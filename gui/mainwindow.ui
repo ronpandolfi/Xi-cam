@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
+      <property name="currentIndex">
+       <number>-1</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>600</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionClose"/>
+   </widget>
+   <addaction name="menuFile"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QDockWidget" name="dockWidget">
+   <property name="layoutDirection">
+    <enum>Qt::RightToLeft</enum>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <layout class="QVBoxLayout" name="propertiesBox">
+       <item>
+        <widget class="QComboBox" name="experimentCombo"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionCenterFind"/>
+   <addaction name="actionBeamProperties"/>
+   <addaction name="actionPolyMask"/>
+  </widget>
+  <action name="actionBeamProperties">
+   <property name="icon">
+    <iconset>
+     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
+   </property>
+   <property name="text">
+    <string>BeamProperties</string>
+   </property>
+  </action>
+  <action name="actionCenterFind">
+   <property name="icon">
+    <iconset>
+     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/apps/help-browser.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/apps/help-browser.png</iconset>
+   </property>
+   <property name="text">
+    <string>CenterFind</string>
+   </property>
+  </action>
+  <action name="actionPolyMask">
+   <property name="icon">
+    <iconset>
+     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/actions/appointment-new.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/actions/appointment-new.png</iconset>
+   </property>
+   <property name="text">
+    <string>PolyMask</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
