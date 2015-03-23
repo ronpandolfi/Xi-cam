@@ -7,14 +7,14 @@ def radialintegrate(imgdata, experiment, mask=None):
 
     # TODO: add checks for mask and center
     # print(self.config.maskingmat)
-    #if self.config.maskingmat == None:
-    print("No mask defined, creating temporary empty mask.")
-    mask = np.ones(imgdata.shape)
+    if mask is None:
+        print("No mask defined, creating temporary empty mask.")
+        mask = np.zeros_like(imgdata)
     #else:
     #    mask = self.config.maskingmat
 
     #mask data
-    data = imgdata * mask
+    data = imgdata * (1 - mask)
 
     #calculate data radial profile
     y, x = np.indices((data.shape))
@@ -22,18 +22,9 @@ def radialintegrate(imgdata, experiment, mask=None):
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
-    nr = np.bincount(r.ravel(), mask.ravel())
+    nr = np.bincount(r.ravel(), (1 - mask).ravel())
     radialprofile = tbin / nr
 
-    #repeat with mask for scaling
-
-    #y, x = np.indices((data.shape))
-    #r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
-    #r = r.astype(np.int)
-
-    #tbin = np.bincount(r.ravel(), mask.ravel())
-    #nr = np.bincount(r.ravel())
-    #radialprofile = radialprofile / (tbin / nr)  #normalize
 
     #calculate q spacings
     x = np.arange(radialprofile.shape[0])
