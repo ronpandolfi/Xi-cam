@@ -88,13 +88,14 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionCenterFind"/>
-   <addaction name="actionBeamProperties"/>
-   <addaction name="actionPolyMask"/>
+   <addaction name="actionLog_Intensity"/>
+   <addaction name="actionCake"/>
+   <addaction name="actionMultiPlot"/>
   </widget>
   <action name="actionBeamProperties">
    <property name="icon">
     <iconset>
-     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
+     <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
    </property>
    <property name="text">
     <string>BeamProperties</string>
@@ -103,7 +104,7 @@
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>
-     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/apps/help-browser.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/apps/help-browser.png</iconset>
+     <normaloff>../gui/icons_1.png</normaloff>icons_1.png</iconset>
    </property>
    <property name="text">
     <string>CenterFind</string>
@@ -112,10 +113,10 @@
   <action name="actionPolyMask">
    <property name="icon">
     <iconset>
-     <normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/actions/appointment-new.png</normaloff>../Downloads/tango-icon-theme-0.8.90/32x32/actions/appointment-new.png</iconset>
+     <normaloff>../gui/icons_5.png</normaloff>icons_5.png</iconset>
    </property>
    <property name="text">
-    <string>PolyMask</string>
+    <string/>
    </property>
   </action>
   <action name="actionOpen">
@@ -126,6 +127,71 @@
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
+   </property>
+  </action>
+  <action name="actionMasking">
+   <property name="icon">
+    <iconset>
+     <normaloff>../gui/icons_3.png</normaloff>icons_3.png</iconset>
+   </property>
+   <property name="text">
+    <string>Masking</string>
+   </property>
+  </action>
+  <action name="actionLog_Intensity">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../gui/icons_2.png</normaloff>icons_2.png</iconset>
+   </property>
+   <property name="text">
+    <string>Log Intensity</string>
+   </property>
+  </action>
+  <action name="actionCake">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../gui/icons_4.png</normaloff>icons_4.png</iconset>
+   </property>
+   <property name="text">
+    <string>Cake</string>
+   </property>
+  </action>
+  <action name="actionRemove_Cosmics">
+   <property name="icon">
+    <iconset>
+     <normalon>../gui/icons_6.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string></string>
+   </property>
+  </action>
+  <action name="actionMaskLoad">
+   <property name="icon">
+    <iconset>
+     <normalon>../gui/icons_8.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string></string>
+   </property>
+  </action>
+  <action name="actionMultiPlot">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../gui/icons_7.png</normaloff>icons_7.png</iconset>
+   </property>
+   <property name="text">
+    <string>Muli plot</string>
    </property>
   </action>
  </widget>

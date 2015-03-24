@@ -28,11 +28,12 @@ def radialintegrate(imgdata, experiment, mask=None):
 
     #calculate q spacings
     x = np.arange(radialprofile.shape[0])
-    theta = np.arctan2(x * experiment.getvalue('Pixel Size X') * 0.000001,
+    theta = np.arctan2(x * experiment.getvalue('Pixel Size X'),
                        experiment.getvalue('Detector Distance'))
     #theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
-    wavelength = 1.239842 / experiment.getvalue('Energy')
-    q = 4 * np.pi / wavelength * np.sin(theta / 2) * .1
+    wavelength = experiment.getvalue('Wavelength')
+    q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+
 
     #save integration to file
     f = open("integ.csv", "w")

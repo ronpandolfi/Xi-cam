@@ -1,5 +1,7 @@
 import pyqtgraph as pg
 import numpy as np
+from pyFAI import detectors
+import scipy
 
 import integration
 import center_approx
@@ -8,10 +10,11 @@ from PySide.QtGui import QSplitter
 from PySide.QtGui import QWidget
 from PySide.QtCore import Qt
 from PySide.QtGui import QAction
+import cosmics
 
 
 class imageTab(QWidget):
-    def __init__(self, imgdata, experiment):
+    def __init__(self, imgdata, experiment, parent):
         '''
         A tab containing an imageview and plotview set in a splitter. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
@@ -23,9 +26,13 @@ class imageTab(QWidget):
         # Save image data and the experiment
         self.imgdata = imgdata
         self.experiment = experiment
+        self.parent = parent
 
         # Immediately mask any negative pixels
-        self.experiment.mask = imgdata < 0
+        self.experiment.addtomask(imgdata < 0)
+
+        # Choose detector
+        self.detector = self.finddetector()
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
@@ -65,9 +72,11 @@ class imageTab(QWidget):
         integrationwidget = pg.PlotWidget()
         self.integration = integrationwidget.getPlotItem()
         self.Splitter.addWidget(integrationwidget)
+        self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
 
         ##
         self.findcenter()
+        self.calibrate()
         self.radialintegrate()
         ##
 
@@ -76,13 +85,22 @@ class imageTab(QWidget):
                                              [self.experiment.getvalue('Center X')], pen=None, symbol='o')
         self.viewbox.addItem(self.centerplot)
 
+        self.maskoverlay()
 
-    def logintensity(self):
+
+    def logintensity(self, toggle=False):
+        self.actionLogIntensity.setChecked(toggle != self.actionLogIntensity.isChecked())
         # When the log intensity button toggles, switch the log scaling on the image
         if self.actionLogIntensity.isChecked():
             self.imgview.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)))
         else:
             self.imgview.setImage(self.imgdata)
+
+    def removecosmics(self):
+        c = cosmics.cosmicsimage(self.imgdata)
+        c.run(maxiter=4)
+        self.experiment.addtomask(c.mask)
+        self.maskoverlay()
 
     def findcenter(self):
         # Auto find the beam center
@@ -94,11 +112,47 @@ class imageTab(QWidget):
 
     def radialintegrate(self):
         # Radial integraion
-        q, radialprofile = integration.radialintegrate(self.imgdata, self.experiment, mask=self.experiment.mask)
-
-        # Clear previous plot and replot
+        self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
+                                                                 mask=self.experiment.mask)
         self.integration.clear()
-        self.integration.plot(q, radialprofile)
+
+        if self.parent.ui.findChild(QAction, 'actionMultiPlot').isChecked():
+            self.replotothers()
+
+        self.replotprimary()
+
+    def calibrate(self):
+
+        y, x = np.indices((self.imgdata.shape))
+        r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
+        r = r.astype(np.int)
+        tbin = np.bincount(r.ravel(), self.imgdata.ravel())
+        nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
+        radialprofile = tbin / nr
+
+        # Find peak positions, they represent the radii
+        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 1)), np.arange(30, 100))
+
+        # Get the tallest peak
+        bestpeak = peaks[radialprofile[peaks].argmax()]
+
+        # Calculate sample to detector distance for lowest q peak
+        tth = 2 * np.arcsin(0.5 * self.experiment.getvalue('Wavelength') / 58.367e-10)
+        tantth = np.tan(tth)
+        sdd = bestpeak * self.experiment.getvalue('Pixel Size X') / tantth
+
+        self.experiment.setValue('Detector Distance', sdd)
+
+    def replotprimary(self):
+        # Replot
+        self.integration.plot(self.q, self.radialprofile)
+
+    def replotothers(self):
+        for tab in self.parent.ui.findChildren(imageTab):
+            tab.replotassecondary(self.integration)
+
+    def replotassecondary(self, plotitem):
+        plotitem.plot(self.q, self.radialprofile, pen=pg.mkPen(0.5))
 
 
     def polymask(self):
@@ -145,7 +199,7 @@ class imageTab(QWidget):
                                 mode='constant')
 
             # Add the masked area to the active mask
-            self.addtomask(maskedarea)
+            self.experiment.addtomask(maskedarea)
 
             # Draw the overlay
             self.maskoverlay()
@@ -155,14 +209,6 @@ class imageTab(QWidget):
 
             # Redo the integration
             self.radialintegrate()
-
-    def addtomask(self, maskedarea):
-        # If the mask is empty, set the mask to the new masked area
-        if self.experiment.mask is None:
-            self.experiment.mask = maskedarea.astype(np.int)
-        else:  # Otherwise, bitwise or it with the current mask
-            # print(self.experiment.mask,maskedarea)
-            self.experiment.mask = np.bitwise_or(self.experiment.mask, maskedarea.astype(np.int))
 
     def maskoverlay(self):
         # Draw the mask as a red channel image with an alpha mask
@@ -174,6 +220,17 @@ class imageTab(QWidget):
         view = pg.ImageView()
         view.setImage(self.experiment.mask)
         view.show()
+
+    def finddetector(self):
+        for name, detector in detectors.ALL_DETECTORS.iteritems():
+            if detector.MAX_SHAPE == self.imgdata.shape:
+                detector = detector()
+                mask = detector.calc_mask()
+                self.experiment.addtomask(mask)
+                self.experiment.setValue('Pixel Size X', detector.pixel1)
+                self.experiment.setValue('Pixel Size Y', detector.pixel2)
+                self.experiment.setValue('Detector', name)
+                return detector
 
 
 
