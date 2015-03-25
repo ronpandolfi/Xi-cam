@@ -1,14 +1,15 @@
-# TODO: Add calibrant selection
+### TODO: Add calibrant selection
 # TODO: Add calibration button
 # TODO: Make experiment save/load
-# TODO: Add peak marking
-# TODO: Add q trace
+### TODO: Add peak marking
+### TODO: Add q trace
 # TODO: Confirm q calibration
-# TODO: Add caking
+### TODO: Add caking
 # TODO: Synchronize tabs
-# TODO: Add mask clear
-# TODO: Clean tab names
-# TODO: Add arc ROI
+## TODO: Add mask clear
+### TODO: Clean tab names
+### TODO: Add arc ROI
+## TODO: Use detector mask in centerfinder
 
 
 
@@ -20,7 +21,7 @@ import os
 
 import qdarkstyle
 import fabio
-from pyqtgraph.parametertree import ParameterTree
+
 
 from PySide.QtUiTools import QUiLoader
 from PySide.QtCore import QFile
@@ -32,8 +33,11 @@ from PySide.QtGui import QVBoxLayout
 from PySide.QtGui import QMenu
 from PySide.QtGui import QToolButton
 from PySide.QtGui import QToolBar
+from PySide.QtGui import QMessageBox
 from config import experiment
 from graphics import imageTab
+from pyqtgraph.parametertree import \
+    ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
 
 
 sys.path.append("../gui/")
@@ -51,6 +55,15 @@ class MyMainWindow():
         self.ui = loader.load(file)
         file.close()
 
+        # Initialize an empty experiment
+        self.experiment = experiment()
+
+        # Connect the experiment tree to a pg tree view and wire up
+        self.experimentTree = ParameterTree()
+        self.bindexperiment()
+        settingsList = self.ui.findChild(QVBoxLayout, 'propertiesBox')
+        settingsList.addWidget(self.experimentTree)
+
 
         # Wire up action buttons
         self.ui.findChild(QAction, 'actionOpen').triggered.connect(self.dialogopen)
@@ -60,18 +73,10 @@ class MyMainWindow():
         self.ui.findChild(QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
         self.ui.findChild(QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
         self.ui.findChild(QAction, 'actionMaskLoad').triggered.connect(self.maskload)
+        self.ui.findChild(QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
+        self.ui.findChild(QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
-
-        # Initialize an empty experiment
-        self.experiment = experiment()
-
-        # Connect the experiment tree to a pg tree view and wire up
-        experimentTree = ParameterTree()
-        experimentTree.setParameters(self.experiment, showTop=False)
-        self.experiment.sigTreeStateChanged.connect(self.experiment.save)
-        settingsList = self.ui.findChild(QVBoxLayout, 'propertiesBox')
-        settingsList.addWidget(experimentTree)
 
         menu = QMenu()
         actionMasking = self.ui.findChild(QAction, 'actionMasking')
@@ -90,7 +95,8 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        self.openimage('../samples/AgB_saxs_00010.edf_mod.tif')
+        # self.openimage('../samples/AgB_00001.edf')
+        # self.calibrate()
         ##
 
         # Show UI and end app when it closes
@@ -122,7 +128,28 @@ class MyMainWindow():
         # Open a file dialog then open that image
         filename, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
         print(filename)
-        self.openimage(filename)
+        if filename is not u'':
+            if self.experiment.iscalibrated:
+                self.openimage(filename)
+            else:
+                msgBox = QMessageBox()
+                msgBox.setText("The current experiment has not yet been calibrated. ")
+                msgBox.setInformativeText("Use this image as a calibrant (AgBe)?")
+                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+                msgBox.setDefaultButton(QMessageBox.Yes)
+
+                response = msgBox.exec_()
+
+                if response == QMessageBox.Yes:
+                    self.openimage(filename)
+                    self.calibrate()
+                elif response == QMessageBox.No:
+                    self.openimage(filename)
+                elif response == QMessageBox.Cancel:
+                    return None
+
+    def calibrate(self):
+        self.currentImageTab().calibrate()
 
     def openimage(self, path):
         self.statusbar.showMessage('Loading image...')
@@ -158,6 +185,14 @@ class MyMainWindow():
         path, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
         mask = self.load_image(path)
         self.experiment.addtomask(mask)
+
+    def loadexperiment(self):
+        path, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.exp")
+        self.experiment = experiment(path)
+
+    def bindexperiment(self):
+        self.experimentTree.setParameters(self.experiment, showTop=False)
+        self.experiment.sigTreeStateChanged.connect(self.experiment.save)
 
 
 if __name__ == '__main__':

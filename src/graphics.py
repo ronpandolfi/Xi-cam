@@ -28,11 +28,8 @@ class imageTab(QWidget):
         self.experiment = experiment
         self.parent = parent
 
-        # Immediately mask any negative pixels
+        # Immediately mask any negative pixels #####MAKE THIS UNIQUE
         self.experiment.addtomask(imgdata < 0)
-
-        # Choose detector
-        self.detector = self.finddetector()
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
@@ -75,15 +72,14 @@ class imageTab(QWidget):
         self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
 
         ##
-        self.findcenter()
-        self.calibrate()
-        self.radialintegrate()
-        ##
+        # self.findcenter()
+        # self.calibrate()
 
-        # Mark the center
-        self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center Y')],
-                                             [self.experiment.getvalue('Center X')], pen=None, symbol='o')
-        self.viewbox.addItem(self.centerplot)
+        if self.experiment.iscalibrated:
+            self.radialintegrate()
+            ##
+            self.drawcenter()
+
 
         self.maskoverlay()
 
@@ -109,6 +105,13 @@ class imageTab(QWidget):
         # Set the center in the experiment
         self.experiment.setValue('Center X', x)
         self.experiment.setValue('Center Y', y)
+        self.drawcenter()
+
+    def drawcenter(self):
+        # Mark the center
+        self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center Y')],
+                                             [self.experiment.getvalue('Center X')], pen=None, symbol='o')
+        self.viewbox.addItem(self.centerplot)
 
     def radialintegrate(self):
         # Radial integraion
@@ -122,6 +125,10 @@ class imageTab(QWidget):
         self.replotprimary()
 
     def calibrate(self):
+        # Choose detector
+        self.detector = self.finddetector()
+
+        self.findcenter()
 
         y, x = np.indices((self.imgdata.shape))
         r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
@@ -142,6 +149,9 @@ class imageTab(QWidget):
         sdd = bestpeak * self.experiment.getvalue('Pixel Size X') / tantth
 
         self.experiment.setValue('Detector Distance', sdd)
+        self.experiment.iscalibrated = True
+
+        self.radialintegrate()
 
     def replotprimary(self):
         # Replot

@@ -6,17 +6,18 @@ import numpy as np
 
 class experiment(Parameter):
     def __init__(self, path=None):
+        self.iscalibrated = False
 
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
                       {'name': 'Detector', 'type': 'str', 'value': 'Unknown'},
-                      {'name': 'Pixel Size X', 'type': 'float', 'value': 72e-6, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size X', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
-                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 72e-6, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
                       {'name': 'Center X', 'type': 'int', 'value': 0, 'suffix': ' px'},
-                      {'name': 'Center Y', 'type': 'int', 'value': 1210, 'suffix': ' px'},
+                      {'name': 'Center Y', 'type': 'int', 'value': 0, 'suffix': ' px'},
                       {'name': 'Detector Distance', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-3},
                       {'name': 'Energy', 'type': 'float', 'value': 9000, 'siPrefix': True, 'suffix': 'eV'},
@@ -56,11 +57,11 @@ class experiment(Parameter):
 
     def addtomask(self, maskedarea):
         # If the mask is empty, set the mask to the new masked area
-        if self.mask is None:
-            self.mask = maskedarea.astype(np.int)
+        if self._mask is None:
+            self._mask = maskedarea.astype(np.int)
         else:  # Otherwise, bitwise or it with the current mask
             # print(self.experiment.mask,maskedarea)
-            self.mask = np.bitwise_or(self.mask, maskedarea.astype(np.int))
+            self._mask = np.bitwise_or(self._mask, maskedarea.astype(np.int))
 
 
     def EnergyChanged(self):
@@ -75,8 +76,10 @@ class experiment(Parameter):
     def save(self):
         # Save the experiment .....
         path = '.emptyexperiment.json'
-        with open(self.getvalue('Name') + '.json', 'w') as f:
+        with open(self.getvalue('Name') + '.exp', 'w') as f:
             pickle.dump(self.saveState(), f)
+        with open(self.getvalue('Name') + '.expmask', 'w') as f:
+            np.save(f, self.mask)
 
     def getvalue(self, name):
         # Return the value of the named child
