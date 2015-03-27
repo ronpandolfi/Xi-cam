@@ -6,7 +6,7 @@ import scipy
 import integration
 import center_approx
 from PySide.QtGui import QVBoxLayout
-from PySide.QtGui import QSplitter
+
 from PySide.QtGui import QWidget
 from PySide.QtCore import Qt
 from PySide.QtGui import QAction
@@ -44,13 +44,11 @@ class imageTab(QWidget):
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
 
-        # Make a splitter for the tab (inside layout); put the image view in it
-        self.Splitter = QSplitter(Qt.Vertical)
-        self.Splitter.addWidget(self.imgview)
+
+
 
         # Make a layout for the tab
         self.Layout = QVBoxLayout()
-        self.Layout.addWidget(self.Splitter)
         self.setLayout(self.Layout)
 
         # Add the Log Intensity check button to the context menu and wire up
@@ -64,12 +62,6 @@ class imageTab(QWidget):
         # Add a placeholder image item for the mask to the viewbox
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
-
-        # Add a plot widget to the splitter for integration
-        integrationwidget = pg.PlotWidget()
-        self.integration = integrationwidget.getPlotItem()
-        self.Splitter.addWidget(integrationwidget)
-        self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
 
         ##
         # self.findcenter()
@@ -117,7 +109,7 @@ class imageTab(QWidget):
         # Radial integraion
         self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
-        self.integration.clear()
+        self.parent.integration.clear()
 
         if self.parent.ui.findChild(QAction, 'actionMultiPlot').isChecked():
             self.replotothers()
@@ -155,11 +147,11 @@ class imageTab(QWidget):
 
     def replotprimary(self):
         # Replot
-        self.integration.plot(self.q, self.radialprofile)
+        self.parent.integration.plot(self.q, self.radialprofile)
 
     def replotothers(self):
         for tab in self.parent.ui.findChildren(imageTab):
-            tab.replotassecondary(self.integration)
+            tab.replotassecondary(self.parent.integration)
 
     def replotassecondary(self, plotitem):
         plotitem.plot(self.q, self.radialprofile, pen=pg.mkPen(0.5))

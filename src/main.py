@@ -34,13 +34,14 @@ from PySide.QtGui import QMenu
 from PySide.QtGui import QToolButton
 from PySide.QtGui import QToolBar
 from PySide.QtGui import QMessageBox
+from PySide.QtGui import QSplitter
 from config import experiment
 from graphics import imageTab
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
+import pyqtgraph as pg
 
-
-sys.path.append("../gui/")
+# sys.path.append("../gui/")
 
 class MyMainWindow():
     def __init__(self):
@@ -50,7 +51,7 @@ class MyMainWindow():
 
         # Load the gui from file
         loader = QUiLoader()
-        file = QFile("../gui/mainwindow.ui")
+        file = QFile("../gui/mainwindowold.ui")
         file.open(QFile.ReadOnly)
         self.ui = loader.load(file)
         file.close()
@@ -78,6 +79,14 @@ class MyMainWindow():
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+
+        # Add a plot widget to the splitter for integration
+        integrationwidget = pg.PlotWidget()
+        self.integration = integrationwidget.getPlotItem()
+        self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
+        self.ui.findChild(QSplitter, 'mainSplitter').addWidget(integrationwidget)
+
+
         menu = QMenu()
         actionMasking = self.ui.findChild(QAction, 'actionMasking')
         actionPolyMask = self.ui.findChild(QAction, 'actionPolyMask')
@@ -95,13 +104,14 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        # self.openimage('../samples/AgB_00001.edf')
-        # self.calibrate()
+        self.openimage('../samples/AgB_00001.edf')
+        self.calibrate()
         ##
 
         # Show UI and end app when it closes
         self.ui.show()
         sys.exit(self.app.exec_())
+
 
     def load_image(self, path):
         # Load an image path with fabio

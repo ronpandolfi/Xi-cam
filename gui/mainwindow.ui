@@ -6,32 +6,66 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>500</height>
+    <width>830</width>
+    <height>541</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>HiSSAXS</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <widget class="QTabWidget" name="tabWidget">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="autoFillBackground">
-       <bool>false</bool>
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="inputMethodHints">
+       <set>Qt::ImhNone</set>
       </property>
       <property name="currentIndex">
-       <number>-1</number>
+       <number>0</number>
       </property>
-      <property name="tabsClosable">
-       <bool>true</bool>
-      </property>
+      <widget class="QWidget" name="page">
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QSplitter" name="mainSplitter">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <widget class="QTabWidget" name="tabWidget">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>50</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
+           <property name="currentIndex">
+            <number>-1</number>
+           </property>
+           <property name="tabsClosable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="page_2">
+       <layout class="QGridLayout" name="gridLayout_2"/>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -41,7 +75,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
+     <width>830</width>
      <height>22</height>
     </rect>
    </property>
@@ -50,6 +84,8 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen"/>
+    <addaction name="actionLoadExperiment"/>
+    <addaction name="actionSaveExperiment"/>
     <addaction name="actionClose"/>
    </widget>
    <addaction name="menuFile"/>
@@ -58,6 +94,9 @@
   <widget class="QDockWidget" name="dockWidget">
    <property name="layoutDirection">
     <enum>Qt::RightToLeft</enum>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -68,11 +107,7 @@
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
-      <layout class="QVBoxLayout" name="propertiesBox">
-       <item>
-        <widget class="QComboBox" name="experimentCombo"/>
-       </item>
-      </layout>
+      <layout class="QVBoxLayout" name="propertiesBox"/>
      </item>
     </layout>
    </widget>
@@ -92,6 +127,21 @@
    <addaction name="actionCake"/>
    <addaction name="actionMultiPlot"/>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_2">
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <item>
+      <widget class="QTreeView" name="treeView"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionBeamProperties">
    <property name="icon">
     <iconset>
@@ -104,7 +154,7 @@
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_1.png</normaloff>icons_1.png</iconset>
+     <normaloff>icons_1.png</normaloff>icons_1.png</iconset>
    </property>
    <property name="text">
     <string>CenterFind</string>
@@ -113,7 +163,7 @@
   <action name="actionPolyMask">
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_5.png</normaloff>icons_5.png</iconset>
+     <normaloff>icons_5.png</normaloff>icons_5.png</iconset>
    </property>
    <property name="text">
     <string/>
@@ -124,6 +174,16 @@
     <string>Open</string>
    </property>
   </action>
+  <action name="actionSaveExperiment">
+   <property name="text">
+    <string>Save Experiment as...</string>
+   </property>
+  </action>
+  <action name="actionLoadExperiment">
+   <property name="text">
+    <string>Load Experiment...</string>
+   </property>
+  </action>
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
@@ -132,7 +192,7 @@
   <action name="actionMasking">
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_3.png</normaloff>icons_3.png</iconset>
+     <normaloff>icons_3.png</normaloff>icons_3.png</iconset>
    </property>
    <property name="text">
     <string>Masking</string>
@@ -144,7 +204,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_2.png</normaloff>icons_2.png</iconset>
+     <normaloff>icons_2.png</normaloff>icons_2.png</iconset>
    </property>
    <property name="text">
     <string>Log Intensity</string>
@@ -156,7 +216,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_4.png</normaloff>icons_4.png</iconset>
+     <normaloff>icons_4.png</normaloff>icons_4.png</iconset>
    </property>
    <property name="text">
     <string>Cake</string>
@@ -165,21 +225,21 @@
   <action name="actionRemove_Cosmics">
    <property name="icon">
     <iconset>
-     <normalon>../gui/icons_6.png</normalon>
+     <normalon>icons_6.png</normalon>
     </iconset>
    </property>
    <property name="text">
-    <string></string>
+    <string/>
    </property>
   </action>
   <action name="actionMaskLoad">
    <property name="icon">
     <iconset>
-     <normalon>../gui/icons_8.png</normalon>
+     <normalon>icons_8.png</normalon>
     </iconset>
    </property>
    <property name="text">
-    <string></string>
+    <string/>
    </property>
   </action>
   <action name="actionMultiPlot">
@@ -188,7 +248,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff>../gui/icons_7.png</normaloff>icons_7.png</iconset>
+     <normaloff>icons_7.png</normaloff>icons_7.png</iconset>
    </property>
    <property name="text">
     <string>Muli plot</string>
