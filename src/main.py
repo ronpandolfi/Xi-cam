@@ -35,11 +35,22 @@ from PySide.QtGui import QToolButton
 from PySide.QtGui import QToolBar
 from PySide.QtGui import QMessageBox
 from PySide.QtGui import QSplitter
+from PySide.QtGui import QLayout
+from PySide.QtGui import QFileSystemModel
+from PySide.QtGui import QTreeView
+from PySide.QtCore import QDir
+from PySide.QtGui import QListView
+from PySide.QtGui import QStandardItemModel
+from PySide.QtGui import QStandardItem
+# from PySide.QtCore import QStringList
 from config import experiment
 from graphics import imageTab
+from graphics import smallview
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
 import pyqtgraph as pg
+import models
+
 
 # sys.path.append("../gui/")
 
@@ -47,11 +58,23 @@ class MyMainWindow():
     def __init__(self):
         # Initialize PySide app with dark stylesheet
         self.app = QApplication(sys.argv)
-        self.app.setStyleSheet(qdarkstyle.load_stylesheet())
+        # self.app.setStyle('Plastique')
+        self.app.setStyleSheet(qdarkstyle.load_stylesheet() + """
+        QSplitter::handle {
+            background-color:gray;
+        }
+        QListView {
+            margin:0px;
+            spacing:0px;
+            padding:0px;
+        }
+
+        """)
+        #self.app.setStyle('plastique')
 
         # Load the gui from file
         loader = QUiLoader()
-        file = QFile("../gui/mainwindowold.ui")
+        file = QFile("../gui/mainwindow.ui")
         file.open(QFile.ReadOnly)
         self.ui = loader.load(file)
         file.close()
@@ -79,12 +102,42 @@ class MyMainWindow():
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+        model = QFileSystemModel()
+
+        tree = self.ui.findChild(QTreeView, 'treebrowser')
+        tree.setModel(model)
+        parent = QDir()
+        parent.cdUp()
+        model.setRootPath(parent.absolutePath())
+        tree.setRootIndex(model.index(parent.absolutePath()))
+        header = tree.header()
+        tree.setHeaderHidden(True)
+        for i in range(1, 4):
+            header.hideSection(i)
+        filter = ["*.tif", "*.edf"]
+        model.setNameFilters(filter)
+        tree.show()
+
+        list = ['test', 'test2', 'test3']
+        listview = self.ui.findChild(QListView, 'openfileslist')
+        m = models.openfilesmodel(list)
+        listview.setModel(m)
+
+        self.smallimageview = smallview(model=m)
+        smallimagebox = self.ui.getChild(QVBoxLayout, 'smallimageview')
+        smallimagebox.addWidget(self.smallimageview)
+        listview.clicked.connect(self.smallimageview.loaditem)
+
+
 
         # Add a plot widget to the splitter for integration
         integrationwidget = pg.PlotWidget()
         self.integration = integrationwidget.getPlotItem()
         self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
-        self.ui.findChild(QSplitter, 'mainSplitter').addWidget(integrationwidget)
+        self.ui.findChild(QVBoxLayout, 'plotholder').addWidget(integrationwidget)
+
+        splitter = self.ui.findChild(QSplitter, 'splitter')
+        splitter.moveSplitter(0,0)
 
 
         menu = QMenu()
@@ -109,6 +162,15 @@ class MyMainWindow():
         ##
 
         # Show UI and end app when it closes
+        for layout in self.ui.findChildren(QLayout):
+            try:
+                layout.setSpacing(0)
+                layout.setContentsMargin(0, 0, 0, 0)
+            except:
+                pass
+
+
+
         self.ui.show()
         sys.exit(self.app.exec_())
 

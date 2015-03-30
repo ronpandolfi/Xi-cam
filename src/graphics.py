@@ -26,7 +26,7 @@ class imageTab(QWidget):
         # Save image data and the experiment
         self.imgdata = imgdata
         self.experiment = experiment
-        self.parent = parent
+        self.parentwindow = parent
 
         # Immediately mask any negative pixels #####MAKE THIS UNIQUE
         self.experiment.addtomask(imgdata < 0)
@@ -47,8 +47,12 @@ class imageTab(QWidget):
 
 
 
+
+
         # Make a layout for the tab
         self.Layout = QVBoxLayout()
+        self.Layout.addWidget(self.imgview)
+        self.Layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.Layout)
 
         # Add the Log Intensity check button to the context menu and wire up
@@ -109,9 +113,9 @@ class imageTab(QWidget):
         # Radial integraion
         self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
-        self.parent.integration.clear()
+        self.parentwindow.integration.clear()
 
-        if self.parent.ui.findChild(QAction, 'actionMultiPlot').isChecked():
+        if self.parentwindow.ui.findChild(QAction, 'actionMultiPlot').isChecked():
             self.replotothers()
 
         self.replotprimary()
@@ -147,11 +151,11 @@ class imageTab(QWidget):
 
     def replotprimary(self):
         # Replot
-        self.parent.integration.plot(self.q, self.radialprofile)
+        self.parentwindow.integration.plot(self.q, self.radialprofile)
 
     def replotothers(self):
-        for tab in self.parent.ui.findChildren(imageTab):
-            tab.replotassecondary(self.parent.integration)
+        for tab in self.parentwindow.ui.findChildren(imageTab):
+            tab.replotassecondary(self.parentwindow.integration)
 
     def replotassecondary(self, plotitem):
         plotitem.plot(self.q, self.radialprofile, pen=pg.mkPen(0.5))
@@ -235,5 +239,10 @@ class imageTab(QWidget):
                 return detector
 
 
+class smallimageview(pg.ImageView)
+    def __init__(self, model):
+        super(smallimageview, self).__init__()
+        self.model = model
 
-
+    def loaditem(self, index):
+        self.model.itemFromIndex(index).
