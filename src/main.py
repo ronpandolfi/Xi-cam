@@ -45,7 +45,7 @@ from PySide.QtGui import QStandardItem
 # from PySide.QtCore import QStringList
 from config import experiment
 from graphics import imageTab
-from graphics import smallview
+from graphics import smallimageview
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
 import pyqtgraph as pg
@@ -117,16 +117,20 @@ class MyMainWindow():
         filter = ["*.tif", "*.edf"]
         model.setNameFilters(filter)
         tree.show()
+        self.smallimageview = smallimageview(model)
+        smallimagebox = self.ui.findChild(QVBoxLayout, 'smallimageview')
+        smallimagebox.addWidget(self.smallimageview)
+        tree.clicked.connect(self.smallimageview.loaditem)
+
+
+
 
         list = ['test', 'test2', 'test3']
         listview = self.ui.findChild(QListView, 'openfileslist')
         m = models.openfilesmodel(list)
         listview.setModel(m)
 
-        self.smallimageview = smallview(model=m)
-        smallimagebox = self.ui.getChild(QVBoxLayout, 'smallimageview')
-        smallimagebox.addWidget(self.smallimageview)
-        listview.clicked.connect(self.smallimageview.loaditem)
+
 
 
 

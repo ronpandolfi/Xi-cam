@@ -11,6 +11,7 @@ from PySide.QtGui import QWidget
 from PySide.QtCore import Qt
 from PySide.QtGui import QAction
 import cosmics
+import fabio
 
 
 class imageTab(QWidget):
@@ -43,7 +44,6 @@ class imageTab(QWidget):
 
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
-
 
 
 
@@ -239,10 +239,18 @@ class imageTab(QWidget):
                 return detector
 
 
-class smallimageview(pg.ImageView)
+class smallimageview(pg.GraphicsLayoutWidget):
     def __init__(self, model):
         super(smallimageview, self).__init__()
         self.model = model
 
+        self.view = self.addViewBox(lockAspect=True)
+
+        self.imageitem = pg.ImageItem()
+        self.view.addItem(self.imageitem)
+        # self.addItem(self.imageitem)
+
     def loaditem(self, index):
-        self.model.itemFromIndex(index).
+        path = self.model.filePath(index)
+        self.imgdata = fabio.open(path).data
+        self.imageitem.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), autoLevels=True)
