@@ -2,6 +2,7 @@ from PySide.QtCore import QAbstractListModel
 from PySide.QtCore import QModelIndex
 from PySide.QtGui import QColor
 from PySide.QtCore import Qt
+from PySide.QtGui import QItemDelegate
 
 
 class openfilesmodel(QAbstractListModel):
@@ -29,3 +30,4 @@ class openfilesmodel(QAbstractListModel):
         else:
             # We don't care about anything else, so make sure to return an empty QVariant.
             return None
+

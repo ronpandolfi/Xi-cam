@@ -37,7 +37,7 @@ class imageTab(QWidget):
 
         # Make an imageview for the image
         self.imgview = pg.ImageView(self)
-        self.imgview.setImage(imgdata)
+        self.imgview.setImage(imgdata.T)
         self.imgview.autoRange()
         self.imageitem = self.imgview.getImageItem()
         self.viewbox = self.imgview.getView()
@@ -84,9 +84,9 @@ class imageTab(QWidget):
         self.actionLogIntensity.setChecked(toggle != self.actionLogIntensity.isChecked())
         # When the log intensity button toggles, switch the log scaling on the image
         if self.actionLogIntensity.isChecked():
-            self.imgview.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)))
+            self.imgview.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)).T)
         else:
-            self.imgview.setImage(self.imgdata)
+            self.imgview.setImage(self.imgdata.T)
 
     def removecosmics(self):
         c = cosmics.cosmicsimage(self.imgdata)
@@ -105,8 +105,8 @@ class imageTab(QWidget):
 
     def drawcenter(self):
         # Mark the center
-        self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center Y')],
-                                             [self.experiment.getvalue('Center X')], pen=None, symbol='o')
+        self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center X')],
+                                             [self.experiment.getvalue('Center Y')], pen=None, symbol='o')
         self.viewbox.addItem(self.centerplot)
 
     def radialintegrate(self):
@@ -166,10 +166,10 @@ class imageTab(QWidget):
             self.activeaction = 'polymask'
 
             # Start with a box around the center
-            left = self.experiment.getvalue('Center Y') - 100
-            right = self.experiment.getvalue('Center Y') + 100
-            up = self.experiment.getvalue('Center X') - 100
-            down = self.experiment.getvalue('Center X') + 100
+            left = self.experiment.getvalue('Center X') - 100
+            right = self.experiment.getvalue('Center X') + 100
+            up = self.experiment.getvalue('Center Y') - 100
+            down = self.experiment.getvalue('Center Y') + 100
 
             # Add ROI item to the image
             self.maskROI = pg.PolyLineROI([[left, up], [left, down], [right, down], [right, up]], pen=(6, 9),
@@ -219,8 +219,8 @@ class imageTab(QWidget):
     def maskoverlay(self):
         # Draw the mask as a red channel image with an alpha mask
         self.maskimage.setImage(np.dstack((
-            self.experiment.mask, np.zeros_like(self.experiment.mask), np.zeros_like(self.experiment.mask),
-            self.experiment.mask)), opacity=.25)
+            self.experiment.mask.T, np.zeros_like(self.experiment.mask).T, np.zeros_like(self.experiment.mask).T,
+            self.experiment.mask.T)), opacity=.25)
 
     def viewmask(self):
         view = pg.ImageView()
@@ -248,9 +248,11 @@ class smallimageview(pg.GraphicsLayoutWidget):
 
         self.imageitem = pg.ImageItem()
         self.view.addItem(self.imageitem)
+        # self.setMaximumHeight(100)
         # self.addItem(self.imageitem)
 
     def loaditem(self, index):
         path = self.model.filePath(index)
         self.imgdata = fabio.open(path).data
-        self.imageitem.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), autoLevels=True)
+        self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                autoLevels=True)

@@ -39,9 +39,14 @@ from PySide.QtGui import QLayout
 from PySide.QtGui import QFileSystemModel
 from PySide.QtGui import QTreeView
 from PySide.QtCore import QDir
+from PySide.QtCore import QSize
 from PySide.QtGui import QListView
-from PySide.QtGui import QStandardItemModel
+from PySide.QtGui import QTableView
 from PySide.QtGui import QStandardItem
+from PySide.QtGui import QWidget
+from PySide.QtGui import QFont
+from PySide.QtGui import QPushButton
+from PySide.QtGui import QStackedWidget
 # from PySide.QtCore import QStringList
 from config import experiment
 from graphics import imageTab
@@ -50,6 +55,8 @@ from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
 import pyqtgraph as pg
 import models
+from thumbwidget import thumbwidgetcollection
+from PySide.QtGui import QCheckBox
 
 
 # sys.path.append("../gui/")
@@ -59,18 +66,13 @@ class MyMainWindow():
         # Initialize PySide app with dark stylesheet
         self.app = QApplication(sys.argv)
         # self.app.setStyle('Plastique')
-        self.app.setStyleSheet(qdarkstyle.load_stylesheet() + """
-        QSplitter::handle {
-            background-color:gray;
-        }
-        QListView {
-            margin:0px;
-            spacing:0px;
-            padding:0px;
-        }
-
-        """)
-        #self.app.setStyle('plastique')
+        with open('../gui/style.stylesheet', 'r') as f:
+            self.app.setStyleSheet(f.read())
+        print(qdarkstyle.load_stylesheet())
+        self.app.setStyle('plastique')
+        font = self.app.font()
+        font.setStyleStrategy(QFont.PreferAntialias)
+        self.app.setFont(font)
 
         # Load the gui from file
         loader = QUiLoader()
@@ -102,26 +104,29 @@ class MyMainWindow():
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        model = QFileSystemModel()
+        self.treemodel = QFileSystemModel()
 
         tree = self.ui.findChild(QTreeView, 'treebrowser')
-        tree.setModel(model)
+        tree.setModel(self.treemodel)
         parent = QDir()
         parent.cdUp()
-        model.setRootPath(parent.absolutePath())
-        tree.setRootIndex(model.index(parent.absolutePath()))
+        self.treemodel.setRootPath(parent.absolutePath())
+        tree.setRootIndex(self.treemodel.index(parent.absolutePath()))
         header = tree.header()
         tree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
         filter = ["*.tif", "*.edf"]
-        model.setNameFilters(filter)
+        self.treemodel.setNameFilters(filter)
         tree.show()
-        self.smallimageview = smallimageview(model)
+        self.smallimageview = smallimageview(self.treemodel)
         smallimagebox = self.ui.findChild(QVBoxLayout, 'smallimageview')
         smallimagebox.addWidget(self.smallimageview)
         tree.clicked.connect(self.smallimageview.loaditem)
+        tree.doubleClicked.connect(self.itemopen)
 
+        self.thumbwidgets = thumbwidgetcollection()
+        self.ui.findChild(QWidget, 'thumbbox').setLayout(self.thumbwidgets)
 
 
 
@@ -131,7 +136,17 @@ class MyMainWindow():
         listview.setModel(m)
 
 
+        # imagemodel = QFileSystemModel()
+        #self.imgbrowser=self.ui.findChild(QTableView,'imgbrowser')
+        #self.imgbrowser.setModel(imagemodel)
+        #imagemodel.setRootPath(parent.absolutePath())
+        #self.imgbrowser.setRootIndex(imagemodel.index(parent.absolutePath()))
 
+        self.ui.findChild(QCheckBox, 'filebrowsercheck').stateChanged.connect(self.filebrowserpanetoggle)
+        self.ui.findChild(QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
+
+        self.ui.findChild(QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
+        self.ui.findChild(QPushButton, 'viewerbutton').clicked.connect(self.showviewer)
 
 
         # Add a plot widget to the splitter for integration
@@ -154,24 +169,31 @@ class MyMainWindow():
         toolbuttonMasking.setDefaultAction(actionMasking)
         toolbuttonMasking.setMenu(menu)
         toolbuttonMasking.setPopupMode(QToolButton.InstantPopup)
-        self.ui.findChild(QToolBar, 'toolBar').addWidget(toolbuttonMasking)
+        # self.ui.findChild(QToolBar, 'toolBar').addWidget(toolbuttonMasking)
+        self.difftoolbar = QToolBar()
+        self.difftoolbar.addWidget(toolbuttonMasking)
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionLog_Intensity'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCenterFind'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCake'))
+        self.difftoolbar.setIconSize(QSize(32, 32))
+        self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
         self.statusbar = self.ui.statusbar
 
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        self.openimage('../samples/AgB_00001.edf')
-        self.calibrate()
+        # self.openimage('../samples/AgB_00001.edf')
+        #self.calibrate()
         ##
 
         # Show UI and end app when it closes
-        for layout in self.ui.findChildren(QLayout):
-            try:
-                layout.setSpacing(0)
-                layout.setContentsMargin(0, 0, 0, 0)
-            except:
-                pass
+        # for layout in self.ui.findChildren(QLayout):
+        #    try:
+        #        layout.setSpacing(0)
+        #        layout.setContentsMargin(0, 0, 0, 0)
+        #    except:
+        #        pass
 
 
 
@@ -203,6 +225,13 @@ class MyMainWindow():
     def dialogopen(self):
         # Open a file dialog then open that image
         filename, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
+        self.openfile(filename)
+
+    def itemopen(self, index):
+        path = self.treemodel.filePath(index)
+        self.openfile(path)
+
+    def openfile(self, filename):
         print(filename)
         if filename is not u'':
             if self.experiment.iscalibrated:
@@ -269,6 +298,20 @@ class MyMainWindow():
     def bindexperiment(self):
         self.experimentTree.setParameters(self.experiment, showTop=False)
         self.experiment.sigTreeStateChanged.connect(self.experiment.save)
+
+    def filebrowserpanetoggle(self):
+        pane = self.ui.findChild(QTreeView, 'treebrowser')
+        pane.setHidden(not pane.isHidden())
+
+    def openfilestoggle(self):
+        pane = self.ui.findChild(QListView, 'openfileslist')
+        pane.setHidden(not pane.isHidden())
+
+    def showlibrary(self):
+        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(1)
+
+    def showviewer(self):
+        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(0)
 
 
 if __name__ == '__main__':
