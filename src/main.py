@@ -178,6 +178,17 @@ class MyMainWindow():
         self.difftoolbar.setIconSize(QSize(32, 32))
         self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
+        self.booltoolbar = QToolBar()
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd'))
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract'))
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd_with_coefficient'))
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract_with_coefficient'))
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionDivide'))
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAverage'))
+        self.booltoolbar.setIconSize(QSize(32, 32))
+        self.ui.findChild(QVBoxLayout, 'leftpanelayout').addWidget(self.booltoolbar)
+
+
         self.statusbar = self.ui.statusbar
 
         self.statusbar.showMessage('Ready...')

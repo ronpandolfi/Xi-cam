@@ -10,7 +10,7 @@ QSplitter::handle:horizontal {
 QWidget {
     color: silver;
     background-color: #302F2F;
-    selection-background-color:#78879b;
+    selection-background-color:orange;
     selection-color: black;
     background-clip: padding;
 
@@ -31,9 +31,15 @@ QHeaderView::section
 {
     background-color: #3A3939;
     color: silver;
-    padding-left: 4px;
+    /*padding-left: 4px;
     padding-top:2px;
-    border: 1px solid #6c6c6c;
+    border: 1px solid #6c6c6c;*/
+
+    padding: 6px;
+}
+
+QHeaderView {
+
 }
 
 
@@ -43,9 +49,14 @@ QTreeView, QListView {
     margin: 4px;
 }
 
-QWidget#centralwidget,QLabel#separator,QLabel#separator_2 {
+QWidget#centralwidget {
     background-color:#111111;
 }
+
+QWidget#centralwidget > QLabel {
+    background-color:#111111;
+}
+
 
 QPushButton::pressed {
     background-color:#111111;
