@@ -20,7 +20,7 @@ class experiment(Parameter):
                       {'name': 'Center Y', 'type': 'int', 'value': 0, 'suffix': ' px'},
                       {'name': 'Detector Distance', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-3},
-                      {'name': 'Energy', 'type': 'float', 'value': 9000, 'siPrefix': True, 'suffix': 'eV'},
+                      {'name': 'Energy', 'type': 'float', 'value': 10000, 'siPrefix': True, 'suffix': 'eV'},
                       {'name': 'Wavelength', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm'},
                       # {'name': 'View Mask', 'type': 'action'},
                       {'name': 'Notes', 'type': 'text', 'value': ''}]
