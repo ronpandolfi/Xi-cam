@@ -13,7 +13,6 @@ QWidget {
     selection-background-color:orange;
     selection-color: black;
     background-clip: padding;
-
     outline: 0;
 }
 

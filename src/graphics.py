@@ -14,6 +14,59 @@ import cosmics
 import fabio
 
 
+class imageTabTracker(QWidget):
+    def __init__(self, paths, experiment, parent, operation=None):
+        '''
+        A collection of references that can be used to make an imageTab dynamically and dispose of it when unneeded
+        :type path: str
+        :param path:
+        :param experiment:
+        :param parent:
+        :return:
+        '''
+        super(imageTabTracker, self).__init__()
+
+        # When tab is activated, load an image tab and put it inside.
+
+        #Whent tab is deactivated, dispose all of its objects but retain a reference to its constructor paramters
+
+        self.paths = paths
+
+        self.experiment = experiment
+        self.parent = parent
+        self.operation = operation
+        self.tab = None
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        parent.listmodel.widgetchanged()
+
+        #self.load()
+
+
+    def load(self):
+        if self.operation is None:
+            imgdata = fabio.open(self.paths).data
+        else:
+            imgdata = [fabio.open(path).data for path in self.paths]
+
+            imgdata = self.operation(imgdata)
+            print(imgdata)
+
+        self.tab = imageTab(imgdata, self.experiment, self.parent)
+
+        self.layout.addWidget(self.tab)
+
+        print('Successful load!')
+
+    def unload(self):
+        self.tab.parent = None
+        self.tab.deleteLater()
+        # self.tab = None
+        print('Successful unload!')
+
+
+
 class imageTab(QWidget):
     def __init__(self, imgdata, experiment, parent):
         '''
@@ -30,14 +83,14 @@ class imageTab(QWidget):
         self.parentwindow = parent
 
         # Immediately mask any negative pixels #####MAKE THIS UNIQUE
-        self.experiment.addtomask(imgdata < 0)
+        self.experiment.addtomask(self.imgdata < 0)
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
 
         # Make an imageview for the image
         self.imgview = pg.ImageView(self)
-        self.imgview.setImage(imgdata.T)
+        self.imgview.setImage(self.imgdata.T)
         self.imgview.autoRange()
         self.imageitem = self.imgview.getImageItem()
         self.viewbox = self.imgview.getView()

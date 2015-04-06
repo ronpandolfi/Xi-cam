@@ -35,7 +35,7 @@ from PySide.QtGui import QToolButton
 from PySide.QtGui import QToolBar
 from PySide.QtGui import QMessageBox
 from PySide.QtGui import QSplitter
-from PySide.QtGui import QLayout
+from PySide.QtGui import QInputDialog
 from PySide.QtGui import QFileSystemModel
 from PySide.QtGui import QTreeView
 from PySide.QtCore import QDir
@@ -49,7 +49,7 @@ from PySide.QtGui import QPushButton
 from PySide.QtGui import QStackedWidget
 # from PySide.QtCore import QStringList
 from config import experiment
-from graphics import imageTab
+from graphics import imageTabTracker
 from graphics import smallimageview
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
@@ -57,6 +57,7 @@ import pyqtgraph as pg
 import models
 from thumbwidget import thumbwidgetcollection
 from PySide.QtGui import QCheckBox
+import numpy as np
 
 
 # sys.path.append("../gui/")
@@ -91,6 +92,7 @@ class MyMainWindow():
         settingsList.addWidget(self.experimentTree)
 
 
+
         # Wire up action buttons
         self.ui.findChild(QAction, 'actionOpen').triggered.connect(self.dialogopen)
         self.ui.findChild(QAction, 'actionCenterFind').triggered.connect(self.centerfind)
@@ -103,6 +105,8 @@ class MyMainWindow():
         self.ui.findChild(QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
+        tabWidget.currentChanged.connect(self.currentchanged)
+        self.previoustabindex = -1
 
         self.treemodel = QFileSystemModel()
 
@@ -130,10 +134,9 @@ class MyMainWindow():
 
 
 
-        list = ['test', 'test2', 'test3']
         listview = self.ui.findChild(QListView, 'openfileslist')
-        m = models.openfilesmodel(list)
-        listview.setModel(m)
+        self.listmodel = models.openfilesmodel(tabWidget)
+        listview.setModel(self.listmodel)
 
 
         # imagemodel = QFileSystemModel()
@@ -185,6 +188,12 @@ class MyMainWindow():
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract_with_coefficient'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionDivide'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAverage'))
+        self.ui.findChild(QAction, 'actionAdd').triggered.connect(self.addmode)
+        self.ui.findChild(QAction, 'actionSubtract').triggered.connect(self.subtractmode)
+        self.ui.findChild(QAction, 'actionAdd_with_coefficient').triggered.connect(self.addwithcoefmode)
+        self.ui.findChild(QAction, 'actionSubtract_with_coefficient').triggered.connect(self.subtractwithcoefmode)
+        self.ui.findChild(QAction, 'actionDivide').triggered.connect(self.dividemode)
+        self.ui.findChild(QAction, 'actionAverage').triggered.connect(self.averagemode)
         self.booltoolbar.setIconSize(QSize(32, 32))
         self.ui.findChild(QVBoxLayout, 'leftpanelayout').addWidget(self.booltoolbar)
 
@@ -211,6 +220,57 @@ class MyMainWindow():
         self.ui.show()
         sys.exit(self.app.exec_())
 
+    def addmode(self):
+        operation = lambda m: np.sum(m, (0))
+        self.launchmultimode(operation, 'Addition')
+
+    def subtractmode(self):
+        operation = lambda m: m[0] - np.sum(m[1:], (0))
+        self.launchmultimode(operation, 'Subtraction')
+
+    def addwithcoefmode(self):
+        coef, ok = QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
+
+        if coef and ok:
+            operation = lambda m: m[0] + coef * np.sum(m[1:], (0))
+            self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
+
+    def subtractwithcoefmode(self):
+        coef, ok = QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
+
+        if coef and ok:
+            operation = lambda m: m[0] - coef * np.sum(m[1:], (0))
+            self.launchmultimode(operation, 'Subtraction with coef (x=' + coef)
+
+    def dividemode(self):
+        operation = lambda m: m[0] / m[1]
+        self.launchmultimode(operation, 'Division')
+
+    def averagemode(self):
+        operation = lambda m: np.mean(m, 0)
+        self.launchmultimode(operation, 'Average')
+
+
+    def launchmultimode(self, operation, operationname):
+        indices = self.ui.findChild(QTreeView, 'treebrowser').selectedIndexes()
+        paths = [self.treemodel.filePath(index) for index in indices]
+        newimagetab = imageTabTracker(paths, self.experiment, self, operation=operation)
+        filenames = [path.split('/')[-1] for path in paths]
+        self.ui.findChild(QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
+
+    def currentchanged(self, index):
+        print('Changing from', self.previoustabindex, 'to', index)
+        if index > -1:
+            tabwidget = self.ui.findChild(QTabWidget, 'tabWidget')
+
+            try:
+
+                tabwidget.widget(self.previoustabindex).unload()
+            except AttributeError:
+                print('AttributeError intercepted in currentchanged()')
+            tabwidget.widget(index).load()
+        self.previoustabindex = index
+
 
     def load_image(self, path):
         # Load an image path with fabio
@@ -228,6 +288,7 @@ class MyMainWindow():
     def tabCloseRequested(self, index):
         # Delete a tab from the tab view upon request
         self.ui.findChild(QTabWidget, 'tabWidget').widget(index).deleteLater()
+        self.listmodel.widgetchanged()
 
     def polymask(self):
         # Add a polygon mask ROI to the tab
@@ -271,11 +332,11 @@ class MyMainWindow():
         self.statusbar.showMessage('Loading image...')
         self.app.processEvents()
         # Load the image path with Fabio
-        imgdata = self.load_image(path)
+        # imgdata = self.load_image(path)
 
         # Make an image tab for that file and add it to the tab view
-        newimagetab = imageTab(imgdata, self.experiment, self)
-        self.ui.findChild(QTabWidget, 'tabWidget').addTab(newimagetab, path)
+        newimagetab = imageTabTracker(path, self.experiment, self)
+        self.ui.findChild(QTabWidget, 'tabWidget').addTab(newimagetab, path.split('/')[-1])
         self.statusbar.showMessage('Ready...')
 
     def centerfind(self):
