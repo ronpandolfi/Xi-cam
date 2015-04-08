@@ -66,11 +66,11 @@ class MyMainWindow():
     def __init__(self):
         # Initialize PySide app with dark stylesheet
         self.app = QApplication(sys.argv)
-        # self.app.setStyle('Plastique')
+        self.app.setStyle('Plastique')
         with open('../gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
-        print(qdarkstyle.load_stylesheet())
-        self.app.setStyle('plastique')
+        # print(qdarkstyle.load_stylesheet())
+        #self.app.setStyle('plastique')
         font = self.app.font()
         font.setStyleStrategy(QFont.PreferAntialias)
         self.app.setFont(font)
@@ -97,12 +97,15 @@ class MyMainWindow():
         self.ui.findChild(QAction, 'actionOpen').triggered.connect(self.dialogopen)
         self.ui.findChild(QAction, 'actionCenterFind').triggered.connect(self.centerfind)
         self.ui.findChild(QAction, 'actionPolyMask').triggered.connect(self.polymask)
-        self.ui.findChild(QAction, 'actionLog_Intensity').triggered.connect(self.logintensity)
+        self.ui.findChild(QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
         self.ui.findChild(QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
         self.ui.findChild(QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
         self.ui.findChild(QAction, 'actionMaskLoad').triggered.connect(self.maskload)
         self.ui.findChild(QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
         self.ui.findChild(QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
+        self.ui.findChild(QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
         tabWidget.currentChanged.connect(self.currentchanged)
@@ -137,6 +140,7 @@ class MyMainWindow():
         listview = self.ui.findChild(QListView, 'openfileslist')
         self.listmodel = models.openfilesmodel(tabWidget)
         listview.setModel(self.listmodel)
+        listview.doubleClicked.connect(self.switchtotab)
 
 
         # imagemodel = QFileSystemModel()
@@ -163,6 +167,7 @@ class MyMainWindow():
 
 
         menu = QMenu()
+
         actionMasking = self.ui.findChild(QAction, 'actionMasking')
         actionPolyMask = self.ui.findChild(QAction, 'actionPolyMask')
         menu.addAction(actionPolyMask)
@@ -178,6 +183,9 @@ class MyMainWindow():
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionLog_Intensity'))
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCenterFind'))
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCake'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionRadial_Symmetry'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionMirror_Symmetry'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionShow_Mask'))
         self.difftoolbar.setIconSize(QSize(32, 32))
         self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
@@ -203,7 +211,7 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        # self.openimage('../samples/AgB_00001.edf')
+        #self.openimage('../samples/AgB_1s_2m.edf')
         #self.calibrate()
         ##
 
@@ -219,6 +227,9 @@ class MyMainWindow():
 
         self.ui.show()
         sys.exit(self.app.exec_())
+
+    def switchtotab(self, index):
+        self.ui.findChild(QTabWidget, 'tabWidget').setCurrentIndex(index.row())
 
     def addmode(self):
         operation = lambda m: np.sum(m, (0))
@@ -292,7 +303,7 @@ class MyMainWindow():
 
     def polymask(self):
         # Add a polygon mask ROI to the tab
-        self.currentImageTab().polymask()
+        self.currentImageTab().tab.polymask()
 
     def dialogopen(self):
         # Open a file dialog then open that image
@@ -319,6 +330,7 @@ class MyMainWindow():
 
                 if response == QMessageBox.Yes:
                     self.openimage(filename)
+
                     self.calibrate()
                 elif response == QMessageBox.No:
                     self.openimage(filename)
@@ -326,7 +338,8 @@ class MyMainWindow():
                     return None
 
     def calibrate(self):
-        self.currentImageTab().calibrate()
+        self.currentImageTab().load()
+        self.currentImageTab().tab.calibrate()
 
     def openimage(self, path):
         self.statusbar.showMessage('Loading image...')
@@ -336,7 +349,9 @@ class MyMainWindow():
 
         # Make an image tab for that file and add it to the tab view
         newimagetab = imageTabTracker(path, self.experiment, self)
-        self.ui.findChild(QTabWidget, 'tabWidget').addTab(newimagetab, path.split('/')[-1])
+        tabwidget = self.ui.findChild(QTabWidget, 'tabWidget')
+        tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
+
         self.statusbar.showMessage('Ready...')
 
     def centerfind(self):
@@ -346,13 +361,14 @@ class MyMainWindow():
         self.currentImageTab().findcenter()
         self.statusbar.showMessage('Ready...')
 
-    def logintensity(self):
-        self.currentImageTab().logintensity(toggle=True)
+    def redrawcurrent(self):
+        self.currentImageTab().tab.redrawimage()
+
 
     def removecosmics(self):
         self.statusbar.showMessage('Removing cosmic rays...')
         self.app.processEvents()
-        self.currentImageTab().removecosmics()
+        self.currentImageTab().tab.removecosmics()
         self.statusbar.showMessage('Ready...')
 
     def multiplottoggle(self):

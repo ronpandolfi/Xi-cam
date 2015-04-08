@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-       <width>969</width>
-       <height>600</height>
+    <width>969</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -16,207 +16,8 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-     <property name="palette">
-         <palette>
-             <active>
-                 <colorrole role="WindowText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>205</red>
-                             <green>205</green>
-                             <blue>205</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Light">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>172</red>
-                             <green>172</green>
-                             <blue>172</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Midlight">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>214</red>
-                             <green>214</green>
-                             <blue>214</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Dark">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Mid">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>232</red>
-                             <green>232</green>
-                             <blue>232</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Text">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>220</red>
-                             <green>220</green>
-                             <blue>220</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="ButtonText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>0</red>
-                             <green>0</green>
-                             <blue>0</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-             </active>
-             <inactive>
-                 <colorrole role="WindowText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>205</red>
-                             <green>205</green>
-                             <blue>205</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Light">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>172</red>
-                             <green>172</green>
-                             <blue>172</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Midlight">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>214</red>
-                             <green>214</green>
-                             <blue>214</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Dark">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Mid">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>232</red>
-                             <green>232</green>
-                             <blue>232</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Text">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>220</red>
-                             <green>220</green>
-                             <blue>220</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="ButtonText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>0</red>
-                             <green>0</green>
-                             <blue>0</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-             </inactive>
-             <disabled>
-                 <colorrole role="WindowText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Light">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>172</red>
-                             <green>172</green>
-                             <blue>172</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Midlight">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>214</red>
-                             <green>214</green>
-                             <blue>214</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Dark">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Mid">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>232</red>
-                             <green>232</green>
-                             <blue>232</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="Text">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-                 <colorrole role="ButtonText">
-                     <brush brushstyle="SolidPattern">
-                         <color alpha="255">
-                             <red>255</red>
-                             <green>255</green>
-                             <blue>255</blue>
-                         </color>
-                     </brush>
-                 </colorrole>
-             </disabled>
-         </palette>
-     </property>
   <property name="windowTitle">
-      <string>SAXS-ON</string>
+   <string>SAXS-ON</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -228,7 +29,7 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
+   <layout class="QVBoxLayout" name="verticalLayout_4">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -245,411 +46,414 @@
      <number>0</number>
     </property>
     <item>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-            <item>
-                <layout class="QHBoxLayout" name="modemenu">
-                    <property name="leftMargin">
-                        <number>6</number>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <layout class="QHBoxLayout" name="modemenu">
+        <property name="spacing">
+         <number>0</number>
         </property>
-                    <property name="topMargin">
-                        <number>6</number>
+        <property name="leftMargin">
+         <number>0</number>
         </property>
-                    <property name="rightMargin">
-                        <number>6</number>
+        <property name="topMargin">
+         <number>0</number>
         </property>
-                    <property name="bottomMargin">
-                        <number>6</number>
+        <property name="rightMargin">
+         <number>0</number>
         </property>
-                    <item>
-                        <layout class="QVBoxLayout" name="verticalLayout_6">
-                            <property name="spacing">
-                                <number>0</number>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
           </property>
-                            <item>
-                                <widget class="QLabel" name="label_2">
-                                    <property name="text">
-                                        <string>[Experiment Name Here]</string>
-                                    </property>
-                                </widget>
-                            </item>
-                            <item>
-                                <widget class="QLabel" name="label">
-                                    <property name="text">
-                                        <string>[File Name Here]</string>
-                                    </property>
-                                </widget>
-                            </item>
-                        </layout>
-                    </item>
-                    <item>
-                        <spacer name="horizontalSpacer">
-                            <property name="orientation">
-                                <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeType">
-                                <enum>QSizePolicy::Expanding</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                                <size>
-                                    <width>40</width>
-                                    <height>20</height>
-                                </size>
-                            </property>
-                        </spacer>
-                    </item>
-                    <item>
-                        <widget class="QPushButton" name="librarybutton">
-                            <property name="font">
-                                <font>
-                                    <pointsize>16</pointsize>
-                                </font>
-                            </property>
-                            <property name="text">
-                                <string>Library</string>
-                            </property>
-                            <property name="flat">
-                                <bool>true</bool>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QLabel" name="separator">
-                            <property name="font">
-                                <font>
-                                    <pointsize>16</pointsize>
-                                </font>
-                            </property>
-                            <property name="text">
-                                <string>|</string>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QPushButton" name="viewerbutton">
-                            <property name="font">
-                                <font>
-                                    <pointsize>16</pointsize>
-                                </font>
-                            </property>
-                            <property name="text">
-                                <string>Viewer</string>
-                            </property>
-                            <property name="flat">
-                                <bool>true</bool>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QLabel" name="separator_2">
-                            <property name="font">
-                                <font>
-                                    <pointsize>16</pointsize>
-                                </font>
-                            </property>
-                            <property name="text">
-                                <string>|</string>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QPushButton" name="pushButton">
-                            <property name="font">
-                                <font>
-                                    <pointsize>16</pointsize>
-                                </font>
-                            </property>
-                            <property name="text">
-                                <string>Timeline</string>
-                            </property>
-                            <property name="flat">
-                                <bool>true</bool>
-                            </property>
-                        </widget>
-                    </item>
-                </layout>
-            </item>
-            <item>
-                <widget class="QSplitter" name="splitter_3">
-                    <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                            <horstretch>0</horstretch>
-                            <verstretch>0</verstretch>
-                        </sizepolicy>
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>[Experiment Name Here]</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="filenamelabel">
+            <property name="text">
+             <string>[File Name Here]</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Expanding</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="librarybutton">
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Library</string>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="separator">
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>|</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="viewerbutton">
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Viewer</string>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="separator_2">
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>|</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Timeline</string>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QSplitter" name="splitter_3">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-                    <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="handleWidth">
-                        <number>4</number>
-                    </property>
-                    <widget class="QSplitter" name="splitter_2">
-                        <property name="orientation">
-                            <enum>Qt::Vertical</enum>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="handleWidth">
+         <number>4</number>
+        </property>
+        <widget class="QSplitter" name="splitter_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-                        <property name="handleWidth">
-                            <number>4</number>
+         <property name="handleWidth">
+          <number>4</number>
          </property>
-                        <widget class="QFrame" name="frame">
-                            <property name="sizePolicy">
-                                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                                    <horstretch>0</horstretch>
-                                    <verstretch>0</verstretch>
-                                </sizepolicy>
-                            </property>
-                            <property name="baseSize">
-                                <size>
-                                    <width>0</width>
-                                    <height>0</height>
-                                </size>
-                            </property>
-                            <property name="frameShape">
-                                <enum>QFrame::StyledPanel</enum>
-                            </property>
-                            <property name="frameShadow">
-                                <enum>QFrame::Sunken</enum>
-                            </property>
-                            <property name="midLineWidth">
-                                <number>1</number>
-                            </property>
-                            <layout class="QVBoxLayout" name="verticalLayout">
-                                <property name="leftMargin">
-                                    <number>3</number>
-                                </property>
-                                <property name="topMargin">
-                                    <number>3</number>
-                                </property>
-                                <property name="rightMargin">
-                                    <number>3</number>
-                                </property>
-                                <property name="bottomMargin">
-                                    <number>3</number>
-                                </property>
-                                <item>
-                                    <layout class="QVBoxLayout" name="smallimageview"/>
-                                </item>
-                            </layout>
-                        </widget>
-                        <widget class="QWidget" name="verticalLayoutWidget_3">
-                            <layout class="QVBoxLayout" name="leftpanelayout">
-                                <property name="spacing">
-                                    <number>5</number>
-                                </property>
-                                <property name="leftMargin">
-                                    <number>3</number>
-                                </property>
-                                <property name="topMargin">
-                                    <number>10</number>
-                                </property>
-                                <item>
-                                    <widget class="QCheckBox" name="openfilescheck">
-                                        <property name="text">
-                                            <string>Open Files</string>
-                                        </property>
-                                        <property name="checked">
-                                            <bool>true</bool>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <widget class="QListView" name="openfileslist">
-                                        <property name="sizePolicy">
-                                            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                                                <horstretch>0</horstretch>
-                                                <verstretch>0</verstretch>
-                                            </sizepolicy>
-                                        </property>
-                                        <property name="alternatingRowColors">
-                                            <bool>true</bool>
-                                        </property>
-                                        <property name="selectionMode">
-                                            <enum>QAbstractItemView::ExtendedSelection</enum>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <widget class="QCheckBox" name="filebrowsercheck">
-                                        <property name="text">
-                                            <string>File Browser</string>
-                                        </property>
-                                        <property name="checked">
-                                            <bool>true</bool>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <widget class="QTreeView" name="treebrowser">
-                                        <property name="enabled">
-                                            <bool>true</bool>
-                                        </property>
-                                        <property name="sizePolicy">
-                                            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                                                <horstretch>0</horstretch>
-                                                <verstretch>0</verstretch>
-                                            </sizepolicy>
-                                        </property>
-                                        <property name="frameShape">
-                                            <enum>QFrame::StyledPanel</enum>
-                                        </property>
-                                        <property name="selectionMode">
-                                            <enum>QAbstractItemView::ExtendedSelection</enum>
-                                        </property>
-                                        <property name="iconSize">
-                                            <size>
-                                                <width>16</width>
-                                                <height>16</height>
-                                            </size>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <spacer name="verticalSpacer">
-                                        <property name="orientation">
-                                            <enum>Qt::Vertical</enum>
-                                        </property>
-                                        <property name="sizeType">
-                                            <enum>QSizePolicy::Preferred</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                            <size>
-                                                <width>0</width>
-                                                <height>0</height>
-                                            </size>
-                                        </property>
-                                    </spacer>
-                                </item>
-                            </layout>
-                        </widget>
-                    </widget>
-                    <widget class="QStackedWidget" name="viewmode">
-                        <property name="sizePolicy">
-                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                                <horstretch>6</horstretch>
-                                <verstretch>0</verstretch>
-                            </sizepolicy>
+         <widget class="QFrame" name="frame">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="baseSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
+          </property>
+          <property name="midLineWidth">
+           <number>1</number>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="leftMargin">
+            <number>3</number>
+           </property>
+           <property name="topMargin">
+            <number>3</number>
+           </property>
+           <property name="rightMargin">
+            <number>3</number>
+           </property>
+           <property name="bottomMargin">
+            <number>3</number>
+           </property>
+           <item>
+            <layout class="QVBoxLayout" name="smallimageview"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="verticalLayoutWidget_3">
+          <layout class="QVBoxLayout" name="leftpanelayout">
+           <property name="spacing">
+            <number>5</number>
+           </property>
+           <property name="leftMargin">
+            <number>3</number>
+           </property>
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QCheckBox" name="openfilescheck">
+             <property name="text">
+              <string>Open Files</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListView" name="openfileslist">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="alternatingRowColors">
+              <bool>true</bool>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::ExtendedSelection</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="filebrowsercheck">
+             <property name="text">
+              <string>File Browser</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTreeView" name="treebrowser">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::ExtendedSelection</enum>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>16</width>
+               <height>16</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Preferred</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+        <widget class="QStackedWidget" name="viewmode">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>6</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
-                        <property name="currentIndex">
+         <property name="currentIndex">
           <number>0</number>
          </property>
-                        <widget class="QWidget" name="page">
-                            <property name="sizePolicy">
-                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                                    <horstretch>0</horstretch>
-                                    <verstretch>0</verstretch>
-                                </sizepolicy>
-                            </property>
-                            <layout class="QVBoxLayout" name="verticalLayout_7">
-                                <property name="spacing">
-                                    <number>0</number>
-                                </property>
-                                <property name="leftMargin">
-                                    <number>0</number>
-                                </property>
-                                <property name="topMargin">
-                                    <number>0</number>
-                                </property>
-                                <property name="rightMargin">
-                                    <number>0</number>
-                                </property>
-                                <property name="bottomMargin">
-                                    <number>0</number>
-                                </property>
-                                <item>
-                                    <widget class="QSplitter" name="splitter">
-                                        <property name="sizePolicy">
-                                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                                                <horstretch>0</horstretch>
-                                                <verstretch>0</verstretch>
-                                            </sizepolicy>
-                                        </property>
-                                        <property name="orientation">
-                                            <enum>Qt::Vertical</enum>
-                                        </property>
-                                        <property name="handleWidth">
-                                            <number>4</number>
-                                        </property>
-                                        <widget class="QWidget" name="verticalLayoutWidget_2">
-                                            <layout class="QVBoxLayout" name="diffbox">
-                                                <property name="spacing">
-                                                    <number>0</number>
-                                                </property>
-                                                <item>
-                                                    <widget class="QTabWidget" name="tabWidget">
+         <widget class="QWidget" name="page">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QSplitter" name="splitter">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="handleWidth">
+              <number>4</number>
+             </property>
+             <widget class="QWidget" name="verticalLayoutWidget_2">
+              <layout class="QVBoxLayout" name="diffbox">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QTabWidget" name="tabWidget">
                  <property name="sizePolicy">
-                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                     </sizepolicy>
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
                  </property>
-                                                        <property name="autoFillBackground">
-                                                            <bool>false</bool>
-                                                        </property>
-                                                        <property name="styleSheet">
-                                                            <string notr="true"/>
-                                                        </property>
-                                                        <property name="currentIndex">
-                                                            <number>-1</number>
-                                                        </property>
-                                                        <property name="tabsClosable">
-                                                            <bool>true</bool>
-                                                        </property>
-                                                    </widget>
-                                                </item>
-                                            </layout>
-                                        </widget>
-                                        <widget class="QWidget" name="verticalLayoutWidget">
-                                            <layout class="QVBoxLayout" name="plotholder"/>
-                                        </widget>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </widget>
-                        <widget class="QWidget" name="page_2">
-                            <layout class="QVBoxLayout" name="verticalLayout_5">
-                                <property name="spacing">
-                                    <number>0</number>
+                 <property name="autoFillBackground">
+                  <bool>false</bool>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true"/>
+                 </property>
+                 <property name="currentIndex">
+                  <number>-1</number>
+                 </property>
+                 <property name="tabsClosable">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="verticalLayoutWidget">
+              <layout class="QVBoxLayout" name="plotholder"/>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="page_2">
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <property name="spacing">
+            <number>0</number>
            </property>
-                                <property name="leftMargin">
-                                    <number>0</number>
+           <property name="leftMargin">
+            <number>0</number>
            </property>
-                                <property name="topMargin">
-                                    <number>0</number>
+           <property name="topMargin">
+            <number>0</number>
            </property>
-                                <property name="rightMargin">
-                                    <number>0</number>
-                                </property>
-                                <property name="bottomMargin">
-                                    <number>0</number>
-                                </property>
-                                <item>
-                                    <widget class="QScrollArea" name="scrollArea">
-                                        <property name="widgetResizable">
-                                            <bool>true</bool>
-                                        </property>
-                                        <widget class="QWidget" name="thumbbox">
-                                            <property name="geometry">
-                                                <rect>
-                                                    <x>0</x>
-                                                    <y>0</y>
-                                                    <width>98</width>
-                                                    <height>28</height>
-                                                </rect>
-                                            </property>
-                                        </widget>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </widget>
-                    </widget>
-                    <widget class="QWidget" name="layoutWidget">
-                        <layout class="QVBoxLayout" name="propertiesBox"/>
-                    </widget>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QScrollArea" name="scrollArea">
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="thumbbox">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>98</width>
+                <height>28</height>
+               </rect>
+              </property>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+        <widget class="QWidget" name="layoutWidget">
+         <layout class="QVBoxLayout" name="propertiesBox"/>
+        </widget>
        </widget>
-            </item>
-        </layout>
+      </item>
+     </layout>
     </item>
-      </layout>
+   </layout>
   </widget>
-     <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionBeamProperties">
    <property name="icon">
     <iconset>
@@ -662,8 +466,7 @@
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>
-        <normaloff>icons_01.png</normaloff>icons_01.png
-    </iconset>
+     <normaloff>icons_01.png</normaloff>icons_01.png</iconset>
    </property>
    <property name="text">
     <string>CenterFind</string>
@@ -672,8 +475,7 @@
   <action name="actionPolyMask">
    <property name="icon">
     <iconset>
-        <normaloff>icons_05.png</normaloff>icons_05.png
-    </iconset>
+     <normaloff>icons_05.png</normaloff>icons_05.png</iconset>
    </property>
    <property name="text">
     <string/>
@@ -702,8 +504,7 @@
   <action name="actionMasking">
    <property name="icon">
     <iconset>
-        <normaloff>icons_03.png</normaloff>icons_03.png
-    </iconset>
+     <normaloff>icons_03.png</normaloff>icons_03.png</iconset>
    </property>
    <property name="text">
     <string>Masking</string>
@@ -715,8 +516,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>icons_02.png</normaloff>icons_02.png
-    </iconset>
+     <normaloff>icons_02.png</normaloff>icons_02.png</iconset>
    </property>
    <property name="text">
     <string>Log Intensity</string>
@@ -728,8 +528,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>icons_04.png</normaloff>icons_04.png
-    </iconset>
+     <normaloff>icons_04.png</normaloff>icons_04.png</iconset>
    </property>
    <property name="text">
     <string>Cake</string>
@@ -738,7 +537,7 @@
   <action name="actionRemove_Cosmics">
    <property name="icon">
     <iconset>
-        <normalon>icons_06.png</normalon>
+     <normalon>icons_06.png</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -748,7 +547,7 @@
   <action name="actionMaskLoad">
    <property name="icon">
     <iconset>
-        <normalon>icons_08.png</normalon>
+     <normalon>icons_08.png</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -761,81 +560,111 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>icons_07.png</normaloff>icons_07.png
-    </iconset>
+     <normaloff>icons_07.png</normaloff>icons_07.png</iconset>
    </property>
    <property name="text">
     <string>Muli plot</string>
    </property>
   </action>
-     <action name="actionLibrary">
-         <property name="text">
-             <string>Library</string>
-         </property>
-     </action>
-     <action name="actionViewer">
-         <property name="text">
-             <string>Viewer</string>
-         </property>
-     </action>
-     <action name="actionAdd">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_11.png</normaloff>icons_11.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Add</string>
-         </property>
-     </action>
-     <action name="actionSubtract">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_13.png</normaloff>icons_13.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Subtract</string>
-         </property>
-     </action>
-     <action name="actionAdd_with_coefficient">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_14.png</normaloff>icons_14.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Add with coefficient</string>
-         </property>
-     </action>
-     <action name="actionSubtract_with_coefficient">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_15.png</normaloff>icons_15.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Subtract with coefficient</string>
-         </property>
-     </action>
-     <action name="actionDivide">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_12.png</normaloff>icons_12.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Divide</string>
-         </property>
-     </action>
-     <action name="actionAverage">
-         <property name="icon">
-             <iconset>
-                 <normaloff>icons_16.png</normaloff>icons_16.png
-             </iconset>
-         </property>
-         <property name="text">
-             <string>Average</string>
+  <action name="actionLibrary">
+   <property name="text">
+    <string>Library</string>
+   </property>
+  </action>
+  <action name="actionViewer">
+   <property name="text">
+    <string>Viewer</string>
+   </property>
+  </action>
+  <action name="actionAdd">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_11.png</normaloff>icons_11.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add</string>
+   </property>
+  </action>
+  <action name="actionSubtract">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_13.png</normaloff>icons_13.png</iconset>
+   </property>
+   <property name="text">
+    <string>Subtract</string>
+   </property>
+  </action>
+  <action name="actionAdd_with_coefficient">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_14.png</normaloff>icons_14.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add with coefficient</string>
+   </property>
+  </action>
+  <action name="actionSubtract_with_coefficient">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_15.png</normaloff>icons_15.png</iconset>
+   </property>
+   <property name="text">
+    <string>Subtract with coefficient</string>
+   </property>
+  </action>
+  <action name="actionDivide">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_12.png</normaloff>icons_12.png</iconset>
+   </property>
+   <property name="text">
+    <string>Divide</string>
+   </property>
+  </action>
+  <action name="actionAverage">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_16.png</normaloff>icons_16.png</iconset>
+   </property>
+   <property name="text">
+    <string>Average</string>
+   </property>
+  </action>
+  <action name="actionRadial_Symmetry">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_18.png</normaloff>icons_18.png</iconset>
+   </property>
+   <property name="text">
+    <string>Radial Symmetry</string>
+   </property>
+  </action>
+  <action name="actionMirror_Symmetry">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_17.png</normaloff>icons_17.png</iconset>
+   </property>
+   <property name="text">
+    <string>Mirror Symmetry</string>
+   </property>
+  </action>
+  <action name="actionShow_Mask">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_20.png</normaloff>
+     <normalon>icons_19.png</normalon>icons_20.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show Mask</string>
    </property>
   </action>
  </widget>
