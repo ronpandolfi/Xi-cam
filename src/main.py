@@ -217,8 +217,8 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        self.openimage('../samples/AgB_1s_2m.edf')
-        self.calibrate()
+        # self.openimage('../samples/AgB_1s_2m.edf')
+        #self.calibrate()
         ##
 
         # Show UI and end app when it closes

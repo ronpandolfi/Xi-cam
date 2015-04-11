@@ -11,6 +11,7 @@ from PySide.QtCore import QRect
 from PySide.QtCore import QSize
 from PySide.QtCore import QPoint
 from PySide.QtGui import QSizePolicy
+from PySide.QtGui import QFrame
 import fabio
 from scipy.misc import imresize
 import numpy as np
@@ -18,12 +19,12 @@ from PIL import Image
 
 
 class FlowLayout(QLayout):
-    def __init__(self, parent=None, margin=0, spacing=-1):
+    def __init__(self, parent=None, margin=5, spacing=-1):
         super(FlowLayout, self).__init__(parent)
 
         # if parent is not None:
+        # self.margin = margin
         self.margin = margin
-
         self.setSpacing(spacing)
 
         self.itemList = []
@@ -133,7 +134,7 @@ class folderwidget(QWidget):  # WIP
         self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
         self.imgdata *= 255 / np.max(self.imgdata)
         self.imgdata = self.imgdata.astype(np.uint8)
-        desiredsize = 300
+
         dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
                 min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
         # dims=(220,230)
@@ -160,16 +161,27 @@ class folderwidget(QWidget):  # WIP
 class thumbwidgetitem(QWidget):
     def __init__(self, path):
         super(thumbwidgetitem, self).__init__()
+        desiredsize = QSize(250, 300)
 
-        self.layout = QVBoxLayout()
+        toplayout = QVBoxLayout(self)
+        frame = QFrame(self)
+        frame.setFrameStyle(QFrame.Raised)
+        frame.setFrameShape(QFrame.StyledPanel)
+
+        self.setFixedSize(desiredsize)
+
+        frame.setFixedSize(desiredsize)
+
+        self.layout = QVBoxLayout(frame)
+
         self.path = path
         self.imgdata = fabio.open(path).data
         self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
         self.imgdata *= 255 / np.max(self.imgdata)
         self.imgdata = self.imgdata.astype(np.uint8)
-        desiredsize = 300
-        dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
-                min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
+
+        # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
+        #        min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
         # dims=(220,230)
         #print(dims)
         #print self.imgdata
@@ -177,18 +189,36 @@ class thumbwidgetitem(QWidget):
         #print self.imgdata
 
         im = Image.fromarray(self.imgdata, 'L')
-        im.thumbnail((150, 150))
+        #im.thumbnail((150, 150))
         print(im.size)
 
-        self.namelabel = QLabel(path)
+        self.namelabel = QLabel(path.split('/')[-1])
+        self.namelabel.setAlignment(Qt.AlignHCenter)
+        self.namelabel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.image = QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
                             QImage.Format_Indexed8)
-        image_label = QLabel(" ")
-        #image_label.setMaximumSize(200,200)
-        image_label.setScaledContents(True)
-        image_label.setPixmap(QPixmap.fromImage(self.image))
+        image_label = ScaledLabel(self.image)
+        image_label.setAlignment(Qt.AlignHCenter)
+
         self.layout.addWidget(image_label)
-        # self.layout.addWidget(self.namelabel)
+
+        line = QFrame()
+        line.setGeometry(QRect(0, 0, desiredsize.width() * 9 / 10, 3))
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        self.layout.addWidget(line)
+
+        self.layout.addWidget(self.namelabel)
         self.setLayout(self.layout)
 
 
+class ScaledLabel(QLabel):
+    def __init__(self, image):
+        super(ScaledLabel, self).__init__()
+        self._pixmap = QPixmap.fromImage(image)
+        self._pixmap = QPixmap(self._pixmap)
+
+    def resizeEvent(self, event):
+        self.setPixmap(self._pixmap.scaled(
+            self.width(), self.height(),
+            Qt.KeepAspectRatio))
