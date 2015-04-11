@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def radialintegrate(imgdata, experiment, mask=None):
+def radialintegrate(imgdata, experiment, mask=None, cut=None):
     centerx = experiment.getvalue('Center X')
     centery = experiment.getvalue('Center Y')
 
@@ -10,11 +10,18 @@ def radialintegrate(imgdata, experiment, mask=None):
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
         mask = np.zeros_like(imgdata)
+
+
+
     #else:
     #    mask = self.config.maskingmat
 
     #mask data
     data = imgdata * (1 - mask)
+
+    if cut is not None:
+        mask *= cut
+        data *= cut
 
     #calculate data radial profile
     y, x = np.indices((data.shape))

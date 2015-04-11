@@ -106,6 +106,9 @@ class MyMainWindow():
         self.ui.findChild(QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
         self.ui.findChild(QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
         self.ui.findChild(QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QAction, 'actionVertical_Cut').triggered.connect(self.verticalcut)
+        #self.ui.findChild(QAction, 'actionHorizontal_Cut').triggered.connect(self.horizontalcut)
+        self.ui.findChild(QAction, 'actionLine_Cut').triggered.connect(self.linecut)
         tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
         tabWidget.currentChanged.connect(self.currentchanged)
@@ -186,6 +189,9 @@ class MyMainWindow():
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionRadial_Symmetry'))
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionMirror_Symmetry'))
         self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionShow_Mask'))
+        # self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionVertical_Cut'))
+        #self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionHorizontal_Cut'))
+        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionLine_Cut'))
         self.difftoolbar.setIconSize(QSize(32, 32))
         self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
@@ -211,8 +217,8 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        #self.openimage('../samples/AgB_1s_2m.edf')
-        #self.calibrate()
+        self.openimage('../samples/AgB_1s_2m.edf')
+        self.calibrate()
         ##
 
         # Show UI and end app when it closes
@@ -227,6 +233,9 @@ class MyMainWindow():
 
         self.ui.show()
         sys.exit(self.app.exec_())
+
+    def linecut(self):
+        self.currentImageTab().tab.linecut()
 
     def switchtotab(self, index):
         self.ui.findChild(QTabWidget, 'tabWidget').setCurrentIndex(index.row())
@@ -372,7 +381,7 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
 
     def multiplottoggle(self):
-        self.currentImageTab().radialintegrate()
+        self.currentImageTab().replot()
 
     def maskload(self):
         path, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")

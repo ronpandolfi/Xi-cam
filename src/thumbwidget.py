@@ -123,6 +123,40 @@ class thumbwidgetcollection(FlowLayout):
             diriterator.next()
 
 
+class folderwidget(QWidget):  # WIP
+    def __init__(self, path):
+        super(folderwidget, self).__init__()
+
+        self.layout = QVBoxLayout()
+        self.path = path
+        self.imgdata = fabio.open(path).data
+        self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
+        self.imgdata *= 255 / np.max(self.imgdata)
+        self.imgdata = self.imgdata.astype(np.uint8)
+        desiredsize = 300
+        dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
+                min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
+        # dims=(220,230)
+        #print(dims)
+        #print self.imgdata
+        #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
+        #print self.imgdata
+
+        im = Image.fromarray(self.imgdata, 'L')
+        im.thumbnail((150, 150))
+        print(im.size)
+
+        self.namelabel = QLabel(path)
+        self.image = QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                            QImage.Format_Indexed8)
+        image_label = QLabel(" ")
+        #image_label.setMaximumSize(200,200)
+        image_label.setScaledContents(True)
+        image_label.setPixmap(QPixmap.fromImage(self.image))
+        self.layout.addWidget(image_label)
+        # self.layout.addWidget(self.namelabel)
+        self.setLayout(self.layout)
+
 class thumbwidgetitem(QWidget):
     def __init__(self, path):
         super(thumbwidgetitem, self).__init__()

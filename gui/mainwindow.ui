@@ -50,19 +50,19 @@
       <item>
        <layout class="QHBoxLayout" name="modemenu">
         <property name="spacing">
-         <number>0</number>
+         <number>-1</number>
         </property>
         <property name="leftMargin">
-         <number>0</number>
+         <number>4</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>4</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>4</number>
         </property>
         <property name="bottomMargin">
-         <number>0</number>
+         <number>4</number>
         </property>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -72,7 +72,7 @@
           <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>[Experiment Name Here]</string>
+             <string>Test Experiment #1</string>
             </property>
            </widget>
           </item>
@@ -665,6 +665,54 @@
    </property>
    <property name="text">
     <string>Show Mask</string>
+   </property>
+  </action>
+  <action name="actionPolygon_Cut">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_21.png</normaloff>icons_21.png</iconset>
+   </property>
+   <property name="text">
+    <string>Polygon Cut</string>
+   </property>
+  </action>
+  <action name="actionVertical_Cut">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_22.png</normaloff>icons_22.png</iconset>
+   </property>
+   <property name="text">
+    <string>Vertical Cut</string>
+   </property>
+  </action>
+  <action name="actionHorizontal_Cut">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_23.png</normaloff>icons_23.png</iconset>
+   </property>
+   <property name="text">
+    <string>Horizontal Cut</string>
+   </property>
+  </action>
+  <action name="actionLine_Cut">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons_24.png</normaloff>icons_24.png</iconset>
+   </property>
+   <property name="text">
+    <string>Line Cut</string>
    </property>
   </action>
  </widget>

@@ -1,3 +1,4 @@
+# --coding: utf-8 --
 import pyqtgraph as pg
 import numpy as np
 from pyFAI import detectors
@@ -15,6 +16,7 @@ import cosmics
 import fabio
 import cv2
 import visvis as vv
+from PySide.QtGui import QStackedLayout
 
 
 class imageTabTracker(QWidget):
@@ -39,8 +41,7 @@ class imageTabTracker(QWidget):
         self.parent = parent
         self.operation = operation
         self.tab = None
-        self.layout = QHBoxLayout()
-        self.setLayout(self.layout)
+
 
         parent.listmodel.widgetchanged()
 
@@ -59,19 +60,19 @@ class imageTabTracker(QWidget):
                 imgdata = self.operation(imgdata)
                 print(imgdata)
 
+            self.layout = QHBoxLayout(self)
             self.tab = imageTab(imgdata, self.experiment, self.parent)
-
             self.layout.addWidget(self.tab)
 
-            print('Successful load!')
+            print('Successful load! :P')
             self.isloaded = True
 
 
 
     def unload(self):
         if self.isloaded:
-            self.tab.parent = None
-            self.tab.deleteLater()
+            self.layout.parent = None
+            self.layout.deleteLater()
             # self.tab = None
             print('Successful unload!')
             self.isloaded = False
@@ -87,6 +88,9 @@ class imageTab(QWidget):
         :return:
         '''
         super(imageTab, self).__init__()
+        self.region = None
+        self.layout = QStackedLayout(self)
+
 
         # Save image data and the experiment
         self.imgdata = np.rot90(imgdata, 2)
@@ -112,22 +116,41 @@ class imageTab(QWidget):
         self.viewbox.setAspectLocked(True)
         self.imghistLUT = pg.HistogramLUTItem(self.imageitem)
         self.graphicslayoutwidget.addItem(self.imghistLUT, 0, 1)
-        self.orientation = 'horizontal'
+
+        # cross hair
+        linepen = pg.mkPen('#FFA500')
+        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=linepen)
+        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=linepen)
+        self.viewbox.addItem(self.vLine, ignoreBounds=True)
+        self.viewbox.addItem(self.hLine, ignoreBounds=True)
 
 
 
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
 
-
-
-
+        self.coordslabel = QLabel('Test')
+        self.layout.addWidget(self.coordslabel)
+        self.coordslabel.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self.coordslabel.setStyleSheet("background-color: rgba(0,0,0,0%)")
+        self.graphicslayoutwidget.scene().sigMouseMoved.connect(self.mouseMoved)
+        self.layout.setStackingMode(QStackedLayout.StackAll)
+        self.coordslabel.mouseMoveEvent = self.graphicslayoutwidget.mouseMoveEvent
+        self.coordslabel.mousePressEvent = self.graphicslayoutwidget.mousePressEvent
+        self.coordslabel.mouseReleaseEvent = self.graphicslayoutwidget.mouseReleaseEvent
+        self.coordslabel.mouseDoubleClickEvent = self.graphicslayoutwidget.mouseDoubleClickEvent
+        self.coordslabel.mouseGrabber = self.graphicslayoutwidget.mouseGrabber
+        self.coordslabel.wheelEvent = self.graphicslayoutwidget.wheelEvent
+        self.coordslabel.leaveEvent = self.graphicslayoutwidget.leaveEvent
+        self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
+        self.coordslabel.setMouseTracking(True)
 
         # Make a layout for the tab
-        self.Layout = QHBoxLayout()
-        self.Layout.addWidget(self.graphicslayoutwidget)
-        self.Layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.Layout)
+        backwidget = QWidget()
+        self.layout.addWidget(backwidget)
+        self.backlayout = QHBoxLayout(backwidget)
+        self.backlayout.setContentsMargins(0, 0, 0, 0)
+        self.backlayout.addWidget(self.graphicslayoutwidget)
 
         # Add the Log Intensity check button to the context menu and wire up
         # self.imgview.buildMenu()
@@ -146,7 +169,7 @@ class imageTab(QWidget):
         # self.calibrate()
 
         if self.experiment.iscalibrated:
-            self.radialintegrate()
+            self.replot()
             ##
             self.drawcenter()
 
@@ -154,6 +177,47 @@ class imageTab(QWidget):
         # self.maskoverlay()
         #self.updatelogintensity()
         self.redrawimage()
+
+    def mouseMoved(self, evt):
+        pos = evt  ## using signal proxy turns original arguments into a tuple
+        if self.viewbox.sceneBoundingRect().contains(pos):
+            mousePoint = self.viewbox.mapSceneToView(pos)
+            index = int(mousePoint.x())
+            if (0 < mousePoint.x() < self.imgdata.shape[1]) & (
+                    0 < mousePoint.y() < self.imgdata.shape[0]):  # within bounds
+                #angstrom=QChar(0x00B5)
+                self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                                         u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.1f</span>,"
+                                         u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
+                                         u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>" % (
+                                         mousePoint.x(),
+                                         mousePoint.y(),
+                                         self.imgdata[int(mousePoint.y()),
+                                                      int(mousePoint.x())],
+                                         pixel2q(mousePoint.x(),
+                                                 mousePoint.y(),
+                                                 self.experiment),
+                                         pixel2q(None,
+                                                 mousePoint.y(),
+                                                 self.experiment),
+                                         pixel2q(mousePoint.x(),
+                                                 None,
+                                                 self.experiment)))
+                self.coordslabel.setVisible(True)
+                self.coordslabel
+            else:
+                self.coordslabel.setVisible(False)
+            self.vLine.setPos(mousePoint.x())
+            self.hLine.setPos(mousePoint.y())
+
+    def leaveEvent(self, evt):
+        self.hLine.setVisible(False)
+        self.vLine.setVisible(False)
+        self.coordslabel.setVisible(False)
+
+    def enterEvent(self, evt):
+        self.hLine.setVisible(True)
+        self.vLine.setVisible(True)
 
 
     def redrawimage(self):
@@ -211,13 +275,47 @@ class imageTab(QWidget):
 
         self.imageitem.setImage(img)
 
-
-    def updatelogintensity(self):
-        # When the log intensity button toggles, switch the log scaling on the image
-        if self.parentwindow.ui.findChild(QAction, 'actionLog_Intensity').isChecked():
-            self.imageitem.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)).T)
+    def linecut(self):
+        if self.parentwindow.ui.findChild(QAction, 'actionLine_Cut').isChecked():
+            self.region = pg.LineSegmentROI(
+                [[self.experiment.getvalue('Center X'), self.experiment.getvalue('Center Y')],
+                 [self.experiment.getvalue('Center X'), self.imgdata.shape[0]]])
+            self.viewbox.addItem(self.region)
+            self.replot()
+            self.region.sigRegionChanged.connect(self.replot)
         else:
-            self.imageitem.setImage(self.imgdata.T)
+            self.viewbox.removeItem(self.region)
+            self.region = None
+            self.replot()
+
+            # if self.parentwindow.ui.findChild(QAction,'actionVertical_Cut').isChecked():
+            #    try:
+            #        self.viewbox.removeItem(self.region)
+            #    except AttributeError:
+            #        print('Attribute error in verticalcut')
+            #    self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical,brush=pg.mkBrush('#00FFFF32'),bounds=[0,self.imgdata.shape[1]],values=[self.experiment.getvalue('Center X')-10,10+self.experiment.getvalue('Center X')])
+            #    for line in self.region.lines:
+            #        line.setPen(pg.mkPen('#00FFFF'))
+            #    self.region.sigRegionChangeFinished.connect(self.replot)
+            #    self.viewbox.addItem(self.region)
+            #else:
+            #    self.viewbox.removeItem(self.region)
+            #    self.region = None
+
+    # def horizontalcut(self):
+    #    if self.parentwindow.ui.findChild(QAction,'actionHorizontal_Cut').isChecked():
+    #        try:
+    #            self.viewbox.removeItem(self.region)
+    #        except AttributeError:
+    #            print('Attribute error in horizontalcut')
+    #        self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal,brush=pg.mkBrush('#00FFFF32'),bounds=[0,self.imgdata.shape[0]],values=[self.experiment.getvalue('Center Y')-10,10+self.experiment.getvalue('Center Y')])
+    #        for line in self.region.lines:
+    #            line.setPen(pg.mkPen('#00FFFF'))
+    #        self.viewbox.addItem(self.region)
+    #    else:
+    #        self.viewbox.removeItem(self.region)
+    #        self.region = None
+
 
     def removecosmics(self):
         c = cosmics.cosmicsimage(self.imgdata)
@@ -239,17 +337,6 @@ class imageTab(QWidget):
         self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center X')],
                                              [self.experiment.getvalue('Center Y')], pen=None, symbol='o')
         self.viewbox.addItem(self.centerplot)
-
-    def radialintegrate(self):
-        # Radial integraion
-        self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
-                                                                 mask=self.experiment.mask)
-        self.parentwindow.integration.clear()
-
-        if self.parentwindow.ui.findChild(QAction, 'actionMultiPlot').isChecked():
-            self.replotothers()
-
-        self.replotprimary()
 
     def calibrate(self):
         # Choose detector
@@ -278,12 +365,49 @@ class imageTab(QWidget):
         self.experiment.setValue('Detector Distance', sdd)
         self.experiment.iscalibrated = True
 
-        self.radialintegrate()
-        #self.maskoverlay()
+        self.replot()
+        # self.maskoverlay()
+
+    def replot(self):
+        self.parentwindow.integration.clear()
+
+        if self.parentwindow.ui.findChild(QAction, 'actionMultiPlot').isChecked():
+            self.replotothers()
+
+        self.replotprimary()
 
     def replotprimary(self):
-        # Replot
-        self.parentwindow.integration.plot(self.q, self.radialprofile)
+        cut = None
+
+        if self.parentwindow.ui.findChild(QAction, 'actionLine_Cut').isChecked():
+            # regionbounds=self.region.getRegion()
+            #cut = np.zeros_like(self.imgdata)
+            #cut[regionbounds[0]:regionbounds[1],:]=1
+            cut = self.region.getArrayRegion(self.imgdata.T, self.imageitem)
+
+            #self.q=pixel2q(np.arange(-self.imgdata.shape[0]/2,self.imgdata.shape[0]/2,1))
+            x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
+                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
+                            cut.__len__())
+            y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
+                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
+                            cut.__len__())
+            #self.viewbox.mapToItem(self.imageitem,self.viewbox.mapToScene(self.region.getSceneHandlePositions(0)[1]))
+            q = pixel2q(x, y, self.experiment)
+            qmiddle = q.argmin()
+            leftq = -q[0:qmiddle]
+            rightq = q[qmiddle:]
+
+            if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
+            if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
+
+        else:
+
+            # Radial integraion
+            self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
+                                                                     mask=self.experiment.mask, cut=cut)
+            # Replot
+            self.parentwindow.integration.plot(self.q, self.radialprofile)
 
     def replotothers(self):
         for tab in self.parentwindow.ui.findChildren(imageTab):
@@ -347,7 +471,7 @@ class imageTab(QWidget):
             self.viewbox.removeItem(self.maskROI)
 
             # Redo the integration
-            self.radialintegrate()
+            self.replot()
 
     def maskoverlay(self):
         # Draw the mask as a red channel image with an alpha mask
@@ -355,10 +479,6 @@ class imageTab(QWidget):
             self.experiment.mask.T, np.zeros_like(self.experiment.mask).T, np.zeros_like(self.experiment.mask).T,
             self.experiment.mask.T)), opacity=.25)
 
-    def viewmask(self):
-        view = pg.ImageView()
-        view.setImage(self.experiment.mask)
-        view.show()
 
     def finddetector(self):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
@@ -398,3 +518,17 @@ def imtest(image):
         cv2.imshow('step?', cv2.resize(image.astype(np.uint8), (0, 0), fx=.2, fy=.2))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+
+def pixel2q(x, y, experiment):
+    if x is None:
+        x = experiment.getvalue('Center X')
+    if y is None:
+        y = experiment.getvalue('Center Y')
+
+    r = np.sqrt((x - experiment.getvalue('Center X')) ** 2 + (y - experiment.getvalue('Center Y')) ** 2)
+    theta = np.arctan2(r * experiment.getvalue('Pixel Size X'),
+                       experiment.getvalue('Detector Distance'))
+    # theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
+    wavelength = experiment.getvalue('Wavelength')
+    return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
