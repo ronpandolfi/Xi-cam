@@ -84,3 +84,13 @@ QToolButton
     width:32px;
     height:32px;
 }
+
+#thumbbox QFrame:focus{
+    background-color:#666666;
+    border-radius:6px;
+}
+
+#thumbbox QFrame * {
+    background-color: transparent;
+}
+

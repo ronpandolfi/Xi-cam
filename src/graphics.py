@@ -121,6 +121,8 @@ class imageTab(QWidget):
         linepen = pg.mkPen('#FFA500')
         self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=linepen)
         self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=linepen)
+        self.vLine.setVisible(False)
+        self.hLine.setVisible(False)
         self.viewbox.addItem(self.vLine, ignoreBounds=True)
         self.viewbox.addItem(self.hLine, ignoreBounds=True)
 
@@ -129,7 +131,7 @@ class imageTab(QWidget):
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
 
-        self.coordslabel = QLabel('Test')
+        self.coordslabel = QLabel('')
         self.layout.addWidget(self.coordslabel)
         self.coordslabel.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
         self.coordslabel.setStyleSheet("background-color: rgba(0,0,0,0%)")
@@ -225,6 +227,7 @@ class imageTab(QWidget):
         isradialsymmetry = self.parentwindow.ui.findChild(QAction, 'actionRadial_Symmetry').isChecked()
         ismirrorsymmetry = self.parentwindow.ui.findChild(QAction, 'actionMirror_Symmetry').isChecked()
         ismaskshown = self.parentwindow.ui.findChild(QAction, 'actionShow_Mask').isChecked()
+        iscake = self.parentwindow.ui.findChild(QAction, 'actionCake').isChecked()
         img = self.imgdata.T.copy()
 
         # When the log intensity button toggles, switch the log scaling on the image
@@ -265,6 +268,9 @@ class imageTab(QWidget):
             imtest(padmask)
             imtest(symimg * padmask * (1 - marginmask))
             img = img * (marginmask) + symimg * padmask * (1 - marginmask)
+
+        if iscake:
+            img, x, y = integration.cake(img, self.experiment)
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((
@@ -349,10 +355,11 @@ class imageTab(QWidget):
         r = r.astype(np.int)
         tbin = np.bincount(r.ravel(), self.imgdata.ravel())
         nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
-        radialprofile = tbin / nr
+        with np.errstate(divide='ignore', invalid='ignore'):
+            radialprofile = tbin / nr
 
         # Find peak positions, they represent the radii
-        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 1)), np.arange(30, 100))
+        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(30, 100))
 
         # Get the tallest peak
         bestpeak = peaks[radialprofile[peaks].argmax()]
@@ -404,8 +411,8 @@ class imageTab(QWidget):
         else:
 
             # Radial integraion
-            self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
-                                                                     mask=self.experiment.mask, cut=cut)
+            self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
+                                                                          mask=self.experiment.mask)
             # Replot
             self.parentwindow.integration.plot(self.q, self.radialprofile)
 

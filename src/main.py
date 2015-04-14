@@ -106,6 +106,7 @@ class MyMainWindow():
         self.ui.findChild(QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
         self.ui.findChild(QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
         self.ui.findChild(QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QAction, 'actionCake').triggered.connect(self.redrawcurrent)
         # self.ui.findChild(QAction, 'actionVertical_Cut').triggered.connect(self.verticalcut)
         #self.ui.findChild(QAction, 'actionHorizontal_Cut').triggered.connect(self.horizontalcut)
         self.ui.findChild(QAction, 'actionLine_Cut').triggered.connect(self.linecut)
@@ -217,8 +218,8 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        # self.openimage('../samples/AgB_1s_2m.edf')
-        #self.calibrate()
+        self.openimage('../samples/AgB_00001.edf')
+        self.calibrate()
         ##
 
         # Show UI and end app when it closes

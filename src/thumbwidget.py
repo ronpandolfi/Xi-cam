@@ -158,21 +158,29 @@ class folderwidget(QWidget):  # WIP
         # self.layout.addWidget(self.namelabel)
         self.setLayout(self.layout)
 
-class thumbwidgetitem(QWidget):
+
+class thumbwidgetitem(QFrame):
     def __init__(self, path):
         super(thumbwidgetitem, self).__init__()
+        self.setObjectName('thumb')
         desiredsize = QSize(250, 300)
 
-        toplayout = QVBoxLayout(self)
-        frame = QFrame(self)
-        frame.setFrameStyle(QFrame.Raised)
-        frame.setFrameShape(QFrame.StyledPanel)
+        # toplayout = QVBoxLayout(self)
+        #self.frame = QFrame(self)
+
 
         self.setFixedSize(desiredsize)
+        self.setAutoFillBackground(True)
+        self.setFocusPolicy(Qt.StrongFocus)
 
-        frame.setFixedSize(desiredsize)
+        # self.frame.setFixedSize(desiredsize)
+        #self.frame.setFrameStyle(QFrame.Plain)
+        #self.frame.setFrameShape(QFrame.StyledPanel)
+        #self.setStyle('background-color:#999999')
 
-        self.layout = QVBoxLayout(frame)
+
+
+        self.layout = QVBoxLayout(self)  #.frame
 
         self.path = path
         self.imgdata = fabio.open(path).data
@@ -210,6 +218,16 @@ class thumbwidgetitem(QWidget):
 
         self.layout.addWidget(self.namelabel)
         self.setLayout(self.layout)
+
+    def enterEvent(self, *args, **kwargs):
+        # self.frame.setFrameStyle(QFrame.Raised)
+        pass
+
+        #def leaveEvent(self, *args, **kwargs):
+        #    self.frame.setFrameStyle(QFrame.Plain)
+
+        #def mousePressEvent(self, *args, **kwargs):
+        #    self.frame.setFrameStyle(QFrame.Sunken)
 
 
 class ScaledLabel(QLabel):

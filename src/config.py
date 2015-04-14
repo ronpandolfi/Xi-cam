@@ -1,4 +1,7 @@
 import pickle
+import pyFAI
+from pyFAI import detectors
+
 
 from pyqtgraph.parametertree import Parameter
 import numpy as np
@@ -89,6 +92,26 @@ class experiment(Parameter):
         # Set the value of the named child
         self.child(name).setValue(value)
 
+    def getAI(self):
+        """
+        :rtype : pyFAI.AzimuthalIntegrator
+        """
+        # print(self.getDetector().MAX_SHAPE)
+        AI = pyFAI.AzimuthalIntegrator(dist=self.getvalue('Detector Distance'),
+                                       poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+                                       poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+                                       rot1=0,
+                                       rot2=0,
+                                       rot3=0,
+                                       pixel1=self.getvalue('Pixel Size Y'),
+                                       pixel2=self.getvalue('Pixel Size X'),
+                                       detector=self.getDetector(),
+                                       wavelength=self.getvalue('Wavelength'))
+        #print AI
+        return AI
+
+    def getDetector(self):
+        return detectors.ALL_DETECTORS[self.getvalue('Detector')]()
 
     def edit(self):
         pass

@@ -332,7 +332,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+             <number>1</number>
          </property>
          <widget class="QWidget" name="page">
           <property name="sizePolicy">
@@ -434,8 +434,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>28</height>
+                   <width>687</width>
+                   <height>522</height>
                </rect>
               </property>
              </widget>

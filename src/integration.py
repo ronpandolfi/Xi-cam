@@ -54,3 +54,21 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
                           [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
 
     return (q, radialprofile)
+
+
+def radialintegratepyFAI(imgdata, experiment, mask=None):
+    AI = experiment.getAI()
+    """:type : pyFAI.AzimuthalIntegrator"""
+    if mask is None:
+        print("No mask defined, creating temporary empty mask.")
+        mask = np.zeros_like(imgdata)
+    xres = 1000
+    return AI.integrate1d(imgdata, xres, mask=mask, method='full_csr')
+
+
+def cake(imgdata, experiment, mask=None):
+    AI = experiment.getAI()
+    """:type : pyFAI.AzimuthalIntegrator"""
+    xres = 1000;
+    yres = 1000
+    return AI.integrate2d(imgdata.T, xres, yres, mask=np.zeros(experiment.getDetector().MAX_SHAPE))
