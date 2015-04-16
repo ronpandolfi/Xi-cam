@@ -47,9 +47,11 @@ from PySide.QtGui import QWidget
 from PySide.QtGui import QFont
 from PySide.QtGui import QPushButton
 from PySide.QtGui import QStackedWidget
+from PySide.QtGui import QScrollArea
 # from PySide.QtCore import QStringList
 from config import experiment
 from graphics import imageTabTracker
+from timeline import timelinetabtracker
 from graphics import smallimageview
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
@@ -115,12 +117,20 @@ class MyMainWindow():
         tabWidget.currentChanged.connect(self.currentchanged)
         self.previoustabindex = -1
 
+        timelinetabwidget = self.ui.findChild(QTabWidget, 'timelinetabwidget')
+        # tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
+        timelinetabwidget.currentChanged.connect(self.currentchangedtimeline)
+        self.previoustimelinetabindex = -1
+
         self.treemodel = QFileSystemModel()
 
         tree = self.ui.findChild(QTreeView, 'treebrowser')
         tree.setModel(self.treemodel)
         parent = QDir()
         parent.cdUp()
+        parent.cdUp()
+        parent.cdUp()
+
         self.treemodel.setRootPath(parent.absolutePath())
         tree.setRootIndex(self.treemodel.index(parent.absolutePath()))
         header = tree.header()
@@ -138,6 +148,7 @@ class MyMainWindow():
 
         self.thumbwidgets = thumbwidgetcollection()
         self.ui.findChild(QWidget, 'thumbbox').setLayout(self.thumbwidgets)
+        #q=self.ui.findChild(QScrollArea, 'scrollArea').setFocusPolicy()
 
 
 
@@ -158,6 +169,7 @@ class MyMainWindow():
 
         self.ui.findChild(QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
         self.ui.findChild(QPushButton, 'viewerbutton').clicked.connect(self.showviewer)
+        self.ui.findChild(QPushButton, 'timelinebutton').clicked.connect(self.showtimeline)
 
 
         # Add a plot widget to the splitter for integration
@@ -168,6 +180,18 @@ class MyMainWindow():
 
         splitter = self.ui.findChild(QSplitter, 'splitter')
         splitter.moveSplitter(0,0)
+
+        # Add a plot widget to the timeline splitter for frameplot
+        timeline = pg.PlotWidget()
+        self.timeline = timeline.getPlotItem()
+        self.timeline.showAxis('left', False)
+        self.timeline.showAxis('bottom', False)
+        self.timeline.showAxis('top', True)
+        self.timeline.showGrid(x=True)
+        self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500'), movable=True)
+        self.timeline.addItem(self.timeruler)
+        # self.timeline.setLabel('bottom', u'Frame #', '')
+        self.ui.findChild(QVBoxLayout, 'timeline').addWidget(timeline)
 
 
         menu = QMenu()
@@ -197,12 +221,14 @@ class MyMainWindow():
         self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
         self.booltoolbar = QToolBar()
+        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionTimeline'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd_with_coefficient'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract_with_coefficient'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionDivide'))
         self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAverage'))
+        self.ui.findChild(QAction, 'actionTimeline').triggered.connect(self.opentimeline)
         self.ui.findChild(QAction, 'actionAdd').triggered.connect(self.addmode)
         self.ui.findChild(QAction, 'actionSubtract').triggered.connect(self.subtractmode)
         self.ui.findChild(QAction, 'actionAdd_with_coefficient').triggered.connect(self.addwithcoefmode)
@@ -218,8 +244,8 @@ class MyMainWindow():
         self.statusbar.showMessage('Ready...')
         self.app.processEvents()
         ##
-        self.openimage('../samples/AgB_00001.edf')
-        self.calibrate()
+        # self.openimage('../samples/AgB_00001.edf')
+        #self.calibrate()
         ##
 
         # Show UI and end app when it closes
@@ -240,6 +266,13 @@ class MyMainWindow():
 
     def switchtotab(self, index):
         self.ui.findChild(QTabWidget, 'tabWidget').setCurrentIndex(index.row())
+
+    def opentimeline(self):
+        indices = self.ui.findChild(QTreeView, 'treebrowser').selectedIndexes()
+        paths = [self.treemodel.filePath(index) for index in indices]
+        newtimelinetab = timelinetabtracker(paths, self.experiment, self)
+        filenames = [path.split('/')[-1] for path in paths]
+        self.ui.findChild(QTabWidget, 'timelinetabwidget').addTab(newtimelinetab, 'Timeline: ' + ', '.join(filenames))
 
     def addmode(self):
         operation = lambda m: np.sum(m, (0))
@@ -291,6 +324,19 @@ class MyMainWindow():
                 print('AttributeError intercepted in currentchanged()')
             tabwidget.widget(index).load()
         self.previoustabindex = index
+
+    def currentchangedtimeline(self, index):
+        print('Changing from', self.previoustimelinetabindex, 'to', index)
+        if index > -1:
+            timelinetabwidget = self.ui.findChild(QTabWidget, 'timelinetabwidget')
+
+            try:
+
+                timelinetabwidget.widget(self.previoustimelinetabindex).unload()
+            except AttributeError:
+                print('AttributeError intercepted in currentchanged()')
+            timelinetabwidget.widget(index).load()
+        self.previoustimelinetabindex = index
 
 
     def load_image(self, path):
@@ -410,6 +456,9 @@ class MyMainWindow():
 
     def showviewer(self):
         self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(0)
+
+    def showtimeline(self):
+        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(2)
 
 
 if __name__ == '__main__':

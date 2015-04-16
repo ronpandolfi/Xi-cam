@@ -188,7 +188,8 @@ class imageTab(QWidget):
             if (0 < mousePoint.x() < self.imgdata.shape[1]) & (
                     0 < mousePoint.y() < self.imgdata.shape[0]):  # within bounds
                 #angstrom=QChar(0x00B5)
-                self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                if self.experiment.iscalibrated:
+                    self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                          u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.1f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                          u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>" % (
@@ -205,8 +206,17 @@ class imageTab(QWidget):
                                          pixel2q(mousePoint.x(),
                                                  None,
                                                  self.experiment)))
+                else:
+                    self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                                             u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.1f</span>,"
+                                             u"  Calibration Required..." % (
+                                                 mousePoint.x(),
+                                                 mousePoint.y(),
+                                                 self.imgdata[int(mousePoint.y()),
+                                                              int(mousePoint.x())],
+                                             ))
+
                 self.coordslabel.setVisible(True)
-                self.coordslabel
             else:
                 self.coordslabel.setVisible(False)
             self.vLine.setPos(mousePoint.x())
