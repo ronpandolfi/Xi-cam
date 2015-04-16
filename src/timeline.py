@@ -75,7 +75,7 @@ class timelinetab(graphics.imageTab):
 
     def plotvariation(self):
         self.parentwindow.timeline.clear()
-        self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500'), movable=True)
+        self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.parentwindow.timeline.addItem(self.parentwindow.timeruler)
         self.parentwindow.timeruler.setBounds([0, self.variation.__len__() - 1])
         self.parentwindow.timeruler.sigPositionChanged.connect(self.timerulermoved)
