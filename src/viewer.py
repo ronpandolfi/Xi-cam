@@ -1,4 +1,7 @@
 # --coding: utf-8 --
+
+from PySide import QtGui
+from PySide.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 from pyFAI import detectors
@@ -6,29 +9,22 @@ import scipy
 
 import integration
 import center_approx
-from PySide.QtGui import QHBoxLayout
 
-from PySide.QtGui import QWidget
-from PySide.QtGui import QLabel
-from PySide.QtCore import Qt
-from PySide.QtGui import QAction
 import cosmics
 import fabio
 import cv2
-import visvis as vv
-from PySide.QtGui import QStackedLayout
 
 
-class imageTabTracker(QWidget):
+class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
-        '''
+        """
         A collection of references that can be used to make an imageTab dynamically and dispose of it when unneeded
-        :type path: str
-        :param path:
-        :param experiment:
-        :param parent:
+        :type paths: list[str]
+        :type experiment: config.experiment
+        :type parent: main.MyMainWindow
+        :type operation:
         :return:
-        '''
+        """
         super(imageTabTracker, self).__init__()
 
         # When tab is activated, load an image tab and put it inside.
@@ -41,6 +37,7 @@ class imageTabTracker(QWidget):
         self.parent = parent
         self.operation = operation
         self.tab = None
+        self.layout = None
 
 
         parent.listmodel.widgetchanged()
@@ -53,14 +50,14 @@ class imageTabTracker(QWidget):
         if not self.isloaded:
             if self.operation is None:
                 imgdata = fabio.open(self.paths).data
-                self.parent.ui.findChild(QLabel, 'filenamelabel').setText(self.paths)
+                self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
             else:
                 imgdata = [fabio.open(path).data for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 print(imgdata)
 
-            self.layout = QHBoxLayout(self)
+            self.layout = QtGui.QHBoxLayout(self)
             self.tab = imageTab(imgdata, self.experiment, self.parent)
             self.layout.addWidget(self.tab)
 
@@ -78,18 +75,18 @@ class imageTabTracker(QWidget):
             self.isloaded = False
 
 
-
-class imageTab(QWidget):
+class imageTab(QtGui.QWidget):
     def __init__(self, imgdata, experiment, parent):
-        '''
+        """
         A tab containing an imageview and plotview set in a splitter. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
         :param experiment:
         :return:
-        '''
+        """
         super(imageTab, self).__init__()
         self.region = None
-        self.layout = QStackedLayout(self)
+        self.maskROI = None
+        self.layout = QtGui.QStackedLayout(self)
 
 
         # Save image data and the experiment
@@ -131,12 +128,12 @@ class imageTab(QWidget):
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
 
-        self.coordslabel = QLabel('')
+        self.coordslabel = QtGui.QLabel('')
         self.layout.addWidget(self.coordslabel)
         self.coordslabel.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
         self.coordslabel.setStyleSheet("background-color: rgba(0,0,0,0%)")
         self.graphicslayoutwidget.scene().sigMouseMoved.connect(self.mouseMoved)
-        self.layout.setStackingMode(QStackedLayout.StackAll)
+        self.layout.setStackingMode(QtGui.QStackedLayout.StackAll)
         self.coordslabel.mouseMoveEvent = self.graphicslayoutwidget.mouseMoveEvent
         self.coordslabel.mousePressEvent = self.graphicslayoutwidget.mousePressEvent
         self.coordslabel.mouseReleaseEvent = self.graphicslayoutwidget.mouseReleaseEvent
@@ -147,10 +144,12 @@ class imageTab(QWidget):
         self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
         self.coordslabel.setMouseTracking(True)
 
+        self.centerplot = None
+
         # Make a layout for the tab
-        backwidget = QWidget()
+        backwidget = QtGui.QWidget()
         self.layout.addWidget(backwidget)
-        self.backlayout = QHBoxLayout(backwidget)
+        self.backlayout = QtGui.QHBoxLayout(backwidget)
         self.backlayout.setContentsMargins(0, 0, 0, 0)
         self.backlayout.addWidget(self.graphicslayoutwidget)
 
@@ -184,7 +183,6 @@ class imageTab(QWidget):
         pos = evt  ## using signal proxy turns original arguments into a tuple
         if self.viewbox.sceneBoundingRect().contains(pos):
             mousePoint = self.viewbox.mapSceneToView(pos)
-            index = int(mousePoint.x())
             if (0 < mousePoint.x() < self.imgdata.shape[1]) & (
                     0 < mousePoint.y() < self.imgdata.shape[0]):  # within bounds
                 #angstrom=QChar(0x00B5)
@@ -233,11 +231,11 @@ class imageTab(QWidget):
 
 
     def redrawimage(self):
-        islogintensity = self.parentwindow.ui.findChild(QAction, 'actionLog_Intensity').isChecked()
-        isradialsymmetry = self.parentwindow.ui.findChild(QAction, 'actionRadial_Symmetry').isChecked()
-        ismirrorsymmetry = self.parentwindow.ui.findChild(QAction, 'actionMirror_Symmetry').isChecked()
-        ismaskshown = self.parentwindow.ui.findChild(QAction, 'actionShow_Mask').isChecked()
-        iscake = self.parentwindow.ui.findChild(QAction, 'actionCake').isChecked()
+        islogintensity = self.parentwindow.ui.findChild(QtGui.QAction, 'actionLog_Intensity').isChecked()
+        isradialsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').isChecked()
+        ismirrorsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').isChecked()
+        ismaskshown = self.parentwindow.ui.findChild(QtGui.QAction, 'actionShow_Mask').isChecked()
+        iscake = self.parentwindow.ui.findChild(QtGui.QAction, 'actionCake').isChecked()
         img = self.imgdata.T.copy()
 
         # When the log intensity button toggles, switch the log scaling on the image
@@ -254,14 +252,14 @@ class imageTab(QWidget):
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
             imtest(symimg)
-            marginmask = 1 - (detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T)
+            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
             imtest(marginmask)
 
-            x, y = np.indices((img.shape))
+            x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
             imtest(padmask)
             imtest(symimg * padmask * (1 - marginmask))
-            img = img * (marginmask) + symimg * padmask * (1 - marginmask)
+            img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         elif ismirrorsymmetry:
             centery = self.experiment.getvalue('Center Y')
@@ -270,14 +268,14 @@ class imageTab(QWidget):
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(yshift), axis=1)
             imtest(symimg)
-            marginmask = 1 - (detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T)
+            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
             imtest(marginmask)
 
-            x, y = np.indices((img.shape))
+            x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])))
             imtest(padmask)
             imtest(symimg * padmask * (1 - marginmask))
-            img = img * (marginmask) + symimg * padmask * (1 - marginmask)
+            img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         if iscake:
             img, x, y = integration.cake(img, self.experiment)
@@ -292,7 +290,7 @@ class imageTab(QWidget):
         self.imageitem.setImage(img)
 
     def linecut(self):
-        if self.parentwindow.ui.findChild(QAction, 'actionLine_Cut').isChecked():
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
             self.region = pg.LineSegmentROI(
                 [[self.experiment.getvalue('Center X'), self.experiment.getvalue('Center Y')],
                  [self.experiment.getvalue('Center X'), self.imgdata.shape[0]]])
@@ -344,8 +342,8 @@ class imageTab(QWidget):
         [x, y] = center_approx.center_approx(self.imgdata)
 
         # Set the center in the experiment
-        self.experiment.setValue('Center X', x)
-        self.experiment.setValue('Center Y', y)
+        self.experiment.setvalue('Center X', x)
+        self.experiment.setvalue('Center Y', y)
         self.drawcenter()
 
     def drawcenter(self):
@@ -356,11 +354,11 @@ class imageTab(QWidget):
 
     def calibrate(self):
         # Choose detector
-        self.detector = self.finddetector()
+        self.finddetector()
 
         self.findcenter()
 
-        y, x = np.indices((self.imgdata.shape))
+        y, x = np.indices(self.imgdata.shape)
         r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
         r = r.astype(np.int)
         tbin = np.bincount(r.ravel(), self.imgdata.ravel())
@@ -379,7 +377,7 @@ class imageTab(QWidget):
         tantth = np.tan(tth)
         sdd = bestpeak * self.experiment.getvalue('Pixel Size X') / tantth
 
-        self.experiment.setValue('Detector Distance', sdd)
+        self.experiment.setvalue('Detector Distance', sdd)
         self.experiment.iscalibrated = True
 
         self.replot()
@@ -388,7 +386,7 @@ class imageTab(QWidget):
     def replot(self):
         self.parentwindow.integration.clear()
 
-        if self.parentwindow.ui.findChild(QAction, 'actionMultiPlot').isChecked():
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionMultiPlot').isChecked():
             self.replotothers()
 
         self.replotprimary()
@@ -396,7 +394,7 @@ class imageTab(QWidget):
     def replotprimary(self):
         cut = None
 
-        if self.parentwindow.ui.findChild(QAction, 'actionLine_Cut').isChecked():
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
             # regionbounds=self.region.getRegion()
             #cut = np.zeros_like(self.imgdata)
             #cut[regionbounds[0]:regionbounds[1],:]=1
@@ -503,9 +501,9 @@ class imageTab(QWidget):
                 detector = detector()
                 mask = detector.calc_mask()
                 self.experiment.addtomask(mask)
-                self.experiment.setValue('Pixel Size X', detector.pixel1)
-                self.experiment.setValue('Pixel Size Y', detector.pixel2)
-                self.experiment.setValue('Detector', name)
+                self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                self.experiment.setvalue('Detector', name)
                 return detector
 
 
@@ -519,6 +517,7 @@ class smallimageview(pg.GraphicsLayoutWidget):
 
         self.imageitem = pg.ImageItem()
         self.view.addItem(self.imageitem)
+        self.imgdata = None
         # self.setMaximumHeight(100)
         # self.addItem(self.imageitem)
 

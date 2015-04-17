@@ -1,7 +1,7 @@
 import pyqtgraph as pg
 import fabio
 from PySide import QtGui
-import graphics
+import viewer
 import integration
 import numpy as np
 
@@ -38,7 +38,7 @@ class timelinetabtracker(QtGui.QWidget):
             self.isloaded = False
 
 
-class timelinetab(graphics.imageTab):
+class timelinetab(viewer.imageTab):
     def __init__(self, paths, experiment, parentwindow):
         imgdata = fabio.open(paths[0]).data
         super(timelinetab, self).__init__(imgdata, experiment, parentwindow)
@@ -49,6 +49,7 @@ class timelinetab(graphics.imageTab):
         self.variation = np.zeros(self.paths.__len__() - 1)
         self.scan()
         self.plotvariation()
+        self.gotomax()
 
 
     def scan(self):
@@ -79,13 +80,21 @@ class timelinetab(graphics.imageTab):
         self.parentwindow.timeline.addItem(self.parentwindow.timeruler)
         self.parentwindow.timeruler.setBounds([0, self.variation.__len__() - 1])
         self.parentwindow.timeruler.sigPositionChanged.connect(self.timerulermoved)
-        print(self.parentwindow.timeline.plot(self.variation))
+        self.parentwindow.timeline.plot(self.variation)
+        # self.parentwindow.timearrow = pg.ArrowItem(angle=-90, tipAngle=30, baseAngle=20,headLen=15,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
+        #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
+        #self.parentwindow.timearrow.setPos(0,self.variation[0])
 
     def timerulermoved(self):
-        self.parentwindow.timeruler.setValue(int(round(self.parentwindow.timeruler.value())))
+        pos = int(round(self.parentwindow.timeruler.value()))
+        self.parentwindow.timeruler.setValue(pos)
+        #self.parentwindow.timearrow.setPos(pos,self.variation[pos])
         self.redrawframe()
 
     def redrawframe(self):
         path = self.paths[self.parentwindow.timeruler.value() + 1]
         self.imgdata = np.rot90(fabio.open(path).data, 2)
         self.redrawimage()
+
+    def gotomax(self):
+        self.parentwindow.timeruler.setValue(np.argmax(self.variation))

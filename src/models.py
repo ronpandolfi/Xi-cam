@@ -1,13 +1,10 @@
-from PySide.QtCore import QAbstractListModel
-from PySide.QtCore import QModelIndex
-from PySide.QtGui import QColor
 from PySide.QtCore import Qt
-from PySide.QtGui import QItemDelegate
+from PySide import QtCore
 
 
-class openfilesmodel(QAbstractListModel):
+class openfilesmodel(QtCore.QAbstractListModel):
     def __init__(self, tabwidget):
-        QAbstractListModel.__init__(self)
+        QtCore.QAbstractListModel.__init__(self)
 
         # Cache the passed data list as a class member.
         # self._items = mlist
@@ -17,7 +14,7 @@ class openfilesmodel(QAbstractListModel):
     def widgetchanged(self):
         self.dataChanged.emit(0, 0)
 
-    def rowCount(self, parent=QModelIndex()):
+    def rowCount(self, parent=QtCore.QModelIndex()):
         return self.tabwidget.count()
 
     def data(self, index, role=Qt.DisplayRole):

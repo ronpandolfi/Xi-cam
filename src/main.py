@@ -19,47 +19,22 @@
 import sys
 import os
 
-import qdarkstyle
 import fabio
 
-
 from PySide.QtUiTools import QUiLoader
-from PySide.QtCore import QFile
-from PySide.QtGui import QApplication
-from PySide.QtGui import QTabWidget
-from PySide.QtGui import QFileDialog
-from PySide.QtGui import QAction
-from PySide.QtGui import QVBoxLayout
-from PySide.QtGui import QMenu
-from PySide.QtGui import QToolButton
-from PySide.QtGui import QToolBar
-from PySide.QtGui import QMessageBox
-from PySide.QtGui import QSplitter
-from PySide.QtGui import QInputDialog
-from PySide.QtGui import QFileSystemModel
-from PySide.QtGui import QTreeView
-from PySide.QtCore import QDir
-from PySide.QtCore import QSize
-from PySide.QtGui import QListView
-from PySide.QtGui import QTableView
-from PySide.QtGui import QStandardItem
-from PySide.QtGui import QWidget
-from PySide.QtGui import QFont
-from PySide.QtGui import QPushButton
-from PySide.QtGui import QStackedWidget
-from PySide.QtGui import QScrollArea
-# from PySide.QtCore import QStringList
-from config import experiment
-from graphics import imageTabTracker
-from timeline import timelinetabtracker
-from graphics import smallimageview
+from PySide import QtGui
+from PySide import QtCore
+
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
 import pyqtgraph as pg
 import models
-from thumbwidget import thumbwidgetcollection
-from PySide.QtGui import QCheckBox
+import config
+import viewer
+import library
+import timeline
 import numpy as np
+
 
 
 # sys.path.append("../gui/")
@@ -67,66 +42,66 @@ import numpy as np
 class MyMainWindow():
     def __init__(self):
         # Initialize PySide app with dark stylesheet
-        self.app = QApplication(sys.argv)
+        self.app = QtGui.QApplication(sys.argv)
         self.app.setStyle('Plastique')
         with open('../gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
         # print(qdarkstyle.load_stylesheet())
         #self.app.setStyle('plastique')
         font = self.app.font()
-        font.setStyleStrategy(QFont.PreferAntialias)
+        font.setStyleStrategy(QtGui.QFont.PreferAntialias)
         self.app.setFont(font)
 
         # Load the gui from file
         loader = QUiLoader()
-        file = QFile("../gui/mainwindow.ui")
-        file.open(QFile.ReadOnly)
-        self.ui = loader.load(file)
-        file.close()
+        f = QtCore.QFile("../gui/mainwindow.ui")
+        f.open(QtCore.QFile.ReadOnly)
+        self.ui = loader.load(f)
+        f.close()
 
         # Initialize an empty experiment
-        self.experiment = experiment()
+        self.experiment = config.experiment()
 
         # Connect the experiment tree to a pg tree view and wire up
         self.experimentTree = ParameterTree()
         self.bindexperiment()
-        settingsList = self.ui.findChild(QVBoxLayout, 'propertiesBox')
+        settingsList = self.ui.findChild(QtGui.QVBoxLayout, 'propertiesBox')
         settingsList.addWidget(self.experimentTree)
 
 
 
         # Wire up action buttons
-        self.ui.findChild(QAction, 'actionOpen').triggered.connect(self.dialogopen)
-        self.ui.findChild(QAction, 'actionCenterFind').triggered.connect(self.centerfind)
-        self.ui.findChild(QAction, 'actionPolyMask').triggered.connect(self.polymask)
-        self.ui.findChild(QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
-        self.ui.findChild(QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
-        self.ui.findChild(QAction, 'actionMaskLoad').triggered.connect(self.maskload)
-        self.ui.findChild(QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
-        self.ui.findChild(QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
-        self.ui.findChild(QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QAction, 'actionCake').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.findChild(QtGui.QAction, 'actionCenterFind').triggered.connect(self.centerfind)
+        self.ui.findChild(QtGui.QAction, 'actionPolyMask').triggered.connect(self.polymask)
+        self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
+        self.ui.findChild(QtGui.QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
+        self.ui.findChild(QtGui.QAction, 'actionMaskLoad').triggered.connect(self.maskload)
+        self.ui.findChild(QtGui.QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
+        self.ui.findChild(QtGui.QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
+        self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QtGui.QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
+        self.ui.findChild(QtGui.QAction, 'actionCake').triggered.connect(self.redrawcurrent)
         # self.ui.findChild(QAction, 'actionVertical_Cut').triggered.connect(self.verticalcut)
         #self.ui.findChild(QAction, 'actionHorizontal_Cut').triggered.connect(self.horizontalcut)
-        self.ui.findChild(QAction, 'actionLine_Cut').triggered.connect(self.linecut)
-        tabWidget = self.ui.findChild(QTabWidget, 'tabWidget')
+        self.ui.findChild(QtGui.QAction, 'actionLine_Cut').triggered.connect(self.linecut)
+        tabWidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
         tabWidget.currentChanged.connect(self.currentchanged)
         self.previoustabindex = -1
 
-        timelinetabwidget = self.ui.findChild(QTabWidget, 'timelinetabwidget')
+        timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
         # tabWidget.tabCloseRequested.connect(self.tabCloseRequested)
         timelinetabwidget.currentChanged.connect(self.currentchangedtimeline)
         self.previoustimelinetabindex = -1
 
-        self.treemodel = QFileSystemModel()
+        self.treemodel = QtGui.QFileSystemModel()
 
-        tree = self.ui.findChild(QTreeView, 'treebrowser')
+        tree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         tree.setModel(self.treemodel)
-        parent = QDir()
+        parent = QtCore.QDir()
         parent.cdUp()
         parent.cdUp()
         parent.cdUp()
@@ -137,22 +112,22 @@ class MyMainWindow():
         tree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filter = ["*.tif", "*.edf"]
-        self.treemodel.setNameFilters(filter)
+        filefilter = ["*.tif", "*.edf"]
+        self.treemodel.setNameFilters(filefilter)
         tree.show()
-        self.smallimageview = smallimageview(self.treemodel)
-        smallimagebox = self.ui.findChild(QVBoxLayout, 'smallimageview')
+        self.smallimageview = viewer.smallimageview(self.treemodel)
+        smallimagebox = self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview')
         smallimagebox.addWidget(self.smallimageview)
         tree.clicked.connect(self.smallimageview.loaditem)
         tree.doubleClicked.connect(self.itemopen)
 
-        self.thumbwidgets = thumbwidgetcollection()
-        self.ui.findChild(QWidget, 'thumbbox').setLayout(self.thumbwidgets)
+        self.thumbwidgets = library.thumbwidgetcollection()
+        self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.thumbwidgets)
         #q=self.ui.findChild(QScrollArea, 'scrollArea').setFocusPolicy()
 
 
 
-        listview = self.ui.findChild(QListView, 'openfileslist')
+        listview = self.ui.findChild(QtGui.QListView, 'openfileslist')
         self.listmodel = models.openfilesmodel(tabWidget)
         listview.setModel(self.listmodel)
         listview.doubleClicked.connect(self.switchtotab)
@@ -164,80 +139,81 @@ class MyMainWindow():
         #imagemodel.setRootPath(parent.absolutePath())
         #self.imgbrowser.setRootIndex(imagemodel.index(parent.absolutePath()))
 
-        self.ui.findChild(QCheckBox, 'filebrowsercheck').stateChanged.connect(self.filebrowserpanetoggle)
-        self.ui.findChild(QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'filebrowsercheck').stateChanged.connect(self.filebrowserpanetoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
 
-        self.ui.findChild(QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
-        self.ui.findChild(QPushButton, 'viewerbutton').clicked.connect(self.showviewer)
-        self.ui.findChild(QPushButton, 'timelinebutton').clicked.connect(self.showtimeline)
+        self.ui.findChild(QtGui.QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
+        self.ui.findChild(QtGui.QPushButton, 'viewerbutton').clicked.connect(self.showviewer)
+        self.ui.findChild(QtGui.QPushButton, 'timelinebutton').clicked.connect(self.showtimeline)
 
 
         # Add a plot widget to the splitter for integration
         integrationwidget = pg.PlotWidget()
         self.integration = integrationwidget.getPlotItem()
         self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
-        self.ui.findChild(QVBoxLayout, 'plotholder').addWidget(integrationwidget)
+        self.ui.findChild(QtGui.QVBoxLayout, 'plotholder').addWidget(integrationwidget)
 
-        splitter = self.ui.findChild(QSplitter, 'splitter')
+        splitter = self.ui.findChild(QtGui.QSplitter, 'splitter')
         splitter.moveSplitter(0,0)
 
         # Add a plot widget to the timeline splitter for frameplot
-        timeline = pg.PlotWidget()
-        self.timeline = timeline.getPlotItem()
+        timelineplot = pg.PlotWidget()
+        self.timeline = timelineplot.getPlotItem()
         self.timeline.showAxis('left', False)
         self.timeline.showAxis('bottom', False)
         self.timeline.showAxis('top', True)
         self.timeline.showGrid(x=True)
         self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.timeline.addItem(self.timeruler)
-        self.timearrow = pg.ArrowItem()
+        # self.timearrow = pg.ArrowItem(angle=-60, tipAngle=30, baseAngle=20,headLen=10,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
+        #self.timeline.addItem(self.timearrow)
+        self.timeline.getViewBox().setMouseEnabled(x=False, y=False)
         # self.timeline.setLabel('bottom', u'Frame #', '')
-        self.ui.findChild(QVBoxLayout, 'timeline').addWidget(timeline)
+        self.ui.findChild(QtGui.QVBoxLayout, 'timeline').addWidget(timelineplot)
 
+        menu = QtGui.QMenu()
 
-        menu = QMenu()
-
-        actionMasking = self.ui.findChild(QAction, 'actionMasking')
-        actionPolyMask = self.ui.findChild(QAction, 'actionPolyMask')
+        actionMasking = self.ui.findChild(QtGui.QAction, 'actionMasking')
+        actionPolyMask = self.ui.findChild(QtGui.QAction, 'actionPolyMask')
         menu.addAction(actionPolyMask)
-        menu.addAction(self.ui.findChild(QAction, 'actionRemove_Cosmics'))
-        menu.addAction(self.ui.findChild(QAction, 'actionMaskLoad'))
-        toolbuttonMasking = QToolButton()
+        menu.addAction(self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics'))
+        menu.addAction(self.ui.findChild(QtGui.QAction, 'actionMaskLoad'))
+        toolbuttonMasking = QtGui.QToolButton()
         toolbuttonMasking.setDefaultAction(actionMasking)
         toolbuttonMasking.setMenu(menu)
-        toolbuttonMasking.setPopupMode(QToolButton.InstantPopup)
+        toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
         # self.ui.findChild(QToolBar, 'toolBar').addWidget(toolbuttonMasking)
-        self.difftoolbar = QToolBar()
+        self.difftoolbar = QtGui.QToolBar()
         self.difftoolbar.addWidget(toolbuttonMasking)
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionLog_Intensity'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCenterFind'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionCake'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionRadial_Symmetry'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionMirror_Symmetry'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionShow_Mask'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCake'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionShow_Mask'))
         # self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionVertical_Cut'))
         #self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionHorizontal_Cut'))
-        self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionLine_Cut'))
-        self.difftoolbar.setIconSize(QSize(32, 32))
-        self.ui.findChild(QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
+        self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
+        self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
-        self.booltoolbar = QToolBar()
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionTimeline'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAdd_with_coefficient'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionSubtract_with_coefficient'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionDivide'))
-        self.booltoolbar.addAction(self.ui.findChild(QAction, 'actionAverage'))
-        self.ui.findChild(QAction, 'actionTimeline').triggered.connect(self.opentimeline)
-        self.ui.findChild(QAction, 'actionAdd').triggered.connect(self.addmode)
-        self.ui.findChild(QAction, 'actionSubtract').triggered.connect(self.subtractmode)
-        self.ui.findChild(QAction, 'actionAdd_with_coefficient').triggered.connect(self.addwithcoefmode)
-        self.ui.findChild(QAction, 'actionSubtract_with_coefficient').triggered.connect(self.subtractwithcoefmode)
-        self.ui.findChild(QAction, 'actionDivide').triggered.connect(self.dividemode)
-        self.ui.findChild(QAction, 'actionAverage').triggered.connect(self.averagemode)
-        self.booltoolbar.setIconSize(QSize(32, 32))
-        self.ui.findChild(QVBoxLayout, 'leftpanelayout').addWidget(self.booltoolbar)
+        self.booltoolbar = QtGui.QToolBar()
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionTimeline'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd_with_coefficient'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionDivide'))
+        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAverage'))
+        self.ui.findChild(QtGui.QAction, 'actionTimeline').triggered.connect(self.opentimeline)
+        self.ui.findChild(QtGui.QAction, 'actionAdd').triggered.connect(self.addmode)
+        self.ui.findChild(QtGui.QAction, 'actionSubtract').triggered.connect(self.subtractmode)
+        self.ui.findChild(QtGui.QAction, 'actionAdd_with_coefficient').triggered.connect(self.addwithcoefmode)
+        self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient').triggered.connect(self.subtractwithcoefmode)
+        self.ui.findChild(QtGui.QAction, 'actionDivide').triggered.connect(self.dividemode)
+        self.ui.findChild(QtGui.QAction, 'actionAverage').triggered.connect(self.averagemode)
+        self.booltoolbar.setIconSize(QtCore.QSize(32, 32))
+        self.ui.findChild(QtGui.QVBoxLayout, 'leftpanelayout').addWidget(self.booltoolbar)
 
 
         self.statusbar = self.ui.statusbar
@@ -266,35 +242,36 @@ class MyMainWindow():
         self.currentImageTab().tab.linecut()
 
     def switchtotab(self, index):
-        self.ui.findChild(QTabWidget, 'tabWidget').setCurrentIndex(index.row())
+        self.ui.findChild(QtGui.QTabWidget, 'tabWidget').setCurrentIndex(index.row())
 
     def opentimeline(self):
-        indices = self.ui.findChild(QTreeView, 'treebrowser').selectedIndexes()
+        indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.treemodel.filePath(index) for index in indices]
-        newtimelinetab = timelinetabtracker(paths, self.experiment, self)
+        newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
         filenames = [path.split('/')[-1] for path in paths]
-        self.ui.findChild(QTabWidget, 'timelinetabwidget').addTab(newtimelinetab, 'Timeline: ' + ', '.join(filenames))
+        self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').addTab(newtimelinetab,
+                                                                        'Timeline: ' + ', '.join(filenames))
 
     def addmode(self):
-        operation = lambda m: np.sum(m, (0))
+        operation = lambda m: np.sum(m, 0)
         self.launchmultimode(operation, 'Addition')
 
     def subtractmode(self):
-        operation = lambda m: m[0] - np.sum(m[1:], (0))
+        operation = lambda m: m[0] - np.sum(m[1:], 0)
         self.launchmultimode(operation, 'Subtraction')
 
     def addwithcoefmode(self):
-        coef, ok = QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
+        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
 
         if coef and ok:
-            operation = lambda m: m[0] + coef * np.sum(m[1:], (0))
+            operation = lambda m: m[0] + coef * np.sum(m[1:], 0)
             self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
 
     def subtractwithcoefmode(self):
-        coef, ok = QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
+        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
 
         if coef and ok:
-            operation = lambda m: m[0] - coef * np.sum(m[1:], (0))
+            operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
             self.launchmultimode(operation, 'Subtraction with coef (x=' + coef)
 
     def dividemode(self):
@@ -307,16 +284,16 @@ class MyMainWindow():
 
 
     def launchmultimode(self, operation, operationname):
-        indices = self.ui.findChild(QTreeView, 'treebrowser').selectedIndexes()
+        indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.treemodel.filePath(index) for index in indices]
-        newimagetab = imageTabTracker(paths, self.experiment, self, operation=operation)
+        newimagetab = viewer.imageTabTracker(paths, self.experiment, self, operation=operation)
         filenames = [path.split('/')[-1] for path in paths]
-        self.ui.findChild(QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
+        self.ui.findChild(QtGui.QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
 
     def currentchanged(self, index):
         print('Changing from', self.previoustabindex, 'to', index)
         if index > -1:
-            tabwidget = self.ui.findChild(QTabWidget, 'tabWidget')
+            tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
 
             try:
 
@@ -329,7 +306,7 @@ class MyMainWindow():
     def currentchangedtimeline(self, index):
         print('Changing from', self.previoustimelinetabindex, 'to', index)
         if index > -1:
-            timelinetabwidget = self.ui.findChild(QTabWidget, 'timelinetabwidget')
+            timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
 
             try:
 
@@ -340,13 +317,14 @@ class MyMainWindow():
         self.previoustimelinetabindex = index
 
 
-    def load_image(self, path):
+    @staticmethod
+    def load_image(path):
         # Load an image path with fabio
         return fabio.open(path).data
 
     def currentImageTab(self):
         # Get the currently shown image tab
-        tabwidget = self.ui.findChild(QTabWidget, 'tabWidget')
+        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         return tabwidget.widget(tabwidget.currentIndex())
 
     def viewmask(self):
@@ -355,7 +333,7 @@ class MyMainWindow():
 
     def tabCloseRequested(self, index):
         # Delete a tab from the tab view upon request
-        self.ui.findChild(QTabWidget, 'tabWidget').widget(index).deleteLater()
+        self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
 
     def polymask(self):
@@ -364,7 +342,7 @@ class MyMainWindow():
 
     def dialogopen(self):
         # Open a file dialog then open that image
-        filename, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
+        filename, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
         self.openfile(filename)
 
     def itemopen(self, index):
@@ -377,21 +355,21 @@ class MyMainWindow():
             if self.experiment.iscalibrated:
                 self.openimage(filename)
             else:
-                msgBox = QMessageBox()
+                msgBox = QtGui.QMessageBox()
                 msgBox.setText("The current experiment has not yet been calibrated. ")
                 msgBox.setInformativeText("Use this image as a calibrant (AgBe)?")
-                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-                msgBox.setDefaultButton(QMessageBox.Yes)
+                msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
+                msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
 
                 response = msgBox.exec_()
 
-                if response == QMessageBox.Yes:
+                if response == QtGui.QMessageBox.Yes:
                     self.openimage(filename)
 
                     self.calibrate()
-                elif response == QMessageBox.No:
+                elif response == QtGui.QMessageBox.No:
                     self.openimage(filename)
-                elif response == QMessageBox.Cancel:
+                elif response == QtGui.QMessageBox.Cancel:
                     return None
 
     def calibrate(self):
@@ -405,8 +383,8 @@ class MyMainWindow():
         # imgdata = self.load_image(path)
 
         # Make an image tab for that file and add it to the tab view
-        newimagetab = imageTabTracker(path, self.experiment, self)
-        tabwidget = self.ui.findChild(QTabWidget, 'tabWidget')
+        newimagetab = viewer.imageTabTracker(path, self.experiment, self)
+        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
 
         self.statusbar.showMessage('Ready...')
@@ -432,34 +410,34 @@ class MyMainWindow():
         self.currentImageTab().replot()
 
     def maskload(self):
-        path, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
+        path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
         mask = self.load_image(path)
         self.experiment.addtomask(mask)
 
     def loadexperiment(self):
-        path, _ = QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.exp")
-        self.experiment = experiment(path)
+        path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.exp")
+        self.experiment = config.experiment(path)
 
     def bindexperiment(self):
         self.experimentTree.setParameters(self.experiment, showTop=False)
         self.experiment.sigTreeStateChanged.connect(self.experiment.save)
 
     def filebrowserpanetoggle(self):
-        pane = self.ui.findChild(QTreeView, 'treebrowser')
+        pane = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         pane.setHidden(not pane.isHidden())
 
     def openfilestoggle(self):
-        pane = self.ui.findChild(QListView, 'openfileslist')
+        pane = self.ui.findChild(QtGui.QListView, 'openfileslist')
         pane.setHidden(not pane.isHidden())
 
     def showlibrary(self):
-        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(1)
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
 
     def showviewer(self):
-        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(0)
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(0)
 
     def showtimeline(self):
-        self.ui.findChild(QStackedWidget, 'viewmode').setCurrentIndex(2)
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
 
 
 if __name__ == '__main__':

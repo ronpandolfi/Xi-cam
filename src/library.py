@@ -1,25 +1,11 @@
-# from PySide.QtGui import QWidget
-#from PySide.QtGui import QLabel
-#from PySide.QtGui import QVBoxLayout
-#from PySide.QtGui import QLayout
-#from PySide.QtCore import QDir
-#from PySide.QtCore import QDirIterator
-#from PySide.QtGui import QImage
-#from PySide.QtGui import QPixmap
-#from PySide.QtCore import Qt
-#from PySide.QtCore import QRect
-#from PySide.QtCore import QSize
-#from PySide.QtCore import QPoint
-#from PySide.QtCore import QtConcurrent
-#from PySide.QtGui import QSizePolicy
-#from PySide.QtGui import QFrame
 from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
 import fabio
-from scipy.misc import imresize
 import numpy as np
 from PIL import Image
+import viewer
+
 
 
 class FlowLayout(QtGui.QLayout):
@@ -198,6 +184,11 @@ class thumbwidgetitem(QtGui.QFrame):
 
         #def mousePressEvent(self, *args, **kwargs):
         #    self.frame.setFrameStyle(QFrame.Sunken)
+
+    def mouseDoubleClickEvent(self, *args, **kwargs):
+        newimagetab = viewer.imageTabTracker(self.path, self.experiment, self)
+        tabwidget = self.window().findChild(QtGui.QTabWidget, 'tabWidget')
+        tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, self.path.split('/')[-1]))
 
 
 class ScaledLabel(QtGui.QLabel):

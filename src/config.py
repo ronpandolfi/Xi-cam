@@ -36,7 +36,7 @@ class experiment(Parameter):
             WavelengthParam.sigValueChanged.connect(self.WavelengthChanged)
 
             # Start with a null mask
-            self.mask = None
+            self._mask = None
 
             self.EnergyChanged()
         else:
@@ -78,7 +78,6 @@ class experiment(Parameter):
 
     def save(self):
         # Save the experiment .....
-        path = '.emptyexperiment.json'
         with open(self.getvalue('Name') + '.exp', 'w') as f:
             pickle.dump(self.saveState(), f)
         with open(self.getvalue('Name') + '.expmask', 'w') as f:
@@ -88,9 +87,9 @@ class experiment(Parameter):
         # Return the value of the named child
         return self.child(name).value()
 
-    def setValue(self, name, value):
+    def setvalue(self, name, value):
         # Set the value of the named child
-        self.child(name).setValue(value)
+        self.child(name).setvalue(value)
 
     def getAI(self):
         """
