@@ -98,9 +98,9 @@ class FlowLayout(QtGui.QLayout):
         return y + lineHeight - rect.y()
 
 
-class thumbwidgetcollection(FlowLayout):
+class librarylayout(FlowLayout):
     def __init__(self):
-        super(thumbwidgetcollection, self).__init__()
+        super(librarylayout, self).__init__()
 
         self.parent = QtCore.QDir()
         self.parent.cdUp()
@@ -109,7 +109,7 @@ class thumbwidgetcollection(FlowLayout):
         diriterator = QtCore.QDirIterator(self.parent)
 
         while diriterator.hasNext():
-            print(diriterator.fileName())
+            # print(diriterator.fileName())
             if diriterator.fileInfo().isFile():
                 self.addWidget(thumbwidgetitem(diriterator.filePath()))
             diriterator.next()
@@ -154,7 +154,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
         im = Image.fromarray(self.imgdata, 'L')
         #im.thumbnail((150, 150))
-        print(im.size)
+        #print(im.size)
 
         self.namelabel = QtGui.QLabel(path.split('/')[-1])
         self.namelabel.setAlignment(Qt.AlignHCenter)

@@ -27,12 +27,7 @@ class imageTabTracker(QtGui.QWidget):
         """
         super(imageTabTracker, self).__init__()
 
-        # When tab is activated, load an image tab and put it inside.
-
-        #Whent tab is deactivated, dispose all of its objects but retain a reference to its constructor paramters
-
         self.paths = paths
-
         self.experiment = experiment
         self.parent = parent
         self.operation = operation
@@ -61,7 +56,7 @@ class imageTabTracker(QtGui.QWidget):
             self.tab = imageTab(imgdata, self.experiment, self.parent)
             self.layout.addWidget(self.tab)
 
-            print('Successful load! :P')
+            # print('Successful load! :P')
             self.isloaded = True
 
 
@@ -71,7 +66,7 @@ class imageTabTracker(QtGui.QWidget):
             self.layout.parent = None
             self.layout.deleteLater()
             # self.tab = None
-            print('Successful unload!')
+            #print('Successful unload!')
             self.isloaded = False
 
 
@@ -188,7 +183,7 @@ class imageTab(QtGui.QWidget):
                 #angstrom=QChar(0x00B5)
                 if self.experiment.iscalibrated:
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
-                                         u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.1f</span>,"
+                                             u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                          u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>" % (
                                          mousePoint.x(),
@@ -206,7 +201,7 @@ class imageTab(QtGui.QWidget):
                                                  self.experiment)))
                 else:
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
-                                             u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.1f</span>,"
+                                             u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                              u"  Calibration Required..." % (
                                                  mousePoint.x(),
                                                  mousePoint.y(),
@@ -507,9 +502,9 @@ class imageTab(QtGui.QWidget):
                 return detector
 
 
-class smallimageview(pg.GraphicsLayoutWidget):
+class previewwidget(pg.GraphicsLayoutWidget):
     def __init__(self, model):
-        super(smallimageview, self).__init__()
+        super(previewwidget, self).__init__()
         self.model = model
         # self.setLayout(QHBoxLayout())
         #self.layout().setContentsMargins(0, 0, 0, 0)

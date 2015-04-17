@@ -89,7 +89,7 @@ class experiment(Parameter):
 
     def setvalue(self, name, value):
         # Set the value of the named child
-        self.child(name).setvalue(value)
+        self.child(name).setValue(value)
 
     def getAI(self):
         """

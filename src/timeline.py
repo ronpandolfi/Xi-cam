@@ -53,8 +53,8 @@ class timelinetab(viewer.imageTab):
 
 
     def scan(self):
-        operation = lambda curr, prev: np.sum(np.square(curr.prev))
-        operation2 = lambda curr, prev: np.sum(np.abs(curr - prev))
+        operation = lambda c, p: np.sum(np.square(c.p))
+        operation2 = lambda c, p: np.sum(np.abs(c - p))
         # print(':P')
         #print self.paths
 
