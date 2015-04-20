@@ -125,6 +125,9 @@ class MyMainWindow():
         integrationwidget = pg.PlotWidget()
         self.integration = integrationwidget.getPlotItem()
         self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
+        self.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        self.qLine.setVisible(False)
+        self.integration.addItem(self.qLine)
         self.ui.findChild(QtGui.QVBoxLayout, 'plotholder').addWidget(integrationwidget)
 
         # Setup timeline plot widget
@@ -179,8 +182,6 @@ class MyMainWindow():
 
 
         # Adjust splitter position (not working?)
-        print self.ui.findChild(QtGui.QSplitter, 'splitter').getRange(0)
-        #self.ui.findChild(QtGui.QSplitter, 'splitter').moveSplitter(50,0)
         self.ui.findChild(QtGui.QSplitter, 'splitter').setSizes([500, 1])
         self.ui.findChild(QtGui.QSplitter, 'splitter_3').setSizes([200, 1, 200])
         self.ui.findChild(QtGui.QSplitter, 'splitter_2').setSizes([150, 1])
@@ -212,8 +213,8 @@ class MyMainWindow():
 
         # TESTING
         ##
-        #self.openimage('../samples/AgB_00001.edf')
-        #self.calibrate()
+        self.openimage('../samples/AgB_00001.edf')
+        self.calibrate()
         ##
 
         # START PYSIDE MAIN LOOP
@@ -388,7 +389,7 @@ class MyMainWindow():
         self.ui.statusbar.showMessage('Finding center...')
         self.app.processEvents()
         # find the center of the current tab
-        self.currentImageTab().findcenter()
+        self.currentImageTab().tab.findcenter()
         self.ui.statusbar.showMessage('Ready...')
 
     def redrawcurrent(self):

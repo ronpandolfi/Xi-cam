@@ -13,7 +13,7 @@ import center_approx
 import cosmics
 import fabio
 import cv2
-
+import debug
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -214,15 +214,18 @@ class imageTab(QtGui.QWidget):
                 self.coordslabel.setVisible(False)
             self.vLine.setPos(mousePoint.x())
             self.hLine.setPos(mousePoint.y())
+            self.parentwindow.qLine.setPos(pixel2q(mousePoint.x(), mousePoint.y(), self.experiment))
 
     def leaveEvent(self, evt):
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
         self.coordslabel.setVisible(False)
+        self.parentwindow.qLine.setVisible(False)
 
     def enterEvent(self, evt):
         self.hLine.setVisible(True)
         self.vLine.setVisible(True)
+        self.parentwindow.qLine.setVisible(True)
 
 
     def redrawimage(self):
@@ -332,9 +335,10 @@ class imageTab(QtGui.QWidget):
         self.experiment.addtomask(c.mask)
         #self.maskoverlay()
 
+    @debug.timeit
     def findcenter(self):
         # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.imgdata)
+        [x, y] = center_approx.center_approx(self.imgdata, self.experiment)
 
         # Set the center in the experiment
         self.experiment.setvalue('Center X', x)
@@ -347,6 +351,7 @@ class imageTab(QtGui.QWidget):
                                              [self.experiment.getvalue('Center Y')], pen=None, symbol='o')
         self.viewbox.addItem(self.centerplot)
 
+    @debug.timeit
     def calibrate(self):
         # Choose detector
         self.finddetector()
@@ -385,6 +390,9 @@ class imageTab(QtGui.QWidget):
             self.replotothers()
 
         self.replotprimary()
+        self.parentwindow.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        self.parentwindow.qLine.setVisible(False)
+        self.parentwindow.integration.addItem(self.parentwindow.qLine)
 
     def replotprimary(self):
         cut = None
@@ -417,7 +425,7 @@ class imageTab(QtGui.QWidget):
             self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask)
             # Replot
-            self.parentwindow.integration.plot(self.q, self.radialprofile)
+            self.parentwindow.integration.plot(self.q / 10.0, self.radialprofile)
 
     def replotothers(self):
         for tab in self.parentwindow.ui.findChildren(imageTab):

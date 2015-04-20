@@ -69,6 +69,6 @@ def radialintegratepyFAI(imgdata, experiment, mask=None):
 def cake(imgdata, experiment, mask=None):
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
-    xres = 1000;
+    xres = 1000
     yres = 1000
     return AI.integrate2d(imgdata.T, xres, yres, mask=np.zeros(experiment.getDetector().MAX_SHAPE))

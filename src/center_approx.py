@@ -7,6 +7,8 @@ import numpy as np
 import cv2
 import fabio
 from scipy import optimize
+from scipy import signal
+import debug
 
 
 def calc_R(x, y, xc, yc):
@@ -46,11 +48,15 @@ def fitpointstocircle(cnt):
     return xc, yc, R, residu
 
 
-def center_approx(img, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
+@debug.timeit
+def center_approx(img, experiment, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
     """
     Find the center of scattering image; maskfit parameters are the Canny threshold parameters for sharp edges and
     the Hough lines transform threshold; edgefitp parameters are the Canny thresholds for finding edges after masking
     """
+
+    return newcenter_approx(img, experiment)
+
     try:
         # Rescale brightness of the image with log depth
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -63,7 +69,7 @@ def center_approx(img, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
         img = cv2.equalizeHist(img)
 
         # Draw for demo
-        if demo == True:
+        if demo:
             cv2.imshow('step?', cv2.resize(img, (0, 0), fx=.5, fy=.5))
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -81,7 +87,7 @@ def center_approx(img, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
         # print sharpmask
 
         # Draw for demo
-        if demo == True:
+        if demo:
             cv2.imshow('step?', cv2.resize(linesimg, (0, 0), fx=.5, fy=.5))
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -204,6 +210,40 @@ def center_approx(img, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
         print message
         print "The center was unable to be found for an image."
         return None
+
+
+def newcenter_approx(img, experiment, demo=True):
+    img = img.astype(np.float)
+    # Rescale brightness of the image with log depth
+    with np.errstate(divide='ignore', invalid='ignore'):
+        img = np.log(img + 3)
+
+    # Convert to 8bit image for the HoughCircles procedure
+    # img = np.uint8(img)
+
+    # Histogram levels and equalize
+    #img = cv2.equalizeHist(img)
+
+    img = img - np.log(3)
+    #img=img*(img>0)
+    m = img.max()
+    testimg(img)
+
+    con = signal.fftconvolve(img > .7 * m, img > .7 * m)
+    testimg(con)
+
+    cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2
+
+    return cen[1], cen[0]
+
+
+def testimg(img, scale=0.5):
+    # Draw for demo
+    demo = False
+    if demo:
+        cv2.imshow('step?', cv2.resize((img * 255.0 / img.max()).astype(np.uint8), (0, 0), fx=.5, fy=.5))
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
