@@ -300,33 +300,43 @@ class imageTab(QtGui.QWidget):
             self.region = None
             self.replot()
 
-            # if self.parentwindow.ui.findChild(QAction,'actionVertical_Cut').isChecked():
-            #    try:
-            #        self.viewbox.removeItem(self.region)
-            #    except AttributeError:
-            #        print('Attribute error in verticalcut')
-            #    self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical,brush=pg.mkBrush('#00FFFF32'),bounds=[0,self.imgdata.shape[1]],values=[self.experiment.getvalue('Center X')-10,10+self.experiment.getvalue('Center X')])
-            #    for line in self.region.lines:
-            #        line.setPen(pg.mkPen('#00FFFF'))
-            #    self.region.sigRegionChangeFinished.connect(self.replot)
-            #    self.viewbox.addItem(self.region)
-            #else:
-            #    self.viewbox.removeItem(self.region)
-            #    self.region = None
+    def verticalcut(self):
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+            try:
+                self.viewbox.removeItem(self.region)
+            except AttributeError:
+                print('Attribute error in verticalcut')
+            self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
+                                              bounds=[0, self.imgdata.shape[1]],
+                                              values=[self.experiment.getvalue('Center X') - 10,
+                                                      10 + self.experiment.getvalue('Center X')])
+            for line in self.region.lines:
+                line.setPen(pg.mkPen('#00FFFF'))
+            self.region.sigRegionChangeFinished.connect(self.replot)
+            self.viewbox.addItem(self.region)
+        else:
+            self.viewbox.removeItem(self.region)
+            self.region = None
+        self.replot()
 
-    # def horizontalcut(self):
-    #    if self.parentwindow.ui.findChild(QAction,'actionHorizontal_Cut').isChecked():
-    #        try:
-    #            self.viewbox.removeItem(self.region)
-    #        except AttributeError:
-    #            print('Attribute error in horizontalcut')
-    #        self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal,brush=pg.mkBrush('#00FFFF32'),bounds=[0,self.imgdata.shape[0]],values=[self.experiment.getvalue('Center Y')-10,10+self.experiment.getvalue('Center Y')])
-    #        for line in self.region.lines:
-    #            line.setPen(pg.mkPen('#00FFFF'))
-    #        self.viewbox.addItem(self.region)
-    #    else:
-    #        self.viewbox.removeItem(self.region)
-    #        self.region = None
+    def horizontalcut(self):
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+            try:
+                self.viewbox.removeItem(self.region)
+            except AttributeError:
+                print('Attribute error in horizontalcut')
+            self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
+                                              bounds=[0, self.imgdata.shape[0]],
+                                              values=[self.experiment.getvalue('Center Y') - 10,
+                                                      10 + self.experiment.getvalue('Center Y')])
+            for line in self.region.lines:
+                line.setPen(pg.mkPen('#00FFFF'))
+            self.region.sigRegionChangeFinished.connect(self.replot)
+            self.viewbox.addItem(self.region)
+        else:
+            self.viewbox.removeItem(self.region)
+            self.region = None
+        self.replot()
 
 
     def removecosmics(self):
@@ -419,11 +429,22 @@ class imageTab(QtGui.QWidget):
             if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
             if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
 
-        else:
 
-            # Radial integraion
+
+        else:
+            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+                regionbounds = self.region.getRegion()
+                cut = np.zeros_like(self.imgdata)
+                cut[:, regionbounds[0]:regionbounds[1]] = 1
+            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+                regionbounds = self.region.getRegion()
+                cut = np.zeros_like(self.imgdata)
+                cut[regionbounds[0]:regionbounds[1], :] = 1
+
+
+            # Radial integration
             self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
-                                                                          mask=self.experiment.mask)
+                                                                          mask=self.experiment.mask, cut=cut)
             # Replot
             self.parentwindow.integration.plot(self.q / 10.0, self.radialprofile)
 
@@ -540,6 +561,8 @@ def imtest(image):
 
 
 def pixel2q(x, y, experiment):
+    # SWITCH TO PYFAI GEOMETRY
+
     if x is None:
         x = experiment.getvalue('Center X')
     if y is None:

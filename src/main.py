@@ -84,6 +84,8 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient').triggered.connect(self.subtractwithcoefmode)
         self.ui.findChild(QtGui.QAction, 'actionDivide').triggered.connect(self.dividemode)
         self.ui.findChild(QtGui.QAction, 'actionAverage').triggered.connect(self.averagemode)
+        self.ui.findChild(QtGui.QAction, 'actionVertical_Cut').triggered.connect(self.vertcut)
+        self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
 
         # WIDGETS
         # Setup experiment tree
@@ -162,8 +164,8 @@ class MyMainWindow():
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionShow_Mask'))
-        #self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionVertical_Cut'))
-        #self.difftoolbar.addAction(self.ui.findChild(QAction, 'actionHorizontal_Cut'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionVertical_Cut'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
         self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
         self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
@@ -279,12 +281,19 @@ class MyMainWindow():
         self.launchmultimode(operation, 'Average')
 
 
+
     def launchmultimode(self, operation, operationname):
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
         newimagetab = viewer.imageTabTracker(paths, self.experiment, self, operation=operation)
         filenames = [path.split('/')[-1] for path in paths]
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
+
+    def vertcut(self):
+        self.currentImageTab().tab.verticalcut()
+
+    def horzcut(self):
+        self.currentImageTab().tab.horizontalcut()
 
     def currentchanged(self, index):
         print('Changing from', self.viewerprevioustab, 'to', index)
