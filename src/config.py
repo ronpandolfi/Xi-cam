@@ -1,6 +1,7 @@
 import pickle
 import pyFAI
 from pyFAI import detectors
+from pyFAI import geometry
 
 
 from pyqtgraph.parametertree import Parameter
@@ -108,6 +109,24 @@ class experiment(Parameter):
                                        wavelength=self.getvalue('Wavelength'))
         #print AI
         return AI
+
+    def getGeometry(self):
+        """
+        :rtype : pyFAI.Geometry
+        """
+        # print(self.getDetector().MAX_SHAPE)
+        geo = geometry.Geometry(dist=self.getvalue('Detector Distance'),
+                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+                                rot1=0,
+                                rot2=0,
+                                rot3=0,
+                                pixel1=self.getvalue('Pixel Size Y'),
+                                pixel2=self.getvalue('Pixel Size X'),
+                                detector=self.getDetector(),
+                                wavelength=self.getvalue('Wavelength'))
+        # print AI
+        return geo
 
     def getDetector(self):
         return detectors.ALL_DETECTORS[self.getvalue('Detector')]()

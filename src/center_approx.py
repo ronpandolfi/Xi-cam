@@ -9,6 +9,10 @@ import fabio
 from scipy import optimize
 from scipy import signal
 import debug
+import saxs_calibration
+import time
+from matplotlib import pylab
+import matplotlib
 
 
 def calc_R(x, y, xc, yc):
@@ -236,6 +240,67 @@ def newcenter_approx(img, experiment, demo=True):
 
     return cen[1], cen[0]
 
+
+def tth_ellipse(geometry, d_spacing):
+    '''
+    Returns a matplotlib.patches.Ellipse to plot the given d-spacing ring.
+    '''
+    tth = 2 * np.arcsin(geometry.get_wavelength() / (2e-10 * d_spacing))
+
+    geo_dict = geometry.getFit2D()
+    sdd = geo_dict['directDist'] / (0.001 * geo_dict['pixelX'])
+    tilt = np.deg2rad(geo_dict['tilt'])
+    rotation = np.deg2rad(geo_dict['tiltPlanRotation'])
+
+    c_plus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tilt - tth)
+    c_minus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 + tilt - tth)
+    elli_h = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tth)
+    elli_w = (c_plus + c_minus) / 2.0
+
+    x_pos = (geo_dict['centerX'] - c_minus + elli_w) - geo_dict['centerX']
+    elli_x = geo_dict['centerX'] + x_pos * np.cos(rotation)
+    elli_y = geo_dict['centerY'] + x_pos * np.sin(rotation)
+
+    return matplotlib.patches.Ellipse((elli_x, elli_y),
+                                      elli_w * 2,
+                                      elli_h * 2,
+                                      np.rad2deg(rotation))
+
+
+def refinecenter(img, experiment):
+    # Refine calibration
+    # d-spacing for Silver Behenate
+    d_spacings = np.array([58.367, 29.1835, 19.45567, 14.59175, 11.6734, 9.72783, 8.33814, 7.29587, 6.48522, 5.8367])
+
+    geometry = experiment.getGeometry()
+
+    print 'Start parameter:'
+    print geometry.getFit2D()
+
+    fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
+    fit_thread = saxs_calibration.FitThread(geometry, d_spacings, img, fit_param, 8)
+    fit_thread.start()
+    while fit_thread.is_alive():
+        print fit_thread.status
+        time.sleep(1)
+
+    print 'Final parameter:'
+    print geometry.getFit2D()
+
+    a = pylab.imshow(np.log(img), interpolation='none')
+
+    for d_spacing in d_spacings:
+        ellipse = tth_ellipse(geometry, d_spacing)
+        ellipse.set_fc('none')
+        ellipse.set_ec('red')
+        pylab.gca().add_patch(ellipse)
+
+    for circle in fit_thread.get_circle_patches():
+        pylab.gca().add_patch(circle)
+
+    pylab.show()
+
+    return geometry.get_poni2(), geometry.get_poni1()
 
 def testimg(img, scale=0.5):
     # Draw for demo

@@ -215,8 +215,8 @@ class MyMainWindow():
 
         # TESTING
         ##
-        # self.openimage('../samples/AgB_00001.edf')
-        #self.calibrate()
+        self.openimage('../samples/AgB_00006.edf')
+        self.calibrate()
         ##
 
         # START PYSIDE MAIN LOOP

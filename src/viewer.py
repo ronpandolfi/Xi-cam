@@ -416,6 +416,9 @@ class imageTab(QtGui.QWidget):
         sdd = bestpeak * self.experiment.getvalue('Pixel Size X') / tantth
 
         self.experiment.setvalue('Detector Distance', sdd)
+
+        center_approx.refinecenter(self.imgdata, self.experiment)
+
         self.experiment.iscalibrated = True
 
         self.replot()
