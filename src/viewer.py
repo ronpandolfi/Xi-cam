@@ -17,6 +17,7 @@ import cv2
 import debug
 import loader
 import colormap
+import PeakFinding
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -473,12 +474,17 @@ class imageTab(QtGui.QWidget):
             # Radial integration
             self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
-
+            ##############################################################################
             # Remi's peak finding
             # self.q / 10.0 is x
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
+            x,y=PeakFinding.PeakFinding((self.q /10.0),self.radialprofile).T
+
+            self.parentwindow.integration.plot(x,y,pen=None,symbol='o')
+
+            ##############################################################################
             # Replot
             self.parentwindow.integration.plot(self.q / 10.0, self.radialprofile)
 
