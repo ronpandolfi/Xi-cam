@@ -19,7 +19,7 @@
 import sys
 import os
 
-import fabio
+import loader
 
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
@@ -103,7 +103,7 @@ class MyMainWindow():
         self.filetree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf"]
+        filefilter = ["*.tif", "*.edf", "*.fits"]
         self.filetreemodel.setNameFilters(filefilter)
 
         # Setup preview
@@ -215,8 +215,8 @@ class MyMainWindow():
 
         # TESTING
         ##
-        self.openimage('../samples/AgB_00001.edf')
-        self.calibrate()
+        # self.openimage('../samples/AgB_00001.edf')
+        #self.calibrate()
         ##
 
         # START PYSIDE MAIN LOOP
@@ -237,12 +237,21 @@ class MyMainWindow():
         self.filetree.show()
 
     def switchtotab(self, index):
+        """
+        Set the current viewer tab
+        """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').setCurrentIndex(index.row())
 
     def linecut(self):
+        """
+        Connect linecut to current tab's linecut
+        """
         self.currentImageTab().tab.linecut()
 
     def opentimeline(self):
+        """
+        Open a tab in Timeline mode
+        """
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
         newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
@@ -251,14 +260,23 @@ class MyMainWindow():
                                                                         'Timeline: ' + ', '.join(filenames))
 
     def addmode(self):
+        """
+        Launch a tab as an add operation
+        """
         operation = lambda m: np.sum(m, 0)
         self.launchmultimode(operation, 'Addition')
 
     def subtractmode(self):
+        """
+        Launch a tab as an sub operation
+        """
         operation = lambda m: m[0] - np.sum(m[1:], 0)
         self.launchmultimode(operation, 'Subtraction')
 
     def addwithcoefmode(self):
+        """
+        Launch a tab as an add with coef operation
+        """
         coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
 
         if coef and ok:
@@ -266,6 +284,9 @@ class MyMainWindow():
             self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
 
     def subtractwithcoefmode(self):
+        """
+        Launch a tab as a sub with coef operation
+        """
         coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
 
         if coef and ok:
@@ -273,16 +294,25 @@ class MyMainWindow():
             self.launchmultimode(operation, 'Subtraction with coef (x=' + coef)
 
     def dividemode(self):
+        """
+        Launch a tab as a div operation
+        """
         operation = lambda m: m[0] / m[1]
         self.launchmultimode(operation, 'Division')
 
     def averagemode(self):
+        """
+        Launch a tab as an avg operation
+        """
         operation = lambda m: np.mean(m, 0)
         self.launchmultimode(operation, 'Average')
 
 
 
     def launchmultimode(self, operation, operationname):
+        """
+        Launch a tab in multi-image operation mode
+        """
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
         newimagetab = viewer.imageTabTracker(paths, self.experiment, self, operation=operation)
@@ -290,12 +320,21 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
 
     def vertcut(self):
+        """
+        Connect vertical cut to current tab
+        """
         self.currentImageTab().tab.verticalcut()
 
     def horzcut(self):
+        """
+        Connect horizontal cut to current tab
+        """
         self.currentImageTab().tab.horizontalcut()
 
     def currentchanged(self, index):
+        """
+        When the active tab changes, load/unload tabs
+        """
         print('Changing from', self.viewerprevioustab, 'to', index)
         if index > -1:
             tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
@@ -309,6 +348,9 @@ class MyMainWindow():
         self.viewerprevioustab = index
 
     def currentchangedtimeline(self, index):
+        """
+        When the active tab changes, load/unload tabs
+        """
         print('Changing from', self.timelineprevioustab, 'to', index)
         if index > -1:
             timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
@@ -324,37 +366,59 @@ class MyMainWindow():
 
     @staticmethod
     def load_image(path):
+        """
+        load an image with fabio
+        """
         # Load an image path with fabio
-        return fabio.open(path).data
+        return loader.loadpath(path)
+
 
     def currentImageTab(self):
-        # Get the currently shown image tab
+        """
+        Get the currently shown image tab
+        """
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         return tabwidget.widget(tabwidget.currentIndex())
 
     def viewmask(self):
+        """
+        Connect mask toggling to the current tab
+        """
         # Show the mask overlay
         self.currentImageTab().viewmask()
 
     def tabCloseRequested(self, index):
-        # Delete a tab from the tab view upon request
+        """
+        Delete a tab from the tab view upon request
+        """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
 
     def polymask(self):
-        # Add a polygon mask ROI to the tab
+        """
+        Add a polygon mask ROI to the tab
+        """
         self.currentImageTab().tab.polymask()
 
     def dialogopen(self):
-        # Open a file dialog then open that image
-        filename, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
-        self.openfile(filename)
+        """
+        Open a file dialog then open that image
+        """
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf *.fits")
+        if filename and ok:
+            self.openfile(filename)
 
     def itemopen(self, index):
+        """
+        Open the item selected in the file tree
+        """
         path = self.filetreemodel.filePath(index)
         self.openfile(path)
 
     def openfile(self, filename):
+        """
+        when a file is opened, check if there is calibration and offer to use the image as calibrant
+        """
         print(filename)
         if filename is not u'':
             if self.experiment.iscalibrated:
@@ -378,15 +442,18 @@ class MyMainWindow():
                     return None
 
     def calibrate(self):
+        """
+        Calibrate using the currently active tab
+        """
         self.currentImageTab().load()
         self.currentImageTab().tab.calibrate()
 
     def openimage(self, path):
+        """
+        build a new tab, add it to the tab view, and display it
+        """
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()
-        # Load the image path with Fabio
-        # imgdata = self.load_image(path)
-
         # Make an image tab for that file and add it to the tab view
         newimagetab = viewer.imageTabTracker(path, self.experiment, self)
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
@@ -395,6 +462,9 @@ class MyMainWindow():
         self.ui.statusbar.showMessage('Ready...')
 
     def centerfind(self):
+        """
+        find the center using the current tab image
+        """
         self.ui.statusbar.showMessage('Finding center...')
         self.app.processEvents()
         # find the center of the current tab
@@ -402,48 +472,81 @@ class MyMainWindow():
         self.ui.statusbar.showMessage('Ready...')
 
     def redrawcurrent(self):
+        """
+        redraw the current tab's view
+        """
         self.currentImageTab().tab.redrawimage()
 
 
     def removecosmics(self):
+        """
+        mask cosmic background on current tab
+        """
         self.ui.statusbar.showMessage('Removing cosmic rays...')
         self.app.processEvents()
         self.currentImageTab().tab.removecosmics()
         self.ui.statusbar.showMessage('Ready...')
 
     def multiplottoggle(self):
+        """
+        replot the current tab (tab plotting checks if this is active)
+        """
         self.currentImageTab().replot()
 
     def maskload(self):
-        path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf")
+        """
+        load a file as a mask
+        """
+        path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf *.fits")
         mask = self.load_image(path)
         self.experiment.addtomask(mask)
 
     def loadexperiment(self):
+        """
+        replot the current tab (tab plotting checks if this is active)
+        """
         path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.exp")
         self.experiment = config.experiment(path)
 
     def bindexperiment(self):
+        """
+        connect the current experiment to the parameter tree gui
+        """
         if self.experiment is None:
             self.experiment = config.experiment()
         self.experimentTree.setParameters(self.experiment, showTop=False)
         self.experiment.sigTreeStateChanged.connect(self.experiment.save)
 
     def filebrowserpanetoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
         pane = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         pane.setHidden(not pane.isHidden())
 
     def openfilestoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
         pane = self.ui.findChild(QtGui.QListView, 'openfileslist')
         pane.setHidden(not pane.isHidden())
 
     def showlibrary(self):
+        """
+        switch to library view
+        """
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
 
     def showviewer(self):
+        """
+        switch to viewer view
+        """
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(0)
 
     def showtimeline(self):
+        """
+        switch to timeline view
+        """
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
 
 

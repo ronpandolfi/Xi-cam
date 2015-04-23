@@ -12,8 +12,11 @@ import center_approx
 
 import cosmics
 import fabio
+import pyfits
 import cv2
 import debug
+import loader
+import colormap
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -42,12 +45,17 @@ class imageTabTracker(QtGui.QWidget):
 
 
     def load(self):
+        """
+        load this tab; rebuild the viewer
+        """
         if not self.isloaded:
             if self.operation is None:
-                imgdata = fabio.open(self.paths).data
+
+                imgdata = loader.loadpath(self.paths)
                 self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
             else:
-                imgdata = [fabio.open(path).data for path in self.paths]
+
+                imgdata = [loader.loadpath(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 print(imgdata)
@@ -55,13 +63,14 @@ class imageTabTracker(QtGui.QWidget):
             self.layout = QtGui.QHBoxLayout(self)
             self.tab = imageTab(imgdata, self.experiment, self.parent)
             self.layout.addWidget(self.tab)
-
-            # print('Successful load! :P')
             self.isloaded = True
 
 
 
     def unload(self):
+        """
+        orphan the tab widgets and queue them for deletion
+        """
         if self.isloaded:
             self.layout.parent = None
             self.layout.deleteLater()
@@ -73,7 +82,7 @@ class imageTabTracker(QtGui.QWidget):
 class imageTab(QtGui.QWidget):
     def __init__(self, imgdata, experiment, parent):
         """
-        A tab containing an imageview and plotview set in a splitter. Also manages functionality connected to a specific tab (masking/integration)
+        A tab containing an imageview. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
         :param experiment:
         :return:
@@ -108,6 +117,9 @@ class imageTab(QtGui.QWidget):
         self.viewbox.setAspectLocked(True)
         self.imghistLUT = pg.HistogramLUTItem(self.imageitem)
         self.graphicslayoutwidget.addItem(self.imghistLUT, 0, 1)
+        self.imghistLUT.autoHistogramRange()
+
+
 
         # cross hair
         linepen = pg.mkPen('#FFA500')
@@ -175,6 +187,9 @@ class imageTab(QtGui.QWidget):
         self.redrawimage()
 
     def mouseMoved(self, evt):
+        """
+        when the mouse is moved in the viewer, translate the crosshair, recalculate coordinates
+        """
         pos = evt  ## using signal proxy turns original arguments into a tuple
         if self.viewbox.sceneBoundingRect().contains(pos):
             mousePoint = self.viewbox.mapSceneToView(pos)
@@ -217,18 +232,27 @@ class imageTab(QtGui.QWidget):
             self.parentwindow.qLine.setPos(pixel2q(mousePoint.x(), mousePoint.y(), self.experiment))
 
     def leaveEvent(self, evt):
+        """
+        hide crosshair and coordinates when mouse leaves viewer
+        """
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
         self.coordslabel.setVisible(False)
         self.parentwindow.qLine.setVisible(False)
 
     def enterEvent(self, evt):
+        """
+        show crosshair and coordinates when mouse enters viewer
+        """
         self.hLine.setVisible(True)
         self.vLine.setVisible(True)
         self.parentwindow.qLine.setVisible(True)
 
 
     def redrawimage(self):
+        """
+        redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
+        """
         islogintensity = self.parentwindow.ui.findChild(QtGui.QAction, 'actionLog_Intensity').isChecked()
         isradialsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').isChecked()
         ismirrorsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').isChecked()
@@ -286,8 +310,12 @@ class imageTab(QtGui.QWidget):
             self.maskimage.clear()
 
         self.imageitem.setImage(img)
+        self.imageitem.setLookupTable(colormap.LUT)
 
     def linecut(self):
+        """
+        toggles the line cut
+        """
         if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
             self.region = pg.LineSegmentROI(
                 [[self.experiment.getvalue('Center X'), self.experiment.getvalue('Center Y')],
@@ -445,6 +473,12 @@ class imageTab(QtGui.QWidget):
             # Radial integration
             self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
+
+            # Remi's peak finding
+            # self.q / 10.0 is x
+            # self.radialprofile is y
+            # Find the peaks, and then plot them
+
             # Replot
             self.parentwindow.integration.plot(self.q / 10.0, self.radialprofile)
 
@@ -547,7 +581,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def loaditem(self, index):
         path = self.model.filePath(index)
-        self.imgdata = fabio.open(path).data
+        self.imgdata = loader.loadpath(path)
         self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
                                 autoLevels=True)
 

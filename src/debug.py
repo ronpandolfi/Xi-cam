@@ -2,6 +2,10 @@ import time
 
 
 def timeit(method):
+    """
+    Use this as a decorator to time a function
+    """
+
     def timed(*args, **kw):
         ts = time.time()
         result = method(*args, **kw)

@@ -1,7 +1,7 @@
 from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
-import fabio
+import loader
 import numpy as np
 from PIL import Image
 import viewer
@@ -111,7 +111,8 @@ class librarylayout(FlowLayout):
         while diriterator.hasNext():
             # print(diriterator.fileName())
             if diriterator.fileInfo().isFile():
-                self.addWidget(thumbwidgetitem(diriterator.filePath()))
+                # self.addWidget(thumbwidgetitem(diriterator.filePath()))
+                pass
             diriterator.next()
 
 
@@ -139,7 +140,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.layout = QtGui.QVBoxLayout(self)  #.frame
 
         self.path = path
-        self.imgdata = fabio.open(path).data
+        self.imgdata = loader.loadpath(path)
         self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
         self.imgdata *= 255 / np.max(self.imgdata)
         self.imgdata = self.imgdata.astype(np.uint8)

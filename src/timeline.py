@@ -1,9 +1,10 @@
 import pyqtgraph as pg
-import fabio
+import loader
 from PySide import QtGui
 import viewer
 import integration
 import numpy as np
+
 
 
 class timelinetabtracker(QtGui.QWidget):
@@ -40,7 +41,8 @@ class timelinetabtracker(QtGui.QWidget):
 
 class timelinetab(viewer.imageTab):
     def __init__(self, paths, experiment, parentwindow):
-        imgdata = fabio.open(paths[0]).data
+
+        imgdata = loader.loadpath(paths[0])
         super(timelinetab, self).__init__(imgdata, experiment, parentwindow)
 
         self.paths = paths
@@ -55,21 +57,22 @@ class timelinetab(viewer.imageTab):
     def scan(self):
         operation = lambda c, p: np.sum(np.square(c.p))
         operation2 = lambda c, p: np.sum(np.abs(c - p))
+        operation3 = lambda c, p: np.sum(c)
         # print(':P')
         #print self.paths
 
         #get the first frame's profile
-        prev = fabio.open(self.paths[0]).data
+        prev = loader.loadpath(self.paths[0])
         for i in range(self.paths.__len__() - 1):
             #print i, self.paths[i]
-            curr = fabio.open(self.paths[i + 1]).data
+            curr = loader.loadpath(self.paths[i + 1])
             if curr is None:
                 self.variation[i] = None
                 continue
 
             #print curr, prev,'\n'
 
-            self.variation[i] = operation2(curr, prev)
+            self.variation[i] = operation3(curr, prev)
             prev = curr
         print self.variation
 
@@ -93,7 +96,8 @@ class timelinetab(viewer.imageTab):
 
     def redrawframe(self):
         path = self.paths[self.parentwindow.timeruler.value() + 1]
-        self.imgdata = np.rot90(fabio.open(path).data, 2)
+        data = loader.loadpath(path)
+        self.imgdata = np.rot90(data, 2)
         self.redrawimage()
 
     def gotomax(self):
