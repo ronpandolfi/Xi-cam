@@ -66,8 +66,12 @@ def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
     if cut is not None:
         mask *= cut
         data *= cut
-    xres = 1000
-    return AI.integrate1d(data, xres, mask=mask, method='full_csr')
+    xres = 10000
+    (q, radialprofile) = AI.integrate1d(data, xres, mask=mask, method='full_csr')
+    # Truncate last 3 points, which typically have very high error?
+    q = q[:-3] / 10.0
+    radialprofile = radialprofile[:-3]
+    return q, radialprofile
 
 
 def cake(imgdata, experiment, mask=None):

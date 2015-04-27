@@ -86,6 +86,8 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QAction, 'actionAverage').triggered.connect(self.averagemode)
         self.ui.findChild(QtGui.QAction, 'actionVertical_Cut').triggered.connect(self.vertcut)
         self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
+        self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
+        self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
 
         # WIDGETS
         # Setup experiment tree
@@ -167,6 +169,8 @@ class MyMainWindow():
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionVertical_Cut'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMultiPlot'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRemeshing'))
         self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
         self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
@@ -215,8 +219,8 @@ class MyMainWindow():
 
         # TESTING
         ##
-        self.openimage('../samples/AgB_00006.edf')
-        self.calibrate()
+        # self.openimage('../samples/AgB_5s_hi_2m.edf')
+        #self.calibrate()
         ##
 
         # START PYSIDE MAIN LOOP
@@ -331,6 +335,12 @@ class MyMainWindow():
         """
         self.currentImageTab().tab.horizontalcut()
 
+    def remeshmode(self):
+        """
+        Connect remesh mode to current tab
+        """
+        self.currentImageTab().tab.redrawimage()
+
     def currentchanged(self, index):
         """
         When the active tab changes, load/unload tabs
@@ -370,7 +380,7 @@ class MyMainWindow():
         load an image with fabio
         """
         # Load an image path with fabio
-        return loader.loadpath(path)
+        return loader.loadpath(path)[0]
 
 
     def currentImageTab(self):
@@ -440,6 +450,9 @@ class MyMainWindow():
                     self.openimage(filename)
                 elif response == QtGui.QMessageBox.Cancel:
                     return None
+
+    def exportimage(self):
+        self.currentImageTab().exportimage()
 
     def calibrate(self):
         """

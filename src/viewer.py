@@ -18,6 +18,7 @@ import debug
 import loader
 import colormap
 import PeakFinding
+import remesh
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -52,20 +53,18 @@ class imageTabTracker(QtGui.QWidget):
         if not self.isloaded:
             if self.operation is None:
 
-                imgdata = loader.loadpath(self.paths)
+                imgdata, paras = loader.loadpath(self.paths)
                 self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
             else:
-
-                imgdata = [loader.loadpath(path) for path in self.paths]
+                imgdata, paras = [loader.loadpath(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 print(imgdata)
 
             self.layout = QtGui.QHBoxLayout(self)
-            self.tab = imageTab(imgdata, self.experiment, self.parent)
+            self.tab = imageTab(imgdata, self.experiment, self.parent, self.paths)
             self.layout.addWidget(self.tab)
             self.isloaded = True
-
 
 
     def unload(self):
@@ -81,7 +80,7 @@ class imageTabTracker(QtGui.QWidget):
 
 
 class imageTab(QtGui.QWidget):
-    def __init__(self, imgdata, experiment, parent):
+    def __init__(self, imgdata, experiment, parent, paths=None):
         """
         A tab containing an imageview. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
@@ -92,7 +91,7 @@ class imageTab(QtGui.QWidget):
         self.region = None
         self.maskROI = None
         self.layout = QtGui.QStackedLayout(self)
-
+        self.path = paths
 
         # Save image data and the experiment
         self.imgdata = np.rot90(imgdata, 2)
@@ -110,7 +109,7 @@ class imageTab(QtGui.QWidget):
         #self.imgview.setImage(self.imgdata.T)
         #self.imgview.autoRange()
         #self.imageitem = self.imgview.getImageItem()
-        self.viewbox = pg.ViewBox(enableMenu=False)
+        self.viewbox = pg.ViewBox()  # enableMenu=False)
         self.imageitem = pg.ImageItem()
         self.viewbox.addItem(self.imageitem)
         self.graphicslayoutwidget = pg.GraphicsLayoutWidget()
@@ -187,6 +186,7 @@ class imageTab(QtGui.QWidget):
         #self.updatelogintensity()
         self.redrawimage()
 
+
     def mouseMoved(self, evt):
         """
         when the mouse is moved in the viewer, translate the crosshair, recalculate coordinates
@@ -259,7 +259,8 @@ class imageTab(QtGui.QWidget):
         ismirrorsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').isChecked()
         ismaskshown = self.parentwindow.ui.findChild(QtGui.QAction, 'actionShow_Mask').isChecked()
         iscake = self.parentwindow.ui.findChild(QtGui.QAction, 'actionCake').isChecked()
-        img = self.imgdata.T.copy()
+        isremesh = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRemeshing').isChecked()
+        img = np.rot90(self.imgdata, 1).copy()
 
         # When the log intensity button toggles, switch the log scaling on the image
         if islogintensity:
@@ -302,6 +303,8 @@ class imageTab(QtGui.QWidget):
 
         if iscake:
             img, x, y = integration.cake(img, self.experiment)
+        elif isremesh:
+            img = remesh.remesh(self.path, self.experiment.getGeometry(), '', 'bar', self.experiment)
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((
@@ -383,6 +386,7 @@ class imageTab(QtGui.QWidget):
         self.experiment.setvalue('Center X', x)
         self.experiment.setvalue('Center Y', y)
         self.drawcenter()
+        self.replot()
 
     def drawcenter(self):
         # Mark the center
@@ -406,7 +410,7 @@ class imageTab(QtGui.QWidget):
             radialprofile = tbin / nr
 
         # Find peak positions, they represent the radii
-        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(30, 100))
+        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
 
         # Get the tallest peak
         bestpeak = peaks[radialprofile[peaks].argmax()]
@@ -483,13 +487,13 @@ class imageTab(QtGui.QWidget):
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            x,y=PeakFinding.PeakFinding((self.q /10.0),self.radialprofile).T
+            x, y = PeakFinding.PeakFinding((self.q), self.radialprofile).T
 
             self.parentwindow.integration.plot(x,y,pen=None,symbol='o')
 
             ##############################################################################
             # Replot
-            self.parentwindow.integration.plot(self.q / 10.0, self.radialprofile)
+            self.parentwindow.integration.plot(self.q, self.radialprofile)
 
     def replotothers(self):
         for tab in self.parentwindow.ui.findChildren(imageTab):
@@ -530,7 +534,7 @@ class imageTab(QtGui.QWidget):
             # Get the region of the image that was selected; unforunately the region is trimmed
             maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.imgdata.T), self.imageitem,
                                                      returnMappedCoords=True)  # levels=(0, arr.max()
-            print maskedarea.shape
+            #print maskedarea.shape
 
             # Decide how much to left and top pad based on the ROI bounding rectangle
             boundrect = self.viewbox.itemBoundingRect(self.maskROI)
@@ -573,6 +577,9 @@ class imageTab(QtGui.QWidget):
                 self.experiment.setvalue('Detector', name)
                 return detector
 
+    def exportimage(self):
+        pass
+
 
 class previewwidget(pg.GraphicsLayoutWidget):
     def __init__(self, model):
@@ -590,7 +597,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def loaditem(self, index):
         path = self.model.filePath(index)
-        self.imgdata = loader.loadpath(path)
+        self.imgdata, paras = loader.loadpath(path)
         self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
                                 autoLevels=True)
 

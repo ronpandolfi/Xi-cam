@@ -252,6 +252,9 @@
              <property name="checked">
               <bool>true</bool>
              </property>
+                <property name="isFoldingTab" stdset="0">
+                    <bool>true</bool>
+                </property>
             </widget>
            </item>
            <item>
@@ -278,6 +281,9 @@
              <property name="checked">
               <bool>true</bool>
              </property>
+                <property name="isFoldingTab" stdset="0">
+                    <bool>true</bool>
+                </property>
             </widget>
            </item>
            <item>
@@ -437,8 +443,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>687</width>
-                <height>522</height>
+                   <width>98</width>
+                   <height>28</height>
                </rect>
               </property>
              </widget>
@@ -506,7 +512,93 @@
          </widget>
         </widget>
         <widget class="QWidget" name="layoutWidget">
-         <layout class="QVBoxLayout" name="propertiesBox"/>
+            <layout class="QVBoxLayout" name="_2">
+                <item>
+                    <widget class="QCheckBox" name="checkBox">
+                        <property name="text">
+                            <string>Experiment Properties</string>
+                        </property>
+                        <property name="checked">
+                            <bool>true</bool>
+                        </property>
+                        <property name="isFoldingTab" stdset="0">
+                            <bool>true</bool>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <layout class="QVBoxLayout" name="propertiesBox"/>
+                </item>
+                <item>
+                    <widget class="QCheckBox" name="checkBox_2">
+                        <property name="text">
+                            <string>Watch Folder</string>
+                        </property>
+                        <property name="checked">
+                            <bool>true</bool>
+                        </property>
+                        <property name="isFoldingTab" stdset="0">
+                            <bool>true</bool>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QFrame" name="frame_2">
+                        <property name="sizePolicy">
+                            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                                <horstretch>0</horstretch>
+                                <verstretch>0</verstretch>
+                            </sizepolicy>
+                        </property>
+                        <property name="autoFillBackground">
+                            <bool>false</bool>
+                        </property>
+                        <property name="frameShape">
+                            <enum>QFrame::StyledPanel</enum>
+                        </property>
+                        <property name="frameShadow">
+                            <enum>QFrame::Sunken</enum>
+                        </property>
+                        <layout class="QVBoxLayout" name="verticalLayout_9">
+                            <item>
+                                <widget class="QLabel" name="label">
+                                    <property name="text">
+                                        <string>[Folder Path Here]</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QDialogButtonBox" name="buttonBox">
+                                    <property name="standardButtons">
+                                        <set>QDialogButtonBox::Open|QDialogButtonBox::Reset</set>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QCheckBox" name="checkBox_3">
+                                    <property name="text">
+                                        <string>Preprocess in background</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QCheckBox" name="checkBox_5">
+                                    <property name="text">
+                                        <string>Open in Viewer</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QCheckBox" name="checkBox_4">
+                                    <property name="text">
+                                        <string>Open in Timeline</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </widget>
+                </item>
+            </layout>
         </widget>
        </widget>
       </item>
@@ -515,6 +607,24 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+     <widget class="QMenuBar" name="menuBar">
+         <property name="geometry">
+             <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>969</width>
+                 <height>22</height>
+             </rect>
+         </property>
+         <widget class="QMenu" name="menuFile">
+             <property name="title">
+                 <string>File</string>
+             </property>
+             <addaction name="actionOpen"/>
+             <addaction name="actionExport_Image"/>
+         </widget>
+         <addaction name="menuFile"/>
+     </widget>
   <action name="actionBeamProperties">
    <property name="icon">
     <iconset>
@@ -544,7 +654,7 @@
   </action>
   <action name="actionOpen">
    <property name="text">
-    <string>Open</string>
+       <string>Open...</string>
    </property>
   </action>
   <action name="actionSaveExperiment">
@@ -783,6 +893,24 @@
    </property>
    <property name="text">
     <string>timeline</string>
+   </property>
+  </action>
+     <action name="actionRemeshing">
+         <property name="checkable">
+             <bool>true</bool>
+         </property>
+         <property name="icon">
+             <iconset>
+                 <normaloff>icons_25.png</normaloff>icons_25.png
+             </iconset>
+         </property>
+         <property name="text">
+             <string>Remeshing</string>
+         </property>
+     </action>
+     <action name="actionExport_Image">
+         <property name="text">
+             <string>Export Image...</string>
    </property>
   </action>
  </widget>

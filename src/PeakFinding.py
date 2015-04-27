@@ -15,6 +15,6 @@ def PeakFinding(x,y):
         PeaksPosition[i,1]=list_max_ordonnee[i]
 
 
-    print PeaksPosition
+    # print PeaksPosition
 
     return PeaksPosition

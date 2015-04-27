@@ -274,31 +274,32 @@ def refinecenter(img, experiment):
 
     geometry = experiment.getGeometry()
 
-    print 'Start parameter:'
-    print geometry.getFit2D()
+    # print 'Start parameter:'
+    #print geometry.getFit2D()
 
     fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
-    fit_thread = saxs_calibration.FitThread(geometry, d_spacings, img, fit_param, 8)
+    fit_thread = saxs_calibration.FitThread(geometry, d_spacings, img, fit_param, 40)
     fit_thread.start()
     while fit_thread.is_alive():
         print fit_thread.status
         time.sleep(1)
 
-    print 'Final parameter:'
-    print geometry.getFit2D()
+    # print 'Final parameter:'
+    #print geometry.getFit2D()
+    #print fit_thread.get_info()
 
-    a = pylab.imshow(np.log(img), interpolation='none')
+    #pylab.imshow(np.log(img), interpolation='none')
 
-    for d_spacing in d_spacings:
-        ellipse = tth_ellipse(geometry, d_spacing)
-        ellipse.set_fc('none')
-        ellipse.set_ec('red')
-        pylab.gca().add_patch(ellipse)
+    # for d_spacing in d_spacings:
+    #    ellipse = tth_ellipse(geometry, d_spacing)
+    #    ellipse.set_fc('none')
+    #    ellipse.set_ec('red')
+    #    pylab.gca().add_patch(ellipse)
 
-    for circle in fit_thread.get_circle_patches():
-        pylab.gca().add_patch(circle)
+    # for circle in fit_thread.get_circle_patches():
+    #    pylab.gca().add_patch(circle)
 
-    pylab.show()
+    #pylab.show()
 
     return geometry.get_poni2(), geometry.get_poni1()
 

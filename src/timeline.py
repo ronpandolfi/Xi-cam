@@ -42,7 +42,7 @@ class timelinetabtracker(QtGui.QWidget):
 class timelinetab(viewer.imageTab):
     def __init__(self, paths, experiment, parentwindow):
 
-        imgdata = loader.loadpath(paths[0])
+        imgdata, paras = loader.loadpath(paths[0])
         super(timelinetab, self).__init__(imgdata, experiment, parentwindow)
 
         self.paths = paths
@@ -62,10 +62,10 @@ class timelinetab(viewer.imageTab):
         #print self.paths
 
         #get the first frame's profile
-        prev = loader.loadpath(self.paths[0])
+        prev, paras = loader.loadpath(self.paths[0])
         for i in range(self.paths.__len__() - 1):
             #print i, self.paths[i]
-            curr = loader.loadpath(self.paths[i + 1])
+            curr, paras = loader.loadpath(self.paths[i + 1])
             if curr is None:
                 self.variation[i] = None
                 continue
@@ -74,7 +74,7 @@ class timelinetab(viewer.imageTab):
 
             self.variation[i] = operation3(curr, prev)
             prev = curr
-        print self.variation
+            # print self.variation
 
 
     def plotvariation(self):
@@ -96,7 +96,7 @@ class timelinetab(viewer.imageTab):
 
     def redrawframe(self):
         path = self.paths[self.parentwindow.timeruler.value() + 1]
-        data = loader.loadpath(path)
+        data, paras = loader.loadpath(path)
         self.imgdata = np.rot90(data, 2)
         self.redrawimage()
 

@@ -111,7 +111,7 @@ class librarylayout(FlowLayout):
         while diriterator.hasNext():
             # print(diriterator.fileName())
             if diriterator.fileInfo().isFile():
-                # self.addWidget(thumbwidgetitem(diriterator.filePath()))
+                self.addWidget(thumbwidgetitem(diriterator.filePath()))
                 pass
             diriterator.next()
 
@@ -140,32 +140,34 @@ class thumbwidgetitem(QtGui.QFrame):
         self.layout = QtGui.QVBoxLayout(self)  #.frame
 
         self.path = path
-        self.imgdata = loader.loadpath(path)
-        self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
-        self.imgdata *= 255 / np.max(self.imgdata)
-        self.imgdata = self.imgdata.astype(np.uint8)
 
-        # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
-        #        min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
-        # dims=(220,230)
-        #print(dims)
-        #print self.imgdata
-        #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
-        #print self.imgdata
+        self.imgdata, paras = loader.loadpath(path)
+        if self.imgdata is not None:
+            self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
+            self.imgdata *= 255 / np.max(self.imgdata)
+            self.imgdata = self.imgdata.astype(np.uint8)
 
-        im = Image.fromarray(self.imgdata, 'L')
-        #im.thumbnail((150, 150))
-        #print(im.size)
+            # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
+            # min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
+            # dims=(220,230)
+            #print(dims)
+            #print self.imgdata
+            #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
+            #print self.imgdata
+
+            im = Image.fromarray(self.imgdata, 'L')
+            #im.thumbnail((150, 150))
+            #print(im.size)
+            self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                                      QtGui.QImage.Format_Indexed8)
+            image_label = ScaledLabel(self.image)
+            image_label.setAlignment(Qt.AlignHCenter)
+            self.layout.addWidget(image_label)
+
 
         self.namelabel = QtGui.QLabel(path.split('/')[-1])
         self.namelabel.setAlignment(Qt.AlignHCenter)
         self.namelabel.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Maximum)
-        self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
-                                  QtGui.QImage.Format_Indexed8)
-        image_label = ScaledLabel(self.image)
-        image_label.setAlignment(Qt.AlignHCenter)
-
-        self.layout.addWidget(image_label)
 
         line = QtGui.QFrame()
         line.setGeometry(QtCore.QRect(0, 0, desiredsize.width() * 9 / 10, 3))

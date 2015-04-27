@@ -8,6 +8,27 @@ from pyqtgraph.parametertree import Parameter
 import numpy as np
 
 
+class PyFAIGeometry(pyFAI.geometry.Geometry):
+    def set_fit2d(self,
+                  wavelength,
+                  distance,
+                  center_x,
+                  center_y,
+                  tilt,
+                  rotation):
+        self.set_wavelength(wavelength * 1e-10)
+        self.setFit2D(distance, center_x, center_y, tilt, rotation)
+
+    def get_fit2d(self):
+        param_dict = self.getFit2D()
+        return [self.get_wavelength() * 1e10,
+                param_dict['directDist'],
+                param_dict['centerX'],
+                param_dict['centerY'],
+                param_dict['tilt'],
+                param_dict['tiltPlanRotation']]
+
+
 class experiment(Parameter):
     def __init__(self, path=None):
         self.iscalibrated = False
@@ -115,7 +136,7 @@ class experiment(Parameter):
         :rtype : pyFAI.Geometry
         """
         # print(self.getDetector().MAX_SHAPE)
-        geo = geometry.Geometry(dist=self.getvalue('Detector Distance'),
+        geo = PyFAIGeometry(dist=self.getvalue('Detector Distance'),
                                 poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
                                 poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
                                 rot1=0,
@@ -126,6 +147,7 @@ class experiment(Parameter):
                                 detector=self.getDetector(),
                                 wavelength=self.getvalue('Wavelength'))
         # print AI
+
         return geo
 
     def getDetector(self):
