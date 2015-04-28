@@ -24,6 +24,7 @@ import loader
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
+from PySide.QtCore import Qt
 
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
@@ -42,19 +43,20 @@ import numpy as np
 class MyMainWindow():
     def __init__(self):
 
-        # STYLE
-        # Initialize PySide app with dark stylesheet
-        self.app = QtGui.QApplication(sys.argv)
-        self.app.setStyle('Plastique')
-        with open('../gui/style.stylesheet', 'r') as f:
-            self.app.setStyleSheet(f.read())
-
         # Load the gui from file
+        self.app = QtGui.QApplication(sys.argv)
         loader = QUiLoader()
         f = QtCore.QFile("../gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = loader.load(f)
         f.close()
+
+        # STYLE
+        self.app.setStyle('Plastique')
+        with open('../gui/style.stylesheet', 'r') as f:
+            self.app.setStyleSheet(f.read())
+
+
 
         # INITIAL GLOBALS
         self.viewerprevioustab = -1
@@ -452,7 +454,7 @@ class MyMainWindow():
                     return None
 
     def exportimage(self):
-        self.currentImageTab().exportimage()
+        self.currentImageTab().tab.exportimage()
 
     def calibrate(self):
         """

@@ -74,7 +74,7 @@ def remesh(filename, geometry, outpath, basename, experiment):
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
-        exit(1)
+        return img
     alphai = paras["Sample Alpha Stage"] / 360.0 * 2 * np.pi
 
     nz, ny = img.shape
@@ -125,7 +125,6 @@ def remesh_mask(agbfile, agb):
     alphai = get_incedent_angle(agbfile)
     if alphai is None:
         print "Failed to read incident angle"
-        exit(1)
 
     img = agb.mask_
     nz, ny = img.shape

@@ -12,13 +12,14 @@ import center_approx
 
 import cosmics
 import fabio
-import pyfits
+from fabio import edfimage
 import cv2
 import debug
 import loader
 import colormap
 import PeakFinding
 import remesh
+import os
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -578,7 +579,12 @@ class imageTab(QtGui.QWidget):
                 return detector
 
     def exportimage(self):
-        pass
+        fabimg = edfimage.edfimage(np.rot90(self.imageitem.image))
+        dialog = QtGui.QFileDialog(parent=self.parentwindow.ui, caption="blah", directory=os.path.dirname(self.path),
+                                   filter=u"EDF (*.edf)")
+        dialog.selectFile(os.path.basename(self.path))
+        filename, _ = dialog.getSaveFileName()
+        fabimg.write(filename)
 
 
 class previewwidget(pg.GraphicsLayoutWidget):
