@@ -37,8 +37,7 @@ import timeline
 import numpy as np
 
 
-
-# sys.path.append("../gui/")
+sys.path.append("../gui/")
 
 class MyMainWindow():
     def __init__(self):
