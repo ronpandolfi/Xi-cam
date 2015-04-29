@@ -34,6 +34,7 @@ import config
 import viewer
 import library
 import timeline
+import watcher
 import numpy as np
 
 
@@ -61,6 +62,7 @@ class MyMainWindow():
         self.viewerprevioustab = -1
         self.timelineprevioustab = -1
         self.experiment = config.experiment()
+        self.folderwatcher = watcher.newfilewatcher()
 
         # ACTIONS
         # Wire up action buttons
@@ -125,6 +127,8 @@ class MyMainWindow():
         # Setup folding toolboxes
         self.ui.findChild(QtGui.QCheckBox, 'filebrowsercheck').stateChanged.connect(self.filebrowserpanetoggle)
         self.ui.findChild(QtGui.QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'watchfold').stateChanged.connect(self.watchfoldtoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'experimentfold').stateChanged.connect(self.experimentfoldtoggle)
 
         # Setup integration plot widget
         integrationwidget = pg.PlotWidget()
@@ -208,6 +212,11 @@ class MyMainWindow():
         self.filetree.clicked.connect(self.preview.loaditem)
         self.filetree.doubleClicked.connect(self.itemopen)
         self.openfileslistview.doubleClicked.connect(self.switchtotab)
+        self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Open).clicked.connect(
+            self.openwatchfolder)
+        self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Reset).clicked.connect(
+            self.resetwatchfolder)
+        self.folderwatcher.newFilesDetected.connect(self.newfilesdetected)
 
         # Connect top menu
         self.ui.findChild(QtGui.QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
@@ -350,11 +359,11 @@ class MyMainWindow():
         if index > -1:
             tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
 
-            try:
-
+            # try:
+            if self.viewerprevioustab > -1 and tabwidget.widget(self.viewerprevioustab) is not None:
                 tabwidget.widget(self.viewerprevioustab).unload()
-            except AttributeError:
-                print('AttributeError intercepted in currentchanged()')
+            # except AttributeError:
+            #    print('AttributeError intercepted in currentchanged()')
             tabwidget.widget(index).load()
         self.viewerprevioustab = index
 
@@ -545,6 +554,20 @@ class MyMainWindow():
         pane = self.ui.findChild(QtGui.QListView, 'openfileslist')
         pane.setHidden(not pane.isHidden())
 
+    def watchfoldtoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
+        pane = self.ui.findChild(QtGui.QFrame, 'watchframe')
+        pane.setVisible(not pane.isVisible())
+
+    def experimentfoldtoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
+        pane = self.experimentTree
+        pane.setHidden(not pane.isHidden())
+
     def showlibrary(self):
         """
         switch to library view
@@ -563,6 +586,27 @@ class MyMainWindow():
         """
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
 
+    def openwatchfolder(self):
+        dialog = QtGui.QFileDialog(self.ui, 'Choose a folder to watch', os.curdir,
+                                   options=QtGui.QFileDialog.ShowDirsOnly)
+        d = dialog.getExistingDirectory()
+        if d:
+            self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText(d)
+            self.folderwatcher.addPath(d)
+
+    def resetwatchfolder(self):
+        self.folderwatcher.removePaths(self.folderwatcher.directories())
+        self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText('')
+
+    def newfilesdetected(self, d, paths):
+        for path in paths:
+            print(path)
+            if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
+                self.openfile(os.path.join(d, path))
+            if self.ui.findChild(QtGui.QCheckBox, 'autoTimeline').isChecked():
+                pass
+            if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
+                pass
 
 if __name__ == '__main__':
     window = MyMainWindow()

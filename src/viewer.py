@@ -54,7 +54,12 @@ class imageTabTracker(QtGui.QWidget):
         if not self.isloaded:
             if self.operation is None:
 
-                imgdata, paras = loader.loadpath(self.paths)
+                try:
+                    imgdata, paras = loader.loadpath(self.paths)
+                except IOError:
+                    print('File moved or deleted. Load failed')
+
+                    return None
                 self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
             else:
                 imgdata, paras = [loader.loadpath(path) for path in self.paths]
@@ -70,12 +75,19 @@ class imageTabTracker(QtGui.QWidget):
 
     def unload(self):
         """
-        orphan the tab widgets and queue them for deletion
+        orphan the tab widgets and queue them for deletion. Mwahahaha.
         """
         if self.isloaded:
-            self.layout.parent = None
-            self.layout.deleteLater()
-            # self.tab = None
+            for child in self.children():
+                print child
+                if type(child) is imageTab:
+                    self.layout.removeWidget(child)
+                    child.deleteLater()
+                if type(child) is QtGui.QHBoxLayout:
+                    child.parent = None
+                    child.deleteLater()
+            self.tab = None
+            self.layout = None
             #print('Successful unload!')
             self.isloaded = False
 
@@ -480,7 +492,7 @@ class imageTab(QtGui.QWidget):
 
 
             # Radial integration
-            self.q, self.radialprofile = integration.radialintegratepyFAI(self.imgdata, self.experiment,
+            self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
             ##############################################################################
             # Remi's peak finding
@@ -488,9 +500,9 @@ class imageTab(QtGui.QWidget):
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            x, y = PeakFinding.PeakFinding((self.q), self.radialprofile).T
+            # x, y = PeakFinding.PeakFinding((self.q), self.radialprofile).T
 
-            self.parentwindow.integration.plot(x,y,pen=None,symbol='o')
+            #self.parentwindow.integration.plot(x,y,pen=None,symbol='o')
 
             ##############################################################################
             # Replot

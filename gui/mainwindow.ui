@@ -526,7 +526,7 @@
                     <number>5</number>
                 </property>
                 <item>
-                    <widget class="QCheckBox" name="checkBox">
+                    <widget class="QCheckBox" name="experimentfold">
                         <property name="text">
                             <string>Experiment Properties</string>
                         </property>
@@ -542,7 +542,7 @@
                     <layout class="QVBoxLayout" name="propertiesBox"/>
                 </item>
                 <item>
-                    <widget class="QCheckBox" name="checkBox_2">
+                    <widget class="QCheckBox" name="watchfold">
                         <property name="text">
                             <string>Watch Folder</string>
                         </property>
@@ -570,35 +570,35 @@
                         </property>
                         <layout class="QVBoxLayout" name="verticalLayout_9">
                             <item>
-                                <widget class="QLabel" name="label">
+                                <widget class="QLabel" name="watchfolderpath">
                                     <property name="text">
                                         <string>[Folder Path Here]</string>
                                     </property>
                                 </widget>
                             </item>
                             <item>
-                                <widget class="QDialogButtonBox" name="buttonBox">
+                                <widget class="QDialogButtonBox" name="watchbuttons">
                                     <property name="standardButtons">
                                         <set>QDialogButtonBox::Open|QDialogButtonBox::Reset</set>
                                     </property>
                                 </widget>
                             </item>
                             <item>
-                                <widget class="QCheckBox" name="checkBox_3">
+                                <widget class="QCheckBox" name="autoPreprocess">
                                     <property name="text">
                                         <string>Preprocess in background</string>
                                     </property>
                                 </widget>
                             </item>
                             <item>
-                                <widget class="QCheckBox" name="checkBox_5">
+                                <widget class="QCheckBox" name="autoView">
                                     <property name="text">
                                         <string>Open in Viewer</string>
                                     </property>
                                 </widget>
                             </item>
                             <item>
-                                <widget class="QCheckBox" name="checkBox_4">
+                                <widget class="QCheckBox" name="autoTimeline">
                                     <property name="text">
                                         <string>Open in Timeline</string>
                                     </property>
@@ -646,7 +646,7 @@
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_01.png</normaloff>../gui/icons_01.png
+        <normaloff>icons_01.png</normaloff>icons_01.png
     </iconset>
    </property>
    <property name="text">
@@ -656,7 +656,7 @@
   <action name="actionPolyMask">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_05.png</normaloff>../gui/icons_05.png
+        <normaloff>icons_05.png</normaloff>icons_05.png
     </iconset>
    </property>
    <property name="text">
@@ -686,7 +686,7 @@
   <action name="actionMasking">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_03.png</normaloff>../gui/icons_03.png
+        <normaloff>icons_03.png</normaloff>icons_03.png
     </iconset>
    </property>
    <property name="text">
@@ -699,7 +699,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_02.png</normaloff>../gui/icons_02.png
+        <normaloff>icons_02.png</normaloff>icons_02.png
     </iconset>
    </property>
    <property name="text">
@@ -712,7 +712,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_04.png</normaloff>../gui/icons_04.png
+        <normaloff>icons_04.png</normaloff>icons_04.png
     </iconset>
    </property>
    <property name="text">
@@ -722,7 +722,7 @@
   <action name="actionRemove_Cosmics">
    <property name="icon">
     <iconset>
-        <normalon>../gui/icons_06.png</normalon>
+        <normalon>icons_06.png</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -732,7 +732,7 @@
   <action name="actionMaskLoad">
    <property name="icon">
     <iconset>
-        <normalon>../gui/icons_08.png</normalon>
+        <normalon>icons_08.png</normalon>
     </iconset>
    </property>
    <property name="text">
@@ -745,7 +745,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_07.png</normaloff>../gui/icons_07.png
+        <normaloff>icons_07.png</normaloff>icons_07.png
     </iconset>
    </property>
    <property name="text">
@@ -765,7 +765,7 @@
   <action name="actionAdd">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_11.png</normaloff>../gui/icons_11.png
+        <normaloff>icons_11.png</normaloff>icons_11.png
     </iconset>
    </property>
    <property name="text">
@@ -775,7 +775,7 @@
   <action name="actionSubtract">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_13.png</normaloff>../gui/icons_13.png
+        <normaloff>icons_13.png</normaloff>icons_13.png
     </iconset>
    </property>
    <property name="text">
@@ -785,7 +785,7 @@
   <action name="actionAdd_with_coefficient">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_14.png</normaloff>../gui/icons_14.png
+        <normaloff>icons_14.png</normaloff>icons_14.png
     </iconset>
    </property>
    <property name="text">
@@ -795,7 +795,7 @@
   <action name="actionSubtract_with_coefficient">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_15.png</normaloff>../gui/icons_15.png
+        <normaloff>icons_15.png</normaloff>icons_15.png
     </iconset>
    </property>
    <property name="text">
@@ -805,7 +805,7 @@
   <action name="actionDivide">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_12.png</normaloff>../gui/icons_12.png
+        <normaloff>icons_12.png</normaloff>icons_12.png
     </iconset>
    </property>
    <property name="text">
@@ -815,7 +815,7 @@
   <action name="actionAverage">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_16.png</normaloff>../gui/icons_16.png
+        <normaloff>icons_16.png</normaloff>icons_16.png
     </iconset>
    </property>
    <property name="text">
@@ -828,7 +828,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_18.png</normaloff>../gui/icons_18.png
+        <normaloff>icons_18.png</normaloff>icons_18.png
     </iconset>
    </property>
    <property name="text">
@@ -841,7 +841,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_17.png</normaloff>../gui/icons_17.png
+        <normaloff>icons_17.png</normaloff>icons_17.png
     </iconset>
    </property>
    <property name="text">
@@ -854,8 +854,8 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_20.png</normaloff>
-        <normalon>../gui/icons_19.png</normalon>../gui/icons_20.png
+        <normaloff>icons_20.png</normaloff>
+        <normalon>icons_19.png</normalon>icons_20.png
     </iconset>
    </property>
    <property name="text">
@@ -868,7 +868,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_21.png</normaloff>../gui/icons_21.png
+        <normaloff>icons_21.png</normaloff>icons_21.png
     </iconset>
    </property>
    <property name="text">
@@ -881,7 +881,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_22.png</normaloff>../gui/icons_22.png
+        <normaloff>icons_22.png</normaloff>icons_22.png
     </iconset>
    </property>
    <property name="text">
@@ -894,7 +894,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_23.png</normaloff>../gui/icons_23.png
+        <normaloff>icons_23.png</normaloff>icons_23.png
     </iconset>
    </property>
    <property name="text">
@@ -907,7 +907,7 @@
    </property>
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_24.png</normaloff>../gui/icons_24.png
+        <normaloff>icons_24.png</normaloff>icons_24.png
     </iconset>
    </property>
    <property name="text">
@@ -917,7 +917,7 @@
   <action name="actionTimeline">
    <property name="icon">
     <iconset>
-        <normaloff>../gui/icons_25.png</normaloff>../gui/icons_25.png
+        <normaloff>icons_25.png</normaloff>icons_25.png
     </iconset>
    </property>
    <property name="text">
@@ -930,7 +930,7 @@
          </property>
          <property name="icon">
              <iconset>
-                 <normaloff>../gui/icons_25.png</normaloff>../gui/icons_25.png
+                 <normaloff>icons_25.png</normaloff>icons_25.png
              </iconset>
          </property>
          <property name="text">
