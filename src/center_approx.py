@@ -238,7 +238,7 @@ def newcenter_approx(img, experiment, demo=True):
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2
 
-    return cen[1], cen[0]
+    return cen[0], cen[1]
 
 
 def tth_ellipse(geometry, d_spacing):

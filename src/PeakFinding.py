@@ -2,19 +2,18 @@ __author__ = 'remi'
 
 from pylab import *
 from scipy import signal
+from scipy.ndimage import filters
 
-def PeakFinding(x,y):
-
-    peakind = signal.find_peaks_cwt(y, np.arange(0.01,100))
-    list_max_abscisse=(x[peakind])
-    list_max_ordonnee=y[peakind]
-    PeaksPosition=np.zeros((size(list_max_ordonnee),2))
-
-    for i in range (0,size(list_max_ordonnee)):
-        PeaksPosition[i,0]=list_max_abscisse[i]
-        PeaksPosition[i,1]=list_max_ordonnee[i]
+maxfiltercoef = 5
+cwtrange = np.arange(3, 100)
+gaussiansigma = 2
 
 
-    # print PeaksPosition
+def findpeaks(x, y):
+    cwtdata = filters.gaussian_filter(signal.cwt(y, signal.ricker, cwtrange), gaussiansigma)
+    maxima = (cwtdata == filters.maximum_filter(cwtdata, 5))
+    maximaloc = np.where(maxima == 1)
+    x = np.array(x)
+    y = np.array(y)
 
-    return PeaksPosition
+    return list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))

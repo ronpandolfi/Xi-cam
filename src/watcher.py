@@ -17,7 +17,7 @@ class newfilewatcher(QtCore.QFileSystemWatcher):
         self.childrendict[path] = set(os.listdir(path))
 
     def checkdirectory(self, path):
-        print(path)
+        # print(path)
         updatedchildren = set(os.listdir(path))
         newchildren = updatedchildren - self.childrendict[path]
         self.childrendict[path] = updatedchildren

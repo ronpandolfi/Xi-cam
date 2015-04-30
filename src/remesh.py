@@ -46,11 +46,13 @@ def transform(ny, nz, geometry, alphai, experiment):
     y = np.arange(ny)
     z = np.arange(nz)
     y, z = np.meshgrid(y, z)
-    print(geometry.get_poni1() / geometry.get_pixel1(), geometry.get_poni2() / geometry.get_poni2())
-    y = (y - (experiment.getDetector().MAX_SHAPE[
-                  1] - geometry.get_poni2() / geometry.get_pixel2())) * geometry.get_pixel2() * 1.0E+10  #1679-geometry.get_poni2()/geometry.get_pixel2())
-    z = (z - (experiment.getDetector().MAX_SHAPE[
-                  0] - geometry.get_poni1() / geometry.get_pixel1())) * geometry.get_pixel1() * 1.0E+10  #1475-(geometry.get_poni1()/geometry.get_pixel1())
+    # print(geometry.get_poni1() / geometry.get_pixel1(), geometry.get_poni2() / geometry.get_poni2())
+    y = (y - (
+    geometry.get_poni2() / geometry.get_pixel2())) * geometry.get_pixel2() * 1.0E+10  #1679-geometry.get_poni2()/geometry.get_pixel2())
+    print(nz)
+    z = (z - (
+    ny - geometry.get_poni1() / geometry.get_pixel1())) * geometry.get_pixel1() * 1.0E+10  #1475-(geometry.get_poni1()/geometry.get_pixel1())
+
 
     tmp = np.sqrt(y ** 2 + sdd ** 2)
     cos2theta = sdd / tmp

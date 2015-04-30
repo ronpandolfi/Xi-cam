@@ -1,6 +1,7 @@
 # --coding: utf-8 --
 
 from PySide import QtGui
+from PySide import QtCore
 from PySide.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
@@ -65,12 +66,20 @@ class imageTabTracker(QtGui.QWidget):
                 imgdata, paras = [loader.loadpath(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
-                print(imgdata)
+                # print(imgdata)
 
             self.layout = QtGui.QHBoxLayout(self)
+            self.layout.setContentsMargins(0, 0, 0, 0)
             self.tab = imageTab(imgdata, self.experiment, self.parent, self.paths)
             self.layout.addWidget(self.tab)
             self.isloaded = True
+            self.tab.cache1Dintegration.connect(self.cache1Dintegration)
+            self.tab.send1Dintegration()
+
+    def cache1Dintegration(self, q, I):
+        self.q = q
+        self.I = I
+        print('tab cached')
 
 
     def unload(self):
@@ -79,7 +88,7 @@ class imageTabTracker(QtGui.QWidget):
         """
         if self.isloaded:
             for child in self.children():
-                print child
+                #print child
                 if type(child) is imageTab:
                     self.layout.removeWidget(child)
                     child.deleteLater()
@@ -92,7 +101,14 @@ class imageTabTracker(QtGui.QWidget):
             self.isloaded = False
 
 
+    def replotassecondary(self):
+
+        self.parent.integration.plot(self.q, self.I, pen=pg.mkPen('#555555'))
+
+
 class imageTab(QtGui.QWidget):
+    cache1Dintegration = QtCore.Signal(np.ndarray, np.ndarray)
+
     def __init__(self, imgdata, experiment, parent, paths=None):
         """
         A tab containing an imageview. Also manages functionality connected to a specific tab (masking/integration)
@@ -107,7 +123,7 @@ class imageTab(QtGui.QWidget):
         self.path = paths
 
         # Save image data and the experiment
-        self.imgdata = np.rot90(imgdata, 2)
+        self.imgdata = np.rot90(imgdata, 3)
         self.experiment = experiment
         self.parentwindow = parent
 
@@ -199,6 +215,14 @@ class imageTab(QtGui.QWidget):
         #self.updatelogintensity()
         self.redrawimage()
 
+        # Cache radial integration
+        self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
+                                                                 mask=self.experiment.mask)
+
+
+    def send1Dintegration(self):
+        self.cache1Dintegration.emit(self.q, self.radialprofile)
+
 
     def mouseMoved(self, evt):
         """
@@ -273,12 +297,7 @@ class imageTab(QtGui.QWidget):
         ismaskshown = self.parentwindow.ui.findChild(QtGui.QAction, 'actionShow_Mask').isChecked()
         iscake = self.parentwindow.ui.findChild(QtGui.QAction, 'actionCake').isChecked()
         isremesh = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRemeshing').isChecked()
-        img = np.rot90(self.imgdata, 1).copy()
-
-        # When the log intensity button toggles, switch the log scaling on the image
-        if islogintensity:
-            img = (np.log(img * (img > 0) + (img < 1)))
-        imtest(img)
+        img = self.imgdata.copy()
         if isradialsymmetry:
             centerx = self.experiment.getvalue('Center X')
             centery = self.experiment.getvalue('Center Y')
@@ -321,13 +340,17 @@ class imageTab(QtGui.QWidget):
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((
-                self.experiment.mask.T, np.zeros_like(self.experiment.mask).T, np.zeros_like(self.experiment.mask).T,
-                self.experiment.mask.T)), opacity=.25)
+                self.experiment.mask, np.zeros_like(self.experiment.mask), np.zeros_like(self.experiment.mask),
+                self.experiment.mask)), opacity=.25)
         else:
             self.maskimage.clear()
 
+        # When the log intensity button toggles, switch the log scaling on the image
+        if islogintensity:
+            img = (np.log(img * (img > 0) + (img < 1)))
+
         self.imageitem.setImage(img)
-        self.imageitem.setLookupTable(colormap.LUT)
+        #self.imageitem.setLookupTable(colormap.LUT)
 
     def linecut(self):
         """
@@ -390,7 +413,7 @@ class imageTab(QtGui.QWidget):
         self.experiment.addtomask(c.mask)
         #self.maskoverlay()
 
-    @debug.timeit
+    #@debug.timeit
     def findcenter(self):
         # Auto find the beam center
         [x, y] = center_approx.center_approx(self.imgdata, self.experiment)
@@ -407,7 +430,7 @@ class imageTab(QtGui.QWidget):
                                              [self.experiment.getvalue('Center Y')], pen=None, symbol='o')
         self.viewbox.addItem(self.centerplot)
 
-    @debug.timeit
+    #@debug.timeit
     def calibrate(self):
         # Choose detector
         self.finddetector()
@@ -445,9 +468,6 @@ class imageTab(QtGui.QWidget):
     def replot(self):
         self.parentwindow.integration.clear()
 
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionMultiPlot').isChecked():
-            self.replotothers()
-
         self.replotprimary()
         self.parentwindow.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
         self.parentwindow.qLine.setVisible(False)
@@ -455,6 +475,11 @@ class imageTab(QtGui.QWidget):
 
     def replotprimary(self):
         cut = None
+
+        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionMultiPlot').isChecked():
+            for tabtracker in self.parentwindow.ui.findChildren(imageTabTracker):
+                if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
+                    tabtracker.replotassecondary()
 
         if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
             # regionbounds=self.region.getRegion()
@@ -494,26 +519,22 @@ class imageTab(QtGui.QWidget):
             # Radial integration
             self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
+            self.cache1Dintegration.emit(self.q, self.radialprofile)
             ##############################################################################
             # Remi's peak finding
             # self.q / 10.0 is x
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            # x, y = PeakFinding.PeakFinding((self.q), self.radialprofile).T
+            q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
 
-            #self.parentwindow.integration.plot(x,y,pen=None,symbol='o')
+            self.parentwindow.integration.plot(q, I, pen=None, symbol='o')
 
             ##############################################################################
             # Replot
             self.parentwindow.integration.plot(self.q, self.radialprofile)
 
-    def replotothers(self):
-        for tab in self.parentwindow.ui.findChildren(imageTab):
-            tab.replotassecondary(self.parentwindow.integration)
 
-    def replotassecondary(self, plotitem):
-        plotitem.plot(self.q, self.radialprofile, pen=pg.mkPen(0.5))
 
 
     def polymask(self):
@@ -581,10 +602,10 @@ class imageTab(QtGui.QWidget):
 
     def finddetector(self):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
-            if detector.MAX_SHAPE == self.imgdata.shape:
+            if detector.MAX_SHAPE == self.imgdata.shape[::-1]:
                 detector = detector()
                 mask = detector.calc_mask()
-                self.experiment.addtomask(mask)
+                self.experiment.addtomask(np.rot90(mask))
                 self.experiment.setvalue('Pixel Size X', detector.pixel1)
                 self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                 self.experiment.setvalue('Detector', name)

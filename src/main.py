@@ -355,7 +355,7 @@ class MyMainWindow():
         """
         When the active tab changes, load/unload tabs
         """
-        print('Changing from', self.viewerprevioustab, 'to', index)
+        # print('Changing from', self.viewerprevioustab, 'to', index)
         if index > -1:
             tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
 
@@ -514,7 +514,7 @@ class MyMainWindow():
         """
         replot the current tab (tab plotting checks if this is active)
         """
-        self.currentImageTab().replot()
+        self.currentImageTab().tab.replot()
 
     def maskload(self):
         """

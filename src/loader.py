@@ -17,7 +17,7 @@ def loadpath(path):
             data = fabio.open(path).data
 
         txtpath = '.'.join(path.split('.')[:-1]) + '.txt'
-        print txtpath
+        # print txtpath
         if os.path.isfile(txtpath):
             with open(txtpath, 'r') as f:
                 lines = f.readlines()

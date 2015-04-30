@@ -24,7 +24,7 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
         data *= cut
 
     #calculate data radial profile
-    y, x = np.indices(data.shape)
+    x, y = np.indices(data.shape)
     r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
     r = r.astype(np.int)
 
