@@ -30,7 +30,7 @@ def loadpath(path):
                     elif cells.__len__() == 1:
                         i += 1
                         paras['Unknown' + str(i)] = str(cells[0])
-            print paras
+            # print paras
             return data, paras
         else:
             return data, None

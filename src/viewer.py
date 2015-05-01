@@ -437,19 +437,36 @@ class imageTab(QtGui.QWidget):
 
         self.findcenter()
 
-        y, x = np.indices(self.imgdata.shape)
-        r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
-        r = r.astype(np.int)
-        tbin = np.bincount(r.ravel(), self.imgdata.ravel())
-        nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
-        with np.errstate(divide='ignore', invalid='ignore'):
-            radialprofile = tbin / nr
+        # x, y = np.indices(self.imgdata.shape)
+        #r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
+        #r = r.astype(np.int)
+        #tbin = np.bincount(r.ravel(), self.imgdata.ravel())
+        #nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
+        #with np.errstate(divide='ignore', invalid='ignore'):
+        #    radialprofile = tbin / nr
+
+        _, radialprofile = integration.radialintegrate(self.imgdata, self.experiment, mask=self.experiment.mask)
 
         # Find peak positions, they represent the radii
-        peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
+        # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
+        np.set_printoptions(threshold=np.nan)
+        print('size', radialprofile.shape[0])
+        peaks = np.array(PeakFinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
+        #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
+
+        peaks = peaks[peaks[:, 1].argsort()[::-1]]
+
+        #print peaks
+
+        for peak in peaks:
+            if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
+                bestpeak = peak[0]
+                print peak
+                break
+
 
         # Get the tallest peak
-        bestpeak = peaks[radialprofile[peaks].argmax()]
+        #bestpeak = peaks[radialprofile[peaks].argmax()]
 
         # Calculate sample to detector distance for lowest q peak
         tth = 2 * np.arcsin(0.5 * self.experiment.getvalue('Wavelength') / 58.367e-10)
@@ -526,9 +543,11 @@ class imageTab(QtGui.QWidget):
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
+            self.peaktooltip = PeakFinding.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
 
-            self.parentwindow.integration.plot(q, I, pen=None, symbol='o')
+            # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
+
+            #self.parentwindow.integration.plot(q, I, pen=None, symbol='o')
 
             ##############################################################################
             # Replot

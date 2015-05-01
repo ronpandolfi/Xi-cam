@@ -32,26 +32,28 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     nr = np.bincount(r.ravel(), (1 - mask).ravel())
     radialprofile = tbin / nr
 
+    q = np.arange(radialprofile.shape[0])
 
-    #calculate q spacings
-    x = np.arange(radialprofile.shape[0])
-    theta = np.arctan2(x * experiment.getvalue('Pixel Size X'),
-                       experiment.getvalue('Detector Distance'))
-    #theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
-    wavelength = experiment.getvalue('Wavelength')
-    q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+    if experiment.iscalibrated:
+        # calculate q spacings
+        x = np.arange(radialprofile.shape[0])
+        theta = np.arctan2(x * experiment.getvalue('Pixel Size X'),
+                           experiment.getvalue('Detector Distance'))
+        #theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
+        wavelength = experiment.getvalue('Wavelength')
+        q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
 
 
-    #save integration to file
-    f = open("integ.csv", "w")
-    for l, z in zip(q, radialprofile):
-        f.write(str(l) + "," + str(z) + "\n")
-    f.close()
+        # save integration to file
+        #f = open("integ.csv", "w")
+        #for l, z in zip(q, radialprofile):
+        #    f.write(str(l) + "," + str(z) + "\n")
+        #f.close()
 
-    #remove 0s
-
-    (q, radialprofile) = ([qvalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0],
+        # remove 0s
+        (q, radialprofile) = ([qvalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0],
                           [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
+
 
     return (q, radialprofile)
 

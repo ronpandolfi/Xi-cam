@@ -52,14 +52,14 @@ def fitpointstocircle(cnt):
     return xc, yc, R, residu
 
 
-@debug.timeit
+# @debug.timeit
 def center_approx(img, experiment, demo=False, maskfitp=(130, 0, 80), edgefitp=(180, 20)):
     """
     Find the center of scattering image; maskfit parameters are the Canny threshold parameters for sharp edges and
     the Hough lines transform threshold; edgefitp parameters are the Canny thresholds for finding edges after masking
     """
-
-    return newcenter_approx(img, experiment)
+    # newcenter_approx(img, experiment)
+    return newcenter_approx(img, experiment, log=False)
 
     try:
         # Rescale brightness of the image with log depth
@@ -216,11 +216,12 @@ def center_approx(img, experiment, demo=False, maskfitp=(130, 0, 80), edgefitp=(
         return None
 
 
-def newcenter_approx(img, experiment, demo=True):
+def newcenter_approx(img, experiment, demo=True, log=True):
     img = img.astype(np.float)
-    # Rescale brightness of the image with log depth
-    with np.errstate(divide='ignore', invalid='ignore'):
-        img = np.log(img + 3)
+    if log:
+        # Rescale brightness of the image with log depth
+        with np.errstate(divide='ignore', invalid='ignore'):
+            img = np.log(img + 3) - np.log(3)
 
     # Convert to 8bit image for the HoughCircles procedure
     # img = np.uint8(img)
@@ -228,16 +229,15 @@ def newcenter_approx(img, experiment, demo=True):
     # Histogram levels and equalize
     #img = cv2.equalizeHist(img)
 
-    img = img - np.log(3)
     #img=img*(img>0)
-    m = img.max()
+    #m = img.max()
     testimg(img)
 
-    con = signal.fftconvolve(img > .7 * m, img > .7 * m)
+    con = signal.fftconvolve(img, img)
     testimg(con)
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2
-
+    #print('Center quality:',log,np.sum(con/con.max()))
     return cen[0], cen[1]
 
 
