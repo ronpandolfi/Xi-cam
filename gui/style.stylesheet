@@ -103,3 +103,8 @@ QPushButton {
 QTabWidget {
     padding:0px;
 }
+
+QMenu {
+    icon-size:32px 32px;
+
+}

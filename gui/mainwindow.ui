@@ -396,6 +396,9 @@
                  <property name="styleSheet">
                   <string notr="true"/>
                  </property>
+                    <property name="tabShape">
+                        <enum>QTabWidget::Rounded</enum>
+                    </property>
                  <property name="currentIndex">
                   <number>-1</number>
                  </property>
@@ -917,12 +920,15 @@
   <action name="actionTimeline">
    <property name="icon">
     <iconset>
-        <normaloff>icons_25.png</normaloff>icons_25.png
+        <normaloff>icons_26.png</normaloff>icons_26.png
     </iconset>
    </property>
    <property name="text">
     <string>timeline</string>
    </property>
+      <property name="toolTip">
+          <string>Timeline</string>
+      </property>
   </action>
      <action name="actionRemeshing">
          <property name="checkable">

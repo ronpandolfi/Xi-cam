@@ -72,7 +72,7 @@ class timelinetab(viewer.imageTab):
 
             #print curr, prev,'\n'
 
-            self.variation[i] = operation3(curr, prev)
+            self.variation[i] = operation2(curr, prev)
             prev = curr
             # print self.variation
 

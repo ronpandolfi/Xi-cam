@@ -241,8 +241,8 @@ class imageTab(QtGui.QWidget):
                                          u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>" % (
                                          mousePoint.x(),
                                          mousePoint.y(),
-                                         self.imgdata[int(mousePoint.y()),
-                                                      int(mousePoint.x())],
+                                         self.imgdata[int(mousePoint.x()),
+                                                      int(mousePoint.y())],
                                          pixel2q(mousePoint.x(),
                                                  mousePoint.y(),
                                                  self.experiment),
@@ -258,8 +258,8 @@ class imageTab(QtGui.QWidget):
                                              u"  Calibration Required..." % (
                                                  mousePoint.x(),
                                                  mousePoint.y(),
-                                                 self.imgdata[int(mousePoint.y()),
-                                                              int(mousePoint.x())],
+                                                 self.imgdata[int(mousePoint.x()),
+                                                              int(mousePoint.y())],
                                              ))
 
                 self.coordslabel.setVisible(True)
