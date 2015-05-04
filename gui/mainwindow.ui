@@ -303,7 +303,7 @@
              <property name="selectionMode">
               <enum>QAbstractItemView::ExtendedSelection</enum>
              </property>
-             <property name="iconSize">
+                <property name="../gui/iconsize">
               <size>
                <width>16</width>
                <height>16</height>
@@ -648,8 +648,10 @@
   </widget>
   <action name="actionBeamProperties">
    <property name="icon">
-    <iconset>
-     <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
+       <../gui/iconset>
+       <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>
+       ~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>BeamProperties</string>
@@ -657,8 +659,9 @@
   </action>
   <action name="actionCenterFind">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_01.png</normaloff>icons_01.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_01.png</normaloff>../gui/icons_01.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>CenterFind</string>
@@ -666,8 +669,9 @@
   </action>
   <action name="actionPolyMask">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_05.png</normaloff>icons_05.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_05.png</normaloff>../gui/icons_05.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string/>
@@ -695,8 +699,9 @@
   </action>
   <action name="actionMasking">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_03.png</normaloff>icons_03.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_03.png</normaloff>../gui/icons_03.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Masking</string>
@@ -707,8 +712,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_02.png</normaloff>icons_02.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_02.png</normaloff>../gui/icons_02.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Log Intensity</string>
@@ -719,8 +725,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_04.png</normaloff>icons_04.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_04.png</normaloff>../gui/icons_04.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Cake</string>
@@ -728,9 +735,9 @@
   </action>
   <action name="actionRemove_Cosmics">
    <property name="icon">
-    <iconset>
-     <normalon>icons_06.png</normalon>
-    </iconset>
+       <../gui/iconset>
+       <normalon>../gui/icons_06.png</normalon>
+   </../gui/iconset>
    </property>
    <property name="text">
     <string/>
@@ -738,9 +745,9 @@
   </action>
   <action name="actionMaskLoad">
    <property name="icon">
-    <iconset>
-     <normalon>icons_08.png</normalon>
-    </iconset>
+       <../gui/iconset>
+       <normalon>../gui/icons_08.png</normalon>
+   </../gui/iconset>
    </property>
    <property name="text">
     <string/>
@@ -751,8 +758,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_07.png</normaloff>icons_07.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_07.png</normaloff>../gui/icons_07.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Muli plot</string>
@@ -770,8 +778,9 @@
   </action>
   <action name="actionAdd">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_11.png</normaloff>icons_11.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_11.png</normaloff>../gui/icons_11.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Add</string>
@@ -779,8 +788,9 @@
   </action>
   <action name="actionSubtract">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_13.png</normaloff>icons_13.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_13.png</normaloff>../gui/icons_13.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Subtract</string>
@@ -788,8 +798,9 @@
   </action>
   <action name="actionAdd_with_coefficient">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_14.png</normaloff>icons_14.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_14.png</normaloff>../gui/icons_14.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Add with coefficient</string>
@@ -797,8 +808,9 @@
   </action>
   <action name="actionSubtract_with_coefficient">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_15.png</normaloff>icons_15.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_15.png</normaloff>../gui/icons_15.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Subtract with coefficient</string>
@@ -806,8 +818,9 @@
   </action>
   <action name="actionDivide">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_12.png</normaloff>icons_12.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_12.png</normaloff>../gui/icons_12.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Divide</string>
@@ -815,8 +828,9 @@
   </action>
   <action name="actionAverage">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_16.png</normaloff>icons_16.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_16.png</normaloff>../gui/icons_16.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Average</string>
@@ -827,8 +841,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_18.png</normaloff>icons_18.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_18.png</normaloff>../gui/icons_18.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Radial Symmetry</string>
@@ -839,8 +854,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_17.png</normaloff>icons_17.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_17.png</normaloff>../gui/icons_17.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Mirror Symmetry</string>
@@ -851,9 +867,10 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_20.png</normaloff>
-     <normalon>icons_19.png</normalon>icons_20.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_20.png</normaloff>
+       <normalon>../gui/icons_19.png</normalon>../gui/icons_20.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Show Mask</string>
@@ -864,8 +881,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_21.png</normaloff>icons_21.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_21.png</normaloff>../gui/icons_21.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Polygon Cut</string>
@@ -876,8 +894,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_22.png</normaloff>icons_22.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_22.png</normaloff>../gui/icons_22.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Vertical Cut</string>
@@ -888,8 +907,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_23.png</normaloff>icons_23.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_23.png</normaloff>../gui/icons_23.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Horizontal Cut</string>
@@ -900,8 +920,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_24.png</normaloff>icons_24.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_24.png</normaloff>../gui/icons_24.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Line Cut</string>
@@ -909,8 +930,9 @@
   </action>
   <action name="actionTimeline">
    <property name="icon">
-    <iconset>
-     <normaloff>icons_26.png</normaloff>icons_26.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_26.png</normaloff>../gui/icons_26.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>timeline</string>
@@ -924,8 +946,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normaloff>icons_25.png</normaloff>icons_25.png</iconset>
+       <../gui/iconset>
+       <normaloff>../gui/icons_25.png</normaloff>../gui/icons_25.png
+   </../gui/iconset>
    </property>
    <property name="text">
     <string>Remeshing</string>
