@@ -1,0 +1,12 @@
+1457474.000
+363506.000
+5816.428
+X=-80.998
+Y=65.063
+Rotation=0.000
+Alpha=-0.716
+Phi=-0.000
+Alpha_scan_positions=
+Alpha_scan_I0_intensities=
+Alpha_scan_I1_intensities=
+Alpha_scan_diode_intensities=

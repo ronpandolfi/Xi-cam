@@ -9,7 +9,6 @@ from scipy.spatial import cKDTree
 from scipy.ndimage.filters import gaussian_filter
 from pyFAI import geometry
 from pyFAI import detectors
-from matplotlib import pylab
 
 
 def gaussian(pts, p0, h):
