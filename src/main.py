@@ -92,6 +92,9 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
         self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
 
+        # set inital state
+        self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').setChecked(True)
+
         # WIDGETS
         # Setup experiment tree
         self.experimentTree = ParameterTree()
