@@ -3,6 +3,8 @@ import fabio
 import pyfits
 import os
 
+acceptableexts = '.fits .edf .tif'
+
 def loadpath(path):
     """
     :type path : str
@@ -10,7 +12,7 @@ def loadpath(path):
     :return:
     """
 
-    if path.split('.')[-1] in '.fits .edf .tif':
+    if os.path.splitext(path)[1] in '.fits .edf .tif':
         if path.split('.')[-1] == 'fits':
             data = pyfits.open(path)[2].data
         else:

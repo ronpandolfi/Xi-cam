@@ -116,7 +116,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout()
+        self.libraryview = library.librarylayout(self, '../')
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list
@@ -237,6 +237,7 @@ class MyMainWindow():
         # Show UI and end app when it closes
         self.ui.show()
         sys.exit(self.app.exec_())
+
 
     def treerefresh(self, path=None):
         """
@@ -572,13 +573,13 @@ class MyMainWindow():
         """
         switch to library view
         """
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(0)
 
     def showviewer(self):
         """
         switch to viewer view
         """
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(0)
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
 
     def showtimeline(self):
         """

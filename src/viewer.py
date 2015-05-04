@@ -231,8 +231,8 @@ class imageTab(QtGui.QWidget):
         pos = evt  ## using signal proxy turns original arguments into a tuple
         if self.viewbox.sceneBoundingRect().contains(pos):
             mousePoint = self.viewbox.mapSceneToView(pos)
-            if (0 < mousePoint.x() < self.imgdata.shape[1]) & (
-                    0 < mousePoint.y() < self.imgdata.shape[0]):  # within bounds
+            if (0 < mousePoint.x() < self.imgdata.shape[0]) & (
+                            0 < mousePoint.y() < self.imgdata.shape[1]):  # within bounds
                 #angstrom=QChar(0x00B5)
                 if self.experiment.iscalibrated:
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
