@@ -336,7 +336,7 @@ class imageTab(QtGui.QWidget):
         if iscake:
             img, x, y = integration.cake(img, self.experiment)
         elif isremesh:
-            img = remesh.remesh(self.path, self.experiment.getGeometry(), '', 'bar', self.experiment)
+            img = remesh.remesh(self.path, self.experiment.getGeometry())
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((
