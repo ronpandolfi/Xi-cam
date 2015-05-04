@@ -7,7 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 from scipy.ndimage.filters import gaussian_filter
-import pyFAI
+from pyFAI import geometry
+from pyFAI import detectors
+from matplotlib import pylab
 
 
 def gaussian(pts, p0, h):
@@ -30,7 +32,7 @@ def remap(xcrd, ycrd, tree, img, radius):
     return qimg
 
 
-def transform(ny, nz, geometry, alphai, experiment):
+def transform(ny, nz, geometry, alphai):
     """
     :type geometry: P
     :param ny:
@@ -49,9 +51,9 @@ def transform(ny, nz, geometry, alphai, experiment):
     # print(geometry.get_poni1() / geometry.get_pixel1(), geometry.get_poni2() / geometry.get_poni2())
     y = (y - (
     geometry.get_poni2() / geometry.get_pixel2())) * geometry.get_pixel2() * 1.0E+10  #1679-geometry.get_poni2()/geometry.get_pixel2())
-    print(nz)
+    print(geometry.get_pixel1())
     z = (z - (
-    ny - geometry.get_poni1() / geometry.get_pixel1())) * geometry.get_pixel1() * 1.0E+10  #1475-(geometry.get_poni1()/geometry.get_pixel1())
+        nz - geometry.get_poni1() / geometry.get_pixel1())) * geometry.get_pixel1() * 1.0E+10  # 1475-(geometry.get_poni1()/geometry.get_pixel1())
 
 
     tmp = np.sqrt(y ** 2 + sdd ** 2)
@@ -68,7 +70,7 @@ def transform(ny, nz, geometry, alphai, experiment):
     return qx, qy, qz
 
 
-def remesh(filename, geometry, outpath, basename, experiment):
+def remesh(filename, geometry):
     # read image
     img, paras = loader.loadpath(filename)
 
@@ -80,9 +82,12 @@ def remesh(filename, geometry, outpath, basename, experiment):
     alphai = paras["Sample Alpha Stage"] / 360.0 * 2 * np.pi
 
     nz, ny = img.shape
-    qx, qy, qz = transform(ny, nz, geometry, alphai, experiment)
+    qx, qy, qz = transform(ny, nz, geometry, alphai)
     qr = np.sqrt(qx ** 2 + qy ** 2) * np.sign(qy)
 
+    # pylab.plot(qr,qz,'ko')
+    #pylab.savefig('testimage.png')
+    #misc.imsave('testimage.png')
     # interpolation
     xcrd = np.linspace(qr.min(), qr.max(), ny)
     ycrd = np.linspace(qz.min(), qz.max(), nz)
@@ -112,13 +117,9 @@ def remesh(filename, geometry, outpath, basename, experiment):
         # remesh in python-slow
         qimg = remap(xcrd, ycrd, tree, im1, rad)
 
-    qimg = gaussian_filter(qimg, sigma=1)
+    #qimg = gaussian_filter(qimg, sigma=1)
 
-    # write PNG file
-    #plt.imshow(qimg, extent=[qr.min(), qr.max(), qz.max(), qz.min()])
-    #filename = basename + '.png'
-    #plt.savefig(filename)
-    #plt.close()
+
     return np.rot90(qimg, 3)
 
 
@@ -166,4 +167,16 @@ def remesh_mask(agbfile, agb):
 
     qimg = np.round(qimg)
     return qimg.astype(bool).astype(np.float32)
+
+
+if __name__ == '__main__':
+    geo = geometry.Geometry(0.298, 29 * .000172, 620 * .000172, 0, 0, 0, .000172, .000172,
+                            detector=detectors.Pilatus2M(), wavelength=0.124)
+    # img,param= loader.loadpath('../samples/AgB_00017.edf')
+    img = remesh('../samples/AgB_00016.edf', geo)
+    # write PNG file
+    plt.imshow(np.log(img + 3))
+    plt.savefig('testimage.png')
+    print(':)')
+    plt.close()
 

@@ -42,3 +42,7 @@ def loadpath(path):
     # except TypeError:
     #   print('Failed to load',path,', its probably not an image format I understand.')
     #  return None,None
+
+
+def loadstichted(filepath, filepath2):
+    pass

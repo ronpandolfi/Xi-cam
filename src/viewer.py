@@ -502,7 +502,7 @@ class imageTab(QtGui.QWidget):
             # regionbounds=self.region.getRegion()
             #cut = np.zeros_like(self.imgdata)
             #cut[regionbounds[0]:regionbounds[1],:]=1
-            cut = self.region.getArrayRegion(self.imgdata.T, self.imageitem)
+            cut = self.region.getArrayRegion(self.imgdata, self.imageitem)
 
             #self.q=pixel2q(np.arange(-self.imgdata.shape[0]/2,self.imgdata.shape[0]/2,1))
             x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
@@ -523,11 +523,11 @@ class imageTab(QtGui.QWidget):
 
 
         else:
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[:, regionbounds[0]:regionbounds[1]] = 1
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[regionbounds[0]:regionbounds[1], :] = 1

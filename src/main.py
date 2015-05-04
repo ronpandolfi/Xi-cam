@@ -485,6 +485,7 @@ class MyMainWindow():
         newimagetab = viewer.imageTabTracker(path, self.experiment, self)
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
 
         self.ui.statusbar.showMessage('Ready...')
 

@@ -97,7 +97,7 @@ class timelinetab(viewer.imageTab):
     def redrawframe(self):
         path = self.paths[self.parentwindow.timeruler.value() + 1]
         data, paras = loader.loadpath(path)
-        self.imgdata = np.rot90(data, 2)
+        self.imgdata = np.rot90(data, 3)
         self.redrawimage()
 
     def gotomax(self):

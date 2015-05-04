@@ -218,8 +218,8 @@ class thumbwidgetitem(QtGui.QFrame):
         else:
             newimagetab = viewer.imageTabTracker(self.path, self.parentwindow.experiment, self.parentwindow)
             tabwidget = self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget')
-            tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, self.path.split('/')[-1]))
-            self.parentwindow.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
+            self.parentwindow.openfile(self.path)
+
 
 
 
