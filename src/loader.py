@@ -111,6 +111,6 @@ def loadstichted(filepath2, filepath1):
     #         else:
     #             IM[i,j]=(data1[i,j]+data2[i+deltaY,j])/2
     # Ima=Image.fromarray(IM)
-    # Ima.show()
+    # Ima.show() 
 if __name__=='__main__':
     loadstichted( '/home/remi/PycharmProjects/saxs-on/samples/AgB_5s_lo_2m.edf' , '/home/remi/PycharmProjects/saxs-on/samples/AgB_5s_hi_2m.edf' )
