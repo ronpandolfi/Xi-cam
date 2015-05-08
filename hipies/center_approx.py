@@ -227,7 +227,7 @@ def newcenter_approx(img, log=False):
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2
     #print('Center quality:',log,np.sum(con/con.max()))
-    return cen[0], cen[1]
+    return cen
 
 
 # def tth_ellipse(geometry, d_spacing):
@@ -254,6 +254,17 @@ def newcenter_approx(img, log=False):
 #                                       elli_w * 2,
 #                                       elli_h * 2,
 #                                       np.rad2deg(rotation))
+
+def gisaxs_center_approx(img, log=False):
+    img = img.astype(np.float)
+    if log:
+        # Rescale brightness of the image with log depth
+        with np.errstate(divide='ignore', invalid='ignore'):
+            img = np.log(img + 3) - np.log(3)
+
+    # Find the center...
+
+    return cen
 
 
 def refinecenter(img, experiment):
