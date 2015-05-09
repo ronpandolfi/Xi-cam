@@ -11,6 +11,8 @@ from scipy import signal
 import debug
 import saxs_calibration
 import time
+from matplotlib import pyplot as plt
+
 
 def calc_R(x, y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -263,7 +265,43 @@ def gisaxs_center_approx(img, log=False):
             img = np.log(img + 3) - np.log(3)
 
     # Find the center...
+    x=0
+    xcenter=0
+    y=10000
+    ycenter=0
+    for i in range(0,img.shape[1]):
+        if x<=sum(img[:,i]):
+            x=sum(img[:,i])
+            xcenter=i
+        else: pass
 
+
+    q=4*sum(img[img.shape[0]-5,:])
+    i=0
+    x=np.sum(img[:,:150],axis=1)
+    for i in range(1,np.size(x)):
+        if x[i]==0:
+            x[i]=x[i-1]
+        else: pass
+    t=np.size(x)-30
+    x=signal.convolve(signal.convolve(x[:t],signal.gaussian(7, std=4)),[1,-1])
+    plt.plot(x)
+    plt.show()
+
+    i=0
+    while (y!=np.min(x)):
+        y=x[i]
+        ycenter=i
+        i=i+1
+
+
+
+    # while (y<=q):
+    #     i=i+1
+    #     y=sum(img[img.shape[0]-i,:100])
+    #     ycenter=img.shape[0]-i
+
+    cen = (xcenter,ycenter)
     return cen
 
 
@@ -335,5 +373,3 @@ if __name__ == "__main__":
             cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
 
             cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))
-
-

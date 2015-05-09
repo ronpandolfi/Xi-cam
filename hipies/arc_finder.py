@@ -176,19 +176,29 @@ def arcmask(img, cen, Rrange, Thetarange):
 
 
 if __name__ == "__main__":
-    for imgpath in glob.glob(os.path.join("../GISAXSRealDataSamples/", '*.edf')):
+
+
+    for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
 
         # read image
         img = fabio.open(imgpath).data
 
         # find center
-        cen = center_approx.center_approx(img)
+        # cen = center_approx.center_approx(img)
+
+
+        cen = center_approx.gisaxs_center_approx(img)
+        plt.axvline(cen[0],color='r')
+        plt.axhline(cen[1],color='r')
+        IM=plt.imshow(np.sqrt(np.sqrt(img)))
         print cen
-        cen = [680, 1619]
+        plt.show()
+
+
 
         # find arcs
-        arcs = find_arcs(img, cen)
+        #arcs = find_arcs(img, cen)
 
         #draw arcs
         #drawarcs(img,arcs)
