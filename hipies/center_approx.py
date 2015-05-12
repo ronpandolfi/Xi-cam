@@ -13,7 +13,7 @@ import saxs_calibration
 import time
 from matplotlib import pyplot as plt
 
-import peakfinding
+import peakfindingrem
 
 
 def calc_R(x, y, xc, yc):
@@ -332,7 +332,7 @@ def pixel_2Dintegrate(imgdata, cen, mask=None):
     radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
     test=np.max(radialprofile)/h
     print 't',test
-    peakmax,peakmin=peakfinding.peakdet(radialprofile,test)
+    peakmax,peakmin=peakfindingrem.peakdet(radialprofile,test)
     peakind = peakmax[:,0]
     peakr=peakmax[:,1]
 

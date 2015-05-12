@@ -15,7 +15,7 @@ import integration
 import center_approx
 import cosmics
 import loader
-import peakfinding
+import peakfindingrem
 import remesh
 
 
@@ -448,7 +448,7 @@ class imageTab(QtGui.QWidget):
         # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
         # np.set_printoptions(threshold=np.nan)
         # print('size', radialprofile.shape[0])
-        peaks = np.array(peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
+        peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 
         peaks = peaks[peaks[:, 1].argsort()[::-1]]
@@ -540,7 +540,7 @@ class imageTab(QtGui.QWidget):
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            self.peaktooltip = peakfinding.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
+            self.peaktooltip = peakfindingrem.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
 
             # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
 

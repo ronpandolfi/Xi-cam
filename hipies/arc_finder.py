@@ -8,7 +8,7 @@ import os
 import center_approx
 import matplotlib.pyplot as plt
 import peakutils
-import peakfinding
+import peakfindingrem
 
 demo = True
 
