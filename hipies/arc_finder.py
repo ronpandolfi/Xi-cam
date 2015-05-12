@@ -8,6 +8,7 @@ import os
 import center_approx
 import matplotlib.pyplot as plt
 import peakutils
+import peakfinding
 
 demo = True
 
@@ -183,17 +184,24 @@ if __name__ == "__main__":
 
         # read image
         img = fabio.open(imgpath).data
-
         # find center
         # cen = center_approx.center_approx(img)
 
-
         cen = center_approx.gisaxs_center_approx(img)
+        y,x=center_approx.pixel_2Dintegrate(img,(cen[1],cen[0]))
+
+        print cen
+
+
         plt.axvline(cen[0],color='r')
         plt.axhline(cen[1],color='r')
-        IM=plt.imshow(np.sqrt(np.sqrt(img)))
-        print cen
+        plt.imshow(np.log(img))
+        for i in range(1,np.size(x,0)):
+            plt.plot(x[i], y[i],color='g')
         plt.show()
+
+
+
 
 
 
