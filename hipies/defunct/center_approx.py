@@ -11,6 +11,10 @@ from scipy import signal
 import debug
 import saxs_calibration
 import time
+from matplotlib import pyplot as plt
+
+import peakfindingrem
+
 
 def calc_R(x, y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -255,6 +259,13 @@ def newcenter_approx(img, log=False):
 #                                       elli_h * 2,
 #                                       np.rad2deg(rotation))
 
+
+######################################################################################
+ ######  REMI
+  ###
+   #
+
+
 def gisaxs_center_approx(img, log=False):
     img = img.astype(np.float)
     if log:
@@ -262,10 +273,88 @@ def gisaxs_center_approx(img, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img + 3) - np.log(3)
 
-    # Find the center...
+    x=0
+    xcenter=0
+    y=10000
+    ycenter=0
+    for i in range(0,img.shape[1]):
+        if x<=sum(img[:,i]):
+            x=sum(img[:,i])
+            xcenter=i
+        else: pass
 
+    q=4*sum(img[img.shape[0]-5,:])
+    i=0
+    x=np.sum(img[:,:150],axis=1)
+    for i in range(1,np.size(x)):
+        if x[i]==0:
+            x[i]=x[i-1]
+        else: pass
+    t=np.size(x)-30
+    x=signal.convolve(signal.convolve(x[:t],signal.gaussian(7, std=4)),[1,-1])
+    #plt.plot(x)
+    #plt.show()
+
+    i=0
+    while (y!=np.min(x)):
+        y=x[i]
+        ycenter=i
+        i=i+1
+
+    # while (y<=q):
+    #     i=i+1
+    #     y=sum(img[img.shape[0]-i,:100])
+    #     ycenter=img.shape[0]-i
+    cen = (xcenter,ycenter)
     return cen
 
+##
+def pixel_2Dintegrate(imgdata, cen, mask=None):
+
+    if mask is None:
+        print("No mask defined, creating temporary empty mask.")
+        mask = np.zeros_like(imgdata)
+
+    # mask data
+    data = imgdata * (1 - mask)
+
+    # calculate data radial profile
+    x, y = np.indices(data.shape)
+    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = r.astype(np.int)
+
+    tbin = np.bincount(r.ravel(), data.ravel())
+    nr = np.bincount(r.ravel(), (1 - mask).ravel())
+    radialprofile = tbin / nr
+##
+
+    h=35
+    radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
+    test=np.max(radialprofile)/h
+    print 't',test
+    peakmax,peakmin=peakfindingrem.peakdet(radialprofile,test)
+    peakind = peakmax[:,0]
+    peakr=peakmax[:,1]
+
+    # for i in range(np.size(peakind)):
+    #     plt.axvline(peakind[i],color='b')
+    # plt.plot(radialprofile)
+    # plt.show()
+
+    accurancy=50
+    x=np.zeros((np.size(peakind),accurancy))
+    y=np.zeros((np.size(peakind),accurancy))
+
+    for i in range(0,np.size(peakind)):
+        theta = np.linspace(0, 2*np.pi, accurancy)
+        x[i] = cen[0]+(peakind[i]-h/2)*np.cos(theta)
+        y[i] = cen[1]+(peakind[i]-h/2)*np.sin(theta)
+    return x,y
+
+   #
+  ###
+ ######  REMI
+#########################################################################################################
 
 def refinecenter(img, experiment):
     # Refine calibration
@@ -335,5 +424,3 @@ if __name__ == "__main__":
             cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
 
             cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))
-
-

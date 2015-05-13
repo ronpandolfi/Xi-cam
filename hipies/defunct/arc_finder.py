@@ -1,14 +1,14 @@
-import glob
-import os
-
 import numpy as np
 import scipy
 from scipy import signal
+import cv2
+import glob
 import fabio
+import os
+import center_approx
 import matplotlib.pyplot as plt
-
-from defunct import center_approx
-
+import peakutils
+import peakfindingrem
 
 demo = True
 
@@ -177,19 +177,36 @@ def arcmask(img, cen, Rrange, Thetarange):
 
 
 if __name__ == "__main__":
-    for imgpath in glob.glob(os.path.join("../GISAXSRealDataSamples/", '*.edf')):
+
+
+    for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
 
         # read image
         img = fabio.open(imgpath).data
-
         # find center
-        cen = center_approx.center_approx(img)
+        # cen = center_approx.center_approx(img)
+
+        cen = center_approx.gisaxs_center_approx(img)
+        y,x=center_approx.pixel_2Dintegrate(img,(cen[1],cen[0]))
+
         print cen
-        cen = [680, 1619]
+
+
+        plt.axvline(cen[0],color='r')
+        plt.axhline(cen[1],color='r')
+        plt.imshow(np.log(img))
+        for i in range(1,np.size(x,0)):
+            plt.plot(x[i], y[i],color='g')
+        plt.show()
+
+
+
+
+
 
         # find arcs
-        arcs = find_arcs(img, cen)
+        #arcs = find_arcs(img, cen)
 
         #draw arcs
         #drawarcs(img,arcs)
