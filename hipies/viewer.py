@@ -11,12 +11,7 @@ from pyFAI import detectors
 from fabio import edfimage
 import cv2
 
-import integration
-import center_approx
-import cosmics
-import loader
-import peakfinding
-import remesh
+import pipeline
 
 
 class imageTabTracker(QtGui.QWidget):
@@ -53,14 +48,14 @@ class imageTabTracker(QtGui.QWidget):
             if self.operation is None:
 
                 try:
-                    imgdata, paras = loader.loadpath(self.paths)
+                    imgdata, paras = pipeline.loader.loadpath(self.paths)
                 except IOError:
                     print('File moved or deleted. Load failed')
 
                     return None
                 self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
             else:
-                imgdata, paras = [loader.loadpath(path) for path in self.paths]
+                imgdata, paras = [pipeline.loader.loadpath(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 # print(imgdata)
@@ -213,8 +208,11 @@ class imageTab(QtGui.QWidget):
         self.redrawimage()
 
         # Cache radial integration
-        self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
+        self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
+
+        # Choose detector
+        self.finddetector()
 
 
     def send1Dintegration(self):
@@ -331,9 +329,9 @@ class imageTab(QtGui.QWidget):
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         if iscake:
-            img, x, y = integration.cake(img, self.experiment)
+            img, x, y = pipeline.integration.cake(img, self.experiment)
         elif isremesh:
-            img = remesh.remesh(self.path, self.experiment.getGeometry())
+            img = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((
@@ -405,7 +403,7 @@ class imageTab(QtGui.QWidget):
 
 
     def removecosmics(self):
-        c = cosmics.cosmicsimage(self.imgdata)
+        c = pipeline.cosmics.cosmicsimage(self.imgdata)
         c.run(maxiter=4)
         self.experiment.addtomask(c.mask)
         #self.maskoverlay()
@@ -413,7 +411,7 @@ class imageTab(QtGui.QWidget):
     #@debug.timeit
     def findcenter(self):
         # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.imgdata, self.experiment)
+        [x, y] = pipeline.center_approx.center_approx(self.imgdata)
 
         # Set the center in the experiment
         self.experiment.setvalue('Center X', x)
@@ -424,13 +422,13 @@ class imageTab(QtGui.QWidget):
     def drawcenter(self):
         # Mark the center
         self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center X')],
-                                             [self.experiment.getvalue('Center Y')], pen=None, symbol='o')
+                                             [self.experiment.getvalue('Center Y')], pen=None, symbol='o',
+                                             brush=pg.mkBrush('#FFA500'))
         self.viewbox.addItem(self.centerplot)
 
     #@debug.timeit
     def calibrate(self):
-        # Choose detector
-        self.finddetector()
+
 
         self.findcenter()
 
@@ -442,13 +440,14 @@ class imageTab(QtGui.QWidget):
         #with np.errstate(divide='ignore', invalid='ignore'):
         #    radialprofile = tbin / nr
 
-        _, radialprofile = integration.radialintegrate(self.imgdata, self.experiment, mask=self.experiment.mask)
+        _, radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
+                                                                mask=self.experiment.mask)
 
         # Find peak positions, they represent the radii
         # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
         # np.set_printoptions(threshold=np.nan)
         # print('size', radialprofile.shape[0])
-        peaks = np.array(peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
+        peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 
         peaks = peaks[peaks[:, 1].argsort()[::-1]]
@@ -472,12 +471,15 @@ class imageTab(QtGui.QWidget):
 
         self.experiment.setvalue('Detector Distance', sdd)
 
-        center_approx.refinecenter(self.imgdata, self.experiment)
+        self.refinecenter()
 
         self.experiment.iscalibrated = True
 
         self.replot()
         # self.maskoverlay()
+
+    def refinecenter(self):
+        pipeline.center_approx.refinecenter(self.imgdata, self.experiment)
 
     def replot(self):
         self.parentwindow.integration.clear()
@@ -531,7 +533,7 @@ class imageTab(QtGui.QWidget):
 
 
             # Radial integration
-            self.q, self.radialprofile = integration.radialintegrate(self.imgdata, self.experiment,
+            self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
             self.cache1Dintegration.emit(self.q, self.radialprofile)
             ##############################################################################
@@ -540,7 +542,8 @@ class imageTab(QtGui.QWidget):
             # self.radialprofile is y
             # Find the peaks, and then plot them
 
-            self.peaktooltip = peakfinding.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
+            self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
+                                                                self.parentwindow.integration)
 
             # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
 
@@ -652,7 +655,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def loaditem(self, index):
         path = self.model.filePath(index)
-        self.imgdata, paras = loader.loadpath(path)
+        self.imgdata, paras = pipeline.loader.loadpath(path)
         self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
                                 autoLevels=True)
 

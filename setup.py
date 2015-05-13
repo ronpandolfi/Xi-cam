@@ -6,6 +6,7 @@ sys.path.append('hipies/')
 # Dependencies are automatically detected, but it might need
 # fine tuning.
 buildOptions = {'packages': ['hipies'],
+                'includes': ['PIL', 'PySide.QtXml', 'PySide', 'scipy.optimize'],
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib'], 'optimize': 2,
                 'include_files': ['hipies/gui/']}

@@ -68,9 +68,9 @@ def transform(ny, nz, geometry, alphai):
     return qx, qy, qz
 
 
-def remesh(filename, geometry):
-    # read image
-    img, paras = loader.loadpath(filename)
+def remesh(img, filename, geometry):
+    # read paras
+    paras = loader.loadparas(filename)
 
 
     # read incident angle

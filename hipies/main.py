@@ -21,7 +21,7 @@ import os
 
 print os.getcwd()
 
-import loader
+# import loader
 
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
@@ -38,7 +38,10 @@ import library
 import timeline
 import watcher
 import numpy as np
-
+import daemon
+import pipeline
+import multiprocessing
+import copy
 
 
 class MyMainWindow():
@@ -48,14 +51,14 @@ class MyMainWindow():
         self.app = QtGui.QApplication(sys.argv)
         loader = QUiLoader()
         print os.getcwd()
-        f = QtCore.QFile("mainwindow.ui")
+        f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = loader.load(f)
         f.close()
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('style.stylesheet', 'r') as f:
+        with open('gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -93,6 +96,8 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
         self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
         self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
+        self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB').triggered.connect(self.calibrate)
+        self.ui.findChild(QtGui.QAction, 'actionRefine_Center').triggered.connect(self.refinecenter)
 
         # set inital state
         self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').setChecked(True)
@@ -172,8 +177,10 @@ class MyMainWindow():
         toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.difftoolbar = QtGui.QToolBar()
         self.difftoolbar.addWidget(toolbuttonMasking)
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRefine_Center'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB'))
+        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCake'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
         self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
@@ -224,6 +231,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Reset).clicked.connect(
             self.resetwatchfolder)
         self.folderwatcher.newFilesDetected.connect(self.newfilesdetected)
+        self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
 
         # Connect top menu
         self.ui.findChild(QtGui.QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
@@ -236,14 +244,24 @@ class MyMainWindow():
 
         # TESTING
         ##
-        # self.openimage('../samples/AgB_5s_hi_2m.edf')
+        self.openimage('../samples/AgB_00016.edf')
         #self.calibrate()
+        self.updatepreprocessing()
         ##
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
         self.ui.show()
         sys.exit(self.app.exec_())
+
+    def updatepreprocessing(self):
+        self.daemonthread = daemon.daemon('/Users/rp/Dropbox (Personal)/xssuite/nxsamples/', self.experiment)
+
+        self.daemonthread.start()
+        # if True: #self.ui.findChild(QtGui.QCheckBox,'autoPreprocess').isChecked():
+        #self.daemonprocess = multiprocessing.Process(target=startdaemon,args=[self.experiment])
+        #self.daemonprocess.daemon=True
+        #self.daemonprocess.start()
 
 
     def treerefresh(self, path=None):
@@ -398,7 +416,7 @@ class MyMainWindow():
         load an image with fabio
         """
         # Load an image path with fabio
-        return loader.loadpath(path)[0]
+        return pipeline.loader.loadpath(path)[0]
 
 
     def currentImageTab(self):
@@ -501,6 +519,16 @@ class MyMainWindow():
         self.app.processEvents()
         # find the center of the current tab
         self.currentImageTab().tab.findcenter()
+        self.ui.statusbar.showMessage('Ready...')
+
+    def refinecenter(self):
+        """
+        Refine the center using the current tab image
+        """
+        self.ui.statusbar.showMessage('Refining center...')
+        self.app.processEvents()
+        # find the center of the current tab
+        self.currentImageTab().tab.refinecenter()
         self.ui.statusbar.showMessage('Ready...')
 
     def redrawcurrent(self):
@@ -616,6 +644,10 @@ class MyMainWindow():
                 pass
             if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
                 pass
+
+
+def startdaemon(experiment):
+    d = daemon.daemon('/Users/rp/Dropbox/xssuite/samples/', experiment)
 
 if __name__ == '__main__':
     window = MyMainWindow()

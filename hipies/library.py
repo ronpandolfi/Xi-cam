@@ -1,11 +1,12 @@
 from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
-import loader
+# import loader
 import numpy as np
 from PIL import Image
 import viewer
 import os
+import pipeline
 
 
 
@@ -119,8 +120,8 @@ class librarylayout(FlowLayout):
         while diriterator.hasNext():
             diriterator.next()
             fileinfo = diriterator.fileInfo()
-            print fileinfo.fileName()
-            if (fileinfo.isFile() or fileinfo.isDir()) and not fileinfo.fileName() == '.':
+            # print fileinfo.fileName()
+            if not (fileinfo.fileName() == '..' and path == '/Volumes/') and not fileinfo.fileName() == '.':
                 self.addWidget(thumbwidgetitem(diriterator.filePath(), parentwindow=self.parentwindow))
 
 
@@ -136,7 +137,7 @@ class thumbwidgetitem(QtGui.QFrame):
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
-        desiredsize = QtCore.QSize(250, 300)
+        desiredsize = QtCore.QSize(160, 200)
 
         # toplayout = QVBoxLayout(self)
         #self.frame = QFrame(self)
@@ -160,30 +161,27 @@ class thumbwidgetitem(QtGui.QFrame):
         self.image = QtGui.QImage()
         #print os.path.splitext(path)[1]
         if os.path.isdir(path):
-            self.image.load('GenericFolderIcon.png')
-        elif os.path.splitext(path)[1] in loader.acceptableexts:
+            self.image.load('gui/GenericFolderIcon.png')
+        elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.imgdata, paras = loader.loadpath(path)
-            if self.imgdata is not None:
-                self.imgdata = np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1))
-                self.imgdata *= 255 / np.max(self.imgdata)
-                self.imgdata = self.imgdata.astype(np.uint8)
+            self.imgdata = pipeline.loader.loadthumbnail(path)
 
-                # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
-                # min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
-                # dims=(220,230)
-                # print(dims)
-                #print self.imgdata
-                #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
-                #print self.imgdata
 
-                im = Image.fromarray(self.imgdata, 'L')
-                # im.thumbnail((150, 150))
-                #print(im.size)
-                self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
-                                          QtGui.QImage.Format_Indexed8)
+            # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
+            # min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
+            # dims=(220,230)
+            # print(dims)
+            # print self.imgdata
+            #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
+            #print self.imgdata
+
+            im = Image.fromarray(self.imgdata, 'L')
+            # im.thumbnail((150, 150))
+            #print(im.size)
+            self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                                      QtGui.QImage.Format_Indexed8)
         else:
-            self.image.load('post-360412-0-09676400-1365986245.png')
+            self.image.load('gui/post-360412-0-09676400-1365986245.png')
 
         image_label = ScaledLabel(self.image)
         image_label.setAlignment(Qt.AlignHCenter)

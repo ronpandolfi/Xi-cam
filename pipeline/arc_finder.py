@@ -35,7 +35,7 @@ def find_arcs(img, cen):
             plt.show()
 
         thetaprofile = radial_integrate(mask * img, cen)
-        #print thetaprofile
+        # print thetaprofile
 
         peakRs = findpeaks(thetaprofile)
 
@@ -153,7 +153,7 @@ def Pilatus2M_Mask():
 # mask = np.zeros_like(img)
 # #print cen, Rrange,Thetarange
 # if min(Rrange)==0:
-#         cv2.ellipse(mask, (int(cen[0]),int(cen[1])), (int(max(Rrange)),int(max(Rrange))), 0, min(Thetarange), int(max(Thetarange)), 255, -1)
+# cv2.ellipse(mask, (int(cen[0]),int(cen[1])), (int(max(Rrange)),int(max(Rrange))), 0, min(Thetarange), int(max(Thetarange)), 255, -1)
 #     else:
 #         cv2.ellipse(mask, (int(cen[0]),int(cen[1])), (int(min(Rrange)),int(min(Rrange))), 0, min(Thetarange), int(max(Thetarange)), 255, int(max(Rrange)-min(Rrange)))
 #     #cv2.ellipse(mask,(256,256),(100,50),0,0,180,255,-1)
