@@ -4,6 +4,7 @@ from pylab import *
 from scipy import signal
 from scipy.ndimage import filters
 import pyqtgraph as pg
+from PySide import QtCore
 
 maxfiltercoef = 5
 cwtrange = np.arange(3, 100)
@@ -38,23 +39,38 @@ def findpeaks(x, y):
 class peaktooltip:
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)
-        self.scatterPoints = pg.ScatterPlotItem(self.q, self.I, size=10, pen=pg.mkPen(None),
-                                                brush=pg.mkBrush(255, 255, 255, 120))
+        self.scatterPoints = pg.PlotDataItem(self.q, self.I, size=10, pen=pg.mkPen(None),
+                                             brush=pg.mkBrush(255, 255, 255, 120), symbol='o')
         self.display_text = pg.TextItem(text='', color=(176, 23, 31), anchor=(0, 1))
         self.display_text.hide()
         widget.addItem(self.scatterPoints)
         widget.addItem(self.display_text)
         self.scatterPoints.scene().sigMouseMoved.connect(self.onMove)
 
-    def onMove(self, pos):
-        act_pos = self.scatterPoints.mapFromScene(pos)
-        p1 = self.scatterPoints.pointsAt(act_pos)
+    def onMove(self, pixelpos):
+        # act_pos = self.scatterPoints.mapFromScene(pos)
+        #p1 = self.scatterPoints.pointsAt(act_pos)
+
+        # get nearby points
+        itempos = self.scatterPoints.mapFromScene(pixelpos)
+        itemx = itempos.x()
+        itemy = itempos.y()
+        pixeldelta = 7
+        delta = self.scatterPoints.mapFromScene(QtCore.QPointF(pixeldelta + pixelpos.x(), pixeldelta + pixelpos.y()))
+        deltax = delta.x() - itemx
+        deltay = -(delta.y() - itemy)
+        p1 = [point for point in zip(self.q, self.I) if (itemx - deltax < point[0] and point[0] < itemx + deltax) and (
+        itemy - deltay < point[1] and point[1] < itemy + deltay)]
+        print(self.q[1], self.I[1])
+        print(itemx - deltax, itemx + deltax, itemy - deltay, itemy + deltay)
+        print(len(p1))
+
         """
         :type p1 : pg.graphicsItems.ScatterPlotItem.SpotItem
         """
         if len(p1) != 0:
-            self.display_text.setText('q=%f\nI=%f' % (p1[0].pos().x(), p1[0].pos().y()))
-            self.display_text.setPos(p1[0].pos())
+            self.display_text.setText('q=%f\nI=%f' % (p1[0][0], p1[0][1]))
+            self.display_text.setPos(*p1[0])
             self.display_text.show()
         else:
             self.display_text.hide()

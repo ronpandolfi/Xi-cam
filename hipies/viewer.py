@@ -11,6 +11,8 @@ from pyFAI import detectors
 from fabio import edfimage
 import cv2
 
+import peakfindingrem
+
 import pipeline
 
 
@@ -421,6 +423,7 @@ class imageTab(QtGui.QWidget):
 
     def drawcenter(self):
         # Mark the center
+        if self.centerplot is not None: self.centerplot.clear()
         self.centerplot = pg.ScatterPlotItem([self.experiment.getvalue('Center X')],
                                              [self.experiment.getvalue('Center Y')], pen=None, symbol='o',
                                              brush=pg.mkBrush('#FFA500'))
@@ -448,7 +451,7 @@ class imageTab(QtGui.QWidget):
         # np.set_printoptions(threshold=np.nan)
         # print('size', radialprofile.shape[0])
         peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
-        peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
+        # peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 
         peaks = peaks[peaks[:, 1].argsort()[::-1]]
@@ -480,7 +483,9 @@ class imageTab(QtGui.QWidget):
         # self.maskoverlay()
 
     def refinecenter(self):
-        pipeline.center_approx.refinecenter(self.imgdata, self.experiment)
+        cen = pipeline.center_approx.refinecenter(self.imgdata, self.experiment)
+        self.experiment.setcenter(cen)
+        self.drawcenter()
 
     def replot(self):
         self.parentwindow.integration.clear()
@@ -545,7 +550,7 @@ class imageTab(QtGui.QWidget):
 
             self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
                                                                 self.parentwindow.integration)
-            self.peaktooltip = peakfindingrem.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
+            # self.peaktooltip = peakfindingrem.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
 
             # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
 

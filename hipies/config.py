@@ -113,6 +113,10 @@ class experiment(Parameter):
         # Set the value of the named child
         self.child(name).setValue(value)
 
+    def setcenter(self, cen):
+        self.setvalue('Center X', cen[0])
+        self.setvalue('Center Y', cen[1])
+
     def getAI(self):
         """
         :rtype : pyFAI.AzimuthalIntegrator

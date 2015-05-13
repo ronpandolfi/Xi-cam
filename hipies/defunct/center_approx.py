@@ -261,9 +261,9 @@ def newcenter_approx(img, log=False):
 
 
 ######################################################################################
- ######  REMI
-  ###
-   #
+######  REMI
+###
+#
 
 
 def gisaxs_center_approx(img, log=False):
@@ -273,44 +273,46 @@ def gisaxs_center_approx(img, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img + 3) - np.log(3)
 
-    x=0
-    xcenter=0
-    y=10000
-    ycenter=0
-    for i in range(0,img.shape[1]):
-        if x<=sum(img[:,i]):
-            x=sum(img[:,i])
-            xcenter=i
-        else: pass
+    x = 0
+    xcenter = 0
+    y = 10000
+    ycenter = 0
+    for i in range(0, img.shape[1]):
+        if x <= sum(img[:, i]):
+            x = sum(img[:, i])
+            xcenter = i
+        else:
+            pass
 
-    q=4*sum(img[img.shape[0]-5,:])
-    i=0
-    x=np.sum(img[:,:150],axis=1)
-    for i in range(1,np.size(x)):
-        if x[i]==0:
-            x[i]=x[i-1]
-        else: pass
-    t=np.size(x)-30
-    x=signal.convolve(signal.convolve(x[:t],signal.gaussian(7, std=4)),[1,-1])
-    #plt.plot(x)
+    q = 4 * sum(img[img.shape[0] - 5, :])
+    i = 0
+    x = np.sum(img[:, :150], axis=1)
+    for i in range(1, np.size(x)):
+        if x[i] == 0:
+            x[i] = x[i - 1]
+        else:
+            pass
+    t = np.size(x) - 30
+    x = signal.convolve(signal.convolve(x[:t], signal.gaussian(7, std=4)), [1, -1])
+    # plt.plot(x)
     #plt.show()
 
-    i=0
-    while (y!=np.min(x)):
-        y=x[i]
-        ycenter=i
-        i=i+1
+    i = 0
+    while (y != np.min(x)):
+        y = x[i]
+        ycenter = i
+        i = i + 1
 
     # while (y<=q):
     #     i=i+1
     #     y=sum(img[img.shape[0]-i,:100])
     #     ycenter=img.shape[0]-i
-    cen = (xcenter,ycenter)
+    cen = (xcenter, ycenter)
     return cen
+
 
 ##
 def pixel_2Dintegrate(imgdata, cen, mask=None):
-
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
         mask = np.zeros_like(imgdata)
@@ -326,34 +328,36 @@ def pixel_2Dintegrate(imgdata, cen, mask=None):
     tbin = np.bincount(r.ravel(), data.ravel())
     nr = np.bincount(r.ravel(), (1 - mask).ravel())
     radialprofile = tbin / nr
-##
+    ##
 
-    h=35
-    radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
-    test=np.max(radialprofile)/h
-    print 't',test
-    peakmax,peakmin=peakfindingrem.peakdet(radialprofile,test)
-    peakind = peakmax[:,0]
-    peakr=peakmax[:,1]
+    h = 35
+    radialprofile = signal.convolve(radialprofile, signal.gaussian(h, std=8))
+    test = np.max(radialprofile) / h
+    print 't', test
+    peakmax, peakmin = peakfindingrem.peakdet(radialprofile, test)
+    peakind = peakmax[:, 0]
+    peakr = peakmax[:, 1]
 
     # for i in range(np.size(peakind)):
-    #     plt.axvline(peakind[i],color='b')
+    # plt.axvline(peakind[i],color='b')
     # plt.plot(radialprofile)
     # plt.show()
 
-    accurancy=50
-    x=np.zeros((np.size(peakind),accurancy))
-    y=np.zeros((np.size(peakind),accurancy))
+    accurancy = 50
+    x = np.zeros((np.size(peakind), accurancy))
+    y = np.zeros((np.size(peakind), accurancy))
 
-    for i in range(0,np.size(peakind)):
-        theta = np.linspace(0, 2*np.pi, accurancy)
-        x[i] = cen[0]+(peakind[i]-h/2)*np.cos(theta)
-        y[i] = cen[1]+(peakind[i]-h/2)*np.sin(theta)
-    return x,y
+    for i in range(0, np.size(peakind)):
+        theta = np.linspace(0, 2 * np.pi, accurancy)
+        x[i] = cen[0] + (peakind[i] - h / 2) * np.cos(theta)
+        y[i] = cen[1] + (peakind[i] - h / 2) * np.sin(theta)
+    return x, y
 
-   #
-  ###
- ######  REMI
+    #
+    ###
+    ######  REMI
+
+
 #########################################################################################################
 
 def refinecenter(img, experiment):

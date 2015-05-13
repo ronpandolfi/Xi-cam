@@ -188,16 +188,15 @@ if __name__ == "__main__":
         # cen = center_approx.center_approx(img)
 
         cen = center_approx.gisaxs_center_approx(img)
-        y,x=center_approx.pixel_2Dintegrate(img,(cen[1],cen[0]))
+        y, x = center_approx.pixel_2Dintegrate(img, (cen[1], cen[0]))
 
         print cen
 
-
-        plt.axvline(cen[0],color='r')
-        plt.axhline(cen[1],color='r')
+        plt.axvline(cen[0], color='r')
+        plt.axhline(cen[1], color='r')
         plt.imshow(np.log(img))
-        for i in range(1,np.size(x,0)):
-            plt.plot(x[i], y[i],color='g')
+        for i in range(1, np.size(x, 0)):
+            plt.plot(x[i], y[i], color='g')
         plt.show()
 
 
@@ -206,7 +205,7 @@ if __name__ == "__main__":
 
 
         # find arcs
-        #arcs = find_arcs(img, cen)
+        # arcs = find_arcs(img, cen)
 
         #draw arcs
         #drawarcs(img,arcs)

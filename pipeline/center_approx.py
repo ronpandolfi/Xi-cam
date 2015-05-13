@@ -256,6 +256,25 @@ def center_approx(img, log=False):
 #                                       elli_h * 2,
 #                                       np.rad2deg(rotation))
 
+    geo_dict = geometry.getFit2D()
+    sdd = geo_dict['directDist'] / (0.001 * geo_dict['pixelX'])
+    tilt = np.deg2rad(geo_dict['tilt'])
+    rotation = np.deg2rad(geo_dict['tiltPlanRotation'])
+
+    c_plus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tilt - tth)
+    c_minus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 + tilt - tth)
+    elli_h = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tth)
+    elli_w = (c_plus + c_minus) / 2.0
+
+    x_pos = (geo_dict['centerX'] - c_minus + elli_w) - geo_dict['centerX']
+    elli_x = geo_dict['centerX'] + x_pos * np.cos(rotation)
+    elli_y = geo_dict['centerY'] + x_pos * np.sin(rotation)
+
+    return matplotlib.patches.Ellipse((elli_x, elli_y),
+                                      elli_w * 2,
+                                      elli_h * 2,
+                                      np.rad2deg(rotation))
+
 def gisaxs_center_approx(img, log=False):
     img = img.astype(np.float)
     if log:
@@ -269,6 +288,7 @@ def gisaxs_center_approx(img, log=False):
 
 
 def refinecenter(img, experiment):
+    imgcopy = img.T
     # Refine calibration
     # d-spacing for Silver Behenate
     d_spacings = np.array([58.367, 29.1835, 19.45567, 14.59175, 11.6734, 9.72783, 8.33814, 7.29587, 6.48522, 5.8367])
@@ -279,7 +299,7 @@ def refinecenter(img, experiment):
     print geometry.getFit2D()
 
     fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
-    fit_thread = saxs_calibration.FitThread(geometry, d_spacings, img, fit_param, 40)
+    fit_thread = saxs_calibration.FitThread(geometry, d_spacings, imgcopy, fit_param, 40)
     fit_thread.start()
     while fit_thread.is_alive():
         print fit_thread.status
@@ -302,7 +322,7 @@ def refinecenter(img, experiment):
 
     #pylab.show()
 
-    return geometry.get_poni2(), geometry.get_poni1()
+    return geometry.getFit2D()['centerX'], geometry.getFit2D()['centerY']
 
 # def testimg(img, scale=0.5):
 #     # Draw for demo
