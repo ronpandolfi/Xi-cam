@@ -450,6 +450,7 @@ class imageTab(QtGui.QWidget):
         # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
         # np.set_printoptions(threshold=np.nan)
         # print('size', radialprofile.shape[0])
+        print radialprofile
         peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         # peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
@@ -628,14 +629,15 @@ class imageTab(QtGui.QWidget):
 
     def finddetector(self):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
-            if detector.MAX_SHAPE == self.imgdata.shape[::-1]:
-                detector = detector()
-                mask = detector.calc_mask()
-                self.experiment.addtomask(np.rot90(mask))
-                self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                self.experiment.setvalue('Detector', name)
-                return detector
+            if hasattr(detector, 'MAX_SHAPE'):
+                if detector.MAX_SHAPE == self.imgdata.shape[::-1]:
+                    detector = detector()
+                    mask = detector.calc_mask()
+                    self.experiment.addtomask(np.rot90(mask))
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Detector', name)
+                    return detector
 
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.imageitem.image))

@@ -5,6 +5,7 @@ import os
 import sys
 import numpy as np
 from nexpy.api import nexus as nx
+from pyFAI import detectors
 
 acceptableexts = '.fits .edf .tif .nxs'
 
@@ -96,11 +97,24 @@ def loadstichted(filepath2, filepath1):
     d2 = numpy.pad(data2, ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     d1 = numpy.pad(data1, ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
 
-    mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
-    mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
+    #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    mask2 = numpy.pad(1 - (finddetector(data2)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
+    mask1 = numpy.pad(1 - (finddetector(data1)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
     return data
+
+
+def finddetector(imgdata):
+    for name, detector in detectors.ALL_DETECTORS.iteritems():
+        if hasattr(detector, 'MAX_SHAPE'):
+            if detector.MAX_SHAPE == imgdata.shape:  # [::-1]
+                detector = detector()
+                mask = detector.calc_mask()
+
+                return detector, mask
 
 
 def loadthumbnail(path):

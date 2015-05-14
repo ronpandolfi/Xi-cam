@@ -40,7 +40,7 @@ class peaktooltip:
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)
         self.scatterPoints = pg.PlotDataItem(self.q, self.I, size=10, pen=pg.mkPen(None),
-                                             brush=pg.mkBrush(255, 255, 255, 120), symbol='o')
+                                             symbolPen=None, symbolBrush=pg.mkBrush(255, 255, 255, 120), symbol='o')
         self.display_text = pg.TextItem(text='', color=(176, 23, 31), anchor=(0, 1))
         self.display_text.hide()
         widget.addItem(self.scatterPoints)

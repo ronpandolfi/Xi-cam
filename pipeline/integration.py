@@ -10,6 +10,9 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
         mask = np.zeros_like(imgdata)
+    elif not mask.shape == imgdata.shape:
+        print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
+        mask = np.zeros_like(imgdata)
 
 
 

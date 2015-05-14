@@ -86,7 +86,11 @@ class experiment(Parameter):
             self._mask = maskedarea.astype(np.int)
         else:  # Otherwise, bitwise or it with the current mask
             # print(self.experiment.mask,maskedarea)
-            self._mask = np.bitwise_or(self._mask, maskedarea.astype(np.int))
+            if self._mask.shape == maskedarea.shape:
+                self._mask = np.bitwise_or(self._mask, maskedarea.astype(np.int))
+            else:
+                pass
+                # TODO: Handle masking images with different sizes
 
 
     def EnergyChanged(self):
