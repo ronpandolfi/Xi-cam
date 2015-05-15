@@ -36,6 +36,7 @@ def findpeaks(x, y):
 #    def
 
 
+# TODO: Refactor this class into hipies module so I can get rid of pyside dependency
 class peaktooltip:
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)
@@ -61,9 +62,9 @@ class peaktooltip:
         deltay = -(delta.y() - itemy)
         p1 = [point for point in zip(self.q, self.I) if (itemx - deltax < point[0] and point[0] < itemx + deltax) and (
         itemy - deltay < point[1] and point[1] < itemy + deltay)]
-        print(self.q[1], self.I[1])
-        print(itemx - deltax, itemx + deltax, itemy - deltay, itemy + deltay)
-        print(len(p1))
+        # print(self.q[1], self.I[1])
+        #print(itemx - deltax, itemx + deltax, itemy - deltay, itemy + deltay)
+        #print(len(p1))
 
         """
         :type p1 : pg.graphicsItems.ScatterPlotItem.SpotItem
