@@ -26,7 +26,7 @@ print os.getcwd()
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
-from PySide.QtCore import Qt
+
 
 from pyqtgraph.parametertree import \
     ParameterTree  # IF THIS IS LOADED BEFORE PYSIDE, BAD THINGS HAPPEN; pycharm insists I'm wrong...
@@ -40,8 +40,7 @@ import watcher
 import numpy as np
 import daemon
 import pipeline
-import multiprocessing
-import copy
+
 
 
 class MyMainWindow():
@@ -267,7 +266,8 @@ class MyMainWindow():
         sys.exit(self.app.exec_())
 
     def updatepreprocessing(self):
-        self.daemonthread = daemon.daemon('/Users/rp/Dropbox (Personal)/xssuite/nxsamples/', self.experiment)
+        print os.getcwd()
+        self.daemonthread = daemon.daemon('../samples/', self.experiment)
 
         self.daemonthread.start()
         # if True: #self.ui.findChild(QtGui.QCheckBox,'autoPreprocess').isChecked():
@@ -676,7 +676,7 @@ class MyMainWindow():
 
 
 def startdaemon(experiment):
-    d = daemon.daemon('/Users/rp/Dropbox/xssuite/samples/', experiment)
+    d = daemon.daemon(':/samples/', experiment)
 
 if __name__ == '__main__':
     window = MyMainWindow()

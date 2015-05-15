@@ -1,6 +1,6 @@
-import json
+
 import pipeline
-import nexpy as nx
+
 from nexpy.api import nexus
 import numpy as np
 import os
@@ -10,27 +10,28 @@ from PIL import Image
 def process(paths, experiment, options=dict(remesh=False, findcenter=True, refinecenter=False, cachethumbnail=True)):
     for path in paths:
         img, _ = pipeline.loader.loadpath(path)
-        if options['findcenter']:
-            cen = pipeline.center_approx.center_approx(img)
-            experiment.setvalue('Center X', cen[0])
-            experiment.setvalue('Center Y', cen[1])
-        if options['refinecenter']:
-            pipeline.center_approx.refinecenter(img, experiment)
-        logimg = None
-        if True:  # log image is needed?
-            with np.errstate(invalid='ignore'):
-                logimg = np.log(img * (img > 0) + 1)
-        thumb = None
-        if options['cachethumbnail']:
-            thumb = thumbnail(logimg)
+        if img is not None:
+            if options['findcenter']:
+                cen = pipeline.center_approx.center_approx(img)
+                experiment.setvalue('Center X', cen[0])
+                experiment.setvalue('Center Y', cen[1])
+            if options['refinecenter']:
+                pipeline.center_approx.refinecenter(img, experiment)
+            logimg = None
+            if True:  # log image is needed?
+                with np.errstate(invalid='ignore'):
+                    logimg = np.log(img * (img > 0) + 1)
+            thumb = None
+            if options['cachethumbnail']:
+                thumb = thumbnail(logimg)
 
-        if options['remesh']:
-            img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
+            if options['remesh']:
+                img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
 
-        if img is None: return None
+            if img is None: return None
 
-        # processing completed, save img
-        outputnexus(img, thumb, path2nexus(path))
+            # processing completed, save img
+            outputnexus(img, thumb, path2nexus(path))
 
 
 def path2nexus(path):
