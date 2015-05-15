@@ -76,7 +76,7 @@ def remesh(img, filename, geometry):
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
-        return img
+        return np.rot90(img,3)
     alphai = paras["Sample Alpha Stage"] / 360.0 * 2 * np.pi
 
     nz, ny = img.shape

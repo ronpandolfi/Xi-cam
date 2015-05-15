@@ -48,37 +48,43 @@ class timelinetab(viewer.imageTab):
         self.paths = paths
         self.experiment = experiment
         self.parentwindow = parentwindow
-        self.variation = np.zeros(self.paths.__len__() - 1)
-        self.scan()
-        self.plotvariation()
+        self.setvariationmode(0)
         self.gotomax()
 
 
     def scan(self):
-        operation = lambda c, p: np.sum(np.square(c.p))
-        operation2 = lambda c, p: np.sum(np.abs(c - p))
-        operation3 = lambda c, p: np.sum(c)
+        self.variation = np.zeros(self.paths.__len__() - 1)
+        operations = [lambda c, p: np.sum(np.square(c - p) / p),  # Chi squared
+                      lambda c, p: np.sum(np.abs(c - p)),  # Absolute difference
+                      lambda c, p: np.sum(np.abs(c - p) / p),  # Norm. absolute difference
+                      lambda c, p: np.sum(c)]  # Sum intensity
         # print(':P')
         #print self.paths
 
         #get the first frame's profile
-        prev, paras = pipeline.loader.loadpath(self.paths[0])
+        prev, _ = pipeline.loader.loadpath(self.paths[0])
         for i in range(self.paths.__len__() - 1):
             #print i, self.paths[i]
-            curr, paras = pipeline.loader.loadpath(self.paths[i + 1])
+            curr, _ = pipeline.loader.loadpath(self.paths[i + 1])
             if curr is None:
                 self.variation[i] = None
                 continue
 
             #print curr, prev,'\n'
 
-            self.variation[i] = operation2(curr, prev)
-            prev = curr
+            self.variation[i] = operations[self.operationindex](curr, prev)
+            prev = curr.copy()
             # print self.variation
+
+    def setvariationmode(self, index):
+        self.operationindex = index
+        self.scan()
+        self.plotvariation()
 
 
     def plotvariation(self):
         self.parentwindow.timeline.clear()
+        self.parentwindow.timeline.enableAutoScale()
         self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.parentwindow.timeline.addItem(self.parentwindow.timeruler)
         self.parentwindow.timeruler.setBounds([0, self.variation.__len__() - 1])

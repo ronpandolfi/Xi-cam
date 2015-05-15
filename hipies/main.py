@@ -162,9 +162,20 @@ class MyMainWindow():
         self.timeline.addItem(self.timeruler)
         # self.timearrow = pg.ArrowItem(angle=-60, tipAngle=30, baseAngle=20,headLen=10,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.timeline.addItem(self.timearrow)
-        self.timeline.getViewBox().setMouseEnabled(x=False, y=False)
+        self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
         #self.timeline.setLabel('bottom', u'Frame #', '')
         self.ui.findChild(QtGui.QVBoxLayout, 'timeline').addWidget(timelineplot)
+        # self.timeline.getViewBox().buildMenu()
+        menu = self.timeline.getViewBox().menu
+        operationcombo = QtGui.QComboBox()
+        operationcombo.setObjectName('operationcombo')
+        operationcombo.addItems(['Chi Squared', 'Abs. difference', 'Norm. Abs. difference', 'Sum intensity'])
+        operationcombo.currentIndexChanged.connect(self.changetimelineoperation)
+        opwidgetaction = QtGui.QWidgetAction(menu)
+        opwidgetaction.setDefaultWidget(operationcombo)
+        #need to connect it
+        menu.addAction(opwidgetaction)
+
 
         # Setup viewer tool menu
         menu = QtGui.QMenu()
@@ -222,7 +233,8 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').tabCloseRequested.connect(self.tabCloseRequested)
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentChanged.connect(self.currentchanged)
         self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').currentChanged.connect(self.currentchangedtimeline)
-        # self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').tabCloseRequested.connect(self.tabCloseRequested)
+        self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').tabCloseRequested.connect(
+            self.timelinetabCloseRequested)
         self.filetree.clicked.connect(self.preview.loaditem)
         self.filetree.doubleClicked.connect(self.itemopen)
         self.openfileslistview.doubleClicked.connect(self.switchtotab)
@@ -296,8 +308,12 @@ class MyMainWindow():
         paths = [self.filetreemodel.filePath(index) for index in indices]
         newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
         filenames = [path.split('/')[-1] for path in paths]
-        self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').addTab(newtimelinetab,
-                                                                        'Timeline: ' + ', '.join(filenames))
+
+        timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
+        timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Timeline: ' + ', '.join(filenames)))
+
+    def changetimelineoperation(self, index):
+        self.currentTimelineTab().tab.setvariationmode(index)
 
     def addmode(self):
         """
@@ -409,6 +425,8 @@ class MyMainWindow():
             timelinetabwidget.widget(index).load()
         self.timelineprevioustab = index
 
+        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
+
 
     @staticmethod
     def load_image(path):
@@ -426,6 +444,13 @@ class MyMainWindow():
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         return tabwidget.widget(tabwidget.currentIndex())
 
+    def currentTimelineTab(self):
+        """
+        Get the currently shown image tab
+        """
+        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
+        return tabwidget.widget(tabwidget.currentIndex())
+
     def viewmask(self):
         """
         Connect mask toggling to the current tab
@@ -438,6 +463,10 @@ class MyMainWindow():
         Delete a tab from the tab view upon request
         """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
+        self.listmodel.widgetchanged()
+
+    def timelinetabCloseRequested(self, index):
+        self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
 
     def polymask(self):

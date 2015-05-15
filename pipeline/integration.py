@@ -19,11 +19,13 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     # else:
     #    mask = self.config.maskingmat
 
+    invmask=1-mask
+
     #mask data
-    data = imgdata * (1 - mask)
+    data = imgdata * (invmask)
 
     if cut is not None:
-        mask *= cut
+        invmask *= cut
         data *= cut
 
     #calculate data radial profile
@@ -32,7 +34,7 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
-    nr = np.bincount(r.ravel(), (1 - mask).ravel())
+    nr = np.bincount(r.ravel(), (invmask).ravel())
     radialprofile = tbin / nr
 
     q = np.arange(radialprofile.shape[0])

@@ -603,7 +603,7 @@ class imageTab(QtGui.QWidget):
             toppad = boundrect.y()
 
             # Pad the mask so it has the same shape as the image
-            maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant').T
+            maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
             maskedarea = np.pad(maskedarea, (
                 (0, self.imgdata.shape[0] - maskedarea.shape[0]), (0, self.imgdata.shape[1] - maskedarea.shape[1])),
                                 mode='constant')
