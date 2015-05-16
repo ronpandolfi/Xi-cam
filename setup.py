@@ -13,7 +13,7 @@ from setuptools import setup
 APP = ['hipies/main.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
-           'resources':['hipies/gui/'],
+           'resources': ['hipies/gui'],
            'iconfile':'hipies/gui/icon.icns',
            'plist': {
                 'CFBundleName': 'HiPIES',

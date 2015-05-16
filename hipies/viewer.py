@@ -73,7 +73,7 @@ class imageTabTracker(QtGui.QWidget):
     def cache1Dintegration(self, q, I):
         self.q = q
         self.I = I
-        print('tab cached')
+        # print('tab cached')
 
 
     def unload(self):
@@ -451,7 +451,7 @@ class imageTab(QtGui.QWidget):
         # np.set_printoptions(threshold=np.nan)
         # print('size', radialprofile.shape[0])
         print radialprofile
-        peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
+        peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
         # peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
         #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 

@@ -296,17 +296,17 @@ def refinecenter(img, experiment):
     geometry = experiment.getGeometry()
 
     # print 'Start parameter:'
-    print geometry.getFit2D()
+    # print geometry.getFit2D()
 
     fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
     fit_thread = saxs_calibration.FitThread(geometry, d_spacings, imgcopy, fit_param, 40)
     fit_thread.start()
     while fit_thread.is_alive():
-        print fit_thread.status
+        #print fit_thread.status
         time.sleep(1)
 
     # print 'Final parameter:'
-    print geometry.getFit2D()
+    #print geometry.getFit2D()
     #print fit_thread.get_info()
 
     #pylab.imshow(np.log(img), interpolation='none')

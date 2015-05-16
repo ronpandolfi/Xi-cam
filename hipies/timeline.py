@@ -26,7 +26,7 @@ class timelinetabtracker(QtGui.QWidget):
             self.tab = timelinetab(self.paths, self.experiment, self.parent)
             self.layout.addWidget(self.tab)
 
-            print('Successful load! :P')
+            # print('Successful load! :P')
             self.isloaded = True
 
 
@@ -71,8 +71,8 @@ class timelinetab(viewer.imageTab):
                 continue
 
             #print curr, prev,'\n'
-
-            self.variation[i] = operations[self.operationindex](curr, prev)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                self.variation[i] = operations[self.operationindex](curr, prev)
             prev = curr.copy()
             # print self.variation
 

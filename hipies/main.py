@@ -48,11 +48,11 @@ class MyMainWindow():
 
         # Load the gui from file
         self.app = QtGui.QApplication(sys.argv)
-        loader = QUiLoader()
+        guiloader = QUiLoader()
         print os.getcwd()
         f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
-        self.ui = loader.load(f)
+        self.ui = guiloader.load(f)
         f.close()
 
         # STYLE
@@ -117,7 +117,7 @@ class MyMainWindow():
         self.filetree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf", "*.fits"]
+        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
@@ -413,7 +413,7 @@ class MyMainWindow():
         """
         When the active tab changes, load/unload tabs
         """
-        print('Changing from', self.timelineprevioustab, 'to', index)
+        # print('Changing from', self.timelineprevioustab, 'to', index)
         if index > -1:
             timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
 

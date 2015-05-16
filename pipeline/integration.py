@@ -35,7 +35,8 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
 
     tbin = np.bincount(r.ravel(), data.ravel())
     nr = np.bincount(r.ravel(), (invmask).ravel())
-    radialprofile = tbin / nr
+    with np.errstate(divide='ignore', invalid='ignore'):
+        radialprofile = tbin / nr
 
     q = np.arange(radialprofile.shape[0])
 
@@ -56,8 +57,9 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
         #f.close()
 
         # remove 0s
-        (q, radialprofile) = ([qvalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0],
-                              [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
+        # (q, radialprofile) = ([qvalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0],
+        #                      [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
+        radialprofile = radialprofile * (radialprofile > 0) + 0.0001 * (radialprofile <= 0)
 
     return (q, radialprofile)
 
