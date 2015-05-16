@@ -4,7 +4,8 @@ import pyfits
 import os
 import sys
 import numpy as np
-from nexpy.api import nexus as nx
+#from nexpy.api import nexus as nx
+import fabio as nx
 from pyFAI import detectors
 
 acceptableexts = '.fits .edf .tif .nxs'

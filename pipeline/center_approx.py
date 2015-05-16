@@ -8,7 +8,6 @@ import numpy as np
 import fabio
 from scipy import optimize
 from scipy import signal
-import debug
 import saxs_calibration
 import time
 

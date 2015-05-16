@@ -1,7 +1,7 @@
 
 import pipeline
 
-from nexpy.api import nexus
+#from nexpy.api import nexus
 import numpy as np
 import os
 from PIL import Image
@@ -46,6 +46,7 @@ def thumbnail(img):
 
 
 def outputnexus(img, thumb, path):
+    import fabio as nexus
     # print img
     x, y = np.meshgrid(*(img.shape))
     neximg = nexus.NXdata(img, [y, x])
