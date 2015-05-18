@@ -2,17 +2,15 @@
 
 import glob
 import os
+import time
 
 import numpy as np
 import cv2
 import fabio
 from scipy import optimize
 from scipy import signal
-import debug
-import saxs_calibration
-import time
-from matplotlib import pyplot as plt
 
+import saxs_calibration
 import peakfindingrem
 
 

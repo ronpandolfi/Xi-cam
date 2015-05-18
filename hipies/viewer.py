@@ -11,8 +11,6 @@ from pyFAI import detectors
 from fabio import edfimage
 import cv2
 
-import peakfindingrem
-
 import pipeline
 
 

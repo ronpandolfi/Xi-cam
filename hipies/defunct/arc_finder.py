@@ -1,14 +1,14 @@
+import glob
+import os
+
 import numpy as np
 import scipy
 from scipy import signal
-import cv2
-import glob
 import fabio
-import os
-import center_approx
 import matplotlib.pyplot as plt
-import peakutils
-import peakfindingrem
+
+import center_approx
+
 
 demo = True
 

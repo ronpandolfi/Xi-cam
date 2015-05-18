@@ -2,19 +2,17 @@
 
 import glob
 import os
+import time
 
 import numpy as np
 import cv2
 import fabio
 from scipy import optimize
 from scipy import signal
-import debug
-import saxs_calibration
-import time
-from matplotlib import pyplot as plt
-import pymodelfit
 
+import saxs_calibration
 import peakfindingrem
+
 
 def calc_R(x, y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -307,102 +305,13 @@ def gisaxs_center_approx(img, log=False):
     return cen
 
 
-def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
-    if mask is None:
-        print("No mask defined, creating temporary empty mask..")
-        mask = np.zeros_like(imgdata)
-
-    # mask data
-    data = imgdata * (1 - mask)
-
-    x, y = np.indices(data.shape).astype(np.float)
-    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
-    r = r.astype(np.int)
-
-    rinf = mu - delta / 2.
-    rsup = mu + delta / 2.
-
-    rmask = ((rinf[1] < r) & (r < rsup[1]) & (x < cen[0])).astype(np.int)
-    data *= rmask
-
-    chi = 100. * np.arctan((y - cen[1]) / (x - cen[0]))
-    chi = 100. * np.pi / 2. + chi
-    chi = np.round(chi).astype(np.int)
-    chi = chi * (chi > 0)
-
-    tbin = np.bincount(chi.ravel(), data.ravel())
-    nr = np.bincount(chi.ravel(), (rmask).ravel())
-    angleprofile = tbin / nr
-
-    vimodel = pymodelfit.builtins.GaussianModel()
-    vimodel.mu = np.pi / 2 * 100
-    vimodel.A = np.nanmax(angleprofile)
-    vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
-    vimodel.plot(lower=0, upper=np.pi * 100)
-
-    print(vimodel.A)
-    print vimodel.mu
-    print vimodel.FWHM
-
-    plt.plot(angleprofile)
-    plt.show()
-
-    return angleprofile
 
 
-def pixel_2Dintegrate(imgdata, cen, mask=None):
-    if mask is None:
-        print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(imgdata)
-
-    # mask data
-    data = imgdata * (1 - mask)
-
-    # calculate data radial profile
-    x, y = np.indices(data.shape)
-    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
-    r = r.astype(np.int)
-
-    tbin = np.bincount(r.ravel(), data.ravel())
-    nr = np.bincount(r.ravel(), (1 - mask).ravel())
-    radialprofile = tbin / nr
-
-    return radialprofile
 
 
-def arcfinder_cercle(radialprofile, cen):
-    h = 35
-    # radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
-    test = np.max(radialprofile) / h
-    print 't', test
-    peakmax, peakmin = peakfindingrem.peakdet(radialprofile, test)
-    peakind = peakmax[:, 0]
 
 
-    # for i in range(np.size(peakind)):
-    # plt.axvline(peakind[i],color='b')
-    # plt.plot(radialprofile)
-    # plt.show()
 
-    accurancy = 50
-    x = np.zeros((np.size(peakind), accurancy))
-    y = np.zeros((np.size(peakind), accurancy))
-    xinf = np.zeros((np.size(peakind), accurancy))
-    yinf = np.zeros((np.size(peakind), accurancy))
-    xsup = np.zeros((np.size(peakind), accurancy))
-    ysup = np.zeros((np.size(peakind), accurancy))
-
-    for i in range(0, np.size(peakind)):
-        Delta = peakind[i] / 10
-        theta = np.linspace(0, 2 * np.pi, accurancy)
-        x[i] = cen[0] + (peakind[i]) * np.cos(theta)
-        y[i] = cen[1] + (peakind[i]) * np.sin(theta)
-        xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
-        xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
-        yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
-        ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
-
-    return x, y, xinf, xsup, yinf, ysup, peakind, Delta
 
 
 

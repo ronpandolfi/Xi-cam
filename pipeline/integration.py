@@ -1,4 +1,6 @@
 import numpy as np
+import pymodelfit
+import matplotlib.pyplot as plt
 
 
 def radialintegrate(imgdata, experiment, mask=None, cut=None):
@@ -62,6 +64,69 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
         radialprofile = radialprofile * (radialprofile > 0) + 0.0001 * (radialprofile <= 0)
 
     return (q, radialprofile)
+
+
+def pixel_2Dintegrate(imgdata, cen, mask=None):
+    if mask is None:
+        print("No mask defined, creating temporary empty mask.")
+        mask = np.zeros_like(imgdata)
+
+    # mask data
+    data = imgdata * (1 - mask)
+
+    # calculate data radial profile
+    x, y = np.indices(data.shape)
+    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = r.astype(np.int)
+
+    tbin = np.bincount(r.ravel(), data.ravel())
+    nr = np.bincount(r.ravel(), (1 - mask).ravel())
+    radialprofile = tbin / nr
+
+    return radialprofile
+
+
+def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
+    if mask is None:
+        print("No mask defined, creating temporary empty mask..")
+        mask = np.zeros_like(imgdata)
+
+    # mask data
+    data = imgdata * (1 - mask)
+
+    x, y = np.indices(data.shape).astype(np.float)
+    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = r.astype(np.int)
+
+    rinf = mu - delta / 2.
+    rsup = mu + delta / 2.
+
+    rmask = ((rinf[1] < r) & (r < rsup[1]) & (x < cen[0])).astype(np.int)
+    data *= rmask
+
+    chi = 100. * np.arctan((y - cen[1]) / (x - cen[0]))
+    chi = 100. * np.pi / 2. + chi
+    chi = np.round(chi).astype(np.int)
+    chi = chi * (chi > 0)
+
+    tbin = np.bincount(chi.ravel(), data.ravel())
+    nr = np.bincount(chi.ravel(), (rmask).ravel())
+    angleprofile = tbin / nr
+
+    vimodel = pymodelfit.builtins.GaussianModel()
+    vimodel.mu = np.pi / 2 * 100
+    vimodel.A = np.nanmax(angleprofile)
+    vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
+    vimodel.plot(lower=0, upper=np.pi * 100)
+
+    print(vimodel.A)
+    print vimodel.mu
+    print vimodel.FWHM
+
+    plt.plot(angleprofile)
+    plt.show()
+
+    return angleprofile
 
 
 def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
