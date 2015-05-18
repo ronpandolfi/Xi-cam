@@ -11,8 +11,9 @@ from watchdog import observers
 
 
 class daemon(QtCore.QThread):
-    def __init__(self, path, experiment):
+    def __init__(self, path, experiment, procold=False):
         super(daemon, self).__init__()
+        self.procold = procold
         self.experiment = experiment
         self.path = path
         self.exiting = False
@@ -24,6 +25,10 @@ class daemon(QtCore.QThread):
         # observer.start()
         self.watcher = watcher.newfilewatcher()
         self.watcher.addPath(self.path)
+
+        if self.procold:
+            self.processfiles(self.path, self.watcher.childrendict[self.path])
+
         self.watcher.newFilesDetected.connect(self.processfiles)
         try:
 
@@ -36,11 +41,11 @@ class daemon(QtCore.QThread):
             # observer.join()
 
     def processfiles(self, path, files):
-        for file in files:
+        for f in files:
             print os.path.splitext(path)[1]
-            if not os.path.splitext(file)[1] == '.nxs':
-                print('Processing new file: ' + file)
-                process.process([os.path.join(path, file)], self.experiment)
+            if not os.path.splitext(f)[1] == '.nxs':
+                print('Processing new file: ' + f)
+                process.process([os.path.join(path, f)], self.experiment)
                 # print('here:',os.path.join(path,file))
 
 

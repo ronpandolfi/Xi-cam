@@ -4,14 +4,17 @@ import glob
 import os
 
 import numpy as np
-# import cv2
+import cv2
 import fabio
 from scipy import optimize
 from scipy import signal
 import debug
 import saxs_calibration
 import time
+from matplotlib import pyplot as plt
+import pymodelfit
 
+import peakfindingrem
 
 def calc_R(x, y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -256,24 +259,12 @@ def center_approx(img, log=False):
 #                                       elli_h * 2,
 #                                       np.rad2deg(rotation))
 
-    geo_dict = geometry.getFit2D()
-    sdd = geo_dict['directDist'] / (0.001 * geo_dict['pixelX'])
-    tilt = np.deg2rad(geo_dict['tilt'])
-    rotation = np.deg2rad(geo_dict['tiltPlanRotation'])
 
-    c_plus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tilt - tth)
-    c_minus = (sdd * np.sin(tth)) / np.sin(np.pi / 2 + tilt - tth)
-    elli_h = (sdd * np.sin(tth)) / np.sin(np.pi / 2 - tth)
-    elli_w = (c_plus + c_minus) / 2.0
+######################################################################################
+######  REMI
+###
+#
 
-    x_pos = (geo_dict['centerX'] - c_minus + elli_w) - geo_dict['centerX']
-    elli_x = geo_dict['centerX'] + x_pos * np.cos(rotation)
-    elli_y = geo_dict['centerY'] + x_pos * np.sin(rotation)
-
-    return matplotlib.patches.Ellipse((elli_x, elli_y),
-                                      elli_w * 2,
-                                      elli_h * 2,
-                                      np.rad2deg(rotation))
 
 def gisaxs_center_approx(img, log=False):
     img = img.astype(np.float)
@@ -282,10 +273,152 @@ def gisaxs_center_approx(img, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img + 3) - np.log(3)
 
-            # Find the center...
+    x = 0
+    xcenter = 0
+    y = 10000
+    ycenter = 0
+    for i in range(0, img.shape[1]):
+        if x <= sum(img[:, i]):
+            x = sum(img[:, i])
+            xcenter = i
+        else:
+            pass
 
-            #return cen
+    q = 4 * sum(img[img.shape[0] - 5, :])
+    i = 0
+    x = np.sum(img[:, :150], axis=1)
+    for i in range(1, np.size(x)):
+        if x[i] == 0:
+            x[i] = x[i - 1]
+        else:
+            pass
+    t = np.size(x) - 20
+    x = signal.convolve(signal.convolve(x[:t], signal.gaussian(7, std=4)), [1, -1])
+    # plt.plot(x)
+    # plt.show()
 
+    i = 0
+    while (y != np.min(x)):
+        y = x[i]
+        ycenter = i - 6  # 6 because correct spread form convolution gaussian and derivation
+        i = i + 1
+
+    cen = (xcenter, ycenter)
+    return cen
+
+
+def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
+    if mask is None:
+        print("No mask defined, creating temporary empty mask..")
+        mask = np.zeros_like(imgdata)
+
+    # mask data
+    data = imgdata * (1 - mask)
+
+    x, y = np.indices(data.shape).astype(np.float)
+    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = r.astype(np.int)
+
+    rinf = mu - delta / 2.
+    rsup = mu + delta / 2.
+
+    rmask = ((rinf[1] < r) & (r < rsup[1]) & (x < cen[0])).astype(np.int)
+    data *= rmask
+
+    chi = 100. * np.arctan((y - cen[1]) / (x - cen[0]))
+    chi = 100. * np.pi / 2. + chi
+    chi = np.round(chi).astype(np.int)
+    chi = chi * (chi > 0)
+
+    tbin = np.bincount(chi.ravel(), data.ravel())
+    nr = np.bincount(chi.ravel(), (rmask).ravel())
+    angleprofile = tbin / nr
+
+    vimodel = pymodelfit.builtins.GaussianModel()
+    vimodel.mu = np.pi / 2 * 100
+    vimodel.A = np.nanmax(angleprofile)
+    vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
+    vimodel.plot(lower=0, upper=np.pi * 100)
+
+    print(vimodel.A)
+    print vimodel.mu
+    print vimodel.FWHM
+
+    plt.plot(angleprofile)
+    plt.show()
+
+    return angleprofile
+
+
+def pixel_2Dintegrate(imgdata, cen, mask=None):
+    if mask is None:
+        print("No mask defined, creating temporary empty mask.")
+        mask = np.zeros_like(imgdata)
+
+    # mask data
+    data = imgdata * (1 - mask)
+
+    # calculate data radial profile
+    x, y = np.indices(data.shape)
+    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = r.astype(np.int)
+
+    tbin = np.bincount(r.ravel(), data.ravel())
+    nr = np.bincount(r.ravel(), (1 - mask).ravel())
+    radialprofile = tbin / nr
+
+    return radialprofile
+
+
+def arcfinder_cercle(radialprofile, cen):
+    h = 35
+    # radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
+    test = np.max(radialprofile) / h
+    print 't', test
+    peakmax, peakmin = peakfindingrem.peakdet(radialprofile, test)
+    peakind = peakmax[:, 0]
+
+
+    # for i in range(np.size(peakind)):
+    # plt.axvline(peakind[i],color='b')
+    # plt.plot(radialprofile)
+    # plt.show()
+
+    accurancy = 50
+    x = np.zeros((np.size(peakind), accurancy))
+    y = np.zeros((np.size(peakind), accurancy))
+    xinf = np.zeros((np.size(peakind), accurancy))
+    yinf = np.zeros((np.size(peakind), accurancy))
+    xsup = np.zeros((np.size(peakind), accurancy))
+    ysup = np.zeros((np.size(peakind), accurancy))
+
+    for i in range(0, np.size(peakind)):
+        Delta = peakind[i] / 10
+        theta = np.linspace(0, 2 * np.pi, accurancy)
+        x[i] = cen[0] + (peakind[i]) * np.cos(theta)
+        y[i] = cen[1] + (peakind[i]) * np.sin(theta)
+        xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
+        xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
+        yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
+        ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
+
+    return x, y, xinf, xsup, yinf, ysup, peakind, Delta
+
+
+
+
+
+
+
+
+
+
+    #
+    ###
+    ######  REMI
+
+
+#########################################################################################################
 
 def refinecenter(img, experiment):
     imgcopy = img.T
@@ -334,28 +467,25 @@ def refinecenter(img, experiment):
 
 
 if __name__ == "__main__":
-    pass
-    # i = 0
-    # for imgpath in glob.glob(os.path.join("../../saxswaxs/AgBs", '*.edf')):
-    #     i += 1
-    #     if i < 0:
-    #         continue
-    #
-    #     print "Opening", imgpath
-    #
-    #     # read image
-    #     img = fabio.open(imgpath).data
-    #
-    #     outputimg = img.copy()
-    #
-    #     # print new center approximation; Add demo=True to see it work!
-    #     circle = center_approx(img, demo=True)
-    #     if circle is not None:
-    #         outputimg = np.uint8(outputimg)
-    #         outputimg = cv2.cvtColor(outputimg, cv2.COLOR_GRAY2BGR)
-    #         cv2.circle(outputimg, (int(circle[0]), int(circle[1])), int(circle[2]), (255, 0, 0), 3)
-    #         cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
-    #
-    #         cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))
+    i = 0
+    for imgpath in glob.glob(os.path.join("../../saxswaxs/AgBs", '*.edf')):
+        i += 1
+        if i < 0:
+            continue
 
+        print "Opening", imgpath
 
+        # read image
+        img = fabio.open(imgpath).data
+
+        outputimg = img.copy()
+
+        # print new center approximation; Add demo=True to see it work!
+        circle = center_approx(img, demo=True)
+        if circle is not None:
+            outputimg = np.uint8(outputimg)
+            outputimg = cv2.cvtColor(outputimg, cv2.COLOR_GRAY2BGR)
+            cv2.circle(outputimg, (int(circle[0]), int(circle[1])), int(circle[2]), (255, 0, 0), 3)
+            cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
+
+            cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))

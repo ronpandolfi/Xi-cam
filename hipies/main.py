@@ -267,7 +267,7 @@ class MyMainWindow():
 
     def updatepreprocessing(self):
         print os.getcwd()
-        self.daemonthread = daemon.daemon('../samples/', self.experiment)
+        self.daemonthread = daemon.daemon('/Users/rp/YL1031/', self.experiment, procold=True)
 
         self.daemonthread.start()
         # if True: #self.ui.findChild(QtGui.QCheckBox,'autoPreprocess').isChecked():
@@ -676,7 +676,7 @@ class MyMainWindow():
 
 
 def startdaemon(experiment):
-    d = daemon.daemon(':/samples/', experiment)
+    d = daemon.daemon('~/samples/', experiment)
 
 if __name__ == '__main__':
     window = MyMainWindow()

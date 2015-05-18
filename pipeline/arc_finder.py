@@ -8,6 +8,7 @@ import os
 import center_approx
 import matplotlib.pyplot as plt
 import peakutils
+import peakfindingrem
 
 demo = True
 
@@ -176,19 +177,34 @@ def arcmask(img, cen, Rrange, Thetarange):
 
 
 if __name__ == "__main__":
-    for imgpath in glob.glob(os.path.join("../GISAXSRealDataSamples/", '*.edf')):
+
+
+    for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
 
         # read image
         img = fabio.open(imgpath).data
-
         # find center
-        cen = center_approx.center_approx(img)
+        # cen = center_approx.center_approx(img)
+
+        cen = center_approx.gisaxs_center_approx(img)
+        radialprofile = center_approx.pixel_2Dintegrate(img, (cen[1], cen[0]))
+        y, x, yinf, ysup, xinf, xsup, mu, delta = center_approx.arcfinder_cercle(radialprofile, (cen[1], cen[0]))
+        a = center_approx.chi_2Dintegrate(img, (cen[1], cen[0]), mu, delta)
         print cen
-        cen = [680, 1619]
+
+        plt.axvline(cen[0], color='r')
+        plt.axhline(cen[1], color='r')
+        plt.imshow(np.log(img))
+        for i in range(1, np.size(x, 0)):
+            plt.plot(x[i], y[i], color='g')
+            plt.plot(xinf[i], yinf[i], color='r')
+            plt.plot(xsup[i], ysup[i], color='r')
+        plt.show()
+
 
         # find arcs
-        arcs = find_arcs(img, cen)
+        # arcs = find_arcs(img, cen)
 
         #draw arcs
         #drawarcs(img,arcs)

@@ -5,9 +5,11 @@ from nexpy.api import nexus
 import numpy as np
 import os
 from PIL import Image
+import debug
 
 
-def process(paths, experiment, options=dict(remesh=False, findcenter=True, refinecenter=False, cachethumbnail=True)):
+@debug.timeit
+def process(paths, experiment, options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True)):
     for path in paths:
         img, _ = pipeline.loader.loadpath(path)
         if img is not None:
@@ -36,7 +38,6 @@ def process(paths, experiment, options=dict(remesh=False, findcenter=True, refin
 
 def path2nexus(path):
     return os.path.splitext(path)[0] + '.nxs'
-
 
 def thumbnail(img):
     im = Image.fromarray((img / np.max(img) * 255.).astype(np.uint8), 'L')
