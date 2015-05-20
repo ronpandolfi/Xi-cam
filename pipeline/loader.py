@@ -16,20 +16,23 @@ def loadsingle(path):
     :return:
     """
     # print os.path.splitext(path)
-    if os.path.splitext(path)[1] in acceptableexts:
-        if os.path.splitext(path)[1] == '.fits':
-            data = pyfits.open(path)[2].data
-            return data, None
-        elif os.path.splitext(path)[1] == '.nxs':
-            nxroot = nx.load(path)
-            print nxroot.tree
-            data = nxroot.data.signal
-            #print('here',data)
-            return data, None
-        else:
-            data = fabio.open(path).data
-            paras = loadparas(path)
-            return data, paras
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.fits':
+                data = pyfits.open(path)[2].data
+                return data, None
+            elif os.path.splitext(path)[1] == '.nxs':
+                nxroot = nx.load(path)
+                print nxroot.tree
+                data = nxroot.data.signal
+                # print('here',data)
+                return data, None
+            else:
+                data = fabio.open(path).data
+                paras = loadparas(path)
+                return data, paras
+    except IOError:
+        print('IO Error loading: ' + path)
 
     return None, None
 
@@ -120,16 +123,16 @@ def loadthumbnail(path):
     nxpath = os.path.splitext(path)[0] + '.nxs'
     if os.path.isfile(nxpath):
         print nx.load(path).tree
-        return np.asarray(nx.load(path).data.thumbnail)
-
+        img = np.asarray(nx.load(path).data.thumbnail)
     else:
         img, _ = loadsingle(path)
-        if img is not None:
-            img = np.log(img * (img > 0) + 1.)
-            img *= 255 / np.max(np.asarray(img))
 
-            img = img.astype(np.uint8)
-        return img
+    if img is not None:
+        img = np.log(img * (img > 0) + 1.)
+        img *= 255 / np.max(np.asarray(img))
+
+        img = img.astype(np.uint8)
+    return img
 
 
 def loadpath(path):

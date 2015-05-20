@@ -328,15 +328,19 @@ class imageTab(QtGui.QWidget):
             imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
+        mask = self.experiment.mask
+
         if iscake:
             img, x, y = pipeline.integration.cake(img, self.experiment)
+            mask, _, _ = pipeline.integration.cake(mask, self.experiment)
+            mask = (mask > 0) * 255
+
         elif isremesh:
             img = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
+            mask = pipeline.remesh.remesh(np.rot90(mask, 1).copy(), self.path, self.experiment.getGeometry())
 
         if ismaskshown:
-            self.maskimage.setImage(np.dstack((
-                self.experiment.mask, np.zeros_like(self.experiment.mask), np.zeros_like(self.experiment.mask),
-                self.experiment.mask)), opacity=.25)
+            self.maskimage.setImage(np.dstack((mask, np.zeros_like(mask), np.zeros_like(mask), mask)), opacity=.25)
         else:
             self.maskimage.clear()
 

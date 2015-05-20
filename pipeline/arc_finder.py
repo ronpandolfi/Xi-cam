@@ -11,6 +11,7 @@ import center_approx
 import integration
 
 import peakfindingrem
+import scipy.optimize as optimize
 
 
 demo = True
@@ -213,6 +214,11 @@ def arcfinder_cercle(radialprofile, cen):
     return x, y, xinf, xsup, yinf, ysup, peakind, Delta
 
 
+def gaussian(x, a, b, c):
+    val = a * np.exp(-(x - b) ** 2 / c ** 2)
+    return val
+
+
 if __name__ == "__main__":
 
 
@@ -237,6 +243,20 @@ if __name__ == "__main__":
             plt.plot(y[i], x[i], color='g')
             plt.plot(yinf[i], xinf[i], color='r')
             plt.plot(ysup[i], xsup[i], color='r')
+        plt.show()
+
+        popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(a)), np.nan_to_num(a))
+
+        print("Scale =  %.3f +/- %.3f" % (popt[0], np.sqrt(pcov[0, 0])))
+        print("Offset = %.3f +/- %.3f" % (popt[1], np.sqrt(pcov[1, 1])))
+        print("Sigma =  %.3f +/- %.3f" % (popt[2], np.sqrt(pcov[2, 2])))
+
+        # print(vimodel.A)
+        # print vimodel.mu
+        # print vimodel.FWHM
+
+        plt.plot(a)
+        plt.plot(gaussian(np.arange(np.size(a)), *popt))
         plt.show()
 
 
