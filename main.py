@@ -1,3 +1,6 @@
 import hipies
+import sys
+import os
 
-window = hipies.main.MyMainWindow()
+sys.path.append(os.path.join(os.getcwd(),'hipies'))
+window = hipies.hipies.MyMainWindow()
