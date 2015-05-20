@@ -257,7 +257,7 @@ class MyMainWindow():
         ##
         # self.openimage('../samples/AgB_00016.edf')
         #self.calibrate()
-        self.updatepreprocessing()
+        # self.updatepreprocessing()
         ##
 
         # START PYSIDE MAIN LOOP
