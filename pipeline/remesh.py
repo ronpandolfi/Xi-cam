@@ -87,37 +87,16 @@ def remesh(img, filename, geometry):
     #pylab.savefig('testimage.png')
     #misc.imsave('testimage.png')
     # interpolation
-    xcrd = np.linspace(qr.min(), qr.max(), ny)
     ycrd = np.linspace(qz.min(), qz.max(), nz)
-    rad = 0.5 * np.sqrt((xcrd[1] - xcrd[0]) ** 2 + (ycrd[1] - ycrd[0]) ** 2)
+    dy   = ycrd[1]-ycrd[0]
+    nx   = np.int((qr.max()-qr.min())/dy)
+    xcrd = qr.min() + np.arange(nx) * dy
     xcrd, ycrd = np.meshgrid(xcrd, ycrd)
 
-    # try faster c/openmp remesh
-    try:
-        qimg = warp_image(
-            img.astype(
-                np.float32), qr.astype(
-                np.float32), qz.astype(
-                np.float32), xcrd.astype(
-                np.float32), ycrd.astype(
-                np.float32), 0)
-    except:
-        print 'Warning: cWarpImage failed. Falling back to python remap'
-        qimg = np.zeros((nz, ny), dtype=float)
-        im1 = img.ravel()
-        pts = np.zeros((ny * nz, 2), dtype=float)
-        pts[:, 0] = qr.ravel()
-        pts[:, 1] = qz.ravel()
-
-        # put data into a KDTree
-        tree = cKDTree(pts, leafsize=10)
-
-        # remesh in python-slow
-        qimg = remap(xcrd, ycrd, tree, im1, rad)
-
-    #qimg = gaussian_filter(qimg, sigma=1)
-
-
+    # c/openmp remesh
+    qimg = warp_image(img.astype(np.float32), qr.astype(np.float32), 
+                    qz.astype(np.float32), xcrd.astype(np.float32), 
+                    ycrd.astype(np.float32), 0)
     return np.rot90(qimg, 3)
 
 
@@ -135,34 +114,16 @@ def remesh_mask(agbfile, agb):
     agb.setQrange(qrange)
 
     # interpolation
-    xcrd = np.linspace(qr.min(), qr.max(), ny)
     ycrd = np.linspace(qz.min(), qz.max(), nz)
-    rad = 0.5 * np.sqrt((xcrd[1] - xcrd[0]) ** 2 + (ycrd[1] - ycrd[0]) ** 2)
+    dy   = ycrd[1]-ycrd[0]
+    nx   = np.int((qr.max()-qr.min())/dy)
+    xcrd = qr.min() + np.arange(nx) * dy
     xcrd, ycrd = np.meshgrid(xcrd, ycrd)
 
-    # try faster c/openmp remesh
-    try:
-        qimg = warp_image(
-            img.astype(
-                np.float32), qr.astype(
-                np.float32), qz.astype(
-                np.float32), xcrd.astype(
-                np.float32), ycrd.astype(
-                np.float32), 0)
-    except:
-        print 'Warning: cWarpImage failed. Falling back to python remap'
-        qimg = np.zeros((nz, ny), dtype=float)
-        im1 = img.ravel()
-        pts = np.zeros((ny * nz, 2), dtype=float)
-        pts[:, 0] = qr.ravel()
-        pts[:, 1] = qz.ravel()
-
-        # put data into a KDTree
-        tree = cKDTree(pts, leafsize=10)
-
-        # remesh in python-slow
-        qimg = remap(xcrd, ycrd, tree, im1, rad)
-
+    # c/openmp remesh
+    qimg = warp_image(img.astype(np.float32), qr.astype(np.float32), 
+                qz.astype(np.float32), xcrd.astype(np.float32),
+                ycrd.astype(np.float32), 0)
     qimg = np.round(qimg)
     return qimg.astype(bool).astype(np.float32)
 
