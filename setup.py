@@ -6,9 +6,8 @@ Usage:
 """
 import sys
 sys.setrecursionlimit(1500)
-
-
 from setuptools import setup
+from numpy.distutils.core import Extension
 
 APP = ['hipies/main.py']
 DATA_FILES = []
@@ -25,10 +24,16 @@ OPTIONS = {'argv_emulation': True,
                 }
             }
 
+EXT = Extension(name = 'pipeline.cWarpImage',
+                sources = ['cext/cWarpImage.cc', 'cext/remesh.cc', 'cext/kdtree2.cpp'],
+                extra_compile_args = ['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include' ],
+                extra_link_args  = ['-fopenmp' ]
+               )
 setup(
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
+    ext_modules = [EXT],
     setup_requires=['py2app']
 
 )

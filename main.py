@@ -1,3 +1,3 @@
 import hipies
 
-window = hipies.main.MyMainWindow()
+window = hipies.hipies.MyMainWindow()
