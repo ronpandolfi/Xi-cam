@@ -77,6 +77,8 @@ def scanparas(path):
                 i += 1
                 paras['Unknown' + str(i)] = str(cells[0])
 
+    return paras
+
 
 def loadstichted(filepath2, filepath1):
     (data1, paras1) = loadsingle(filepath1)
