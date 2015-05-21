@@ -5,7 +5,6 @@ from nexpy.api import nexus
 import numpy as np
 import os
 from PIL import Image
-import debug
 import string
 
 

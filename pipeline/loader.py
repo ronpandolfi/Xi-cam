@@ -3,8 +3,11 @@ import numpy
 import pyfits
 import os
 import numpy as np
-from nexpy.api import nexus as nx
+#from nexpy.api import nexus as nx
+import fabio as nx
 from pyFAI import detectors
+import glob
+import re
 
 acceptableexts = '.fits .edf .tif .nxs'
 
@@ -42,24 +45,37 @@ def loadsingle(path):
 
 
 def loadparas(path):
-    txtpath = os.path.splitext(path)[0] + '.txt'
-    # print txtpath
-    if os.path.isfile(txtpath):
-        with open(txtpath, 'r') as f:
-            lines = f.readlines()
-            paras = dict()
-            i = 0
-            for line in lines:
-                cells = line.split(':')
-                if cells.__len__() == 2:
-                    paras[cells[0]] = float(cells[1])
-                elif cells.__len__() == 1:
-                    i += 1
-                    paras['Unknown' + str(i)] = str(cells[0])
-        # print paras
-        return paras
-    else:
-        return None
+    try:
+        txtpath = os.path.splitext(path)[0] + '.txt'
+        if os.path.isfile(txtpath):
+            return scanparas(txtpath)
+        else:
+            basename = os.path.splitext(path)[0]
+            obj = re.search('_\d+$', basename)
+            if obj is not None:
+                iend = obj.start()
+                token = basename[:iend] + '*txt'
+                txtpath = glob.glob(token)[0]
+                return scanparas(txtpath)
+            else:
+                raise Exception('Error: Accompanied text file not found')
+    except IOError:
+        print('Unexpected read error in loadparas')
+    return None
+
+
+def scanparas(path):
+    with open(path, 'r') as f:
+        lines = f.readlines()
+        paras = dict()
+        i = 0
+        for line in lines:
+            cells = line.split(':')
+            if cells.__len__() == 2:
+                paras[cells[0]] = float(cells[1])
+            elif cells.__len__() == 1:
+                i += 1
+                paras['Unknown' + str(i)] = str(cells[0])
 
 
 def loadstichted(filepath2, filepath1):

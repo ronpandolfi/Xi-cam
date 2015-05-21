@@ -48,17 +48,16 @@ class MyMainWindow():
 
         # Load the gui from file
         self.app = QtGui.QApplication(sys.argv)
-        loader = QUiLoader()
-        #f = QtCore.QFile(":/gui/mainwindow.ui")
-        f = QtCore.QFile(os.path.abspath('gui/mainwindow.ui'))
+        guiloader = QUiLoader()
+        print os.getcwd()
+        f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
-        self.ui = loader.load(f)
+        self.ui = guiloader.load(f)
         f.close()
 
         # STYLE
         self.app.setStyle('Plastique')
-        stysheet = os.path.abspath('gui/style.stylesheet')
-        with open(stysheet, 'r') as f:
+        with open('gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -118,7 +117,7 @@ class MyMainWindow():
         self.filetree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf", "*.fits"]
+        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
@@ -258,7 +257,7 @@ class MyMainWindow():
         ##
         # self.openimage('../samples/AgB_00016.edf')
         #self.calibrate()
-        self.updatepreprocessing()
+        # self.updatepreprocessing()
         ##
 
         # START PYSIDE MAIN LOOP
@@ -267,7 +266,8 @@ class MyMainWindow():
         sys.exit(self.app.exec_())
 
     def updatepreprocessing(self):
-        self.daemonthread = daemon.daemon('samples/', self.experiment)
+        print os.getcwd()
+        self.daemonthread = daemon.daemon('/Users/rp/YL1031/', self.experiment, procold=True)
 
         self.daemonthread.start()
         # if True: #self.ui.findChild(QtGui.QCheckBox,'autoPreprocess').isChecked():
@@ -413,7 +413,7 @@ class MyMainWindow():
         """
         When the active tab changes, load/unload tabs
         """
-        print('Changing from', self.timelineprevioustab, 'to', index)
+        # print('Changing from', self.timelineprevioustab, 'to', index)
         if index > -1:
             timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
 
@@ -676,7 +676,7 @@ class MyMainWindow():
 
 
 def startdaemon(experiment):
-    d = daemon.daemon('samples/', experiment)
+    d = daemon.daemon('~/samples/', experiment)
 
 if __name__ == '__main__':
     window = MyMainWindow()

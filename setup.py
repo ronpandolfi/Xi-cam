@@ -5,15 +5,16 @@ Usage:
     python setup.py py2app
 """
 import sys
+import glob
 sys.setrecursionlimit(1500)
 from setuptools import setup
 from numpy.distutils.core import Extension
 
-APP = ['hipies/main.py']
+APP = ['main.py']
 DATA_FILES = []
-OPTIONS = {'argv_emulation': True,
-           'resources': ['hipies/gui'],
-           'iconfile':'hipies/gui/icon.icns',
+OPTIONS = {'argv_emulation': False,
+           'resources':['gui'],
+           'iconfile': 'gui/icon.icns',
            'plist': {
                 'CFBundleName': 'HiPIES',
                 'CFBundleShortVersionString':'0.1.0', # must be in X.X.X format
@@ -21,7 +22,12 @@ OPTIONS = {'argv_emulation': True,
                 'CFBundleIdentifier':'com.lbnl.hipies', #optional
                 'NSHumanReadableCopyright': '@ 2015', #optional
                 'CFBundleDevelopmentRegion': 'English', #optional - English is default
-                }
+                },
+            'includes' : [ 
+                           'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
+                           'PySide.QtXml'
+                         ],
+                'packages' : [ 'pipeline', 'daemon', 'hipies' ]
             }
 
 EXT = Extension(name = 'pipeline.cWarpImage',
