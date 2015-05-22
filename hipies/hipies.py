@@ -243,7 +243,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Reset).clicked.connect(
             self.resetwatchfolder)
         self.folderwatcher.newFilesDetected.connect(self.newfilesdetected)
-        self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
+        #self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
 
         # Connect top menu
         self.ui.findChild(QtGui.QPushButton, 'librarybutton').clicked.connect(self.showlibrary)

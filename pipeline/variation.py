@@ -31,13 +31,10 @@ def filevariation(operationindex, filea, fileb, filec):
     c, _ = loader.loadpath(fileb)
     n, _ = loader.loadpath(filec)
 
-    # resize to 100 px
-
-    p = scipy.ndimage.zoom(p, 0.1, order=1)
-    c = scipy.ndimage.zoom(c, 0.1, order=1)
-    n = scipy.ndimage.zoom(n, 0.1, order=1)
-
     if p is not None and c is not None and n is not None:
+        p = scipy.ndimage.zoom(p, 0.1, order=1)
+        c = scipy.ndimage.zoom(c, 0.1, order=1)
+        n = scipy.ndimage.zoom(n, 0.1, order=1)
         return variation(operationindex, p, c, n)
     else:
         print('Variation could not be determined for a frame.')
