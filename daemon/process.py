@@ -39,9 +39,7 @@ def process(paths, experiment,
                 nextpath = similarframe(path, +1)
                 if prevpath is not None and nextpath is not None:
                     # print 'comparing:', prevpath, path, nextpath
-                    previmg, _ = pipeline.loader.loadpath(prevpath)
-                    nextimg, _ = pipeline.loader.loadpath(nextpath)
-                    variation = pipeline.variation.variation(4, img, previmg, nextimg)
+                    variation = pipeline.variation.filevariation(4, prevpath, path, nextpath)
                     #print 'variation:', variation
                 else:
                     variation = None
