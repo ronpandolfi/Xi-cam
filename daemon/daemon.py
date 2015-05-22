@@ -4,10 +4,10 @@ import time
 import logging
 import process
 from PySide import QtCore, QtGui
-import watcher
+from hipies import watcher
 
-from watchdog import events
-from watchdog import observers
+#from watchdog import events
+#from watchdog import observers
 
 
 class daemon(QtCore.QThread):

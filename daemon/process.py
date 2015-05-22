@@ -5,10 +5,9 @@ from nexpy.api import nexus
 import numpy as np
 import os
 from PIL import Image
-import debug
 
 
-@debug.timeit
+
 def process(paths, experiment, options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True)):
     for path in paths:
         img, _ = pipeline.loader.loadpath(path)

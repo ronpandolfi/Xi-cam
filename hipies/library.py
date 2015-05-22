@@ -121,7 +121,7 @@ class librarylayout(FlowLayout):
             diriterator.next()
             fileinfo = diriterator.fileInfo()
             # print fileinfo.fileName()
-            if not (fileinfo.fileName() == '..' and path == '/Volumes/') and not fileinfo.fileName() == '.':
+            if not (fileinfo.fileName() == '..' and path == 'Computer') and not fileinfo.fileName() == '.':
                 self.addWidget(thumbwidgetitem(diriterator.filePath(), parentwindow=self.parentwindow))
 
 

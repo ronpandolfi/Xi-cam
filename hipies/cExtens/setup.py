@@ -4,15 +4,14 @@ import os
 from numpy.distutils.core import Extension
 from Cython.Build import cythonize
 
-os.environ["CC"] = "gcc-4.9"
-os.environ["CXX"] = "g++-4.9"
+os.environ["CC"] = "cc.exe"
+os.environ["CXX"] = "c++.exe"
 
-boost_inc = '-I/usr/local/Cellar/boost/1.57.0/include/'
+boost_inc = '-IC:\\boost_1_58_0\\boost1580'
 
 ext = Extension(name='cWarpImage',
                 sources=['cWarpImage.cc', 'warpimage.h', 'remesh.h', 'remesh.cc', 'kdtree2.hpp', 'kdtree2.cpp'],
-                extra_compile_args=['-fopenmp', '-O3', '-ffast-math', boost_inc],
-                extra_link_args=['-fopenmp']
+                extra_compile_args=['-O3', '-ffast-math', boost_inc],
                 # extra_compile_args = ['-O0 -g', boost_inc]
 )
 
