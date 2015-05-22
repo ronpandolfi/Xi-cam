@@ -6,8 +6,10 @@ import numpy as np
 import os
 from PIL import Image
 import string
+from hipies import debug
 
 
+@debug.timeit
 def process(paths, experiment,
             options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True, variation=True,
                          savefullres=False)):
@@ -33,12 +35,14 @@ def process(paths, experiment,
 
             variation = None
             if options['variation']:
-                prevpath = previousframe(path)
-                if prevpath is not None:
-                    print 'comparing:', prevpath, path
+                prevpath = similarframe(path, -1)
+                nextpath = similarframe(path, +1)
+                if prevpath is not None and nextpath is not None:
+                    # print 'comparing:', prevpath, path, nextpath
                     previmg, _ = pipeline.loader.loadpath(prevpath)
-                    variation = pipeline.variation.variation(pipeline.variation.chisquared, img, previmg)
-                    print 'variation:', variation
+                    nextimg, _ = pipeline.loader.loadpath(nextpath)
+                    variation = pipeline.variation.variation(4, img, previmg, nextimg)
+                    #print 'variation:', variation
                 else:
                     variation = None
 
@@ -50,10 +54,10 @@ def process(paths, experiment,
             outputnexus(img, thumb, path2nexus(path), variation)
 
 
-def previousframe(path):
+def similarframe(path, N):
     try:
         framenum = os.path.splitext(os.path.basename(path).split('_')[-1])[0]
-        prevframenum = int(framenum) - 1
+        prevframenum = int(framenum) + N
         prevframenum = '{:0>5}'.format(prevframenum)
         return string.replace(path, framenum, prevframenum)
     except ValueError:

@@ -168,7 +168,8 @@ class MyMainWindow():
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
         operationcombo.setObjectName('operationcombo')
-        operationcombo.addItems(['Chi Squared', 'Abs. difference', 'Norm. Abs. difference', 'Sum intensity'])
+        operationcombo.addItems(
+            ['Chi Squared', 'Abs. difference', 'Norm. Abs. difference', 'Sum intensity', 'Norm. Abs. Diff. derivative'])
         operationcombo.currentIndexChanged.connect(self.changetimelineoperation)
         opwidgetaction = QtGui.QWidgetAction(menu)
         opwidgetaction.setDefaultWidget(operationcombo)
@@ -416,12 +417,11 @@ class MyMainWindow():
         # print('Changing from', self.timelineprevioustab, 'to', index)
         if index > -1:
             timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
-
-            try:
-
+            # try:
+            if self.viewerprevioustab > -1 and timelinetabwidget.widget(self.timelineprevioustab) is not None:
                 timelinetabwidget.widget(self.timelineprevioustab).unload()
-            except AttributeError:
-                print('AttributeError intercepted in currentchanged()')
+            # except AttributeError:
+            #    print('AttributeError intercepted in currentchanged()')
             timelinetabwidget.widget(index).load()
         self.timelineprevioustab = index
 
@@ -659,10 +659,14 @@ class MyMainWindow():
         if d:
             self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText(d)
             self.folderwatcher.addPath(d)
+            if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
+                self.daemonthread = daemon.daemon(d, self.experiment, procold=True)
+                self.daemonthread.start()
 
     def resetwatchfolder(self):
         self.folderwatcher.removePaths(self.folderwatcher.directories())
         self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText('')
+        self.daemonthread.terminate()
 
     def newfilesdetected(self, d, paths):
         for path in paths:

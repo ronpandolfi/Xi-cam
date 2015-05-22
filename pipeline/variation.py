@@ -1,28 +1,32 @@
 import numpy as np
 
 
-def chisquared(c, p):
+def chisquared(p, c, n):
     return np.sum(np.square(c - p) / p)
 
 
-def absdiff(c, p):
+def absdiff(p, c, n):
     return np.sum(np.abs(c - p))
 
 
-def normabsdiff(c, p):
+def normabsdiff(p, c, n):
     return np.sum(np.abs(c - p) / p)
 
 
-def sumintensity(c, p):
+def sumintensity(p, c, n):
     return np.sub(c)
 
 
-operations = [chisquared, absdiff, normabsdiff, sumintensity]
+def normabsdiffderiv(p, c, n):
+    return -np.sum(np.abs(n - c) / c) + np.sum(np.abs(c - p) / c)
 
 
-def variation(operation, imga, imgb=None):
+operations = [chisquared, absdiff, normabsdiff, sumintensity, normabsdiffderiv]
+
+
+def variation(operationindex, imga, imgb=None, imgc=None):
     try:
-        with np.errstate(divide='ignore', invalid='ignore'):
-            return operation(imga, imgb)
+
+        return operations[operationindex](imga, imgb, imgc)
     except TypeError:
         print('Variation could not be determined for a frame.')

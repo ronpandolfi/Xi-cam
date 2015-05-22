@@ -51,29 +51,38 @@ class timelinetab(viewer.imageTab):
         self.setvariationmode(0)
         self.gotomax()
 
+    def reduce(self):
+        self.skipframes = (self.variation[0:-1] / self.variation[1:]) > 0.1
+
 
     def scan(self):
-        self.variation = np.zeros(self.paths.__len__() - 1)
-        operations = [lambda c, p: np.sum(np.square(c - p) / p),  # Chi squared
-                      lambda c, p: np.sum(np.abs(c - p)),  # Absolute difference
-                      lambda c, p: np.sum(np.abs(c - p) / p),  # Norm. absolute difference
-                      lambda c, p: np.sum(c)]  # Sum intensity
+        self.variation = np.zeros(self.paths.__len__() - 2)
+        # operations = [lambda c, p, n: np.sum(np.square(c - p) / p),  # Chi squared
+        #              lambda c, p, n: np.sum(np.abs(c - p)),  # Absolute difference
+        #              lambda c, p, n: np.sum(np.abs(c - p) / p),  # Norm. absolute difference
+        #              lambda c, p, n: np.sum(c),  # Sum intensity
+        #              lambda c, p, n: np.sum(np.abs(n-c) / c)-np.sum(np.abs(c-p) / c)] # Norm. abs. diff. derivative
         # print(':P')
         #print self.paths
 
         #get the first frame's profile
         prev, _ = pipeline.loader.loadpath(self.paths[0])
-        for i in range(self.paths.__len__() - 1):
+        curr, _ = pipeline.loader.loadpath(self.paths[1])
+        for i in range(self.paths.__len__() - 2):
             #print i, self.paths[i]
-            curr, _ = pipeline.loader.loadpath(self.paths[i + 1])
+            nxt, _ = pipeline.loader.loadpath(self.paths[i + 2])
             if curr is None:
                 self.variation[i] = None
+                prev = curr.copy()
+                curr = nxt.copy()
                 continue
 
             #print curr, prev,'\n'
             with np.errstate(divide='ignore', invalid='ignore'):
-                self.variation[i] = operations[self.operationindex](curr, prev)
+                self.variation[i] = pipeline.variation.variation(self.operationindex, prev, curr,
+                                                                 nxt)  #operations[self.operationindex](curr, prev)
             prev = curr.copy()
+            curr = nxt.copy()
             # print self.variation
 
     def setvariationmode(self, index):

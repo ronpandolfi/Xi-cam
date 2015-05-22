@@ -9,6 +9,8 @@ from hipies import watcher
 from watchdog import events
 from watchdog import observers
 
+# http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
+
 
 class daemon(QtCore.QThread):
     def __init__(self, path, experiment, procold=False):
@@ -17,28 +19,21 @@ class daemon(QtCore.QThread):
         self.experiment = experiment
         self.path = path
         self.exiting = False
+        self.childfiles = set(os.listdir(path))
+
 
     def run(self):
-        # event_handler=newfilehandler(self.experiment)
-        # observer = observers.Observer()
-        # observer.schedule(event_handler, self.path, recursive=True)
-        # observer.start()
-        self.watcher = watcher.newfilewatcher()
-        self.watcher.addPath(self.path)
 
         if self.procold:
-            self.processfiles(self.path, self.watcher.childrendict[self.path])
+            self.processfiles(self.path, self.childfiles)
 
-        self.watcher.newFilesDetected.connect(self.processfiles)
         try:
 
             while True:
-                self.msleep(1000)
-                self.watcher.checkdirectory(self.path)  # Force update; should not have to do this -.-
+                time.sleep(1)
+                self.checkdirectory()  # Force update; should not have to do this -.-
         except KeyboardInterrupt:
-            self.watcher = None
-            # observer.stop()
-            # observer.join()
+            pass
 
     def processfiles(self, path, files):
         for f in files:
@@ -47,6 +42,14 @@ class daemon(QtCore.QThread):
                 print('Processing new file: ' + f)
                 process.process([os.path.join(path, f)], self.experiment)
                 # print('here:',os.path.join(path,file))
+
+    def checkdirectory(self):
+        # print(path)
+        updatedchildren = set(os.listdir(self.path))
+        newchildren = updatedchildren - self.childrenfiles
+        self.childrenfiles = updatedchildren
+        self.processfiles(self.path, list(newchildren))
+
 
 
 # class newfilehandler(events.PatternMatchingEventHandler):
