@@ -27,9 +27,9 @@ def normabsdiffderiv(p, c, n):
 operations = [chisquared, absdiff, normabsdiff, sumintensity, normabsdiffderiv]
 
 
-def filevariation(operationindex, filea, fileb, filec):
+def filevariation(operationindex, filea, c, filec):
     p, _ = loader.loadpath(filea)
-    c, _ = loader.loadpath(fileb)
+    # c, _ = loader.loadpath(fileb)
     n, _ = loader.loadpath(filec)
 
     if p is not None and c is not None and n is not None:

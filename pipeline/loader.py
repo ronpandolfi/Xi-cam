@@ -44,6 +44,10 @@ def loadsingle(path):
     #  return None,None
 
 
+def loadjustimage(path):
+    data = fabio.open(path).data
+    return data
+
 def loadparas(path):
     try:
         txtpath = os.path.splitext(path)[0] + '.txt'

@@ -9,14 +9,13 @@ import string
 from hipies import debug
 
 
-@debug.timeit
 def process(paths, experiment,
             options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True, variation=True,
                          savefullres=False)):
     path = paths
     if os.path.splitext(path)[1] == '.nxs':
         return None
-    print('Processing new file: ' + path)
+    # print('Processing new file: ' + path)
 
     img, _ = pipeline.loader.loadpath(path)
     if img is not None:
@@ -43,8 +42,8 @@ def process(paths, experiment,
             nextpath = similarframe(path, +1)
             if prevpath is not None and nextpath is not None:
                 # print 'comparing:', prevpath, path, nextpath
-                variation = pipeline.variation.filevariation(4, prevpath, path, nextpath)
-                print 'variation:', variation
+                variation = pipeline.variation.filevariation(4, prevpath, img, nextpath)
+                #print 'variation:', variation
             else:
                 variation = None
 
