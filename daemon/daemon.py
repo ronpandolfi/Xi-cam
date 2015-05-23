@@ -8,11 +8,15 @@ from hipies import watcher
 
 from watchdog import events
 from watchdog import observers
+from joblib import Parallel, delayed
+import multiprocessing
+from hipies import debug
 
 # http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
 
 
 class daemon(QtCore.QThread):
+    num_cores = multiprocessing.cpu_count()
     def __init__(self, path, experiment, procold=False):
         super(daemon, self).__init__()
         self.procold = procold
@@ -30,24 +34,36 @@ class daemon(QtCore.QThread):
         try:
 
             while True:
-                time.sleep(1)
+                time.sleep(.1)
                 self.checkdirectory()  # Force update; should not have to do this -.-
         except KeyboardInterrupt:
             pass
 
+    @debug.timeit
     def processfiles(self, path, files):
-        for f in files:
+        if files:
             print os.path.splitext(path)[1]
-            if not os.path.splitext(f)[1] == '.nxs':
-                print('Processing new file: ' + f)
-                process.process([os.path.join(path, f)], self.experiment)
+
+
+            # process.process([os.path.join(path, f)], self.experiment)
+            jobs = []
+            p = None
+            for f in files:
+                p = multiprocessing.Process(target=process.process, args=(os.path.join(path, f), self.experiment))
+                jobs.append(p)
+                p.start()
+
+            while p.is_alive():
+                time.sleep(.1)
+
+
                 # print('here:',os.path.join(path,file))
 
     def checkdirectory(self):
         # print(path)
         updatedchildren = set(os.listdir(self.path))
-        newchildren = updatedchildren - self.childrenfiles
-        self.childrenfiles = updatedchildren
+        newchildren = updatedchildren - self.childfiles
+        self.childfiles = updatedchildren
         self.processfiles(self.path, list(newchildren))
 
 

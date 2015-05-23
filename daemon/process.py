@@ -13,43 +13,47 @@ from hipies import debug
 def process(paths, experiment,
             options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True, variation=True,
                          savefullres=False)):
-    for path in paths:
-        img, _ = pipeline.loader.loadpath(path)
-        if img is not None:
-            if options['findcenter']:
-                cen = pipeline.center_approx.center_approx(img)
-                experiment.setvalue('Center X', cen[0])
-                experiment.setvalue('Center Y', cen[1])
-            if options['refinecenter']:
-                pipeline.center_approx.refinecenter(img, experiment)
-            logimg = None
-            # if False:  # log image is needed?
-            #    with np.errstate(invalid='ignore'):
-            #        logimg = np.log(img * (img > 0) + 1)
-            thumb = None
-            if options['cachethumbnail']:
-                thumb = thumbnail(img)
+    path = paths
+    if os.path.splitext(path)[1] == '.nxs':
+        return None
+    print('Processing new file: ' + path)
 
-            if options['remesh']:
-                img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
+    img, _ = pipeline.loader.loadpath(path)
+    if img is not None:
+        if options['findcenter']:
+            cen = pipeline.center_approx.center_approx(img)
+            experiment.setvalue('Center X', cen[0])
+            experiment.setvalue('Center Y', cen[1])
+        if options['refinecenter']:
+            pipeline.center_approx.refinecenter(img, experiment)
+        logimg = None
+        # if False:  # log image is needed?
+        # with np.errstate(invalid='ignore'):
+        #        logimg = np.log(img * (img > 0) + 1)
+        thumb = None
+        if options['cachethumbnail']:
+            thumb = thumbnail(img)
 
-            variation = None
-            if options['variation']:
-                prevpath = similarframe(path, -1)
-                nextpath = similarframe(path, +1)
-                if prevpath is not None and nextpath is not None:
-                    # print 'comparing:', prevpath, path, nextpath
-                    variation = pipeline.variation.filevariation(4, prevpath, path, nextpath)
-                    #print 'variation:', variation
-                else:
-                    variation = None
+        if options['remesh']:
+            img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
 
-            if img is None: return None
+        variation = None
+        if options['variation']:
+            prevpath = similarframe(path, -1)
+            nextpath = similarframe(path, +1)
+            if prevpath is not None and nextpath is not None:
+                # print 'comparing:', prevpath, path, nextpath
+                variation = pipeline.variation.filevariation(4, prevpath, path, nextpath)
+                print 'variation:', variation
+            else:
+                variation = None
 
-            if not options['savefullres']:
-                img = None
+        if img is None: return None
 
-            outputnexus(img, thumb, path2nexus(path), variation)
+        if not options['savefullres']:
+            img = None
+
+        outputnexus(img, thumb, path2nexus(path), variation)
 
 
 def similarframe(path, N):
