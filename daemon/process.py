@@ -9,12 +9,9 @@ import string
 from hipies import debug
 
 
-def process(paths, experiment,
-            options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=True, variation=True,
+def process(path, experiment,
+            options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=False, variation=True,
                          savefullres=False)):
-    path = paths
-    if os.path.splitext(path)[1] == '.nxs':
-        return None
     # print('Processing new file: ' + path)
 
     img, _ = pipeline.loader.loadpath(path)

@@ -49,6 +49,8 @@ class daemon(QtCore.QThread):
             jobs = []
             p = None
             for f in files:
+                if os.path.splitext(f)[1] == '.nxs':
+                    continue
                 p = multiprocessing.Process(target=process.process, args=(os.path.join(path, f), self.experiment))
                 jobs.append(p)
                 p.start()
