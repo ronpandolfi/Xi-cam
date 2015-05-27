@@ -87,7 +87,7 @@ def pixel_2Dintegrate(imgdata, cen, mask=None):
     return radialprofile
 
 
-def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
+def chi_2Dintegrate(imgdata, cen, mu, mask=None):
     if mask is None:
         print("No mask defined, creating temporary empty mask..")
         mask = np.zeros_like(imgdata)
@@ -99,7 +99,7 @@ def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     r = r.astype(np.int)
 
-    mu = mu[1]
+    delta = 10
 
     rinf = mu - delta / 2.
     rsup = mu + delta / 2.

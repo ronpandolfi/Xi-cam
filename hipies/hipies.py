@@ -449,7 +449,10 @@ class MyMainWindow():
         Get the currently shown image tab
         """
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
-        return tabwidget.widget(tabwidget.currentIndex())
+        if tabwidget.currentIndex() > -1:
+            return tabwidget.widget(tabwidget.currentIndex())
+        else:
+            return None
 
     def viewmask(self):
         """
@@ -669,14 +672,21 @@ class MyMainWindow():
         self.daemonthread.terminate()
 
     def newfilesdetected(self, d, paths):
-        for path in paths:
-            print(path)
-            if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
+        if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
+            for path in paths:
+                print(path)
                 self.openfile(os.path.join(d, path))
-            if self.ui.findChild(QtGui.QCheckBox, 'autoTimeline').isChecked():
-                pass
-            if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
-                pass
+        if self.ui.findChild(QtGui.QCheckBox, 'autoTimeline').isChecked():
+            self.showtimeline()
+            if self.currentTimelineTab() is None:
+                newtimelinetab = timeline.timelinetabtracker([], self.experiment, self)
+                timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
+
+                timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Watched timeline'))
+                timelinetabwidget.load()
+            self.currentTimelineTab().tab.appendimage(d, paths)
+        if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
+            pass
 
 
 def startdaemon(experiment):

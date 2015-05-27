@@ -115,12 +115,15 @@ class imageTab(QtGui.QWidget):
         self.path = paths
 
         # Save image data and the experiment
-        self.imgdata = np.rot90(imgdata, 3)
+        self.imgdata = imgdata
+        if self.imgdata is not None:
+            self.imgdata = np.rot90(self.imgdata, 3)
         self.experiment = experiment
         self.parentwindow = parent
 
         # Immediately mask any negative pixels #####MAKE THIS UNIQUE
-        self.experiment.addtomask(self.imgdata < 0)
+        if self.imgdata is not None:
+            self.experiment.addtomask(self.imgdata < 0)
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
@@ -205,14 +208,16 @@ class imageTab(QtGui.QWidget):
 
         # self.maskoverlay()
         #self.updatelogintensity()
-        self.redrawimage()
+
 
         # Cache radial integration
-        self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
+        if self.imgdata is not None:
+            self.redrawimage()
+            self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
 
-        # Choose detector
-        self.finddetector()
+            # Choose detector
+            self.finddetector()
 
 
     def send1Dintegration(self):

@@ -22,7 +22,7 @@ def process(path, experiment,
             experiment.setvalue('Center Y', cen[1])
         if options['refinecenter']:
             pipeline.center_approx.refinecenter(img, experiment)
-        logimg = None
+
         # if False:  # log image is needed?
         # with np.errstate(invalid='ignore'):
         #        logimg = np.log(img * (img > 0) + 1)
@@ -49,7 +49,7 @@ def process(path, experiment,
         if not options['savefullres']:
             img = None
 
-        outputnexus(img, thumb, path2nexus(path), variation)
+        outputnexus(img, thumb, path2nexus(path), path, variation)
 
 
 def similarframe(path, N):
@@ -72,10 +72,11 @@ def thumbnail(img):
     return im
 
 
-def outputnexus(img, thumb, path, variation=None):
+def outputnexus(img, thumb, path, rawpath=None, variation=None):
     # print img
     # x, y = np.meshgrid(*(img.shape))
     neximg = nexus.NXdata(img)  #img
+    neximg.rawfile = rawpath
     neximg.thumbnail = thumb
     neximg.variation = variation
     nexroot = nexus.NXroot(neximg)
