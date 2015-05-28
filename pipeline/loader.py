@@ -50,15 +50,17 @@ def loadsingle(path):
 
 
 def readvariation(path):
-    try:
-        nxroot = nx.load(path)
-        return int(nxroot.data.variation)
-    except IOError:
-        print 'Could not load', path, ', trying again in 0.1 s'
-        time.sleep(0.1)
-        nxroot = nx.load(path)
-        print 'Second attempt to read', path, 'succeded; continuing...'
-        return int(nxroot.data.variation)
+    for i in range(20):
+        try:
+            nxroot = nx.load(path)
+            print 'Attempt', i + 1, 'to read', path, 'succeded; continuing...'
+            return int(nxroot.data.variation)
+        except IOError:
+            print 'Could not load', path, ', trying again in 0.2 s'
+            time.sleep(0.2)
+            nxroot = nx.load(path)
+
+    return None
 
 def loadjustimage(path):
     data = fabio.open(path).data

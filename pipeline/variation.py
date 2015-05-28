@@ -38,6 +38,9 @@ def filevariation(operationindex, filea, c, filec):
             p = scipy.ndimage.zoom(p, 0.1, order=1)
             c = scipy.ndimage.zoom(c, 0.1, order=1)
             n = scipy.ndimage.zoom(n, 0.1, order=1)
+            p = scipy.ndimage.gaussian_filter(p, 3)
+            c = scipy.ndimage.gaussian_filter(c, 3)
+            n = scipy.ndimage.gaussian_filter(n, 3)
 
         return variation(operationindex, p, c, n)
     else:

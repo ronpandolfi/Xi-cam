@@ -683,7 +683,7 @@ class MyMainWindow():
                 timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
 
                 timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Watched timeline'))
-                timelinetabwidget.load()
+                self.currentTimelineTab().load()
             self.currentTimelineTab().tab.appendimage(d, paths)
         if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
             pass

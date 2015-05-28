@@ -42,7 +42,7 @@ class timelinetabtracker(QtGui.QWidget):
 
 class timelinetab(viewer.imageTab):
     def __init__(self, paths, experiment, parentwindow):
-        self.variation = []
+        self.variation = dict()
         if len(paths) > 0:
             imgdata, paras = pipeline.loader.loadpath(paths[0])
         else:
@@ -56,14 +56,15 @@ class timelinetab(viewer.imageTab):
         self.gotomax()
 
     def reduce(self):
-        self.skipframes = (self.variationy[0:-1] / self.variationy[1:]) > 0.1
+        pass
+        # self.skipframes = (self.variationy[0:-1] / self.variationy[1:]) > 0.1
 
 
     def scan(self):
         if len(self.paths) < 3:
             return None
 
-        self.variation = []
+        self.variation = dict()
         # operations = [lambda c, p, n: np.sum(np.square(c - p) / p),  # Chi squared
         #              lambda c, p, n: np.sum(np.abs(c - p)),  # Absolute difference
         #              lambda c, p, n: np.sum(np.abs(c - p) / p),  # Norm. absolute difference
@@ -95,7 +96,7 @@ class timelinetab(viewer.imageTab):
                                                               nxt)  #operations[self.operationindex](curr, prev)
 
             variationx = int(os.path.splitext(os.path.basename(self.paths[i + 1]).split('_')[-1])[0])
-            self.variation.append((variationx, variationy))
+            self.variation[variationx] = variationy
             prev = curr.copy()
             curr = nxt.copy()
             # print self.variation
@@ -106,9 +107,14 @@ class timelinetab(viewer.imageTab):
             variation = pipeline.loader.readvariation(path)
             # print ('var:',variation)
             #print(path)
-            self.variation.append((int(os.path.splitext(os.path.basename(path).split('_')[-1])[0]), variation))
+            try:
+                frame = int(os.path.splitext(os.path.basename(path).split('_')[-1])[0])
+            except ValueError:
+                print 'Path has no frame number:', path
+                continue
+            self.variation[frame] = variation
 
-            self.paths.append(path)
+            self.paths[frame] = path
 
         self.plotvariation()
         #self.parentwindow.app.processEvents()
@@ -121,21 +127,24 @@ class timelinetab(viewer.imageTab):
 
 
     def plotvariation(self):
-        if self.variation == []:
+        if len(self.variation) == 0:
             return None
 
         # TODO: plot variation with indices, and skipped frames; skip None's
-        print self.variation
-        self.variation = sorted(self.variation, key=itemgetter(0))
-        self.paths = sorted(self.paths)
-        print self.variation
+        # print self.variation
+        #self.variation = sorted(self.variation, key=itemgetter(0))
+        #print self.variation
+        variation = np.array(self.variation.items())
+        #print variation.shape
+        variation = variation[variation[:, 0].argsort()]
+        #print variation.shape
         self.parentwindow.timeline.clear()
         self.parentwindow.timeline.enableAutoScale()
         self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.parentwindow.timeline.addItem(self.parentwindow.timeruler)
-        self.parentwindow.timeruler.setBounds([0, len(self.variation)])
+        self.parentwindow.timeruler.setBounds([0, max(variation[:, 0])])
         self.parentwindow.timeruler.sigPositionChanged.connect(self.timerulermoved)
-        self.parentwindow.timeline.plot(*zip(*self.variation))
+        self.parentwindow.timeline.plot(variation[:, 0], variation[:, 1])
         # self.parentwindow.timearrow = pg.ArrowItem(angle=-90, tipAngle=30, baseAngle=20,headLen=15,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
         #self.parentwindow.timearrow.setPos(0,self.variation[0])

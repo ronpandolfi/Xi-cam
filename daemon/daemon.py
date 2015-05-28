@@ -48,10 +48,12 @@ class daemon(QtCore.QThread):
             # process.process([os.path.join(path, f)], self.experiment)
             jobs = []
             p = None
-            for f in files:
-                if os.path.splitext(f)[1] == '.nxs':
-                    continue
-                p = multiprocessing.Process(target=process.process, args=(os.path.join(path, f), self.experiment))
+            # filter paths
+            files = [f for f in files if not os.path.splitext(f)[1] == '.nxs']
+            files = list(chunks(files, self.num_cores))
+
+            for i in range(self.num_cores):
+                p = multiprocessing.Process(target=process.process, args=(path, files[i], self.experiment))
                 jobs.append(p)
                 p.start()
 
@@ -86,3 +88,20 @@ class daemon(QtCore.QThread):
 #
 #     def on_modified(self,event):
 #         self.doprocessing(event)
+
+
+def chunks(l, n):
+    """ Yield successive n chunks from l.
+    """
+    chunksize = int(len(l) / n)
+    for i in xrange(0, n, 1):
+        yield l[i * chunksize:(i + 1) * chunksize]
+
+
+if __name__ == '__main__':
+    path = '/Users/rp/YL1031'
+    # files = os.listdir(path)
+    experiment = None
+    procold = True
+    d = daemon(path, experiment, procold)
+    d.run()
