@@ -9,7 +9,7 @@ import pyqtgraph as pg
 import numpy as np
 from pyFAI import detectors
 from fabio import edfimage
-import cv2
+
 
 import pipeline
 
@@ -196,19 +196,9 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
-        ##
-        # self.findcenter()
-        # self.calibrate()
-
         if self.experiment.iscalibrated:
             self.replot()
-            ##
             self.drawcenter()
-
-
-        # self.maskoverlay()
-        #self.updatelogintensity()
-
 
         # Cache radial integration
         if self.imgdata is not None:
@@ -302,35 +292,35 @@ class imageTab(QtGui.QWidget):
             centerx = self.experiment.getvalue('Center X')
             centery = self.experiment.getvalue('Center Y')
             symimg = np.rot90(img.copy(), 2)
-            imtest(symimg)
+            # imtest(symimg)
             xshift = -(img.shape[0] - 2 * centerx)
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
-            imtest(symimg)
+            # imtest(symimg)
             marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
-            imtest(marginmask)
+            #imtest(marginmask)
 
             x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-            imtest(padmask)
-            imtest(symimg * padmask * (1 - marginmask))
+            # imtest(padmask)
+            #imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         elif ismirrorsymmetry:
             centery = self.experiment.getvalue('Center Y')
             symimg = np.fliplr(img.copy())
-            imtest(symimg)
+            #imtest(symimg)
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(yshift), axis=1)
-            imtest(symimg)
+            #imtest(symimg)
             marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
-            imtest(marginmask)
+            #imtest(marginmask)
 
             x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])))
-            imtest(padmask)
-            imtest(symimg * padmask * (1 - marginmask))
+            # imtest(padmask)
+            #imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         mask = self.experiment.mask
@@ -442,39 +432,19 @@ class imageTab(QtGui.QWidget):
 
         self.findcenter()
 
-        # x, y = np.indices(self.imgdata.shape)
-        #r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
-        #r = r.astype(np.int)
-        #tbin = np.bincount(r.ravel(), self.imgdata.ravel())
-        #nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
-        #with np.errstate(divide='ignore', invalid='ignore'):
-        #    radialprofile = tbin / nr
-
         _, radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                 mask=self.experiment.mask)
 
-        # Find peak positions, they represent the radii
-        # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
-        # np.set_printoptions(threshold=np.nan)
-        # print('size', radialprofile.shape[0])
-        print radialprofile
+
         peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
-        # peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
-        #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 
         peaks = peaks[peaks[:, 1].argsort()[::-1]]
-
-        #print peaks
 
         for peak in peaks:
             if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
                 bestpeak = peak[0]
                 print peak
                 break
-
-
-        # Get the tallest peak
-        #bestpeak = peaks[radialprofile[peaks].argmax()]
 
         # Calculate sample to detector distance for lowest q peak
         tth = 2 * np.arcsin(0.5 * self.experiment.getvalue('Wavelength') / 58.367e-10)
@@ -488,7 +458,6 @@ class imageTab(QtGui.QWidget):
         self.experiment.iscalibrated = True
 
         self.replot()
-        # self.maskoverlay()
 
     def refinecenter(self):
         cen = pipeline.center_approx.refinecenter(self.imgdata, self.experiment)
@@ -512,19 +481,16 @@ class imageTab(QtGui.QWidget):
                     tabtracker.replotassecondary()
 
         if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
-            # regionbounds=self.region.getRegion()
-            #cut = np.zeros_like(self.imgdata)
-            #cut[regionbounds[0]:regionbounds[1],:]=1
+
             cut = self.region.getArrayRegion(self.imgdata, self.imageitem)
 
-            #self.q=pixel2q(np.arange(-self.imgdata.shape[0]/2,self.imgdata.shape[0]/2,1))
             x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
                             self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
                             cut.__len__())
             y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
                             self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
                             cut.__len__())
-            #self.viewbox.mapToItem(self.imageitem,self.viewbox.mapToScene(self.region.getSceneHandlePositions(0)[1]))
+
             q = pixel2q(x, y, self.experiment)
             qmiddle = q.argmin()
             leftq = -q[0:qmiddle]
@@ -550,21 +516,10 @@ class imageTab(QtGui.QWidget):
             self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
             self.cache1Dintegration.emit(self.q, self.radialprofile)
-            ##############################################################################
-            # Remi's peak finding
-            # self.q / 10.0 is x
-            # self.radialprofile is y
-            # Find the peaks, and then plot them
 
             self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
                                                                 self.parentwindow.integration)
-            # self.peaktooltip = peakfindingrem.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
 
-            # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
-
-            #self.parentwindow.integration.plot(q, I, pen=None, symbol='o')
-
-            ##############################################################################
             # Replot
             self.parentwindow.integration.plot(self.q, self.radialprofile)
 
@@ -656,18 +611,17 @@ class imageTab(QtGui.QWidget):
 
 
 class previewwidget(pg.GraphicsLayoutWidget):
+    """
+    top-left preview
+    """
     def __init__(self, model):
         super(previewwidget, self).__init__()
         self.model = model
-        # self.setLayout(QHBoxLayout())
-        #self.layout().setContentsMargins(0, 0, 0, 0)
         self.view = self.addViewBox(lockAspect=True)
 
         self.imageitem = pg.ImageItem()
         self.view.addItem(self.imageitem)
         self.imgdata = None
-        # self.setMaximumHeight(100)
-        # self.addItem(self.imageitem)
 
     def loaditem(self, index):
         path = self.model.filePath(index)
@@ -676,13 +630,12 @@ class previewwidget(pg.GraphicsLayoutWidget):
                                 autoLevels=True)
 
 
-def imtest(image):
-    if False:
-        image = image * 255 / image.max()
-        cv2.imshow('step?', cv2.resize(image.astype(np.uint8), (0, 0), fx=.2, fy=.2))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
+# def imtest(image):
+# if False:
+# image = image * 255 / image.max()
+#         cv2.imshow('step?', cv2.resize(image.astype(np.uint8), (0, 0), fx=.2, fy=.2))
+#         cv2.waitKey(0)
+#         cv2.destroyAllWindows()
 
 def pixel2q(x, y, experiment):
     # SWITCH TO PYFAI GEOMETRY
@@ -695,6 +648,5 @@ def pixel2q(x, y, experiment):
     r = np.sqrt((x - experiment.getvalue('Center X')) ** 2 + (y - experiment.getvalue('Center Y')) ** 2)
     theta = np.arctan2(r * experiment.getvalue('Pixel Size X'),
                        experiment.getvalue('Detector Distance'))
-    # theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
     wavelength = experiment.getvalue('Wavelength')
     return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10

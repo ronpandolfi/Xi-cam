@@ -4,10 +4,6 @@
 import loader
 from cWarpImage import warp_image
 import numpy as np
-from scipy.spatial import cKDTree
-from scipy.ndimage.filters import gaussian_filter
-from pyFAI import geometry
-from pyFAI import detectors
 
 
 def gaussian(pts, p0, h):

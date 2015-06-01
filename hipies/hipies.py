@@ -266,17 +266,6 @@ class MyMainWindow():
         self.ui.show()
         sys.exit(self.app.exec_())
 
-    def updatepreprocessing(self):
-        print os.getcwd()
-        self.daemonthread = daemon.daemon('/Users/rp/YL1031/', self.experiment, procold=True)
-
-        self.daemonthread.start()
-        # if True: #self.ui.findChild(QtGui.QCheckBox,'autoPreprocess').isChecked():
-        #self.daemonprocess = multiprocessing.Process(target=startdaemon,args=[self.experiment])
-        #self.daemonprocess.daemon=True
-        #self.daemonprocess.start()
-
-
     def treerefresh(self, path=None):
         """
         Refresh the file tree, or switch directories and refresh
@@ -656,6 +645,9 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
 
     def openwatchfolder(self):
+        """
+        Start a daemon thread watching the selected folder
+        """
         dialog = QtGui.QFileDialog(self.ui, 'Choose a folder to watch', os.curdir,
                                    options=QtGui.QFileDialog.ShowDirsOnly)
         d = dialog.getExistingDirectory()
@@ -667,11 +659,18 @@ class MyMainWindow():
                 self.daemonthread.start()
 
     def resetwatchfolder(self):
+        """
+        Resets the watch folder gui and ends current daemon
+        """
         self.folderwatcher.removePaths(self.folderwatcher.directories())
         self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText('')
-        self.daemonthread.terminate()
+        self.daemonthread.exiting = True
 
     def newfilesdetected(self, d, paths):
+        """
+        When new files are detected, auto view/timeline them
+        """
+        # TODO: receive data from daemon thread instead of additional watcher object.
         if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
             for path in paths:
                 print(path)
@@ -685,12 +684,8 @@ class MyMainWindow():
                 timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Watched timeline'))
                 self.currentTimelineTab().load()
             self.currentTimelineTab().tab.appendimage(d, paths)
-        if self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').isChecked():
-            pass
 
 
-def startdaemon(experiment):
-    d = daemon.daemon('~/samples/', experiment)
 
 if __name__ == '__main__':
     window = MyMainWindow()

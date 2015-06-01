@@ -1,14 +1,15 @@
 import pyqtgraph as pg
-# import loader
 from PySide import QtGui
 import viewer
 import numpy as np
 import pipeline
 import os
-from operator import itemgetter
 
 
 class timelinetabtracker(QtGui.QWidget):
+    """
+    A light-weight version of the timeline tab that is retained when the full tab is disposed. Used to generate tab.
+    """
     def __init__(self, paths, experiment, parent):
         super(timelinetabtracker, self).__init__()
 
@@ -65,24 +66,14 @@ class timelinetab(viewer.imageTab):
             return None
 
         self.variation = dict()
-        # operations = [lambda c, p, n: np.sum(np.square(c - p) / p),  # Chi squared
-        #              lambda c, p, n: np.sum(np.abs(c - p)),  # Absolute difference
-        #              lambda c, p, n: np.sum(np.abs(c - p) / p),  # Norm. absolute difference
-        #              lambda c, p, n: np.sum(c),  # Sum intensity
-        #              lambda c, p, n: np.sum(np.abs(n-c) / c)-np.sum(np.abs(c-p) / c)] # Norm. abs. diff. derivative
-        # print(':P')
-        #print self.paths
 
         #get the first frame's profile
         prev, _ = pipeline.loader.loadpath(self.paths[0])
         curr, _ = pipeline.loader.loadpath(self.paths[1])
         for i in range(self.paths.__len__() - 2):
             nxt, _ = pipeline.loader.loadpath(self.paths[i + 2])
-            #print i, self.paths[i]
             if os.path.splitext(self.paths[i + 1])[1] == '.nxs':
                 variationy = pipeline.loader.readvariation(self.paths[i])
-
-
             else:
 
                 if curr is None:
@@ -99,14 +90,11 @@ class timelinetab(viewer.imageTab):
             self.variation[variationx] = variationy
             prev = curr.copy()
             curr = nxt.copy()
-            # print self.variation
 
     def appendimage(self, d, paths):
         for path in paths:
             path = os.path.join(d, path)
             variation = pipeline.loader.readvariation(path)
-            # print ('var:',variation)
-            #print(path)
             try:
                 frame = int(os.path.splitext(os.path.basename(path).split('_')[-1])[0])
             except ValueError:
@@ -117,27 +105,20 @@ class timelinetab(viewer.imageTab):
             self.paths[frame] = path
 
         self.plotvariation()
-        #self.parentwindow.app.processEvents()
-
 
     def setvariationmode(self, index):
         self.operationindex = index
         self.scan()
         self.plotvariation()
 
-
     def plotvariation(self):
         if len(self.variation) == 0:
             return None
 
         # TODO: plot variation with indices, and skipped frames; skip None's
-        # print self.variation
-        #self.variation = sorted(self.variation, key=itemgetter(0))
-        #print self.variation
+
         variation = np.array(self.variation.items())
-        #print variation.shape
         variation = variation[variation[:, 0].argsort()]
-        #print variation.shape
         self.parentwindow.timeline.clear()
         self.parentwindow.timeline.enableAutoScale()
         self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)

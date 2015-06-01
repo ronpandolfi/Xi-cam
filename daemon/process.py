@@ -11,6 +11,9 @@ import string
 def process(parent, files, experiment,
             options=dict(remesh=False, findcenter=False, refinecenter=False, cachethumbnail=False, variation=True,
                          savefullres=False)):
+    """
+    Applies a series of processing steps to a list of files; outputs a nexus file containing all results
+    """
     # print('Processing new file: ' + path)
     for f in files:
         path = os.path.join(parent, f)
@@ -53,6 +56,9 @@ def process(parent, files, experiment,
 
 
 def similarframe(path, N):
+    """
+    Get the file path N ahead (or behind) the provided path frame.
+    """
     try:
         framenum = os.path.splitext(os.path.basename(path).split('_')[-1])[0]
         prevframenum = int(framenum) + N
@@ -63,9 +69,15 @@ def similarframe(path, N):
         return None
 
 def path2nexus(path):
+    """
+    Get the path to corresponding nexus file
+    """
     return os.path.splitext(path)[0] + '.nxs'
 
 def thumbnail(img):
+    """
+    Generate a thumbnail from an image
+    """
     im = Image.fromarray((img / np.max(img) * 255.).astype(np.uint8), 'L')
     im.thumbnail((128, 128))
     im = np.log(im * (np.asarray(im) > 0) + 1)
@@ -73,9 +85,12 @@ def thumbnail(img):
 
 
 def outputnexus(img, thumb, path, rawpath=None, variation=None):
-    # print img
+    """
+    Output all results to a nexus files
+    """
+
     # x, y = np.meshgrid(*(img.shape))
-    neximg = nexus.NXdata(img)  #img
+    neximg = nexus.NXdata(img)
     neximg.rawfile = rawpath
     neximg.thumbnail = thumb
     neximg.variation = variation

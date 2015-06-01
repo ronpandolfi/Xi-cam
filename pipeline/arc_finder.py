@@ -11,6 +11,7 @@ import center_approx
 import integration
 
 import peakfindingrem
+import peakfinding
 import scipy.optimize as optimize
 
 
@@ -194,7 +195,7 @@ def scanforarcs(radialprofile, cen):
     # plt.plot(radialprofile)
     # plt.show()
 
-    accurancy = 50
+    # accurancy = 50
     # x = np.zeros((np.size(peakind), accurancy))
     #y = np.zeros((np.size(peakind), accurancy))
     #xinf = np.zeros((np.size(peakind), accurancy))
@@ -223,21 +224,35 @@ def gaussian(x, a, b, c, d):
 tworoot2ln2 = 2 * np.sqrt(2 * np.log(2))
 
 
-def findgisaxsarcs(img, cen):
-    radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]))
-    arcs = scanforarcs(radialprofile, cen)
+def findgisaxsarcs(img, cen, experiment):
+    radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]), experiment.mask)
+    # arcs = scanforarcs(radialprofile, cen)
+    arcs = peakfinding.findpeaks(None, radialprofile, (100, 50), gaussianwidthsigma=3, minimumsigma=100)
+    # print arcs
+    plt.plot(radialprofile)
+    plt.plot(arcs[0], arcs[1], 'ok')
+    plt.show()
+    arcs = arcs[0]
 
     output = []
-
     for qmu in arcs:
-        chiprofile = integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu)
-        popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(chiprofile)), np.nan_to_num(chiprofile))
+        chiprofile = integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask)
+        try:
+            popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(chiprofile)), np.nan_to_num(chiprofile))
+        except RuntimeError:
+            continue
+        perr = np.sqrt(np.abs(np.diag(pcov)))
+        # print 'perr:',perr
+        if np.any(perr > 10):
+            pass
+            # print 'Parameter error too large, discarding arc at qmu'
+            #continue
         chimu, A, sigma, baseline = popt
         FWHM = sigma * tworoot2ln2
         output.append([qmu, chimu, A, FWHM, baseline])
-        plt.plot(chiprofile)
-        plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
-        plt.show()
+        # plt.plot(chiprofile)
+        # plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
+        # plt.show()
 
     return output
 
@@ -246,7 +261,11 @@ def findgisaxsarcs(img, cen):
 
 
 if __name__ == "__main__":
+    import hipies.config
 
+    experiment = hipies.config.experiment()
+    experiment.setvalue('Detector', 'pilatus2m')
+    experiment.mask = experiment.getDetector().calc_mask()
 
     for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
@@ -257,13 +276,26 @@ if __name__ == "__main__":
         # cen = center_approx.center_approx(img)
 
         cen = center_approx.gisaxs_center_approx(img)
-        arcs = findgisaxsarcs(img,cen)
-        print cen
-        print arcs
+        arcs = findgisaxsarcs(img, cen, experiment)
+        # print cen
+        #print arcs
 
         plt.axvline(cen[0], color='r')
         plt.axhline(cen[1], color='r')
         plt.imshow(np.log(img))
+
+        ax = plt.axes()
+
+        from matplotlib.patches import Arc
+
+        for arc in arcs:
+            print arc[3]
+            arcs = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
+                        theta2=abs(arc[3]) / (400 * np.pi / 2) * 360 * 4)]  # Arc
+            ax.add_artist(arcs[0])
+            arcs[0].set_lw(3)
+
+
         # for i in range(1, np.size(x, 0)):
         # plt.plot(y[i], x[i], color='g')
         #     plt.plot(yinf[i], xinf[i], color='r')
