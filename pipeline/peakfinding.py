@@ -27,10 +27,12 @@ def findpeaks(x, y, filtersize=(5, 5), gaussianwidthsigma=5, gaussiancentersigma
     peakxs = []
     peaksigmas = []
 
+    plt.plot(maximaxs, y[maximaxs], 'or')
+
     for mx, sigma in zip(maximaxs, maximasigmas):
         print mx, sigma
         print max(0, mx - filtersize[1]), min(len(y), mx + filtersize[1])
-        window = y[max(0, mx - filtersize[1]):min(len(y), mx + filtersize[1])]  # maybe scale with m's width?
+        window = y[max(0, mx - 2 * filtersize[1]):min(len(y), mx + 2 * filtersize[1])]  # maybe scale with m's width?
         noiselevel = stats.scoreatpercentile(window, 10)
         print(mx, noiselevel)
         if y[mx] > snr * noiselevel:

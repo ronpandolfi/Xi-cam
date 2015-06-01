@@ -169,8 +169,6 @@ def findpeaks(Y):
 #     return mask/255
 
 def arcmask(img, cen, Rrange, Thetarange):
-    mask = np.zeros_like(img)
-
     y, x = np.indices((img.shape))
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     theta = np.arctan2(y - cen[1], x - cen[0]) / (2 * np.pi) * 360.0
@@ -250,9 +248,9 @@ def findgisaxsarcs(img, cen, experiment):
         chimu, A, sigma, baseline = popt
         FWHM = sigma * tworoot2ln2
         output.append([qmu, chimu, A, FWHM, baseline])
-        # plt.plot(chiprofile)
-        # plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
-        # plt.show()
+        plt.plot(chiprofile)
+        plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
+        plt.show()
 
     return output
 
