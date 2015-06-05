@@ -87,6 +87,9 @@ def pixel_2Dintegrate(imgdata, cen, mask=None):
 
 
 def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
+    """
+    Integration over r for a chi range. Output is 30*
+    """
     if mask is None:
         print("No mask defined, creating temporary empty mask..")
         mask = np.zeros_like(imgdata)
@@ -98,7 +101,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     r = r.astype(np.int)
 
-    delta = 20
+    delta = 10
 
     rinf = mu - delta / 2.
     rsup = mu + delta / 2.
@@ -120,7 +123,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
     # vimodel.A = np.nanmax(angleprofile)
     # vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
     # vimodel.plot(lower=0, upper=np.pi * 100)
-
+    # print ('len:',len(angleprofile))
     return angleprofile
 
 

@@ -1,8 +1,7 @@
 import pickle
 import pyFAI
-from pyFAI import detectors
 from pyFAI import geometry
-
+from pipeline import detectors
 
 from pyqtgraph.parametertree import Parameter
 import numpy as np
@@ -159,7 +158,9 @@ class experiment(Parameter):
         return geo
 
     def getDetector(self):
-        return detectors.ALL_DETECTORS[self.getvalue('Detector')]()
+        key = self.getvalue('Detector')
+        if key in detectors.ALL_DETECTORS:
+            return detectors.ALL_DETECTORS[self.getvalue('Detector')]()
 
     def edit(self):
         pass

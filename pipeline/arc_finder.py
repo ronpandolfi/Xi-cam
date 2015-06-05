@@ -13,6 +13,9 @@ import integration
 import peakfindingrem
 import peakfinding
 import scipy.optimize as optimize
+import scipy.stats
+
+from scipy.fftpack import rfft, irfft
 
 
 demo = True
@@ -214,12 +217,25 @@ def scanforarcs(radialprofile, cen):
     return peakind
 
 
+def mirroredgaussian(theta, a, b, c, d):
+    val = (gaussian(theta, a, b, c, d) + gaussian(2 * np.pi - theta, a, b, c, d)) / 2.
+    return val
+
 def gaussian(x, a, b, c, d):
-    val = abs(a) * np.exp(-(x - b) ** 2 / c ** 2) + abs(d)
+    val = abs(a) * np.exp(-(x - b) ** 2. / c ** 2.) + abs(d)
     return val
 
 
-tworoot2ln2 = 2 * np.sqrt(2 * np.log(2))
+def vonmises(x, A, mu, kappa, floor):
+    return (A * scipy.stats.vonmises.pdf(2 * (x - mu), kappa) + floor)
+
+
+def mirroredvonmises(x, A, mu, kappa, floor):
+    mu = np.mod(mu, np.pi)
+    return (vonmises(x, A, mu, kappa, floor) + vonmises(np.pi - x, A, mu, kappa, floor)) / 2.
+
+
+tworoot2ln2 = 2. * np.sqrt(2. * np.log(2.))
 
 
 def findgisaxsarcs(img, cen, experiment):
@@ -233,29 +249,69 @@ def findgisaxsarcs(img, cen, experiment):
     arcs = arcs[0]
 
     output = []
-    for qmu in arcs:
+    _, unique = np.unique(arcs, return_index=True)
+
+    for qmu in arcs[unique]:
         chiprofile = integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask)
+
+        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'r')
+
+        # filter out missing chi
+        missingpointfloor = np.percentile(chiprofile, 15)
+        badpoints = np.where(chiprofile < missingpointfloor)[0]
+        goodpoints = np.where(chiprofile >= missingpointfloor)[0]
+
+        chiprofile[badpoints] = np.interp(badpoints, goodpoints, chiprofile[goodpoints])
+
+        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'k')
+
+        # f=rfft(chiprofile)
+        # plt.plot(f)
+        # f[-20:]=0
+        # chiprofile=irfft(chiprofile)
+
+
+
+
         try:
-            popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(chiprofile)), np.nan_to_num(chiprofile))
+            popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+                                            p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+            print(popt)
         except RuntimeError:
             continue
         perr = np.sqrt(np.abs(np.diag(pcov)))
         # print 'perr:',perr
-        if np.any(perr > 10):
-            pass
-            # print 'Parameter error too large, discarding arc at qmu'
+        # if np.any(perr > 100):
+        #pass
+        #print 'Parameter error too large, discarding arc at qmu'
             #continue
-        chimu, A, sigma, baseline = popt
+        A, chimu, sigma, baseline = popt
         FWHM = sigma * tworoot2ln2
-        output.append([qmu, chimu, A, FWHM, baseline])
-        plt.plot(chiprofile)
-        plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
+
+        output.append([qmu, A, chimu, FWHM, baseline])
+        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile)
+        plt.plot(np.arange(0, np.pi, 1 / 30.), vonmises(np.arange(0, np.pi, 1 / 30.), *popt))
         plt.show()
 
     return output
 
 
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
 
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+
+    return np.isnan(y), lambda z: z.nonzero()[0]
 
 
 if __name__ == "__main__":
@@ -289,7 +345,7 @@ if __name__ == "__main__":
         for arc in arcs:
             print arc[3]
             arcs = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
-                        theta2=abs(arc[3]) / (400 * np.pi / 2) * 360 * 4)]  # Arc
+                        theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4)]  # Arc
             ax.add_artist(arcs[0])
             arcs[0].set_lw(3)
 

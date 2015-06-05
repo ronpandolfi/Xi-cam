@@ -664,7 +664,7 @@ class MyMainWindow():
         """
         self.folderwatcher.removePaths(self.folderwatcher.directories())
         self.ui.findChild(QtGui.QLabel, 'watchfolderpath').setText('')
-        self.daemonthread.exiting = True
+        self.daemonthread.stop()
 
     def newfilesdetected(self, d, paths):
         """

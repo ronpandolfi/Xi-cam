@@ -7,7 +7,7 @@ from PySide import QtCore
 from PySide.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
-from pyFAI import detectors
+from pipeline import detectors
 from fabio import edfimage
 
 
@@ -298,7 +298,7 @@ class imageTab(QtGui.QWidget):
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
             # imtest(symimg)
-            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
+            marginmask = 1 - self.experiment.getDetector().calc_mask().T
             #imtest(marginmask)
 
             x, y = np.indices(img.shape)
@@ -314,7 +314,7 @@ class imageTab(QtGui.QWidget):
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(yshift), axis=1)
             #imtest(symimg)
-            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
+            marginmask = 1 - self.experiment.getDetector().calc_mask().T
             #imtest(marginmask)
 
             x, y = np.indices(img.shape)
@@ -590,16 +590,14 @@ class imageTab(QtGui.QWidget):
 
 
     def finddetector(self):
-        for name, detector in detectors.ALL_DETECTORS.iteritems():
-            if hasattr(detector, 'MAX_SHAPE'):
-                if detector.MAX_SHAPE == self.imgdata.shape[::-1]:
-                    detector = detector()
-                    mask = detector.calc_mask()
-                    self.experiment.addtomask(np.rot90(mask))
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', name)
-                    return detector
+        detector, mask = pipeline.loader.finddetector(self.imgdata)
+        name = detector.get_name()
+        if mask is not None:
+            self.experiment.addtomask(np.rot90(mask))
+        self.experiment.setvalue('Pixel Size X', detector.pixel1)
+        self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+        self.experiment.setvalue('Detector', name)
+        return detector
 
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.imageitem.image))

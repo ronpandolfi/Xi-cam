@@ -4,7 +4,7 @@ import pyfits
 import os
 import numpy as np
 from nexpy.api import nexus as nx
-from pyFAI import detectors
+from pipeline import detectors
 import glob
 import re
 import time
@@ -23,6 +23,7 @@ def loadsingle(path):
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.fits':
                 data = pyfits.open(path)[2].data
+                readenergy(path)
                 return data, None
             elif os.path.splitext(path)[1] == '.nxs':
                 nxroot = nx.load(path)
@@ -47,6 +48,33 @@ def loadsingle(path):
     # except TypeError:
     #   print('Failed to load',path,', its probably not an image format I understand.')
     #  return None,None
+
+
+def readenergy(path):
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.fits':
+                head = pyfits.open(path)
+                paras = scanparaslines(str(head[0].header).split('\n'))
+                print paras
+            elif os.path.splitext(path)[1] == '.nxs':
+                pass
+                # nxroot = nx.load(path)
+                # # print nxroot.tree
+                # if hasattr(nxroot.data, 'signal'):
+                # data = nxroot.data.signal
+                #     return data, nxroot
+                # else:
+                #     print ('here:', nxroot.data.rawfile)
+                #     return loadsingle(str(nxroot.data.rawfile))
+                # print('here',data)
+
+            else:
+                pass
+    except IOError:
+        print('IO Error reading energy: ' + path)
+
+    return None
 
 
 def readvariation(path):
@@ -91,15 +119,22 @@ def loadparas(path):
 def scanparas(path):
     with open(path, 'r') as f:
         lines = f.readlines()
-        paras = dict()
-        i = 0
-        for line in lines:
-            cells = line.split(':')
-            if cells.__len__() == 2:
-                paras[cells[0]] = float(cells[1])
-            elif cells.__len__() == 1:
-                i += 1
-                paras['Unknown' + str(i)] = str(cells[0])
+
+    paras = scanparaslines(lines)
+
+    return paras
+
+def scanparaslines(lines):
+    paras = dict()
+    for line in lines:
+        cells = line.split(':')
+        cells[1] = cells[1].split('/')[0]
+        key = cells[0]
+
+        if cells.__len__() == 2:
+            paras[key] = cells[1]
+        elif cells.__len__() == 1:
+            paras[key] = cells[0]
 
     return paras
 
@@ -154,10 +189,17 @@ def loadstichted(filepath2, filepath1):
 def finddetector(imgdata):
     for name, detector in detectors.ALL_DETECTORS.iteritems():
         if hasattr(detector, 'MAX_SHAPE'):
-            if detector.MAX_SHAPE == imgdata.shape:  # [::-1]
+            print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+            if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
                 detector = detector()
                 mask = detector.calc_mask()
-
+                return detector, mask
+        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+            print detector.BINNED_PIXEL_SIZE.keys()
+            if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                                       detector.BINNED_PIXEL_SIZE.keys()]:
+                detector = detector()
+                mask = detector.calc_mask()
                 return detector, mask
 
 

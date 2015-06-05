@@ -36,6 +36,14 @@ class daemon(QtCore.QThread):
         except KeyboardInterrupt:
             pass
 
+    def stop(self):
+        self.exiting = True
+        print ("thread stop - %s" % self.exiting)
+
+    def __del__(self):
+        self.exiting = True
+        self.wait()
+
     @debug.timeit
     def processfiles(self, path, files):
         """
