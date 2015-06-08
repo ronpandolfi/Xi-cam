@@ -2,128 +2,127 @@
 
 # from image_load import *
 import loader
-from cWarpImage import warp_image
 import numpy as np
-from scipy.spatial import cKDTree
-from scipy.ndimage.filters import gaussian_filter
 from pyFAI import geometry
-from pyFAI import detectors
 
+def calc_q_range(lims, geometry, alphai, cen):
 
-def gaussian(pts, p0, h):
-    t = 0.5 * ((pts[:, 0] - p0[0]) ** 2 + (pts[:, 1] - p0[1]) ** 2) / h ** 2
-    k = 0.5 / h ** 2 / np.pi
-    return k * np.exp(-t)
+    nanometer = 1.0E+09
+    sdd = geometry.get_dist() * nanometer
+    wavelen = geometry.get_wavelength() * nanometer
+    pixel1 = geometry.get_pixel1() * nanometer
+    pixel2 = geometry.get_pixel2() * nanometer
 
+    # calculate q-range for the image
+    y = np.array([0, lims[1]-1], dtype=np.float) * pixel1 
+    z = np.array([0, lims[0]-1], dtype=np.float) * pixel2
+    y,z = np.meshgrid(y,z)
+    y -= cen[0]
+    z -= cen[1]
 
-def remap(xcrd, ycrd, tree, img, radius):
-    qimg = np.zeros(xcrd.shape, dtype=float)
-    it = np.nditer([xcrd, ycrd], flags=['multi_index'])
-    while not it.finished:
-        pt = it[:2]
-        n = tree.query_ball_point(pt, radius)
-        if len(n) > 0:
-            i, j = it.multi_index
-            w = gaussian(tree.data[n, :], pt, radius)
-            qimg[i, j] = np.dot(img[n], w) / w.sum()
-        it.iternext()
-    return qimg
-
-
-def transform(ny, nz, geometry, alphai):
-    """
-    :type geometry: P
-    :param ny:
-    :param nz:
-    :param geometry: pyFAI.Geometry
-    :param alphai:
-    :return:
-    """
-    sdd = geometry.get_dist() * 1.0E+10
-    wave = geometry.get_wavelength()
-
-    # transform into q-space
-    y = np.arange(ny)
-    z = np.arange(nz)
-    y, z = np.meshgrid(y, z)
-    # print(geometry.get_poni1() / geometry.get_pixel1(), geometry.get_poni2() / geometry.get_poni2())
-    y = (y - (
-    geometry.get_poni2() / geometry.get_pixel2())) * geometry.get_pixel2() * 1.0E+10  #1679-geometry.get_poni2()/geometry.get_pixel2())
-    print(geometry.get_pixel1())
-    z = (z - (
-        nz - geometry.get_poni1() / geometry.get_pixel1())) * geometry.get_pixel1() * 1.0E+10  # 1475-(geometry.get_poni1()/geometry.get_pixel1())
-
-
+    # calculate angles 
     tmp = np.sqrt(y ** 2 + sdd ** 2)
     cos2theta = sdd / tmp
     sin2theta = y / tmp
     tmp = np.sqrt(z ** 2 + sdd ** 2)
     cosalpha = sdd / tmp
     sinalpha = z / tmp
-    K0 = 2. * np.pi / wave
+    k0 = 2. * np.pi / wavelen
 
-    qx = K0 * (cosalpha * cos2theta - np.cos(alphai))
-    qy = K0 * cosalpha * sin2theta
-    qz = K0 * (sinalpha + np.sin(alphai))
-    return qx, qy, qz
+    # calculate q-values of each corner
+    qx = k0 * (cosalpha * cos2theta - np.cos(alphai))
+    qy = k0 * cosalpha * sin2theta
+    qz = k0 * (sinalpha + np.sin(alphai))
+    qp = np.sign(qy) * np.sqrt(qx ** 2 + qy ** 2)
+    q_range = [qp.min(), qp.max(), qz.min(), qz.max()]
+    return q_range, k0
 
+def remesh(image, filename, geometry):
 
-def remesh(img, filename, geometry):
+    shape = image.shape
+    cen = np.zeros(2, dtype=np.float)
+
+    # get calibrated parameters
+    nanometer = 1.0E+09
+    sdd = geometry.get_dist() * nanometer
+    pixel1 = geometry.get_pixel1() * nanometer
+    pixel2 = geometry.get_pixel2() * nanometer
+    cen[0] = geometry.get_poni2() * nanometer
+    cen[1] = shape[0] * pixel1 - geometry.get_poni1() * nanometer
+
     # read paras
     paras = loader.loadparas(filename)
-
 
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
         return np.rot90(img,3)
-    alphai = paras["Sample Alpha Stage"] / 360.0 * 2 * np.pi
+    alphai = np.deg2rad(paras["Sample Alpha Stage"])
 
-    nz, ny = img.shape
-    qx, qy, qz = transform(ny, nz, geometry, alphai)
-    qr = np.sqrt(qx ** 2 + qy ** 2) * np.sign(qy)
+    # calculate q values
+    qrange, k0 = calc_q_range(image.shape, geometry, alphai, cen)
+    
+    # uniformly spaced q-values for remeshed image
+    nqz = image.shape[0]
+    dqz = (qrange[3] - qrange[2])/(nqz-1)
+    nqp = np.int((qrange[1]-qrange[0]) / dqz)
+    qvrt = np.linspace(qrange[2], qrange[3], nqz)
+    qpar = qrange[0] + np.arange(nqp) * dqz
+    qpar,qvrt = np.meshgrid(qpar, qvrt)
 
-    # pylab.plot(qr,qz,'ko')
-    #pylab.savefig('testimage.png')
-    #misc.imsave('testimage.png')
-    # interpolation
-    ycrd = np.linspace(qz.min(), qz.max(), nz)
-    dy   = ycrd[1]-ycrd[0]
-    nx   = np.int((qr.max()-qr.min())/dy)
-    xcrd = qr.min() + np.arange(nx) * dy
-    xcrd, ycrd = np.meshgrid(xcrd, ycrd)
+    # find inverse map
+    cosi = np.cos(alphai)
+    sini = np.sin(alphai)
 
-    # c/openmp remesh
-    qimg = warp_image(img.astype(np.float32), qr.astype(np.float32), 
-                    qz.astype(np.float32), xcrd.astype(np.float32), 
-                    ycrd.astype(np.float32), 0)
-    return np.rot90(qimg, 3)
+    sina = (qvrt/k0) - sini
+    cosa2= 1 - sina**2
+    cosa = np.sqrt(cosa2)
+    tana = sina / cosa
 
+    t1 = cosa2 + cosi**2 - (qpar/k0)**2
+    t2 = 2. * cosa * cosi
+    cost = t1 / t2
+    cost[t1 > t2] = 0
+    with np.errstate(divide='ignore'):
+        tant = np.sign(qpar) * np.sqrt(1. - cost**2) / cost
+        tant [cost == 0 ] = 0
+    
+    # F : (qp,qz) --> (x,y)
+    map_x = (tant * sdd + cen[0]) / pixel1
+    map_y = (tana * sdd + cen[1]) / pixel2
+    
+    # compute null space
+    m1 = t1 > t2
+    m2 = np.logical_or(map_x < 0, map_x > 1474)
+    mask = np.logical_or(m1, m2)
+    map_x[mask] = -1
 
-def remesh_mask(agbfile, agb):
-    # read incedent angle
-    alphai = get_incedent_angle(agbfile)
-    if alphai is None:
-        print "Failed to read incident angle"
+    qsize = map_x.size
+    qshape = map_x.shape
+    qimg = np.fromiter((image[i,j] for i,j in np.nditer([map_y.astype(int),
+        map_x.astype(int)])),dtype=np.float, count=qsize).reshape(qshape)
+    qimg[mask] = 0.
+    return np.rot90(qimg, 3),qpar,qvrt
 
-    img = agb.mask_
-    nz, ny = img.shape
-    qx, qy, qz = transform(ny, nz, agb, alphai)
-    qr = np.sqrt(qx ** 2 + qy ** 2) * np.sign(qy)
-    qrange = [qr.min(), qr.max(), qz.min(), qz.max()]
-    agb.setQrange(qrange)
-
-    # interpolation
-    ycrd = np.linspace(qz.min(), qz.max(), nz)
-    dy   = ycrd[1]-ycrd[0]
-    nx   = np.int((qr.max()-qr.min())/dy)
-    xcrd = qr.min() + np.arange(nx) * dy
-    xcrd, ycrd = np.meshgrid(xcrd, ycrd)
-
-    # c/openmp remesh
-    qimg = warp_image(img.astype(np.float32), qr.astype(np.float32), 
-                qz.astype(np.float32), xcrd.astype(np.float32),
-                ycrd.astype(np.float32), 0)
-    qimg = np.round(qimg)
-    return qimg.astype(bool).astype(np.float32)
-
+if __name__ == "__main__":
+# create a test case with known geometry
+    import fabio
+    import pylab as plt
+    import time
+    filename = 'Burst/calibration/AGB_5S_USE_2_2m.edf'
+    image = fabio.open(filename).data
+    sdd = 0.283351
+    cen_y = 0.005363
+    cen_x = 0.040123
+    pixel = 0.000172
+    geo = geometry.Geometry(sdd, cen_y, cen_x, 0, 0, 0)
+    geo.set_wavelength(1.23984E-10)
+    geo.set_pixel1(0.172E-03)
+    geo.set_pixel2(0.172E-03)
+    t0 = time.clock()
+    qimg = remesh(image, filename, geo) 
+    t1 = time.clock() - t0
+    print "remesh clock time = %f" % t1
+    plt.imshow(np.log(qimg+5))
+    plt.show()
+    
