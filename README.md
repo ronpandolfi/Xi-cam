@@ -1,5 +1,24 @@
-# SAXS-ON
-Small Angle X-ray Scattering - Organized aNalysis
+# HiPIES
+High Performance Integrated Environment for SAXS
 
-## About SAXS-ON
-SAXS-ON is a graphical environment for organizing, viewing, and analyzing SAXS/WAXS/GISAXS images. Interactivity and automation are
+## About HiPIES
+
+
+## Dependencies
+* QT
+* PySide
+* PyQtGraph
+* PyFAI
+* FABIO
+* NeXpy
+* PyFITS
+* Numpy
+* Scipy
+* Pillow
+
+* Cython
+* h5py
+* pyopencl
+
+
+

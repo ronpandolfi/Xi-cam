@@ -3,11 +3,11 @@ import numpy
 import pyfits
 import os
 import numpy as np
-#from nexpy.api import nexus as nx
-import fabio as nx
+from nexpy.api import nexus as nx
 from pyFAI import detectors
 import glob
 import re
+import time
 
 acceptableexts = '.fits .edf .tif .nxs'
 
@@ -26,10 +26,15 @@ def loadsingle(path):
                 return data, None
             elif os.path.splitext(path)[1] == '.nxs':
                 nxroot = nx.load(path)
-                print nxroot.tree
-                data = nxroot.data.signal
+                # print nxroot.tree
+                if hasattr(nxroot.data, 'signal'):
+                    data = nxroot.data.signal
+                    return data, nxroot
+                else:
+                    print ('here:', nxroot.data.rawfile)
+                    return loadsingle(str(nxroot.data.rawfile))
                 # print('here',data)
-                return data, None
+
             else:
                 data = fabio.open(path).data
                 paras = loadparas(path)
@@ -43,6 +48,19 @@ def loadsingle(path):
     #   print('Failed to load',path,', its probably not an image format I understand.')
     #  return None,None
 
+
+def readvariation(path):
+    for i in range(20):
+        try:
+            nxroot = nx.load(path)
+            print 'Attempt', i + 1, 'to read', path, 'succeded; continuing...'
+            return int(nxroot.data.variation)
+        except IOError:
+            print 'Could not load', path, ', trying again in 0.2 s'
+            time.sleep(0.2)
+            nxroot = nx.load(path)
+
+    return None
 
 def loadjustimage(path):
     data = fabio.open(path).data
@@ -62,9 +80,11 @@ def loadparas(path):
                 txtpath = glob.glob(token)[0]
                 return scanparas(txtpath)
             else:
-                raise Exception('Error: Accompanied text file not found')
+                return None
     except IOError:
         print('Unexpected read error in loadparas')
+    except IndexError:
+        print('No txt file found in loadparas')
     return None
 
 

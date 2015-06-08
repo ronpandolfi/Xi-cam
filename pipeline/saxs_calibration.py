@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 
 import warnings
-import time
 import threading
 
 import numpy
@@ -38,8 +37,7 @@ def pseudo_voigt(x_max, y_max, fwhm, eta, x_array):
 def fit_maxima(x_data, y_data):
     # print(x_data,y_data)
     # error function
-    err = lambda p, x, y: y - (p[0] + p[1] * x + \
-                               pseudo_voigt(p[2], p[3], p[4], p[5], x))
+    err = lambda p, x, y: y - (p[0] + p[1] * x + pseudo_voigt(p[2], p[3], p[4], p[5], x))
 
     # approximate the fitting parameter
     y_min = y_data.min()
@@ -189,33 +187,6 @@ def peak_distance(geometry, d_spacings, (x_peaks, y_peaks)):
     distance = [numpy.abs(tth_rings - tth).min() \
                 for tth in geometry.tth(y_peaks, x_peaks)]
     return numpy.array(distance)
-
-
-# def tth_ellipse(geometry, d_spacing):
-# '''
-# Returns a matplotlib.patches.Ellipse to plot the given d-spacing ring.
-# '''
-# tth = 2 * numpy.arcsin(geometry.get_wavelength() / (2e-10 * d_spacing))
-#
-#     geo_dict = geometry.getFit2D()
-#     sdd = geo_dict['directDist'] / (0.001 * geo_dict['pixelX'])
-#     tilt = numpy.deg2rad(geo_dict['tilt'])
-#     rotation = numpy.deg2rad(geo_dict['tiltPlanRotation'])
-#
-#     c_plus = (sdd * numpy.sin(tth)) / numpy.sin(numpy.pi / 2 - tilt - tth)
-#     c_minus = (sdd * numpy.sin(tth)) / numpy.sin(numpy.pi / 2 + tilt - tth)
-#     elli_h = (sdd * numpy.sin(tth)) / numpy.sin(numpy.pi / 2 - tth)
-#     elli_w = (c_plus + c_minus) / 2.0
-#
-#     x_pos = (geo_dict['centerX'] - c_minus + elli_w) - geo_dict['centerX']
-#     elli_x = geo_dict['centerX'] + x_pos * numpy.cos(rotation)
-#     elli_y = geo_dict['centerY'] + x_pos * numpy.sin(rotation)
-#
-#     return matplotlib.patches.Ellipse((elli_x, elli_y),
-#                                       elli_w * 2,
-#                                       elli_h * 2,
-#                                       numpy.rad2deg(rotation))
-
 
 def circle_center_distance(center, x_array, y_array):
     """

@@ -11,6 +11,7 @@ import center_approx
 import integration
 
 import peakfindingrem
+import peakfinding
 import scipy.optimize as optimize
 
 
@@ -168,8 +169,6 @@ def findpeaks(Y):
 #     return mask/255
 
 def arcmask(img, cen, Rrange, Thetarange):
-    mask = np.zeros_like(img)
-
     y, x = np.indices((img.shape))
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     theta = np.arctan2(y - cen[1], x - cen[0]) / (2 * np.pi) * 360.0
@@ -179,11 +178,12 @@ def arcmask(img, cen, Rrange, Thetarange):
 
     return mask
 
-def arcfinder_cercle(radialprofile, cen):
-    h = 35
+
+def scanforarcs(radialprofile, cen):
+    # h = 35
     # radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
-    test = np.max(radialprofile) / h
-    print 't', test
+    # test = np.max(radialprofile) / h
+    #print 't', test
     peakmax, peakmin = peakfindingrem.peakdet(range(len(radialprofile)), radialprofile, 10)
     peakind = peakmax[:, 0]
 
@@ -193,34 +193,77 @@ def arcfinder_cercle(radialprofile, cen):
     # plt.plot(radialprofile)
     # plt.show()
 
-    accurancy = 50
-    x = np.zeros((np.size(peakind), accurancy))
-    y = np.zeros((np.size(peakind), accurancy))
-    xinf = np.zeros((np.size(peakind), accurancy))
-    yinf = np.zeros((np.size(peakind), accurancy))
-    xsup = np.zeros((np.size(peakind), accurancy))
-    ysup = np.zeros((np.size(peakind), accurancy))
+    # accurancy = 50
+    # x = np.zeros((np.size(peakind), accurancy))
+    #y = np.zeros((np.size(peakind), accurancy))
+    #xinf = np.zeros((np.size(peakind), accurancy))
+    #yinf = np.zeros((np.size(peakind), accurancy))
+    #xsup = np.zeros((np.size(peakind), accurancy))
+    #ysup = np.zeros((np.size(peakind), accurancy))
 
-    for i in range(0, np.size(peakind)):
-        Delta = peakind[i] / 10
-        theta = np.linspace(0, 2 * np.pi, accurancy)
-        x[i] = cen[0] + (peakind[i]) * np.cos(theta)
-        y[i] = cen[1] + (peakind[i]) * np.sin(theta)
-        xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
-        xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
-        yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
-        ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
+    # for i in range(0, np.size(peakind)):
+    #Delta = peakind[i] / 10
+    #theta = np.linspace(0, 2 * np.pi, accurancy)
+    #x[i] = cen[0] + (peakind[i]) * np.cos(theta)
+    #y[i] = cen[1] + (peakind[i]) * np.sin(theta)
+    #xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
+    #xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
+    #yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
+    #ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
 
-    return x, y, xinf, xsup, yinf, ysup, peakind, Delta
+    return peakind
 
 
-def gaussian(x, a, b, c):
-    val = a * np.exp(-(x - b) ** 2 / c ** 2)
+def gaussian(x, a, b, c, d):
+    val = abs(a) * np.exp(-(x - b) ** 2 / c ** 2) + abs(d)
     return val
 
 
-if __name__ == "__main__":
+tworoot2ln2 = 2 * np.sqrt(2 * np.log(2))
 
+
+def findgisaxsarcs(img, cen, experiment):
+    radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]), experiment.mask)
+    # arcs = scanforarcs(radialprofile, cen)
+    arcs = peakfinding.findpeaks(None, radialprofile, (100, 50), gaussianwidthsigma=3, minimumsigma=100)
+    # print arcs
+    plt.plot(radialprofile)
+    plt.plot(arcs[0], arcs[1], 'ok')
+    plt.show()
+    arcs = arcs[0]
+
+    output = []
+    for qmu in arcs:
+        chiprofile = integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask)
+        try:
+            popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(chiprofile)), np.nan_to_num(chiprofile))
+        except RuntimeError:
+            continue
+        perr = np.sqrt(np.abs(np.diag(pcov)))
+        # print 'perr:',perr
+        if np.any(perr > 10):
+            pass
+            # print 'Parameter error too large, discarding arc at qmu'
+            #continue
+        chimu, A, sigma, baseline = popt
+        FWHM = sigma * tworoot2ln2
+        output.append([qmu, chimu, A, FWHM, baseline])
+        plt.plot(chiprofile)
+        plt.plot(gaussian(np.arange(np.size(chiprofile)), *popt))
+        plt.show()
+
+    return output
+
+
+
+
+
+if __name__ == "__main__":
+    import hipies.config
+
+    experiment = hipies.config.experiment()
+    experiment.setvalue('Detector', 'pilatus2m')
+    experiment.mask = experiment.getDetector().calc_mask()
 
     for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
@@ -231,33 +274,43 @@ if __name__ == "__main__":
         # cen = center_approx.center_approx(img)
 
         cen = center_approx.gisaxs_center_approx(img)
-        radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]))
-        y, x, yinf, ysup, xinf, xsup, mu, delta = arcfinder_cercle(radialprofile, cen)
-        a = integration.chi_2Dintegrate(img, (cen[1], cen[0]), mu, delta)
-        print cen
+        arcs = findgisaxsarcs(img, cen, experiment)
+        # print cen
+        #print arcs
 
         plt.axvline(cen[0], color='r')
         plt.axhline(cen[1], color='r')
         plt.imshow(np.log(img))
-        for i in range(1, np.size(x, 0)):
-            plt.plot(y[i], x[i], color='g')
-            plt.plot(yinf[i], xinf[i], color='r')
-            plt.plot(ysup[i], xsup[i], color='r')
+
+        ax = plt.axes()
+
+        from matplotlib.patches import Arc
+
+        for arc in arcs:
+            print arc[3]
+            arcs = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
+                        theta2=abs(arc[3]) / (400 * np.pi / 2) * 360 * 4)]  # Arc
+            ax.add_artist(arcs[0])
+            arcs[0].set_lw(3)
+
+
+        # for i in range(1, np.size(x, 0)):
+        # plt.plot(y[i], x[i], color='g')
+        #     plt.plot(yinf[i], xinf[i], color='r')
+        #     plt.plot(ysup[i], xsup[i], color='r')
         plt.show()
 
-        popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(a)), np.nan_to_num(a))
+        # popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(a)), np.nan_to_num(a))
 
-        print("Scale =  %.3f +/- %.3f" % (popt[0], np.sqrt(pcov[0, 0])))
-        print("Offset = %.3f +/- %.3f" % (popt[1], np.sqrt(pcov[1, 1])))
-        print("Sigma =  %.3f +/- %.3f" % (popt[2], np.sqrt(pcov[2, 2])))
+        # print("Scale =  %.3f +/- %.3f" % (popt[0], np.sqrt(pcov[0, 0])))
+        #print("Offset = %.3f +/- %.3f" % (popt[1], np.sqrt(pcov[1, 1])))
+        #print("Sigma =  %.3f +/- %.3f" % (popt[2], np.sqrt(pcov[2, 2])))
 
         # print(vimodel.A)
         # print vimodel.mu
         # print vimodel.FWHM
 
-        plt.plot(a)
-        plt.plot(gaussian(np.arange(np.size(a)), *popt))
-        plt.show()
+
 
 
         # find arcs

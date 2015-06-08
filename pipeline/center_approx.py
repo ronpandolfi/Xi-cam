@@ -5,7 +5,6 @@ import os
 import time
 
 import numpy as np
-import cv2
 import fabio
 from scipy import optimize
 from scipy import signal
@@ -375,26 +374,26 @@ def refinecenter(img, experiment):
 #         cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
-    i = 0
-    for imgpath in glob.glob(os.path.join("../../saxswaxs/AgBs", '*.edf')):
-        i += 1
-        if i < 0:
-            continue
-
-        print "Opening", imgpath
-
-        # read image
-        img = fabio.open(imgpath).data
-
-        outputimg = img.copy()
-
-        # print new center approximation; Add demo=True to see it work!
-        circle = center_approx(img, demo=True)
-        if circle is not None:
-            outputimg = np.uint8(outputimg)
-            outputimg = cv2.cvtColor(outputimg, cv2.COLOR_GRAY2BGR)
-            cv2.circle(outputimg, (int(circle[0]), int(circle[1])), int(circle[2]), (255, 0, 0), 3)
-            cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
-
-            cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))
+# if __name__ == "__main__":
+# i = 0
+# for imgpath in glob.glob(os.path.join("../../saxswaxs/AgBs", '*.edf')):
+#         i += 1
+#         if i < 0:
+#             continue
+#
+#         print "Opening", imgpath
+#
+#         # read image
+#         img = fabio.open(imgpath).data
+#
+#         outputimg = img.copy()
+#
+#         # print new center approximation; Add demo=True to see it work!
+#         circle = center_approx(img, demo=True)
+#         if circle is not None:
+#             outputimg = np.uint8(outputimg)
+#             outputimg = cv2.cvtColor(outputimg, cv2.COLOR_GRAY2BGR)
+#             cv2.circle(outputimg, (int(circle[0]), int(circle[1])), int(circle[2]), (255, 0, 0), 3)
+#             cv2.circle(outputimg, (int(circle[0]), int(circle[1])), 10, (255, 0, 0), 10)
+#
+#             cv2.imwrite(imgpath + "_center.png", cv2.resize(outputimg, (0, 0), fx=.3, fy=.3))

@@ -31,22 +31,24 @@ def filevariation(operationindex, filea, c, filec):
     p, _ = loader.loadpath(filea)
     # c, _ = loader.loadpath(fileb)
     n, _ = loader.loadpath(filec)
+    return variation(operationindex, p, c, n)
 
-    if p is not None and c is not None and n is not None:
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            p = scipy.ndimage.zoom(p, 0.1, order=1)
-            c = scipy.ndimage.zoom(c, 0.1, order=1)
-            n = scipy.ndimage.zoom(n, 0.1, order=1)
 
-        return variation(operationindex, p, c, n)
+def variation(operationindex, imga, imgb=None, imgc=None):
+    if imga is not None and imgb is not None and imgc is not None:
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                p = scipy.ndimage.zoom(imga, 0.1, order=1)
+                c = scipy.ndimage.zoom(imgb, 0.1, order=1)
+                n = scipy.ndimage.zoom(imgc, 0.1, order=1)
+                p = scipy.ndimage.gaussian_filter(p, 3)
+                c = scipy.ndimage.gaussian_filter(c, 3)
+                n = scipy.ndimage.gaussian_filter(n, 3)
+            with np.errstate(divide='ignore'):
+                return operations[operationindex](p, c, n)
+        except TypeError:
+            print('Variation could not be determined for a frame.')
     else:
         print('Variation could not be determined for a frame.')
         return None
-
-def variation(operationindex, imga, imgb=None, imgc=None):
-    try:
-        with np.errstate(divide='ignore'):
-            return operations[operationindex](imga, imgb, imgc)
-    except TypeError:
-        print('Variation could not be determined for a frame.')
