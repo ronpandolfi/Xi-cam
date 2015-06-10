@@ -255,6 +255,19 @@ def residual(params, x, data):
     return data - model
 
 
+def gaussianresidual(params, x, data, sig=1):
+    A = params['A'].value
+    mu = params['mu'].value
+    sigma = params['sigma'].value
+    floor = params['floor'].value
+
+    model = gaussian(x, A, mu, sigma, floor)
+
+    resids = data - model
+
+    weighted = np.sqrt(resids ** 2 / sig ** 2)
+    return weighted
+
 
 def findgisaxsarcs(img, cen, experiment):
     radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]), experiment.mask)
@@ -304,7 +317,8 @@ def findgisaxsarcs(img, cen, experiment):
             # print params['A'].stderr
 
             # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
-            # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+            #
+
             # print(popt)
         except RuntimeError:
             print('Fit failed at ' + qmu)
@@ -410,6 +424,40 @@ def fitarc(chiprofile):
     return A, chimu, FWHM, baseline, isring
 
 
+def fitarcgaussian(chiprofile, chi):
+    try:
+        params = Parameters()
+        x = np.arange(np.size(chiprofile))
+        roi = gaussian(x, 1, chi, 40, 0)
+        plt.plot(roi * np.max(chiprofile * roi), 'g')
+        params.add('A', value=np.max(chiprofile * roi), min=0)
+        params.add('mu', value=chi, min=0, max=len(chiprofile))
+        params.add('sigma', value=20, min=0)
+        params.add('floor', value=0.1, min=0)
+
+        out = minimize(gaussianresidual, params, args=(x, chiprofile, roi))
+        print params
+        # print params['A'].stderr
+
+        # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+        # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+        # print(popt)
+    except RuntimeError:
+        print('Fit failed.')
+
+    if params['sigma'].stderr > 100 or params['A'].stderr > 100:
+        isring = True
+    else:
+        isring = False
+
+    popt = [params['A'].value, params['mu'].value, params['sigma'].value, params['floor'].value]
+    plt.plot(x, gaussian(x, *popt), 'r')
+    A, chimu, sigma, baseline = popt
+    FWHM = sigma
+
+    return A, chimu, FWHM, baseline, isring
+
+
 def findgisaxsarcs2(img, cen, experiment):
     img = img.T.copy()
     cake, _, _ = integration.cake(img, experiment, mask=experiment.mask)  # TODO: refactor these parameters and check .T
@@ -420,9 +468,18 @@ def findgisaxsarcs2(img, cen, experiment):
     maxchis, maxqs = findmaxs(img)
 
     for chi, q in zip(maxchis, maxqs):
-        roi = img[chi - 10:chi + 10, q - 5:q + 5]
-        chiprofile = np.sum(roi, axis=1)
-        print fitarc(chiprofile)
+        # roi=np.ones_like(img)
+        #roi[chi - 10:chi + 10, q - 5:q + 5]=10
+        #roi=np.sum(roi,axis=1)
+        chiprofile = np.sum(img[:, q - 5:q + 5], axis=1)
+        x = np.arange(np.size(chiprofile))
+
+        plt.plot(chiprofile)
+
+        out = fitarcgaussian(chiprofile, chi)
+
+        print out
+        plt.show()
 
     plt.imshow(np.log(img))
     plt.show()

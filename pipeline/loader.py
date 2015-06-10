@@ -23,8 +23,8 @@ def loadsingle(path):
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.fits':
                 data = pyfits.open(path)[2].data
-                readenergy(path)
-                return data, None
+                paras = loadparas(path)
+                return data, paras
             elif os.path.splitext(path)[1] == '.nxs':
                 nxroot = nx.load(path)
                 # print nxroot.tree
@@ -55,7 +55,8 @@ def readenergy(path):
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.fits':
                 head = pyfits.open(path)
-                paras = scanparaslines(str(head[0].header).split('\n'))
+                print head[0].header.keys()
+                paras = scanparaslines(str(head[0].header).split('\r'))
                 print paras
             elif os.path.splitext(path)[1] == '.nxs':
                 pass
@@ -96,19 +97,25 @@ def loadjustimage(path):
 
 def loadparas(path):
     try:
-        txtpath = os.path.splitext(path)[0] + '.txt'
-        if os.path.isfile(txtpath):
-            return scanparas(txtpath)
-        else:
-            basename = os.path.splitext(path)[0]
-            obj = re.search('_\d+$', basename)
-            if obj is not None:
-                iend = obj.start()
-                token = basename[:iend] + '*txt'
-                txtpath = glob.glob(token)[0]
+        if os.path.splitext(path)[1] == '.fits':
+            head = pyfits.open(path)
+            print head[0].header
+            return head[0].header
+        elif os.path.splitext(path)[1] == '.edf':
+
+            txtpath = os.path.splitext(path)[0] + '.txt'
+            if os.path.isfile(txtpath):
                 return scanparas(txtpath)
             else:
-                return None
+                basename = os.path.splitext(path)[0]
+                obj = re.search('_\d+$', basename)
+                if obj is not None:
+                    iend = obj.start()
+                    token = basename[:iend] + '*txt'
+                    txtpath = glob.glob(token)[0]
+                    return scanparas(txtpath)
+                else:
+                    return None
     except IOError:
         print('Unexpected read error in loadparas')
         # except IndexError:

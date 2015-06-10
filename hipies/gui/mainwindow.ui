@@ -982,6 +982,16 @@
                 <string>Calibrate AgB</string>
             </property>
         </action>
+        <action name="actionCalibrate_PsL">
+            <property name="icon">
+                <iconset>
+                    <normaloff>gui/icons_30.png</normaloff>gui/icons_29.png
+                </iconset>
+            </property>
+            <property name="text">
+                <string>Calibrate AgB</string>
+            </property>
+        </action>
     </widget>
     <resources/>
     <connections/>

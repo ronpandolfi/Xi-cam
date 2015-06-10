@@ -596,7 +596,13 @@ class MyMainWindow():
         if self.experiment is None:
             self.experiment = config.experiment()
         self.experimentTree.setParameters(self.experiment, showTop=False)
-        self.experiment.sigTreeStateChanged.connect(self.experiment.save)
+        self.experiment.sigTreeStateChanged.connect(self.updateexperiment)
+
+    def updateexperiment(self):
+        self.experiment.save()
+        self.currentImageTab().tab.redrawimage()
+        self.currentImageTab().tab.drawcenter()
+        self.currentImageTab().tab.replot()
 
     def filebrowserpanetoggle(self):
         """
