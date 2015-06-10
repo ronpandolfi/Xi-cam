@@ -9,10 +9,15 @@ import glob
 sys.setrecursionlimit(1500)
 from setuptools import setup
 from numpy.distutils.core import Extension
+import numpy as np
+import os
+
+os.environ["CC"] = "gcc-4.9"
+os.environ["CXX"] = "g++-4.9"
 
 APP = ['main.py']
 DATA_FILES = []
-OPTIONS = {'argv_emulation': False,
+OPTIONS = {'argv_emulation': True,
            'resources':['gui'],
            'iconfile': 'gui/icon.icns',
            'plist': {
@@ -23,8 +28,8 @@ OPTIONS = {'argv_emulation': False,
                 'NSHumanReadableCopyright': '@ 2015', #optional
                 'CFBundleDevelopmentRegion': 'English', #optional - English is default
                 },
-            'includes' : [ 
-                           'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
+            'includes' : [
+                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
                            'PySide.QtXml'
                          ],
                 'packages' : [ 'pipeline', 'daemon', 'hipies' ]
@@ -35,11 +40,14 @@ EXT = Extension(name = 'pipeline.cWarpImage',
                 extra_compile_args = ['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include' ],
                 extra_link_args  = ['-fopenmp' ]
                )
+
 setup(
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
-    ext_modules = [EXT],
-    setup_requires=['py2app']
+    setup_requires=['py2app'],
+    include_dirs=[np.get_include()],
+    ext_modules=[EXT]
 
 )
+

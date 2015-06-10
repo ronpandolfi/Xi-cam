@@ -8,41 +8,59 @@ from PySide import QtCore
 maxfiltercoef = 5
 cwtrange = np.arange(1, 100)
 
+maxfiltercoef = 5
+cwtrange = np.arange(3, 100)
+gaussiancentersigma = 2
+gaussianwidthsigma = 5
 
-def findpeaks(x, y, filtersize=(5, 5), gaussianwidthsigma=5, gaussiancentersigma=0, minimumsigma=100, snr=1.2):
-    if x is None:
-        x = np.arange(len(y))
 
-    cwtdata = signal.cwt(y, signal.ricker, cwtrange)
-    cwtdata = filters.gaussian_filter1d(cwtdata, gaussiancentersigma, axis=1)
-    cwtdata = filters.gaussian_filter1d(cwtdata, gaussianwidthsigma, axis=0)
-    cwtdata = filters.minimum_filter1d(cwtdata, minimumsigma, axis=0)
-
-    maxima = (cwtdata == filters.maximum_filter(cwtdata, filtersize))
-    maximasigmas, maximaxs = np.where(maxima == 1)
-
+def findpeaks(x, y):
+    cwtdata = filters.gaussian_filter1d(
+        filters.gaussian_filter1d(signal.cwt(y, signal.ricker, cwtrange), gaussiancentersigma, axis=1),
+        gaussianwidthsigma, axis=0)
+    maxima = (cwtdata == filters.maximum_filter(cwtdata, 5))
+    maximaloc = np.where(maxima == 1)
     x = np.array(x)
     y = np.array(y)
 
-    peakxs = []
-    peaksigmas = []
-
-    plt.plot(maximaxs, y[maximaxs], 'or')
-
-    for mx, sigma in zip(maximaxs, maximasigmas):
-        print mx, sigma
-        print max(0, mx - filtersize[1]), min(len(y), mx + filtersize[1])
-        window = y[max(0, mx - 2 * filtersize[1]):min(len(y), mx + 2 * filtersize[1])]  # maybe scale with m's width?
-        noiselevel = stats.scoreatpercentile(window, 10)
-        print(mx, noiselevel)
-        if y[mx] > snr * noiselevel:
-            peakxs.append(mx)
-            peaksigmas.append(sigma)
-
-    # print maximaloc
-
     # print('before',np.array(list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))).shape)
-    return list(np.array(np.vstack([x[peakxs], y[peakxs], [peakxs, peaksigmas]])))
+    return list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))
+
+
+# def findpeaks(x, y, filtersize=(5, 5), gaussianwidthsigma=5, gaussiancentersigma=0, minimumsigma=100, snr=1.2):
+# if x is None:
+#         x = np.arange(len(y))
+#
+#     cwtdata = signal.cwt(y, signal.ricker, cwtrange)
+#     cwtdata = filters.gaussian_filter1d(cwtdata, gaussiancentersigma, axis=1)
+#     cwtdata = filters.gaussian_filter1d(cwtdata, gaussianwidthsigma, axis=0)
+#     cwtdata = filters.minimum_filter1d(cwtdata, minimumsigma, axis=0)
+#
+#     maxima = (cwtdata == filters.maximum_filter(cwtdata, filtersize))
+#     maximasigmas, maximaxs = np.where(maxima == 1)
+#
+#     x = np.array(x)
+#     y = np.array(y)
+#
+#     peakxs = []
+#     peaksigmas = []
+#
+#     plt.plot(maximaxs, y[maximaxs], 'or')
+#
+#     for mx, sigma in zip(maximaxs, maximasigmas):
+#         print mx, sigma
+#         print max(0, mx - filtersize[1]), min(len(y), mx + filtersize[1])
+#         window = y[max(0, mx - 2 * filtersize[1]):min(len(y), mx + 2 * filtersize[1])]  # maybe scale with m's width?
+#         noiselevel = stats.scoreatpercentile(window, 10)
+#         print(mx, noiselevel)
+#         if y[mx] > snr * noiselevel:
+#             peakxs.append(mx)
+#             peaksigmas.append(sigma)
+#
+#     # print maximaloc
+#
+#     # print('before',np.array(list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))).shape)
+#     return list(np.array(np.vstack([x[peakxs], y[peakxs], [peakxs, peaksigmas]])))
 
 
 # TODO: Refactor this class into hipies module so I can get rid of pyside dependency

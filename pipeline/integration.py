@@ -101,7 +101,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     r = r.astype(np.int)
 
-    delta = 10
+    delta = 3
 
     rinf = mu - delta / 2.
     rsup = mu + delta / 2.
@@ -148,8 +148,10 @@ def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
 
 
 def cake(imgdata, experiment, mask=None):
+    if mask is None:
+        mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
     xres = 1000
     yres = 1000
-    return AI.integrate2d(imgdata.T, xres, yres, mask=np.zeros(experiment.getDetector().MAX_SHAPE))
+    return AI.integrate2d(imgdata.T, xres, yres, mask=mask)

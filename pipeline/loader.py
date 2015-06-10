@@ -111,8 +111,8 @@ def loadparas(path):
                 return None
     except IOError:
         print('Unexpected read error in loadparas')
-    except IndexError:
-        print('No txt file found in loadparas')
+        # except IndexError:
+        #print('No txt file found in loadparas')
     return None
 
 
@@ -127,11 +127,12 @@ def scanparas(path):
 def scanparaslines(lines):
     paras = dict()
     for line in lines:
-        cells = line.split(':')
-        cells[1] = cells[1].split('/')[0]
+        cells = filter(None, re.split('[=:]+', line))
+
         key = cells[0]
 
         if cells.__len__() == 2:
+            cells[1] = cells[1].split('/')[0]
             paras[key] = cells[1]
         elif cells.__len__() == 1:
             paras[key] = cells[0]

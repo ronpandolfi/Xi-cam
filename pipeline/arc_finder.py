@@ -14,6 +14,12 @@ import peakfindingrem
 import peakfinding
 import scipy.optimize as optimize
 import scipy.stats
+from scipy import interpolate
+
+from lmfit import minimize, Parameters
+import cv2
+
+from scipy.ndimage import filters
 
 from scipy.fftpack import rfft, irfft
 
@@ -226,16 +232,28 @@ def gaussian(x, a, b, c, d):
     return val
 
 
-def vonmises(x, A, mu, kappa, floor):
-    return (A * scipy.stats.vonmises.pdf(2 * (x - mu), kappa) + floor)
+def vonmises(x, A, mu, kappa):
+    return A * scipy.stats.vonmises.pdf(2 * (x - mu), kappa)
 
 
 def mirroredvonmises(x, A, mu, kappa, floor):
-    mu = np.mod(mu, np.pi)
-    return (vonmises(x, A, mu, kappa, floor) + vonmises(np.pi - x, A, mu, kappa, floor)) / 2.
+    return A * (scipy.stats.vonmises.pdf(2 * (mu - x), kappa) + scipy.stats.vonmises.pdf(2 * (mu - x),
+                                                                                         kappa)) / 2 + floor  # 2*(mu-(np.pi-x))
 
 
 tworoot2ln2 = 2. * np.sqrt(2. * np.log(2.))
+
+
+def residual(params, x, data):
+    A = params['A'].value
+    mu = params['mu'].value
+    kappa = params['kappa'].value
+    floor = params['floor'].value
+
+    model = mirroredvonmises(x, A, mu, kappa, floor)
+
+    return data - model
+
 
 
 def findgisaxsarcs(img, cen, experiment):
@@ -245,14 +263,14 @@ def findgisaxsarcs(img, cen, experiment):
     # print arcs
     plt.plot(radialprofile)
     plt.plot(arcs[0], arcs[1], 'ok')
-    plt.show()
+    #plt.show()
     arcs = arcs[0]
 
     output = []
     _, unique = np.unique(arcs, return_index=True)
 
     for qmu in arcs[unique]:
-        chiprofile = integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask)
+        chiprofile = np.nan_to_num(integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask))
 
         plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'r')
 
@@ -274,44 +292,142 @@ def findgisaxsarcs(img, cen, experiment):
 
 
         try:
-            popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
-                                            p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
-            print(popt)
-        except RuntimeError:
-            continue
-        perr = np.sqrt(np.abs(np.diag(pcov)))
-        # print 'perr:',perr
-        # if np.any(perr > 100):
-        #pass
-        #print 'Parameter error too large, discarding arc at qmu'
-            #continue
-        A, chimu, sigma, baseline = popt
-        FWHM = sigma * tworoot2ln2
+            params = Parameters()
+            params.add('A', value=np.max(chiprofile), min=0)
+            params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+            params.add('kappa', value=0.1, min=0)
+            params.add('floor', value=0.1, min=0)
+            x = np.arange(0, np.pi, 1 / 30.)
 
-        output.append([qmu, A, chimu, FWHM, baseline])
-        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile)
-        plt.plot(np.arange(0, np.pi, 1 / 30.), vonmises(np.arange(0, np.pi, 1 / 30.), *popt))
-        plt.show()
+            out = minimize(residual, params, args=(x, chiprofile))
+            print params
+            # print params['A'].stderr
+
+            # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+            # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+            # print(popt)
+        except RuntimeError:
+            print('Fit failed at ' + qmu)
+            continue
+
+        if params['kappa'].stderr > 100 or params['A'].stderr > 100:
+            isring = True
+        else:
+            isring = False
+
+        popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
+        A, chimu, kappa, baseline = popt
+        FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+
+        output.append([qmu, A, chimu, FWHM, baseline, isring])
+        # plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile)
+        # plt.plot(np.arange(0, np.pi, 1 / 30.), mirroredvonmises(np.arange(0, np.pi, 1 / 30.), *popt))
+        # plt.show()
 
     return output
 
 
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs.
+def inpaint(img,mask):
+    filled = None
+    if False:
+        img = img / (2 ^ 16 - 1) * 255
+        plt.imshow(img.astype(np.uint8))
+        plt.show()
 
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    """
+        plt.imshow(mask)  #TODO: check that mask corners are correct
+        plt.show()
 
-    return np.isnan(y), lambda z: z.nonzero()[0]
+        kernel = np.ones((3, 3),np.uint8)
+        mask = cv2.dilate(mask.astype(np.uint8), kernel, iterations=1)
+
+        filled = cv2.inpaint(img.astype(np.uint8), mask.astype(np.uint8), 3, cv2.INPAINT_TELEA)
+
+        plt.imshow(img)
+        plt.show()
+
+        return
+
+    elif True:
+
+        valid = ~mask.astype(np.bool)
+        coords = np.array(np.nonzero(valid)).T
+        values = img[valid]
+
+        it = interpolate.LinearNDInterpolator(coords, values)
+
+        filled = it(list(np.ndindex(img.shape))).reshape(img.shape)
+
+        plt.imshow(filled)
+        plt.show()
+
+    return filled
+
+
+def findmaxs(img):
+    orig = img.copy()
+    img = filters.gaussian_filter(img, 3)
+    # img = filters.median_filter(img,5)
+    #img = filters.minimum_filter(img, 20)
+    #img = filters.percentile_filter(img,10,5)
+
+    maxima = np.array(img == filters.maximum_filter(img, (10, 10))) & (img > 100)
+    maximachis, maximaqs = np.where(maxima == 1)
+    plt.imshow(orig, interpolation='nearest')
+    plt.plot(maximaqs, maximachis, 'ro')
+    plt.show()
+
+    return maximachis, maximaqs
+
+
+def fitarc(chiprofile):
+    try:
+        params = Parameters()
+        params.add('A', value=np.max(chiprofile), min=0)
+        params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+        params.add('kappa', value=0.1, min=0)
+        params.add('floor', value=0.1, min=0)
+        x = np.arange(0, np.pi, 1 / 30.)
+
+        out = minimize(residual, params, args=(x, chiprofile))
+        print params
+        # print params['A'].stderr
+
+        # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+        # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+        # print(popt)
+    except RuntimeError:
+        print('Fit failed.')
+
+    if params['kappa'].stderr > 100 or params['A'].stderr > 100:
+        isring = True
+    else:
+        isring = False
+
+    popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
+    A, chimu, kappa, baseline = popt
+    FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+
+    return A, chimu, FWHM, baseline, isring
+
+
+def findgisaxsarcs2(img, cen, experiment):
+    img = img.T.copy()
+    cake, _, _ = integration.cake(img, experiment, mask=experiment.mask)  # TODO: refactor these parameters and check .T
+    maskcake, _, _ = integration.cake(experiment.mask.T, experiment)
+
+    img = inpaint(cake, maskcake)
+
+    maxchis, maxqs = findmaxs(img)
+
+    for chi, q in zip(maxchis, maxqs):
+        roi = img[chi - 10:chi + 10, q - 5:q + 5]
+        chiprofile = np.sum(roi, axis=1)
+        print fitarc(chiprofile)
+
+    plt.imshow(np.log(img))
+    plt.show()
+
+    return []
 
 
 if __name__ == "__main__":
@@ -319,6 +435,8 @@ if __name__ == "__main__":
 
     experiment = hipies.config.experiment()
     experiment.setvalue('Detector', 'pilatus2m')
+    experiment.setvalue('Pixel Size X',172e-6)
+    experiment.setvalue('Pixel Size Y', 172e-6)
     experiment.mask = experiment.getDetector().calc_mask()
 
     for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
@@ -329,25 +447,46 @@ if __name__ == "__main__":
         # find center
         # cen = center_approx.center_approx(img)
 
+
+
         cen = center_approx.gisaxs_center_approx(img)
-        arcs = findgisaxsarcs(img, cen, experiment)
+        experiment.setcenter(cen)
+
+        arcs = findgisaxsarcs2(img, cen, experiment)
         # print cen
-        #print arcs
+        # print arcs
+
+        ax = plt.gca()
 
         plt.axvline(cen[0], color='r')
         plt.axhline(cen[1], color='r')
         plt.imshow(np.log(img))
 
-        ax = plt.axes()
+
 
         from matplotlib.patches import Arc
 
+
+
         for arc in arcs:
-            print arc[3]
-            arcs = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
-                        theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4)]  # Arc
-            ax.add_artist(arcs[0])
-            arcs[0].set_lw(3)
+            if not np.isnan(arc[3]):
+                print arc[3]
+                if arc[5]:
+                    arcartist = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
+                                     theta2=360)]  # Arc
+                    ax.add_artist(arcartist[0])
+                    arcartist[0].set_lw(3)
+                else:
+                    arcartist = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-arc[2] * 360 / (2 * np.pi),
+                                     theta1=-abs(arc[3]) / (30 * np.pi / 2) * 360 * 4,
+                                     theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4),
+                                 Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2,
+                                     angle=-(np.pi - arc[2]) * 360 / (2 * np.pi),
+                                     theta1=-abs(arc[3]) / (30 * np.pi / 2) * 360 * 4,
+                                     theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4)]  # Arc
+                    for artist in arcartist:
+                        ax.add_artist(artist)
+                        artist.set_lw(3)
 
 
         # for i in range(1, np.size(x, 0)):

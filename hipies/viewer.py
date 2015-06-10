@@ -331,8 +331,8 @@ class imageTab(QtGui.QWidget):
             mask = (mask > 0) * 255
 
         elif isremesh:
-            img = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
-            mask = pipeline.remesh.remesh(np.rot90(mask, 1).copy(), self.path, self.experiment.getGeometry())
+            img, _, _ = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
+            mask, _, _ = pipeline.remesh.remesh(np.rot90(mask, 1).copy(), self.path, self.experiment.getGeometry())
 
         if ismaskshown:
             self.maskimage.setImage(np.dstack((mask, np.zeros_like(mask), np.zeros_like(mask), mask)), opacity=.25)

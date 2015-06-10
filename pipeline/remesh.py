@@ -56,8 +56,11 @@ def remesh(image, filename, geometry):
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
-        return np.rot90(img,3)
-    alphai = np.deg2rad(paras["Sample Alpha Stage"])
+        return np.rot90(image, 3)
+    if "Sample Alpha Stage" in paras:
+        alphai = np.deg2rad(float(paras["Sample Alpha Stage"]))
+    elif "Alpha" in paras:
+        alphai = np.deg2rad(float(paras['Alpha']))
 
     # calculate q values
     qrange, k0 = calc_q_range(image.shape, geometry, alphai, cen)
