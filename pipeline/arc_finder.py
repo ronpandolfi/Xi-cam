@@ -265,6 +265,8 @@ def gaussianresidual(params, x, data, sig=1):
 
     resids = data - model
 
+    # print resids
+
     weighted = np.sqrt(resids ** 2 / sig ** 2)
     return weighted
 
@@ -377,14 +379,14 @@ def inpaint(img,mask):
     return filled
 
 
-def findmaxs(img):
-    orig = img.copy()
-    img = filters.gaussian_filter(img, 3)
-    # img = filters.median_filter(img,5)
-    #img = filters.minimum_filter(img, 20)
-    #img = filters.percentile_filter(img,10,5)
+def findmaxs(orig):
+    img = orig.copy()
+    img = filters.minimum_filter(img, 4)
+    img = filters.gaussian_filter(img, 4)
+    img = filters.median_filter(img, 4)
+    #img = filters.percentile_filter(img,50,50)
 
-    maxima = np.array(img == filters.maximum_filter(img, (10, 10))) & (img > 100)
+    maxima = np.array(img == filters.maximum_filter(img, (4, 4))) & (img > 1)
     maximachis, maximaqs = np.where(maxima == 1)
     plt.imshow(orig, interpolation='nearest')
     plt.plot(maximaqs, maximachis, 'ro')
@@ -428,15 +430,18 @@ def fitarcgaussian(chiprofile, chi):
     try:
         params = Parameters()
         x = np.arange(np.size(chiprofile))
-        roi = gaussian(x, 1, chi, 40, 0)
-        plt.plot(roi * np.max(chiprofile * roi), 'g')
-        params.add('A', value=np.max(chiprofile * roi), min=0)
+        roi = np.ones_like(chiprofile)
+        roi[chi - 30:chi + 30] = .0001
+        # roi/=1000
+        #plt.plot(roi * np.max(chiprofile * roi), 'g')
+        #plt.plot(roi*chiprofile,'k')
+        params.add('A', value=np.max(chiprofile * (1 - roi)), min=0)
         params.add('mu', value=chi, min=0, max=len(chiprofile))
         params.add('sigma', value=20, min=0)
         params.add('floor', value=0.1, min=0)
 
-        out = minimize(gaussianresidual, params, args=(x, chiprofile, roi))
-        print params
+        out = minimize(gaussianresidual, params, args=(x, chiprofile, roi), method='nelder')
+        #print params
         # print params['A'].stderr
 
         # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
@@ -446,14 +451,14 @@ def fitarcgaussian(chiprofile, chi):
         print('Fit failed.')
 
     if params['sigma'].stderr > 100 or params['A'].stderr > 100:
-        isring = True
+        isring = False  #True
     else:
         isring = False
 
     popt = [params['A'].value, params['mu'].value, params['sigma'].value, params['floor'].value]
-    plt.plot(x, gaussian(x, *popt), 'r')
+    #plt.plot(x, gaussian(x, *popt), 'r')
     A, chimu, sigma, baseline = popt
-    FWHM = sigma
+    FWHM = sigma * tworoot2ln2
 
     return A, chimu, FWHM, baseline, isring
 
@@ -467,6 +472,8 @@ def findgisaxsarcs2(img, cen, experiment):
 
     maxchis, maxqs = findmaxs(img)
 
+    out =[]
+
     for chi, q in zip(maxchis, maxqs):
         # roi=np.ones_like(img)
         #roi[chi - 10:chi + 10, q - 5:q + 5]=10
@@ -474,17 +481,18 @@ def findgisaxsarcs2(img, cen, experiment):
         chiprofile = np.sum(img[:, q - 5:q + 5], axis=1)
         x = np.arange(np.size(chiprofile))
 
-        plt.plot(chiprofile)
+        #plt.plot(chiprofile)
 
-        out = fitarcgaussian(chiprofile, chi)
+        out.append([q] + list(fitarcgaussian(chiprofile, chi)))
 
-        print out
-        plt.show()
+
+
+        #plt.show()
 
     plt.imshow(np.log(img))
     plt.show()
 
-    return []
+    return out
 
 
 if __name__ == "__main__":
@@ -526,6 +534,7 @@ if __name__ == "__main__":
 
 
         for arc in arcs:
+            print arc
             if not np.isnan(arc[3]):
                 print arc[3]
                 if arc[5]:
@@ -535,8 +544,8 @@ if __name__ == "__main__":
                     arcartist[0].set_lw(3)
                 else:
                     arcartist = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-arc[2] * 360 / (2 * np.pi),
-                                     theta1=-abs(arc[3]) / (30 * np.pi / 2) * 360 * 4,
-                                     theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4),
+                                     theta1=-abs(arc[3]) / (1000) * 2 * np.pi,
+                                     theta2=abs(arc[3]) / (1000) * 2 * np.pi),
                                  Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2,
                                      angle=-(np.pi - arc[2]) * 360 / (2 * np.pi),
                                      theta1=-abs(arc[3]) / (30 * np.pi / 2) * 360 * 4,

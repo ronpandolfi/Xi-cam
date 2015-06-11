@@ -593,7 +593,8 @@ class imageTab(QtGui.QWidget):
 
 
     def finddetector(self):
-        detector, mask = pipeline.loader.finddetector(self.imgdata)
+        # detector, mask = pipeline.loader.finddetector(self.imgdata)
+        detector, mask = pipeline.loader.finddetectorbyfilename(self.path)
         name = detector.get_name()
         if mask is not None:
             self.experiment.addtomask(np.rot90(mask))

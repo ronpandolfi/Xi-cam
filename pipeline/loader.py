@@ -21,6 +21,8 @@ def loadsingle(path):
     # print os.path.splitext(path)
     try:
         if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.gb':
+                data = numpy.loadtxt()
             if os.path.splitext(path)[1] == '.fits':
                 data = pyfits.open(path)[2].data
                 paras = loadparas(path)
@@ -151,10 +153,10 @@ def loadstichted(filepath2, filepath1):
     (data1, paras1) = loadsingle(filepath1)
     (data2, paras2) = loadsingle(filepath2)
 
-    positionY1 = paras1['Detector Vertical']
-    positionY2 = paras2['Detector Vertical']
-    positionX1 = paras1['Detector Horizontal']
-    positionX2 = paras2['Detector Horizontal']
+    positionY1 = float(paras1['Detector Vertical'])
+    positionY2 = float(paras2['Detector Vertical'])
+    positionX1 = float(paras1['Detector Horizontal'])
+    positionX2 = float(paras2['Detector Horizontal'])
     deltaX = round((positionX2 - positionX1) / 0.172)
     deltaY = round((positionY2 - positionY1) / 0.172)
     padtop2 = 0
@@ -186,8 +188,8 @@ def loadstichted(filepath2, filepath1):
 
     # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
-    mask2 = numpy.pad(1 - (finddetector(data2)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
-    mask1 = numpy.pad(1 - (finddetector(data1)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    mask2 = numpy.pad(1 - (finddetector(data2.T)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
+    mask1 = numpy.pad(1 - (finddetector(data1.T)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
 
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
@@ -210,6 +212,23 @@ def finddetector(imgdata):
                 mask = detector.calc_mask()
                 return detector, mask
 
+
+def finddetectorbyfilename(path):
+    imgdata = loadsingle(path)[0].T
+    for name, detector in detectors.ALL_DETECTORS.iteritems():
+        if hasattr(detector, 'MAX_SHAPE'):
+            print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+            if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
+                detector = detector()
+                mask = detector.calc_mask()
+                return detector, mask
+        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+            print detector.BINNED_PIXEL_SIZE.keys()
+            if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                                       detector.BINNED_PIXEL_SIZE.keys()]:
+                detector = detector()
+                mask = detector.calc_mask()
+                return detector, mask
 
 def loadthumbnail(path):
     nxpath = os.path.splitext(path)[0] + '.nxs'
