@@ -108,3 +108,10 @@ QMenu {
     icon-size:32px 32px;
 
 }
+/*
+QMenu::item {
+    width:32px;
+    height:32px;
+    padding:0px;
+
+}*/

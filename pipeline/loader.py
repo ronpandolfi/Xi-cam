@@ -8,48 +8,72 @@ from pipeline import detectors
 import glob
 import re
 import time
+import scipy.ndimage
 
-acceptableexts = '.fits .edf .tif .nxs'
+acceptableexts = '.fits .edf .tif .nxs .tif'
 
 
 def loadsingle(path):
-    """
-    :type path : str
-    :param path:
-    :return:
-    """
-    # print os.path.splitext(path)
+    return loadimage(path), loadparas(path)
+
+
+def loadimage(path):
+    data = None
     try:
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.gb':
-                data = numpy.loadtxt()
-            if os.path.splitext(path)[1] == '.fits':
+                raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
+            elif os.path.splitext(path)[1] == '.fits':
                 data = pyfits.open(path)[2].data
-                paras = loadparas(path)
-                return data, paras
+                return data
             elif os.path.splitext(path)[1] == '.nxs':
                 nxroot = nx.load(path)
                 # print nxroot.tree
                 if hasattr(nxroot.data, 'signal'):
                     data = nxroot.data.signal
-                    return data, nxroot
+                    return data
                 else:
-                    print ('here:', nxroot.data.rawfile)
                     return loadsingle(str(nxroot.data.rawfile))
-                # print('here',data)
 
             else:
                 data = fabio.open(path).data
-                paras = loadparas(path)
-                return data, paras
+                return data
     except IOError:
         print('IO Error loading: ' + path)
 
-    return None, None
+    return data
 
-    # except TypeError:
-    #   print('Failed to load',path,', its probably not an image format I understand.')
-    #  return None,None
+
+def loadparas(path):
+    """
+    :type path : str
+    :param path:
+    :return:
+    """
+    paras = None
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.gb':
+                raise NotImplementedError('This format is not yet supported.')
+            elif os.path.splitext(path)[1] == '.fits':
+
+                paras = loadparas(path)
+                return paras
+            elif os.path.splitext(path)[1] == '.nxs':
+                nxroot = nx.load(path)
+                # print nxroot.tree
+                return nxroot
+
+                # print('here',data)
+
+            else:
+
+                paras = loadparas(path)
+                return paras
+    except IOError:
+        print('IO Error loading: ' + path)
+
+    return paras
 
 
 def readenergy(path):
@@ -93,9 +117,7 @@ def readvariation(path):
 
     return None
 
-def loadjustimage(path):
-    data = fabio.open(path).data
-    return data
+
 
 def loadparas(path):
     try:
@@ -120,8 +142,8 @@ def loadparas(path):
                     return None
     except IOError:
         print('Unexpected read error in loadparas')
-        # except IndexError:
-        #print('No txt file found in loadparas')
+    except IndexError:
+        print('No txt file found in loadparas')
     return None
 
 
@@ -199,36 +221,23 @@ def loadstichted(filepath2, filepath1):
 def finddetector(imgdata):
     for name, detector in detectors.ALL_DETECTORS.iteritems():
         if hasattr(detector, 'MAX_SHAPE'):
-            print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+            #print name, detector.MAX_SHAPE, imgdata.shape[::-1]
             if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
                 detector = detector()
                 mask = detector.calc_mask()
                 return detector, mask
         if hasattr(detector, 'BINNED_PIXEL_SIZE'):
-            print detector.BINNED_PIXEL_SIZE.keys()
+            #print detector.BINNED_PIXEL_SIZE.keys()
             if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
                                        detector.BINNED_PIXEL_SIZE.keys()]:
                 detector = detector()
                 mask = detector.calc_mask()
                 return detector, mask
-
+    return None, None
 
 def finddetectorbyfilename(path):
     imgdata = loadsingle(path)[0].T
-    for name, detector in detectors.ALL_DETECTORS.iteritems():
-        if hasattr(detector, 'MAX_SHAPE'):
-            print name, detector.MAX_SHAPE, imgdata.shape[::-1]
-            if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
-                detector = detector()
-                mask = detector.calc_mask()
-                return detector, mask
-        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
-            print detector.BINNED_PIXEL_SIZE.keys()
-            if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
-                                       detector.BINNED_PIXEL_SIZE.keys()]:
-                detector = detector()
-                mask = detector.calc_mask()
-                return detector, mask
+    return finddetector(imgdata)
 
 def loadthumbnail(path):
     nxpath = os.path.splitext(path)[0] + '.nxs'
@@ -236,12 +245,16 @@ def loadthumbnail(path):
         print nx.load(path).tree
         img = np.asarray(nx.load(path).data.thumbnail)
     else:
-        img, _ = loadsingle(path)
+        img = loadimage(path)
 
     if img is not None:
         img = np.log(img * (img > 0) + 1.)
         img *= 255 / np.max(np.asarray(img))
 
+        desiredsize = np.array([160., 160.])
+
+        zoomfactor = np.max(desiredsize / np.array(img.shape))
+        img = scipy.ndimage.zoom(img, zoomfactor, order=1)
         img = img.astype(np.uint8)
     return img
 

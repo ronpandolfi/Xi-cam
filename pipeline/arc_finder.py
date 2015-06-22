@@ -23,6 +23,8 @@ from scipy.ndimage import filters
 
 from scipy.fftpack import rfft, irfft
 
+from skimage.restoration import denoise_bilateral
+
 
 demo = True
 
@@ -382,11 +384,13 @@ def inpaint(img,mask):
 def findmaxs(orig):
     img = orig.copy()
     img = filters.minimum_filter(img, 4)
-    img = filters.gaussian_filter(img, 4)
+    img = filters.gaussian_filter(img, 2)
     img = filters.median_filter(img, 4)
+    img -= np.min(img)
+    img = denoise_bilateral(img, sigma_range=0.05, sigma_spatial=15)
     #img = filters.percentile_filter(img,50,50)
 
-    maxima = np.array(img == filters.maximum_filter(img, (4, 4))) & (img > 1)
+    maxima = np.array(img == filters.maximum_filter(img, (10, 10))) & (img > np.percentile(orig, 90))
     maximachis, maximaqs = np.where(maxima == 1)
     plt.imshow(orig, interpolation='nearest')
     plt.plot(maximaqs, maximachis, 'ro')
@@ -433,6 +437,7 @@ def fitarcgaussian(chiprofile, chi):
         roi = np.ones_like(chiprofile)
         roi[chi - 30:chi + 30] = .0001
         # roi/=1000
+        # plt.plot(chiprofile,'')
         #plt.plot(roi * np.max(chiprofile * roi), 'g')
         #plt.plot(roi*chiprofile,'k')
         params.add('A', value=np.max(chiprofile * (1 - roi)), min=0)
@@ -457,18 +462,33 @@ def fitarcgaussian(chiprofile, chi):
 
     popt = [params['A'].value, params['mu'].value, params['sigma'].value, params['floor'].value]
     #plt.plot(x, gaussian(x, *popt), 'r')
-    A, chimu, sigma, baseline = popt
-    FWHM = sigma * tworoot2ln2
+    # plt.show()
+    # A, chimu, sigma, baseline = popt
+    # FWHM = sigma * tworoot2ln2
 
-    return A, chimu, FWHM, baseline, isring
+    return params
 
 
-def findgisaxsarcs2(img, cen, experiment):
+def findgisaxsarcs2(img, experiment):
     img = img.T.copy()
     cake, _, _ = integration.cake(img, experiment, mask=experiment.mask)  # TODO: refactor these parameters and check .T
     maskcake, _, _ = integration.cake(experiment.mask.T, experiment)
 
+    from fabio import edfimage
+
+    fabimg = edfimage.edfimage(cake)
+    filename = 'cake.edf'
+    fabimg.write(filename)
+
+    fabimg = edfimage.edfimage(maskcake)
+    filename = 'cake_MASK.edf'
+    fabimg.write(filename)
+
     img = inpaint(cake, maskcake)
+
+    fabimg = edfimage.edfimage(img)
+    filename = 'cake_LINEAR_INFILL.edf'
+    fabimg.write(filename)
 
     maxchis, maxqs = findmaxs(img)
 
@@ -478,19 +498,26 @@ def findgisaxsarcs2(img, cen, experiment):
         # roi=np.ones_like(img)
         #roi[chi - 10:chi + 10, q - 5:q + 5]=10
         #roi=np.sum(roi,axis=1)
-        chiprofile = np.sum(img[:, q - 5:q + 5], axis=1)
+        slice = img[:, q - 5:q + 5]
+        if np.max(slice) / np.min(slice) < 2:
+            pass  # continue
+        chiprofile = np.sum(slice, axis=1)
         x = np.arange(np.size(chiprofile))
 
         #plt.plot(chiprofile)
 
-        out.append([q] + list(fitarcgaussian(chiprofile, chi)))
+        params = fitarcgaussian(chiprofile, chi)
+        if params['mu'] > chi + 5 or params['mu'] < chi - 5:
+            continue
+        params.add('q', value=q)
+        out.append(params)
 
 
 
         #plt.show()
 
-    plt.imshow(np.log(img))
-    plt.show()
+    # plt.imshow(np.log(img))
+    #plt.show()
 
     return out
 
@@ -517,7 +544,7 @@ if __name__ == "__main__":
         cen = center_approx.gisaxs_center_approx(img)
         experiment.setcenter(cen)
 
-        arcs = findgisaxsarcs2(img, cen, experiment)
+        arcs = findgisaxsarcs2(img, experiment)
         # print cen
         # print arcs
 
@@ -531,25 +558,25 @@ if __name__ == "__main__":
 
         from matplotlib.patches import Arc
 
-
+        qratio =1.78
 
         for arc in arcs:
             print arc
-            if not np.isnan(arc[3]):
-                print arc[3]
-                if arc[5]:
-                    arcartist = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-90, theta1=0,
+            if not np.isnan(arc['sigma'].value):
+
+                if False:
+                    arcartist = [Arc(xy=cen, width=arc['q'] * 2, height=arc['q'] * 2, angle=-90, theta1=0,
                                      theta2=360)]  # Arc
                     ax.add_artist(arcartist[0])
                     arcartist[0].set_lw(3)
                 else:
-                    arcartist = [Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2, angle=-arc[2] * 360 / (2 * np.pi),
-                                     theta1=-abs(arc[3]) / (1000) * 2 * np.pi,
-                                     theta2=abs(arc[3]) / (1000) * 2 * np.pi),
-                                 Arc(xy=cen, width=arc[0] * 2, height=arc[0] * 2,
-                                     angle=-(np.pi - arc[2]) * 360 / (2 * np.pi),
-                                     theta1=-abs(arc[3]) / (30 * np.pi / 2) * 360 * 4,
-                                     theta2=abs(arc[3]) / (30 * np.pi / 2) * 360 * 4)]  # Arc
+                    angle = -arc['mu'].value / 1000 * 360
+                    theta1 = -abs(arc['sigma'].value * tworoot2ln2) / 1000 * 360 / 2
+                    theta2 = abs(arc['sigma'].value * tworoot2ln2) / 1000 * 360 / 2
+                    arcartist = [
+                        Arc(xy=cen, width=arc['q'].value * 2 * qratio, height=arc['q'].value * 2 * qratio, angle=angle,
+                            theta1=theta1,
+                            theta2=theta2)]  # Arc
                     for artist in arcartist:
                         ax.add_artist(artist)
                         artist.set_lw(3)

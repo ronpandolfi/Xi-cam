@@ -79,7 +79,7 @@
                                         <item>
                                             <widget class="QLabel" name="filenamelabel">
                                                 <property name="text">
-                                                    <string>[File Name Here]</string>
+                                                    <string></string>
                                                 </property>
                                             </widget>
                                         </item>

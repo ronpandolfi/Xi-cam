@@ -48,7 +48,7 @@ class imageTabTracker(QtGui.QWidget):
             if self.operation is None:
 
                 try:
-                    imgdata, paras = pipeline.loader.loadpath(self.paths)
+                    imgdata, paras = pipeline.loader.loadpath(self.paths[0])
                     if paras is not None:
                         if 'Beamline Energy' in paras:
                             self.experiment.setvalue('Energy', paras['Beamline Energy'])
@@ -56,15 +56,16 @@ class imageTabTracker(QtGui.QWidget):
                     print('File moved, corrupted, or deleted. Load failed')
 
                     return None
-                self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
+                self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths[0])
             else:
-                imgdata, paras = [pipeline.loader.loadpath(path) for path in self.paths]
+                imgdata = [pipeline.loader.loadimage(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 # print(imgdata)
 
             self.layout = QtGui.QHBoxLayout(self)
             self.layout.setContentsMargins(0, 0, 0, 0)
+            print self.paths
             self.tab = imageTab(imgdata, self.experiment, self.parent, self.paths)
             self.layout.addWidget(self.tab)
             self.isloaded = True
@@ -115,7 +116,11 @@ class imageTab(QtGui.QWidget):
         self.region = None
         self.maskROI = None
         self.layout = QtGui.QStackedLayout(self)
-        self.path = paths
+        print 'paths', paths
+        if paths is not None:
+            self.path = paths[0]
+        else:
+            self.path = None
 
         # Save image data and the experiment
         self.imgdata = imgdata
@@ -144,7 +149,6 @@ class imageTab(QtGui.QWidget):
         self.viewbox.setAspectLocked(True)
         self.imghistLUT = pg.HistogramLUTItem(self.imageitem)
         self.graphicslayoutwidget.addItem(self.imghistLUT, 0, 1)
-        self.imghistLUT.autoHistogramRange()
 
 
 
@@ -199,18 +203,23 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
-        if self.experiment.iscalibrated:
-            self.replot()
-            self.drawcenter()
+
+
+
 
         # Cache radial integration
         if self.imgdata is not None:
             self.redrawimage()
+
             self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
 
             # Choose detector
             self.finddetector()
+
+            if self.experiment.iscalibrated:
+                self.replot()
+                self.drawcenter()
 
 
     def send1Dintegration(self):
@@ -284,12 +293,12 @@ class imageTab(QtGui.QWidget):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
-        islogintensity = self.parentwindow.ui.findChild(QtGui.QAction, 'actionLog_Intensity').isChecked()
-        isradialsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').isChecked()
-        ismirrorsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').isChecked()
-        ismaskshown = self.parentwindow.ui.findChild(QtGui.QAction, 'actionShow_Mask').isChecked()
-        iscake = self.parentwindow.ui.findChild(QtGui.QAction, 'actionCake').isChecked()
-        isremesh = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRemeshing').isChecked()
+        islogintensity = self.parentwindow.difftoolbar.actionLog_Intensity.isChecked()
+        isradialsymmetry = self.parentwindow.difftoolbar.actionRadial_Symmetry.isChecked()
+        ismirrorsymmetry = self.parentwindow.difftoolbar.actionMirror_Symmetry.isChecked()
+        ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
+        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
         img = self.imgdata.copy()
         if isradialsymmetry:
             centerx = self.experiment.getvalue('Center X')
@@ -353,7 +362,7 @@ class imageTab(QtGui.QWidget):
         """
         toggles the line cut
         """
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
+        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
             self.region = pg.LineSegmentROI(
                 [[self.experiment.getvalue('Center X'), self.experiment.getvalue('Center Y')],
                  [self.experiment.getvalue('Center X'), self.imgdata.shape[0]]])
@@ -366,7 +375,7 @@ class imageTab(QtGui.QWidget):
             self.replot()
 
     def verticalcut(self):
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+        if self.parentwindow.ui.difftoolbar.actionVertical_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
             except AttributeError:
@@ -385,7 +394,7 @@ class imageTab(QtGui.QWidget):
         self.replot()
 
     def horizontalcut(self):
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+        if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
             except AttributeError:
@@ -478,12 +487,12 @@ class imageTab(QtGui.QWidget):
     def replotprimary(self):
         cut = None
 
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionMultiPlot').isChecked():
+        if self.parentwindow.difftoolbar.actionMultiPlot.isChecked():
             for tabtracker in self.parentwindow.ui.findChildren(imageTabTracker):
                 if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
                     tabtracker.replotassecondary()
 
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
+        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
 
             cut = self.region.getArrayRegion(self.imgdata, self.imageitem)
 
@@ -505,11 +514,11 @@ class imageTab(QtGui.QWidget):
 
 
         else:
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+            if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[:, regionbounds[0]:regionbounds[1]] = 1
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+            if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[regionbounds[0]:regionbounds[1], :] = 1
@@ -594,13 +603,17 @@ class imageTab(QtGui.QWidget):
 
     def finddetector(self):
         # detector, mask = pipeline.loader.finddetector(self.imgdata)
-        detector, mask = pipeline.loader.finddetectorbyfilename(self.path)
-        name = detector.get_name()
-        if mask is not None:
-            self.experiment.addtomask(np.rot90(mask))
-        self.experiment.setvalue('Pixel Size X', detector.pixel1)
-        self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-        self.experiment.setvalue('Detector', name)
+        if self.path is not None:
+            detector, mask = pipeline.loader.finddetectorbyfilename(self.path)
+        else:
+            detector, mask = pipeline.loader.finddetector(self.imgdata)
+        if detector is not None:
+            name = detector.get_name()
+            if mask is not None:
+                self.experiment.addtomask(np.rot90(mask))
+            self.experiment.setvalue('Pixel Size X', detector.pixel1)
+            self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+            self.experiment.setvalue('Detector', name)
         return detector
 
     def exportimage(self):
@@ -627,9 +640,10 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def loaditem(self, index):
         path = self.model.filePath(index)
-        self.imgdata, paras = pipeline.loader.loadpath(path)
-        self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
-                                autoLevels=True)
+        if os.path.isfile(path):
+            self.imgdata = pipeline.loader.loadimage(path)
+            self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                    autoLevels=True)
 
 
 # def imtest(image):

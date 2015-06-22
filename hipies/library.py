@@ -162,11 +162,13 @@ class thumbwidgetitem(QtGui.QFrame):
 
             self.imgdata = pipeline.loader.loadthumbnail(path)
 
-
-            im = Image.fromarray(self.imgdata, 'L')
-            # TODO: use scipy zoom or pull from .nxs for thumbnails
-            self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
-                                      QtGui.QImage.Format_Indexed8)
+            if self.imgdata.size > 0:
+                im = Image.fromarray(self.imgdata, 'L')
+                # TODO: use scipy zoom or pull from .nxs for thumbnails
+                self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                                          QtGui.QImage.Format_Indexed8)
+            else:
+                self.image.load('gui/post-360412-0-09676400-1365986245.png')
         else:
             self.image.load('gui/post-360412-0-09676400-1365986245.png')
 

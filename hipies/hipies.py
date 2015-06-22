@@ -40,7 +40,7 @@ import watcher
 import numpy as np
 import daemon
 import pipeline
-
+import toolbar
 
 
 class MyMainWindow():
@@ -67,6 +67,28 @@ class MyMainWindow():
         self.timelineprevioustab = -1
         self.experiment = config.experiment()
         self.folderwatcher = watcher.newfilewatcher()
+
+        # TOOLBARS
+        self.difftoolbar = toolbar.difftoolbar()
+        self.difftoolbar.actionCenterFind.triggered.connect(self.centerfind)
+        self.difftoolbar.actionPolyMask.triggered.connect(self.polymask)
+        self.difftoolbar.actionLog_Intensity.triggered.connect(self.redrawcurrent)
+        self.difftoolbar.actionRemove_Cosmics.triggered.connect(self.removecosmics)
+        self.difftoolbar.actionMultiPlot.triggered.connect(self.multiplottoggle)
+        self.difftoolbar.actionMaskLoad.triggered.connect(self.maskload)
+        self.difftoolbar.actionRadial_Symmetry.triggered.connect(self.redrawcurrent)
+        self.difftoolbar.actionMirror_Symmetry.triggered.connect(self.redrawcurrent)
+        self.difftoolbar.actionShow_Mask.triggered.connect(self.redrawcurrent)
+        self.difftoolbar.actionCake.triggered.connect(self.redrawcurrent)
+        self.difftoolbar.actionLine_Cut.triggered.connect(self.linecut)
+        self.difftoolbar.actionVertical_Cut.triggered.connect(self.vertcut)
+        self.difftoolbar.actionHorizontal_Cut.triggered.connect(self.horzcut)
+        self.difftoolbar.actionRemeshing.triggered.connect(self.remeshmode)
+        self.difftoolbar.actionCalibrate_AgB.triggered.connect(self.calibrate)
+        self.difftoolbar.actionRefine_Center.triggered.connect(self.refinecenter)
+
+        self.ui.diffbox.addWidget(self.difftoolbar)
+
 
         # ACTIONS
         # Wire up action buttons
@@ -186,23 +208,27 @@ class MyMainWindow():
         toolbuttonMasking.setDefaultAction(self.ui.findChild(QtGui.QAction, 'actionMasking'))
         toolbuttonMasking.setMenu(menu)
         toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
-        self.difftoolbar = QtGui.QToolBar()
-        self.difftoolbar.addWidget(toolbuttonMasking)
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRefine_Center'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCake'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionShow_Mask'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionVertical_Cut'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMultiPlot'))
-        self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRemeshing'))
-        self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
-        self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
+        # self.difftoolbar = QtGui.QToolBar()
+        # self.difftoolbar.addWidget(toolbuttonMasking)
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRefine_Center'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCake'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionShow_Mask'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionVertical_Cut'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMultiPlot'))
+        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRemeshing'))
+        # self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
+        # self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
+
+
+
+        self.ui.timelinebox.addWidget(toolbar.difftoolbar())
 
         # Setup file operation toolbox
         self.booltoolbar = QtGui.QToolBar()
@@ -363,7 +389,8 @@ class MyMainWindow():
         paths = [self.filetreemodel.filePath(index) for index in indices]
         newimagetab = viewer.imageTabTracker(paths, self.experiment, self, operation=operation)
         filenames = [path.split('/')[-1] for path in paths]
-        self.ui.findChild(QtGui.QTabWidget, 'tabWidget').addTab(newimagetab, operationname + ': ' + ', '.join(filenames))
+        tabwidget = self.ui.tabWidget
+        tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, operationname + ': ' + ', '.join(filenames)))
 
     def vertcut(self):
         """
@@ -471,7 +498,7 @@ class MyMainWindow():
         """
         Open a file dialog then open that image
         """
-        filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf *.fits")
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf *.fits *.tif")
         if filename and ok:
             self.openfile(filename)
 
@@ -480,7 +507,13 @@ class MyMainWindow():
         Open the item selected in the file tree
         """
         path = self.filetreemodel.filePath(index)
-        self.openfile(path)
+
+        if os.path.isfile(path):
+            self.openfile(path)
+        elif os.path.isdir(path):
+            self.libraryview.chdir(path)
+            self.showlibrary()
+
 
     def openfile(self, filename):
         """
@@ -525,7 +558,7 @@ class MyMainWindow():
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()
         # Make an image tab for that file and add it to the tab view
-        newimagetab = viewer.imageTabTracker(path, self.experiment, self)
+        newimagetab = viewer.imageTabTracker([path], self.experiment, self)
         tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
         self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
@@ -600,9 +633,10 @@ class MyMainWindow():
 
     def updateexperiment(self):
         self.experiment.save()
-        self.currentImageTab().tab.redrawimage()
-        self.currentImageTab().tab.drawcenter()
-        self.currentImageTab().tab.replot()
+        if self.currentImageTab().tab is not None:
+            self.currentImageTab().tab.redrawimage()
+            self.currentImageTab().tab.drawcenter()
+            self.currentImageTab().tab.replot()
 
     def filebrowserpanetoggle(self):
         """
