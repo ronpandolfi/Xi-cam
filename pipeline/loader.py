@@ -225,14 +225,14 @@ def finddetector(imgdata):
             if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
                 detector = detector()
                 mask = detector.calc_mask()
-                return detector, mask
+                return name, mask, detector
         if hasattr(detector, 'BINNED_PIXEL_SIZE'):
             #print detector.BINNED_PIXEL_SIZE.keys()
             if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
                                        detector.BINNED_PIXEL_SIZE.keys()]:
                 detector = detector()
                 mask = detector.calc_mask()
-                return detector, mask
+                return name, mask, detector
     return None, None
 
 def finddetectorbyfilename(path):
