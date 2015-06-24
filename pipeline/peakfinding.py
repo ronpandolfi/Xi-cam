@@ -1,10 +1,12 @@
-__author__ = 'remi'
-
-from pylab import *
 from scipy import signal
 from scipy.ndimage import filters
+from scipy import stats
 import pyqtgraph as pg
 from PySide import QtCore
+import numpy as np
+
+maxfiltercoef = 5
+cwtrange = np.arange(1, 100)
 
 maxfiltercoef = 5
 cwtrange = np.arange(3, 100)
@@ -25,15 +27,40 @@ def findpeaks(x, y):
     return list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))
 
 
-# class peakplotitem(pg.PlotItem):
-# def __init__(self,x,y):
-# super(peakplotitem, self).__init__()
-#        self.q, self.I, self.width, self.index = findpeaks(x,y)
+# def findpeaks(x, y, filtersize=(5, 5), gaussianwidthsigma=5, gaussiancentersigma=0, minimumsigma=100, snr=1.2):
+# if x is None:
+#         x = np.arange(len(y))
 #
-#        self.peakdataitem=self.plot(self.q, self.I, pen=None, symbol='o')
-
-#        self.peakdataitem.hover
-#    def
+#     cwtdata = signal.cwt(y, signal.ricker, cwtrange)
+#     cwtdata = filters.gaussian_filter1d(cwtdata, gaussiancentersigma, axis=1)
+#     cwtdata = filters.gaussian_filter1d(cwtdata, gaussianwidthsigma, axis=0)
+#     cwtdata = filters.minimum_filter1d(cwtdata, minimumsigma, axis=0)
+#
+#     maxima = (cwtdata == filters.maximum_filter(cwtdata, filtersize))
+#     maximasigmas, maximaxs = np.where(maxima == 1)
+#
+#     x = np.array(x)
+#     y = np.array(y)
+#
+#     peakxs = []
+#     peaksigmas = []
+#
+#     plt.plot(maximaxs, y[maximaxs], 'or')
+#
+#     for mx, sigma in zip(maximaxs, maximasigmas):
+#         print mx, sigma
+#         print max(0, mx - filtersize[1]), min(len(y), mx + filtersize[1])
+#         window = y[max(0, mx - 2 * filtersize[1]):min(len(y), mx + 2 * filtersize[1])]  # maybe scale with m's width?
+#         noiselevel = stats.scoreatpercentile(window, 10)
+#         print(mx, noiselevel)
+#         if y[mx] > snr * noiselevel:
+#             peakxs.append(mx)
+#             peaksigmas.append(sigma)
+#
+#     # print maximaloc
+#
+#     # print('before',np.array(list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))).shape)
+#     return list(np.array(np.vstack([x[peakxs], y[peakxs], [peakxs, peaksigmas]])))
 
 
 # TODO: Refactor this class into hipies module so I can get rid of pyside dependency

@@ -11,6 +11,19 @@ import center_approx
 import integration
 
 import peakfindingrem
+import peakfinding
+import scipy.optimize as optimize
+import scipy.stats
+from scipy import interpolate
+
+from lmfit import minimize, Parameters
+import cv2
+
+from scipy.ndimage import filters
+
+from scipy.fftpack import rfft, irfft
+
+from skimage.restoration import denoise_bilateral
 
 
 demo = True
@@ -167,8 +180,6 @@ def findpeaks(Y):
 #     return mask/255
 
 def arcmask(img, cen, Rrange, Thetarange):
-    mask = np.zeros_like(img)
-
     y, x = np.indices((img.shape))
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     theta = np.arctan2(y - cen[1], x - cen[0]) / (2 * np.pi) * 360.0
@@ -178,11 +189,12 @@ def arcmask(img, cen, Rrange, Thetarange):
 
     return mask
 
-def arcfinder_cercle(radialprofile, cen):
-    h = 35
+
+def scanforarcs(radialprofile, cen):
+    # h = 35
     # radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
-    test = np.max(radialprofile) / h
-    print 't', test
+    # test = np.max(radialprofile) / h
+    #print 't', test
     peakmax, peakmin = peakfindingrem.peakdet(range(len(radialprofile)), radialprofile, 10)
     peakind = peakmax[:, 0]
 
@@ -192,29 +204,332 @@ def arcfinder_cercle(radialprofile, cen):
     # plt.plot(radialprofile)
     # plt.show()
 
-    accurancy = 50
-    x = np.zeros((np.size(peakind), accurancy))
-    y = np.zeros((np.size(peakind), accurancy))
-    xinf = np.zeros((np.size(peakind), accurancy))
-    yinf = np.zeros((np.size(peakind), accurancy))
-    xsup = np.zeros((np.size(peakind), accurancy))
-    ysup = np.zeros((np.size(peakind), accurancy))
+    # accurancy = 50
+    # x = np.zeros((np.size(peakind), accurancy))
+    #y = np.zeros((np.size(peakind), accurancy))
+    #xinf = np.zeros((np.size(peakind), accurancy))
+    #yinf = np.zeros((np.size(peakind), accurancy))
+    #xsup = np.zeros((np.size(peakind), accurancy))
+    #ysup = np.zeros((np.size(peakind), accurancy))
 
-    for i in range(0, np.size(peakind)):
-        Delta = peakind[i] / 10
-        theta = np.linspace(0, 2 * np.pi, accurancy)
-        x[i] = cen[0] + (peakind[i]) * np.cos(theta)
-        y[i] = cen[1] + (peakind[i]) * np.sin(theta)
-        xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
-        xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
-        yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
-        ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
+    # for i in range(0, np.size(peakind)):
+    #Delta = peakind[i] / 10
+    #theta = np.linspace(0, 2 * np.pi, accurancy)
+    #x[i] = cen[0] + (peakind[i]) * np.cos(theta)
+    #y[i] = cen[1] + (peakind[i]) * np.sin(theta)
+    #xinf[i] = cen[0] + (peakind[i] - Delta) * np.cos(theta)
+    #xsup[i] = cen[0] + (peakind[i] + Delta) * np.cos(theta)
+    #yinf[i] = cen[1] + (peakind[i] - Delta) * np.sin(theta)
+    #ysup[i] = cen[1] + (peakind[i] + Delta) * np.sin(theta)
 
-    return x, y, xinf, xsup, yinf, ysup, peakind, Delta
+    return peakind
+
+
+def mirroredgaussian(theta, a, b, c, d):
+    val = (gaussian(theta, a, b, c, d) + gaussian(2 * np.pi - theta, a, b, c, d)) / 2.
+    return val
+
+def gaussian(x, a, b, c, d):
+    val = abs(a) * np.exp(-(x - b) ** 2. / c ** 2.) + abs(d)
+    return val
+
+
+def vonmises(x, A, mu, kappa):
+    return A * scipy.stats.vonmises.pdf(2 * (x - mu), kappa)
+
+
+def mirroredvonmises(x, A, mu, kappa, floor):
+    return A * (scipy.stats.vonmises.pdf(2 * (mu - x), kappa) + scipy.stats.vonmises.pdf(2 * (mu - x),
+                                                                                         kappa)) / 2 + floor  # 2*(mu-(np.pi-x))
+
+
+tworoot2ln2 = 2. * np.sqrt(2. * np.log(2.))
+
+
+def residual(params, x, data):
+    A = params['A'].value
+    mu = params['mu'].value
+    kappa = params['kappa'].value
+    floor = params['floor'].value
+
+    model = mirroredvonmises(x, A, mu, kappa, floor)
+
+    return data - model
+
+
+def gaussianresidual(params, x, data, sig=1):
+    A = params['A'].value
+    mu = params['mu'].value
+    sigma = params['sigma'].value
+    floor = params['floor'].value
+
+    model = gaussian(x, A, mu, sigma, floor)
+
+    resids = data - model
+
+    # print resids
+
+    weighted = np.sqrt(resids ** 2 / sig ** 2)
+    return weighted
+
+
+def findgisaxsarcs(img, cen, experiment):
+    radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]), experiment.mask)
+    # arcs = scanforarcs(radialprofile, cen)
+    arcs = peakfinding.findpeaks(None, radialprofile, (100, 50), gaussianwidthsigma=3, minimumsigma=100)
+    # print arcs
+    plt.plot(radialprofile)
+    plt.plot(arcs[0], arcs[1], 'ok')
+    #plt.show()
+    arcs = arcs[0]
+
+    output = []
+    _, unique = np.unique(arcs, return_index=True)
+
+    for qmu in arcs[unique]:
+        chiprofile = np.nan_to_num(integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask))
+
+        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'r')
+
+        # filter out missing chi
+        missingpointfloor = np.percentile(chiprofile, 15)
+        badpoints = np.where(chiprofile < missingpointfloor)[0]
+        goodpoints = np.where(chiprofile >= missingpointfloor)[0]
+
+        chiprofile[badpoints] = np.interp(badpoints, goodpoints, chiprofile[goodpoints])
+
+        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'k')
+
+        # f=rfft(chiprofile)
+        # plt.plot(f)
+        # f[-20:]=0
+        # chiprofile=irfft(chiprofile)
+
+
+
+
+        try:
+            params = Parameters()
+            params.add('A', value=np.max(chiprofile), min=0)
+            params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+            params.add('kappa', value=0.1, min=0)
+            params.add('floor', value=0.1, min=0)
+            x = np.arange(0, np.pi, 1 / 30.)
+
+            out = minimize(residual, params, args=(x, chiprofile))
+            print params
+            # print params['A'].stderr
+
+            # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+            #
+
+            # print(popt)
+        except RuntimeError:
+            print('Fit failed at ' + qmu)
+            continue
+
+        if params['kappa'].stderr > 100 or params['A'].stderr > 100:
+            isring = True
+        else:
+            isring = False
+
+        popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
+        A, chimu, kappa, baseline = popt
+        FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+
+        output.append([qmu, A, chimu, FWHM, baseline, isring])
+        # plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile)
+        # plt.plot(np.arange(0, np.pi, 1 / 30.), mirroredvonmises(np.arange(0, np.pi, 1 / 30.), *popt))
+        # plt.show()
+
+    return output
+
+
+def inpaint(img,mask):
+    filled = None
+    if False:
+        img = img / (2 ^ 16 - 1) * 255
+        plt.imshow(img.astype(np.uint8))
+        plt.show()
+
+        plt.imshow(mask)  #TODO: check that mask corners are correct
+        plt.show()
+
+        kernel = np.ones((3, 3),np.uint8)
+        mask = cv2.dilate(mask.astype(np.uint8), kernel, iterations=1)
+
+        filled = cv2.inpaint(img.astype(np.uint8), mask.astype(np.uint8), 3, cv2.INPAINT_TELEA)
+
+        plt.imshow(img)
+        plt.show()
+
+        return
+
+    elif True:
+
+        valid = ~mask.astype(np.bool)
+        coords = np.array(np.nonzero(valid)).T
+        values = img[valid]
+
+        it = interpolate.LinearNDInterpolator(coords, values)
+
+        filled = it(list(np.ndindex(img.shape))).reshape(img.shape)
+
+        plt.imshow(filled)
+        plt.show()
+
+    return filled
+
+
+def findmaxs(orig):
+    img = orig.copy()
+    img = filters.minimum_filter(img, 4)
+    img = filters.gaussian_filter(img, 2)
+    img = filters.median_filter(img, 4)
+    img -= np.min(img)
+    img = denoise_bilateral(img, sigma_range=0.05, sigma_spatial=15)
+    #img = filters.percentile_filter(img,50,50)
+
+    maxima = np.array(img == filters.maximum_filter(img, (10, 10))) & (img > np.percentile(orig, 90))
+    maximachis, maximaqs = np.where(maxima == 1)
+    plt.imshow(orig, interpolation='nearest')
+    plt.plot(maximaqs, maximachis, 'ro')
+    plt.show()
+
+    return maximachis, maximaqs
+
+
+def fitarc(chiprofile):
+    try:
+        params = Parameters()
+        params.add('A', value=np.max(chiprofile), min=0)
+        params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+        params.add('kappa', value=0.1, min=0)
+        params.add('floor', value=0.1, min=0)
+        x = np.arange(0, np.pi, 1 / 30.)
+
+        out = minimize(residual, params, args=(x, chiprofile))
+        print params
+        # print params['A'].stderr
+
+        # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+        # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+        # print(popt)
+    except RuntimeError:
+        print('Fit failed.')
+
+    if params['kappa'].stderr > 100 or params['A'].stderr > 100:
+        isring = True
+    else:
+        isring = False
+
+    popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
+    A, chimu, kappa, baseline = popt
+    FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+
+    return A, chimu, FWHM, baseline, isring
+
+
+def fitarcgaussian(chiprofile, chi):
+    try:
+        params = Parameters()
+        x = np.arange(np.size(chiprofile))
+        roi = np.ones_like(chiprofile)
+        roi[chi - 30:chi + 30] = .0001
+        # roi/=1000
+        # plt.plot(chiprofile,'')
+        #plt.plot(roi * np.max(chiprofile * roi), 'g')
+        #plt.plot(roi*chiprofile,'k')
+        params.add('A', value=np.max(chiprofile * (1 - roi)), min=0)
+        params.add('mu', value=chi, min=0, max=len(chiprofile))
+        params.add('sigma', value=20, min=0)
+        params.add('floor', value=0.1, min=0)
+
+        out = minimize(gaussianresidual, params, args=(x, chiprofile, roi), method='nelder')
+        #print params
+        # print params['A'].stderr
+
+        # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
+        # p0=[np.max(np.nan_to_num(chiprofile)), np.pi / 2, .1, 0])
+        # print(popt)
+    except RuntimeError:
+        print('Fit failed.')
+
+    if params['sigma'].stderr > 100 or params['A'].stderr > 100:
+        isring = False  #True
+    else:
+        isring = False
+
+    popt = [params['A'].value, params['mu'].value, params['sigma'].value, params['floor'].value]
+    #plt.plot(x, gaussian(x, *popt), 'r')
+    # plt.show()
+    # A, chimu, sigma, baseline = popt
+    # FWHM = sigma * tworoot2ln2
+
+    return params
+
+
+def findgisaxsarcs2(img, experiment):
+    img = img.T.copy()
+    cake, _, _ = integration.cake(img, experiment, mask=experiment.mask)  # TODO: refactor these parameters and check .T
+    maskcake, _, _ = integration.cake(experiment.mask.T, experiment)
+
+    from fabio import edfimage
+
+    fabimg = edfimage.edfimage(cake)
+    filename = 'cake.edf'
+    fabimg.write(filename)
+
+    fabimg = edfimage.edfimage(maskcake)
+    filename = 'cake_MASK.edf'
+    fabimg.write(filename)
+
+    img = inpaint(cake, maskcake)
+
+    fabimg = edfimage.edfimage(img)
+    filename = 'cake_LINEAR_INFILL.edf'
+    fabimg.write(filename)
+
+    maxchis, maxqs = findmaxs(img)
+
+    out =[]
+
+    for chi, q in zip(maxchis, maxqs):
+        # roi=np.ones_like(img)
+        #roi[chi - 10:chi + 10, q - 5:q + 5]=10
+        #roi=np.sum(roi,axis=1)
+        slice = img[:, q - 5:q + 5]
+        if np.max(slice) / np.min(slice) < 2:
+            pass  # continue
+        chiprofile = np.sum(slice, axis=1)
+        x = np.arange(np.size(chiprofile))
+
+        #plt.plot(chiprofile)
+
+        params = fitarcgaussian(chiprofile, chi)
+        if params['mu'] > chi + 5 or params['mu'] < chi - 5:
+            continue
+        params.add('q', value=q)
+        out.append(params)
+
+
+
+        #plt.show()
+
+    # plt.imshow(np.log(img))
+    #plt.show()
+
+    return out
 
 
 if __name__ == "__main__":
+    import hipies.config
 
+    experiment = hipies.config.experiment()
+    experiment.setvalue('Detector', 'pilatus2m')
+    experiment.setvalue('Pixel Size X',172e-6)
+    experiment.setvalue('Pixel Size Y', 172e-6)
+    experiment.mask = experiment.getDetector().calc_mask()
 
     for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
         print "Opening", imgpath
@@ -224,20 +539,66 @@ if __name__ == "__main__":
         # find center
         # cen = center_approx.center_approx(img)
 
+
+
         cen = center_approx.gisaxs_center_approx(img)
-        radialprofile = integration.pixel_2Dintegrate(img, (cen[1], cen[0]))
-        y, x, yinf, ysup, xinf, xsup, mu, delta = arcfinder_cercle(radialprofile, cen)
-        a = integration.chi_2Dintegrate(img, (cen[1], cen[0]), mu, delta)
-        print cen
+        experiment.setcenter(cen)
+
+        arcs = findgisaxsarcs2(img, experiment)
+        # print cen
+        # print arcs
+
+        ax = plt.gca()
 
         plt.axvline(cen[0], color='r')
         plt.axhline(cen[1], color='r')
         plt.imshow(np.log(img))
-        for i in range(1, np.size(x, 0)):
-            plt.plot(y[i], x[i], color='g')
-            plt.plot(yinf[i], xinf[i], color='r')
-            plt.plot(ysup[i], xsup[i], color='r')
+
+
+
+        from matplotlib.patches import Arc
+
+        qratio =1.78
+
+        for arc in arcs:
+            print arc
+            if not np.isnan(arc['sigma'].value):
+
+                if False:
+                    arcartist = [Arc(xy=cen, width=arc['q'] * 2, height=arc['q'] * 2, angle=-90, theta1=0,
+                                     theta2=360)]  # Arc
+                    ax.add_artist(arcartist[0])
+                    arcartist[0].set_lw(3)
+                else:
+                    angle = -arc['mu'].value / 1000 * 360
+                    theta1 = -abs(arc['sigma'].value * tworoot2ln2) / 1000 * 360 / 2
+                    theta2 = abs(arc['sigma'].value * tworoot2ln2) / 1000 * 360 / 2
+                    arcartist = [
+                        Arc(xy=cen, width=arc['q'].value * 2 * qratio, height=arc['q'].value * 2 * qratio, angle=angle,
+                            theta1=theta1,
+                            theta2=theta2)]  # Arc
+                    for artist in arcartist:
+                        ax.add_artist(artist)
+                        artist.set_lw(3)
+
+
+        # for i in range(1, np.size(x, 0)):
+        # plt.plot(y[i], x[i], color='g')
+        #     plt.plot(yinf[i], xinf[i], color='r')
+        #     plt.plot(ysup[i], xsup[i], color='r')
         plt.show()
+
+        # popt, pcov = optimize.curve_fit(gaussian, np.arange(np.size(a)), np.nan_to_num(a))
+
+        # print("Scale =  %.3f +/- %.3f" % (popt[0], np.sqrt(pcov[0, 0])))
+        #print("Offset = %.3f +/- %.3f" % (popt[1], np.sqrt(pcov[1, 1])))
+        #print("Sigma =  %.3f +/- %.3f" % (popt[2], np.sqrt(pcov[2, 2])))
+
+        # print(vimodel.A)
+        # print vimodel.mu
+        # print vimodel.FWHM
+
+
 
 
         # find arcs

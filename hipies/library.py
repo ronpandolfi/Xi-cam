@@ -1,8 +1,6 @@
 from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
-# import loader
-import numpy as np
 from PIL import Image
 import viewer
 import os
@@ -11,11 +9,12 @@ import pipeline
 
 
 class FlowLayout(QtGui.QLayout):
+    """
+    A grid layout that wraps and adjusts to its items
+    """
     def __init__(self, parent=None, margin=5, spacing=-1):
         super(FlowLayout, self).__init__(parent)
 
-        # if parent is not None:
-        # self.margin = margin
         self.margin = margin
         self.setSpacing(spacing)
 
@@ -101,6 +100,9 @@ class FlowLayout(QtGui.QLayout):
 
 
 class librarylayout(FlowLayout):
+    """
+    Extend the flow layout to fill it with thumbwidgetitems representing files/folders
+    """
     def __init__(self, parentwindow, path='samples/'):
         super(librarylayout, self).__init__()
         self.parent = None
@@ -133,25 +135,19 @@ class librarylayout(FlowLayout):
                 widget.deleteLater()
 
 class thumbwidgetitem(QtGui.QFrame):
+    """
+    A single icon representing a file/folder that can be accessed/opened
+    """
     def __init__(self, path, parentwindow):
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
         desiredsize = QtCore.QSize(160, 200)
 
-        # toplayout = QVBoxLayout(self)
-        #self.frame = QFrame(self)
-
 
         self.setFixedSize(desiredsize)
         self.setAutoFillBackground(True)
         self.setFocusPolicy(Qt.StrongFocus)
-
-        # self.frame.setFixedSize(desiredsize)
-        #self.frame.setFrameStyle(QFrame.Plain)
-        #self.frame.setFrameShape(QFrame.StyledPanel)
-        #self.setStyle('background-color:#999999')
-
 
 
         self.layout = QtGui.QVBoxLayout(self)  #.frame
@@ -165,21 +161,15 @@ class thumbwidgetitem(QtGui.QFrame):
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
             self.imgdata = pipeline.loader.loadthumbnail(path)
-
-
-            # dims = (min(desiredsize, self.imgdata.shape[0] * desiredsize / self.imgdata.shape[1]),
-            # min(desiredsize, self.imgdata.shape[1] * desiredsize / self.imgdata.shape[0]))
-            # dims=(220,230)
-            # print(dims)
-            # print self.imgdata
-            #self.imgdata = imresize(self.imgdata, (dims[0],dims[1]))
-            #print self.imgdata
-
-            im = Image.fromarray(self.imgdata, 'L')
-            # im.thumbnail((150, 150))
-            #print(im.size)
-            self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
-                                      QtGui.QImage.Format_Indexed8)
+            if self.imgdata is None:
+                self.image.load('gui/post-360412-0-09676400-1365986245.png')
+            elif self.imgdata.size > 0:
+                im = Image.fromarray(self.imgdata, 'L')
+                # TODO: use scipy zoom or pull from .nxs for thumbnails
+                self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                                          QtGui.QImage.Format_Indexed8)
+            else:
+                self.image.load('gui/post-360412-0-09676400-1365986245.png')
         else:
             self.image.load('gui/post-360412-0-09676400-1365986245.png')
 
@@ -204,25 +194,23 @@ class thumbwidgetitem(QtGui.QFrame):
         # self.frame.setFrameStyle(QFrame.Raised)
         pass
 
-        #def leaveEvent(self, *args, **kwargs):
-        #    self.frame.setFrameStyle(QFrame.Plain)
+    # def leaveEvent(self, *args, **kwargs):
+    # self.frame.setFrameStyle(QFrame.Plain)
 
-        #def mousePressEvent(self, *args, **kwargs):
-        #    self.frame.setFrameStyle(QFrame.Sunken)
+    # def mousePressEvent(self, *args, **kwargs):
+    # self.frame.setFrameStyle(QFrame.Sunken)
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         if os.path.isdir(self.path):
             self.parentwindow.libraryview.chdir(self.path)
         else:
-            newimagetab = viewer.imageTabTracker(self.path, self.parentwindow.experiment, self.parentwindow)
-            tabwidget = self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget')
             self.parentwindow.openfile(self.path)
 
-
-
-
-
 class ScaledLabel(QtGui.QLabel):
+    """
+    A label that scales with the constrained dimension; for thumbnails
+    """
+
     def __init__(self, image):
         super(ScaledLabel, self).__init__()
         self._pixmap = QtGui.QPixmap.fromImage(image)

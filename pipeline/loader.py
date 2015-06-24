@@ -3,70 +3,186 @@ import numpy
 import pyfits
 import os
 import numpy as np
-from nexpy.api import nexus as nx
-from pyFAI import detectors
+import nexpy as nx
+from pipeline import detectors
+import glob
+import re
+import time
+import scipy.ndimage
 
-acceptableexts = '.fits .edf .tif .nxs'
+acceptableexts = '.fits .edf .tif .nxs .tif'
 
 
 def loadsingle(path):
+    return loadimage(path), loadparas(path)
+
+
+def loadimage(path):
+    data = None
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.gb':
+                raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
+            elif os.path.splitext(path)[1] == '.fits':
+                data = pyfits.open(path)[2].data
+                return data
+            elif os.path.splitext(path)[1] == '.nxs':
+                nxroot = nx.load(path)
+                # print nxroot.tree
+                if hasattr(nxroot.data, 'signal'):
+                    data = nxroot.data.signal
+                    return data
+                else:
+                    return loadsingle(str(nxroot.data.rawfile))
+
+            else:
+                data = fabio.open(path).data
+                return data
+    except IOError:
+        print('IO Error loading: ' + path)
+
+    except TypeError:
+        print('Type Error loading: ' + path)
+
+
+    return data
+
+
+def loadparas(path):
     """
     :type path : str
     :param path:
     :return:
     """
-    # print os.path.splitext(path)
-    if os.path.splitext(path)[1] in acceptableexts:
-        if os.path.splitext(path)[1] == '.fits':
-            data = pyfits.open(path)[2].data
-            return data, None
-        elif os.path.splitext(path)[1] == '.nxs':
+    paras = None
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.gb':
+                raise NotImplementedError('This format is not yet supported.')
+            elif os.path.splitext(path)[1] == '.fits':
+
+                paras = loadparas(path)
+                return paras
+            elif os.path.splitext(path)[1] == '.nxs':
+                nxroot = nx.load(path)
+                # print nxroot.tree
+                return nxroot
+
+                # print('here',data)
+
+            else:
+
+                paras = loadparas(path)
+                return paras
+    except IOError:
+        print('IO Error loading: ' + path)
+
+    return paras
+
+
+def readenergy(path):
+    try:
+        if os.path.splitext(path)[1] in acceptableexts:
+            if os.path.splitext(path)[1] == '.fits':
+                head = pyfits.open(path)
+                print head[0].header.keys()
+                paras = scanparaslines(str(head[0].header).split('\r'))
+                print paras
+            elif os.path.splitext(path)[1] == '.nxs':
+                pass
+                # nxroot = nx.load(path)
+                # # print nxroot.tree
+                # if hasattr(nxroot.data, 'signal'):
+                # data = nxroot.data.signal
+                #     return data, nxroot
+                # else:
+                #     print ('here:', nxroot.data.rawfile)
+                #     return loadsingle(str(nxroot.data.rawfile))
+                # print('here',data)
+
+            else:
+                pass
+    except IOError:
+        print('IO Error reading energy: ' + path)
+
+    return None
+
+
+def readvariation(path):
+    for i in range(20):
+        try:
             nxroot = nx.load(path)
-            print nxroot.tree
-            data = nxroot.data.signal
-            #print('here',data)
-            return data, None
-        else:
-            data = fabio.open(path).data
-            paras = loadparas(path)
-            return data, paras
+            print 'Attempt', i + 1, 'to read', path, 'succeded; continuing...'
+            return int(nxroot.data.variation)
+        except IOError:
+            print 'Could not load', path, ', trying again in 0.2 s'
+            time.sleep(0.2)
+            nxroot = nx.load(path)
 
-    return None, None
+    return None
 
-    # except TypeError:
-    #   print('Failed to load',path,', its probably not an image format I understand.')
-    #  return None,None
 
 
 def loadparas(path):
-    txtpath = os.path.splitext(path)[0] + '.txt'
-    # print txtpath
-    if os.path.isfile(txtpath):
-        with open(txtpath, 'r') as f:
-            lines = f.readlines()
-            paras = dict()
-            i = 0
-            for line in lines:
-                cells = line.split(':')
-                if cells.__len__() == 2:
-                    paras[cells[0]] = float(cells[1])
-                elif cells.__len__() == 1:
-                    i += 1
-                    paras['Unknown' + str(i)] = str(cells[0])
-        # print paras
-        return paras
-    else:
-        return None
+    try:
+        if os.path.splitext(path)[1] == '.fits':
+            head = pyfits.open(path)
+            print head[0].header
+            return head[0].header
+        elif os.path.splitext(path)[1] == '.edf':
+
+            txtpath = os.path.splitext(path)[0] + '.txt'
+            if os.path.isfile(txtpath):
+                return scanparas(txtpath)
+            else:
+                basename = os.path.splitext(path)[0]
+                obj = re.search('_\d+$', basename)
+                if obj is not None:
+                    iend = obj.start()
+                    token = basename[:iend] + '*txt'
+                    txtpath = glob.glob(token)[0]
+                    return scanparas(txtpath)
+                else:
+                    return None
+    except IOError:
+        print('Unexpected read error in loadparas')
+    except IndexError:
+        print('No txt file found in loadparas')
+    return None
+
+
+def scanparas(path):
+    with open(path, 'r') as f:
+        lines = f.readlines()
+
+    paras = scanparaslines(lines)
+
+    return paras
+
+def scanparaslines(lines):
+    paras = dict()
+    for line in lines:
+        cells = filter(None, re.split('[=:]+', line))
+
+        key = cells[0]
+
+        if cells.__len__() == 2:
+            cells[1] = cells[1].split('/')[0]
+            paras[key] = cells[1]
+        elif cells.__len__() == 1:
+            paras[key] = cells[0]
+
+    return paras
 
 
 def loadstichted(filepath2, filepath1):
     (data1, paras1) = loadsingle(filepath1)
     (data2, paras2) = loadsingle(filepath2)
 
-    positionY1 = paras1['Detector Vertical']
-    positionY2 = paras2['Detector Vertical']
-    positionX1 = paras1['Detector Horizontal']
-    positionX2 = paras2['Detector Horizontal']
+    positionY1 = float(paras1['Detector Vertical'])
+    positionY2 = float(paras2['Detector Vertical'])
+    positionX1 = float(paras1['Detector Horizontal'])
+    positionX2 = float(paras2['Detector Horizontal'])
     deltaX = round((positionX2 - positionX1) / 0.172)
     deltaY = round((positionY2 - positionY1) / 0.172)
     padtop2 = 0
@@ -98,8 +214,8 @@ def loadstichted(filepath2, filepath1):
 
     # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
-    mask2 = numpy.pad(1 - (finddetector(data2)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
-    mask1 = numpy.pad(1 - (finddetector(data1)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    mask2 = numpy.pad(1 - (finddetector(data2.T)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
+    mask1 = numpy.pad(1 - (finddetector(data1.T)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
 
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
@@ -109,27 +225,42 @@ def loadstichted(filepath2, filepath1):
 def finddetector(imgdata):
     for name, detector in detectors.ALL_DETECTORS.iteritems():
         if hasattr(detector, 'MAX_SHAPE'):
-            if detector.MAX_SHAPE == imgdata.shape:  # [::-1]
+            #print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+            if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
                 detector = detector()
                 mask = detector.calc_mask()
+                return name, mask, detector
+        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+            #print detector.BINNED_PIXEL_SIZE.keys()
+            if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                                       detector.BINNED_PIXEL_SIZE.keys()]:
+                detector = detector()
+                mask = detector.calc_mask()
+                return name, mask, detector
+    return None, None
 
-                return detector, mask
-
+def finddetectorbyfilename(path):
+    imgdata = loadsingle(path)[0].T
+    return finddetector(imgdata)
 
 def loadthumbnail(path):
     nxpath = os.path.splitext(path)[0] + '.nxs'
     if os.path.isfile(nxpath):
         print nx.load(path).tree
-        return np.asarray(nx.load(path).data.thumbnail)
-
+        img = np.asarray(nx.load(path).data.thumbnail)
     else:
-        img, _ = loadsingle(path)
-        if img is not None:
-            img = np.log(img * (img > 0) + 1.)
-            img *= 255 / np.max(np.asarray(img))
+        img = loadimage(path)
 
-            img = img.astype(np.uint8)
-        return img
+    if img is not None:
+        img = np.log(img * (img > 0) + 1.)
+        img *= 255 / np.max(np.asarray(img))
+
+        desiredsize = np.array([160., 160.])
+
+        zoomfactor = np.max(desiredsize / np.array(img.shape))
+        img = scipy.ndimage.zoom(img, zoomfactor, order=1)
+        img = img.astype(np.uint8)
+    return img
 
 
 def loadpath(path):

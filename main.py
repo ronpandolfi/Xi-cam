@@ -1,8 +1,3 @@
-
 import hipies
-import sys
 
-window = hipies.main.MyMainWindow()
-window.ui.show()
-
-sys.exit(window.app.exec_())
+window = hipies.hipies.MyMainWindow()

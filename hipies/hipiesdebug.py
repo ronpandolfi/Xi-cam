@@ -10,9 +10,10 @@ def timeit(method):
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()
-
-        print '%r (%r, %r) %2.2f sec' % \
-              (method.__name__, args, kw, te - ts)
+        # '%r (%r, %r) %2.2f sec'
+        #(method.__name__, args, kw, te - ts)
+        print '%r  %2.3f sec' % \
+              (method.__name__, te - ts)
         return result
 
     return timed

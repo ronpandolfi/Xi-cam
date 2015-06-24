@@ -3,11 +3,12 @@ from PySide import QtCore
 
 
 class openfilesmodel(QtCore.QAbstractListModel):
+    """
+    This model creates modelitems for each open tab for navigation
+    """
+
     def __init__(self, tabwidget):
         QtCore.QAbstractListModel.__init__(self)
-
-        # Cache the passed data list as a class member.
-        # self._items = mlist
 
         self.tabwidget = tabwidget
 

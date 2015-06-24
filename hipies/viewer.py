@@ -7,9 +7,9 @@ from PySide import QtCore
 from PySide.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
-from pyFAI import detectors
+from pipeline import detectors
 from fabio import edfimage
-import cv2
+
 
 import pipeline
 
@@ -48,20 +48,24 @@ class imageTabTracker(QtGui.QWidget):
             if self.operation is None:
 
                 try:
-                    imgdata, paras = pipeline.loader.loadpath(self.paths)
+                    imgdata, paras = pipeline.loader.loadpath(self.paths[0])
+                    if paras is not None:
+                        if 'Beamline Energy' in paras:
+                            self.experiment.setvalue('Energy', paras['Beamline Energy'])
                 except IOError:
-                    print('File moved or deleted. Load failed')
+                    print('File moved, corrupted, or deleted. Load failed')
 
                     return None
-                self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths)
+                self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths[0])
             else:
-                imgdata, paras = [pipeline.loader.loadpath(path) for path in self.paths]
+                imgdata = [pipeline.loader.loadimage(path) for path in self.paths]
 
                 imgdata = self.operation(imgdata)
                 # print(imgdata)
 
             self.layout = QtGui.QHBoxLayout(self)
             self.layout.setContentsMargins(0, 0, 0, 0)
+            print self.paths
             self.tab = imageTab(imgdata, self.experiment, self.parent, self.paths)
             self.layout.addWidget(self.tab)
             self.isloaded = True
@@ -112,15 +116,22 @@ class imageTab(QtGui.QWidget):
         self.region = None
         self.maskROI = None
         self.layout = QtGui.QStackedLayout(self)
-        self.path = paths
+        print 'paths', paths
+        if paths is not None:
+            self.path = paths[0]
+        else:
+            self.path = None
 
         # Save image data and the experiment
-        self.imgdata = np.rot90(imgdata, 3)
+        self.imgdata = imgdata
+        if self.imgdata is not None:
+            self.imgdata = np.rot90(self.imgdata, 3)
         self.experiment = experiment
         self.parentwindow = parent
 
         # Immediately mask any negative pixels #####MAKE THIS UNIQUE
-        self.experiment.addtomask(self.imgdata < 0)
+        if self.imgdata is not None:
+            self.experiment.addtomask(self.imgdata < 0)
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
@@ -138,7 +149,6 @@ class imageTab(QtGui.QWidget):
         self.viewbox.setAspectLocked(True)
         self.imghistLUT = pg.HistogramLUTItem(self.imageitem)
         self.graphicslayoutwidget.addItem(self.imghistLUT, 0, 1)
-        self.imghistLUT.autoHistogramRange()
 
 
 
@@ -193,26 +203,23 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
-        ##
-        # self.findcenter()
-        # self.calibrate()
-
-        if self.experiment.iscalibrated:
-            self.replot()
-            ##
-            self.drawcenter()
 
 
-        # self.maskoverlay()
-        #self.updatelogintensity()
-        self.redrawimage()
+
 
         # Cache radial integration
-        self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
+        if self.imgdata is not None:
+            self.redrawimage()
+
+            self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                  mask=self.experiment.mask)
 
-        # Choose detector
-        self.finddetector()
+            # Choose detector
+            self.finddetector()
+
+            if self.experiment.iscalibrated:
+                self.replot()
+                self.drawcenter()
 
 
     def send1Dintegration(self):
@@ -286,57 +293,61 @@ class imageTab(QtGui.QWidget):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
-        islogintensity = self.parentwindow.ui.findChild(QtGui.QAction, 'actionLog_Intensity').isChecked()
-        isradialsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').isChecked()
-        ismirrorsymmetry = self.parentwindow.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').isChecked()
-        ismaskshown = self.parentwindow.ui.findChild(QtGui.QAction, 'actionShow_Mask').isChecked()
-        iscake = self.parentwindow.ui.findChild(QtGui.QAction, 'actionCake').isChecked()
-        isremesh = self.parentwindow.ui.findChild(QtGui.QAction, 'actionRemeshing').isChecked()
+        islogintensity = self.parentwindow.difftoolbar.actionLog_Intensity.isChecked()
+        isradialsymmetry = self.parentwindow.difftoolbar.actionRadial_Symmetry.isChecked()
+        ismirrorsymmetry = self.parentwindow.difftoolbar.actionMirror_Symmetry.isChecked()
+        ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
+        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
         img = self.imgdata.copy()
         if isradialsymmetry:
             centerx = self.experiment.getvalue('Center X')
             centery = self.experiment.getvalue('Center Y')
             symimg = np.rot90(img.copy(), 2)
-            imtest(symimg)
+            # imtest(symimg)
             xshift = -(img.shape[0] - 2 * centerx)
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
-            imtest(symimg)
-            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
-            imtest(marginmask)
+            # imtest(symimg)
+            marginmask = 1 - self.experiment.getDetector().calc_mask().T
+            #imtest(marginmask)
 
             x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-            imtest(padmask)
-            imtest(symimg * padmask * (1 - marginmask))
+            # imtest(padmask)
+            #imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
         elif ismirrorsymmetry:
             centery = self.experiment.getvalue('Center Y')
             symimg = np.fliplr(img.copy())
-            imtest(symimg)
+            #imtest(symimg)
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(yshift), axis=1)
-            imtest(symimg)
-            marginmask = 1 - detectors.ALL_DETECTORS[self.experiment.getvalue('Detector')]().calc_mask().T
-            imtest(marginmask)
+            #imtest(symimg)
+            marginmask = 1 - self.experiment.getDetector().calc_mask().T
+            #imtest(marginmask)
 
             x, y = np.indices(img.shape)
             padmask = ((yshift < y) & (y < (yshift + img.shape[1])))
-            imtest(padmask)
-            imtest(symimg * padmask * (1 - marginmask))
+            # imtest(padmask)
+            #imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
+
+        mask = self.experiment.mask
 
         if iscake:
             img, x, y = pipeline.integration.cake(img, self.experiment)
+            mask, _, _ = pipeline.integration.cake(mask, self.experiment)
+            mask = (mask > 0) * 255
+
         elif isremesh:
-            img = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
+            img, _, _ = pipeline.remesh.remesh(np.rot90(img, 1).copy(), self.path, self.experiment.getGeometry())
+            mask, _, _ = pipeline.remesh.remesh(np.rot90(mask, 1).copy(), self.path, self.experiment.getGeometry())
 
         if ismaskshown:
-            self.maskimage.setImage(np.dstack((
-                self.experiment.mask, np.zeros_like(self.experiment.mask), np.zeros_like(self.experiment.mask),
-                self.experiment.mask)), opacity=.25)
+            self.maskimage.setImage(np.dstack((mask, np.zeros_like(mask), np.zeros_like(mask), mask)), opacity=.25)
         else:
             self.maskimage.clear()
 
@@ -351,7 +362,7 @@ class imageTab(QtGui.QWidget):
         """
         toggles the line cut
         """
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
+        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
             self.region = pg.LineSegmentROI(
                 [[self.experiment.getvalue('Center X'), self.experiment.getvalue('Center Y')],
                  [self.experiment.getvalue('Center X'), self.imgdata.shape[0]]])
@@ -364,7 +375,7 @@ class imageTab(QtGui.QWidget):
             self.replot()
 
     def verticalcut(self):
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+        if self.parentwindow.ui.difftoolbar.actionVertical_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
             except AttributeError:
@@ -383,7 +394,7 @@ class imageTab(QtGui.QWidget):
         self.replot()
 
     def horizontalcut(self):
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+        if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
             except AttributeError:
@@ -433,39 +444,19 @@ class imageTab(QtGui.QWidget):
 
         self.findcenter()
 
-        # x, y = np.indices(self.imgdata.shape)
-        #r = np.sqrt((x - self.experiment.getvalue('Center X')) ** 2 + (y - self.experiment.getvalue('Center Y')) ** 2)
-        #r = r.astype(np.int)
-        #tbin = np.bincount(r.ravel(), self.imgdata.ravel())
-        #nr = np.bincount(r.ravel(), self.experiment.mask.ravel())
-        #with np.errstate(divide='ignore', invalid='ignore'):
-        #    radialprofile = tbin / nr
-
         _, radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                 mask=self.experiment.mask)
 
-        # Find peak positions, they represent the radii
-        # peaks = scipy.signal.find_peaks_cwt(np.nan_to_num(np.log(radialprofile + 3)), np.arange(1, 100))
-        # np.set_printoptions(threshold=np.nan)
-        # print('size', radialprofile.shape[0])
-        print radialprofile
+
         peaks = np.array(pipeline.peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
-        # peaks = np.array(peakfindingrem.findpeaks(np.arange(radialprofile.shape[0]), radialprofile)).T
-        #print('after',PeakFinding.findpeaks(np.arange(radialprofile.__len__()),radialprofile)[0].shape)
 
         peaks = peaks[peaks[:, 1].argsort()[::-1]]
-
-        #print peaks
 
         for peak in peaks:
             if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
                 bestpeak = peak[0]
                 print peak
                 break
-
-
-        # Get the tallest peak
-        #bestpeak = peaks[radialprofile[peaks].argmax()]
 
         # Calculate sample to detector distance for lowest q peak
         tth = 2 * np.arcsin(0.5 * self.experiment.getvalue('Wavelength') / 58.367e-10)
@@ -479,7 +470,6 @@ class imageTab(QtGui.QWidget):
         self.experiment.iscalibrated = True
 
         self.replot()
-        # self.maskoverlay()
 
     def refinecenter(self):
         cen = pipeline.center_approx.refinecenter(self.imgdata, self.experiment)
@@ -497,25 +487,22 @@ class imageTab(QtGui.QWidget):
     def replotprimary(self):
         cut = None
 
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionMultiPlot').isChecked():
+        if self.parentwindow.difftoolbar.actionMultiPlot.isChecked():
             for tabtracker in self.parentwindow.ui.findChildren(imageTabTracker):
                 if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
                     tabtracker.replotassecondary()
 
-        if self.parentwindow.ui.findChild(QtGui.QAction, 'actionLine_Cut').isChecked():
-            # regionbounds=self.region.getRegion()
-            #cut = np.zeros_like(self.imgdata)
-            #cut[regionbounds[0]:regionbounds[1],:]=1
+        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
+
             cut = self.region.getArrayRegion(self.imgdata, self.imageitem)
 
-            #self.q=pixel2q(np.arange(-self.imgdata.shape[0]/2,self.imgdata.shape[0]/2,1))
             x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
                             self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
                             cut.__len__())
             y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
                             self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
                             cut.__len__())
-            #self.viewbox.mapToItem(self.imageitem,self.viewbox.mapToScene(self.region.getSceneHandlePositions(0)[1]))
+
             q = pixel2q(x, y, self.experiment)
             qmiddle = q.argmin()
             leftq = -q[0:qmiddle]
@@ -527,11 +514,11 @@ class imageTab(QtGui.QWidget):
 
 
         else:
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').isChecked():
+            if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[:, regionbounds[0]:regionbounds[1]] = 1
-            if self.parentwindow.ui.findChild(QtGui.QAction, 'actionVertical_Cut').isChecked():
+            if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
                 regionbounds = self.region.getRegion()
                 cut = np.zeros_like(self.imgdata)
                 cut[regionbounds[0]:regionbounds[1], :] = 1
@@ -541,21 +528,10 @@ class imageTab(QtGui.QWidget):
             self.q, self.radialprofile = pipeline.integration.radialintegrate(self.imgdata, self.experiment,
                                                                           mask=self.experiment.mask, cut=cut)
             self.cache1Dintegration.emit(self.q, self.radialprofile)
-            ##############################################################################
-            # Remi's peak finding
-            # self.q / 10.0 is x
-            # self.radialprofile is y
-            # Find the peaks, and then plot them
 
             self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
                                                                 self.parentwindow.integration)
-            # self.peaktooltip = peakfindingrem.peaktooltip(self.q, self.radialprofile, self.parentwindow.integration)
 
-            # q, I, width, index = PeakFinding.findpeaks(self.q, self.radialprofile)
-
-            #self.parentwindow.integration.plot(q, I, pen=None, symbol='o')
-
-            ##############################################################################
             # Replot
             self.parentwindow.integration.plot(self.q, self.radialprofile)
 
@@ -626,16 +602,19 @@ class imageTab(QtGui.QWidget):
 
 
     def finddetector(self):
-        for name, detector in detectors.ALL_DETECTORS.iteritems():
-            if hasattr(detector, 'MAX_SHAPE'):
-                if detector.MAX_SHAPE == self.imgdata.shape[::-1]:
-                    detector = detector()
-                    mask = detector.calc_mask()
-                    self.experiment.addtomask(np.rot90(mask))
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', name)
-                    return detector
+        # detector, mask = pipeline.loader.finddetector(self.imgdata)
+        if self.path is not None:
+            name, mask, detector = pipeline.loader.finddetectorbyfilename(self.path)
+        else:
+            name, mask, detector = pipeline.loader.finddetector(self.imgdata)
+        if detector is not None:
+            # name = detector.get_name()
+            if mask is not None:
+                self.experiment.addtomask(np.rot90(mask))
+            self.experiment.setvalue('Pixel Size X', detector.pixel1)
+            self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+            self.experiment.setvalue('Detector', name)
+        return detector
 
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.imageitem.image))
@@ -647,33 +626,32 @@ class imageTab(QtGui.QWidget):
 
 
 class previewwidget(pg.GraphicsLayoutWidget):
+    """
+    top-left preview
+    """
     def __init__(self, model):
         super(previewwidget, self).__init__()
         self.model = model
-        # self.setLayout(QHBoxLayout())
-        #self.layout().setContentsMargins(0, 0, 0, 0)
         self.view = self.addViewBox(lockAspect=True)
 
         self.imageitem = pg.ImageItem()
         self.view.addItem(self.imageitem)
         self.imgdata = None
-        # self.setMaximumHeight(100)
-        # self.addItem(self.imageitem)
 
     def loaditem(self, index):
         path = self.model.filePath(index)
-        self.imgdata, paras = pipeline.loader.loadpath(path)
-        self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
-                                autoLevels=True)
+        if os.path.isfile(path):
+            self.imgdata = pipeline.loader.loadimage(path)
+            self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                    autoLevels=True)
 
 
-def imtest(image):
-    if False:
-        image = image * 255 / image.max()
-        cv2.imshow('step?', cv2.resize(image.astype(np.uint8), (0, 0), fx=.2, fy=.2))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
+# def imtest(image):
+# if False:
+# image = image * 255 / image.max()
+#         cv2.imshow('step?', cv2.resize(image.astype(np.uint8), (0, 0), fx=.2, fy=.2))
+#         cv2.waitKey(0)
+#         cv2.destroyAllWindows()
 
 def pixel2q(x, y, experiment):
     # SWITCH TO PYFAI GEOMETRY
@@ -686,6 +664,5 @@ def pixel2q(x, y, experiment):
     r = np.sqrt((x - experiment.getvalue('Center X')) ** 2 + (y - experiment.getvalue('Center Y')) ** 2)
     theta = np.arctan2(r * experiment.getvalue('Pixel Size X'),
                        experiment.getvalue('Detector Distance'))
-    # theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
     wavelength = experiment.getvalue('Wavelength')
     return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10

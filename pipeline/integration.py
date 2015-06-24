@@ -1,6 +1,6 @@
 import numpy as np
-import pymodelfit
-import matplotlib.pyplot as plt
+
+
 
 
 def radialintegrate(imgdata, experiment, mask=None, cut=None):
@@ -36,7 +36,7 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
-    nr = np.bincount(r.ravel(), (invmask).ravel())
+    nr = np.bincount(r.ravel(), invmask.ravel())
     with np.errstate(divide='ignore', invalid='ignore'):
         radialprofile = tbin / nr
 
@@ -86,7 +86,10 @@ def pixel_2Dintegrate(imgdata, cen, mask=None):
     return radialprofile
 
 
-def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
+def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
+    """
+    Integration over r for a chi range. Output is 30*
+    """
     if mask is None:
         print("No mask defined, creating temporary empty mask..")
         mask = np.zeros_like(imgdata)
@@ -98,35 +101,32 @@ def chi_2Dintegrate(imgdata, cen, mu, delta, mask=None):
     r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
     r = r.astype(np.int)
 
+    delta = 3
+
     rinf = mu - delta / 2.
     rsup = mu + delta / 2.
 
-    rmask = ((rinf[1] < r) & (r < rsup[1]) & (x < cen[0])).astype(np.int)
+    rmask = ((rinf < r) & (r < rsup) & (x < cen[0])).astype(np.int)
     data *= rmask
 
-    chi = 100. * np.arctan((y - cen[1]) / (x - cen[0]))
-    chi = 100. * np.pi / 2. + chi
+    chi = chires * np.arctan((y - cen[1]) / (x - cen[0]))
+    chi += chires * np.pi / 2.
     chi = np.round(chi).astype(np.int)
-    chi = chi * (chi > 0)
+    chi *= (chi > 0)
 
     tbin = np.bincount(chi.ravel(), data.ravel())
-    nr = np.bincount(chi.ravel(), (rmask).ravel())
+    nr = np.bincount(chi.ravel(), rmask.ravel())
     angleprofile = tbin / nr
 
-    vimodel = pymodelfit.builtins.GaussianModel()
-    vimodel.mu = np.pi / 2 * 100
-    vimodel.A = np.nanmax(angleprofile)
-    vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
-    vimodel.plot(lower=0, upper=np.pi * 100)
-
-    print(vimodel.A)
-    print vimodel.mu
-    print vimodel.FWHM
-
-    plt.plot(angleprofile)
-    plt.show()
-
+    # vimodel = pymodelfit.builtins.GaussianModel()
+    # vimodel.mu = np.pi / 2 * 100
+    # vimodel.A = np.nanmax(angleprofile)
+    # vimodel.fitData(x=np.arange(np.size(angleprofile)), y=angleprofile, weights=angleprofile)
+    # vimodel.plot(lower=0, upper=np.pi * 100)
+    # print ('len:',len(angleprofile))
     return angleprofile
+
+
 
 
 def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
@@ -148,8 +148,10 @@ def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
 
 
 def cake(imgdata, experiment, mask=None):
+    if mask is None:
+        mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
     xres = 1000
     yres = 1000
-    return AI.integrate2d(imgdata.T, xres, yres, mask=np.zeros(experiment.getDetector().MAX_SHAPE))
+    return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
