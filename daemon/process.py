@@ -1,7 +1,6 @@
 
 import pipeline
 
-from nexpy.api import nexus
 import numpy as np
 import os
 from PIL import Image
@@ -31,7 +30,7 @@ def process(parent, files, experiment,
             # logimg = np.log(img * (img > 0) + 1)
             thumb = None
             if options['cachethumbnail']:
-                thumb = thumbnail(img)
+                thumb = pipeline.writer.thumbnail(img)
 
             if options['remesh']:
                 img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
@@ -52,7 +51,7 @@ def process(parent, files, experiment,
             if not options['savefullres']:
                 img = None
 
-            outputnexus(img, thumb, path2nexus(path), path, variation)
+            pipeline.writer.writenexus(img, thumb, path2nexus(path), path, variation)
 
 
 def similarframe(path, N):
@@ -74,27 +73,5 @@ def path2nexus(path):
     """
     return os.path.splitext(path)[0] + '.nxs'
 
-def thumbnail(img):
-    """
-    Generate a thumbnail from an image
-    """
-    im = Image.fromarray((img / np.max(img) * 255.).astype(np.uint8), 'L')
-    im.thumbnail((128, 128))
-    im = np.log(im * (np.asarray(im) > 0) + 1)
-    return im
 
 
-def outputnexus(img, thumb, path, rawpath=None, variation=None):
-    """
-    Output all results to a nexus files
-    """
-
-    # x, y = np.meshgrid(*(img.shape))
-    neximg = nexus.NXdata(img)
-    neximg.rawfile = rawpath
-    neximg.thumbnail = thumb
-    neximg.variation = variation
-    nexroot = nexus.NXroot(neximg)
-    #print nexroot.tree
-    nexroot.save(path)
-    return nexroot

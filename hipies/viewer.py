@@ -45,7 +45,10 @@ class imageTabTracker(QtGui.QWidget):
         load this tab; rebuild the viewer
         """
         if not self.isloaded:
-            if self.operation is None:
+            if self.operation is None and len(self.paths) == 1:
+                paras = pipeline.loader.loadparas(self.paths[0])
+
+
 
                 try:
                     imgdata, paras = pipeline.loader.loadpath(self.paths[0])
@@ -53,7 +56,7 @@ class imageTabTracker(QtGui.QWidget):
                         if 'Beamline Energy' in paras:
                             self.experiment.setvalue('Energy', paras['Beamline Energy'])
                 except IOError:
-                    print('File moved, corrupted, or deleted. Load failed')
+                    print('File moved, corrupted, or deleted. Load failed (ﾉಥ益ಥ）ﾉ﻿ ┻━┻')
 
                     return None
                 self.parent.ui.findChild(QtGui.QLabel, 'filenamelabel').setText(self.paths[0])

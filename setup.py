@@ -22,17 +22,17 @@ OPTIONS = {'argv_emulation': True,
            'iconfile': 'gui/icon.icns',
            'plist': {
                 'CFBundleName': 'HiPIES',
-                'CFBundleShortVersionString':'0.1.0', # must be in X.X.X format
-                'CFBundleVersion': '0.1.0',
+                'CFBundleShortVersionString': '0.6',  # must be in X.X.X format
+                'CFBundleVersion': '0.6',
                 'CFBundleIdentifier':'com.lbnl.hipies', #optional
                 'NSHumanReadableCopyright': '@ 2015', #optional
                 'CFBundleDevelopmentRegion': 'English', #optional - English is default
                 },
             'includes' : [
                 'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
-                           'PySide.QtXml'
+                'PySide.QtXml', 'PIL'
                          ],
-                'packages' : [ 'pipeline', 'daemon', 'hipies' ]
+           'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
             }
 
 EXT = Extension(name = 'pipeline.cWarpImage',
@@ -45,9 +45,8 @@ setup(
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-    include_dirs=[np.get_include()],
-    ext_modules=[EXT]
+    setup_requires=['py2app']
+    # include_dirs=[np.get_include()]
+    #ext_modules=[EXT]
 
 )
-

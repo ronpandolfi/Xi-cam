@@ -9,6 +9,7 @@ import glob
 import re
 import time
 import scipy.ndimage
+import writer
 
 acceptableexts = '.fits .edf .tif .nxs .tif'
 
@@ -42,38 +43,6 @@ def loadimage(path):
         print('IO Error loading: ' + path)
 
     return data
-
-
-def loadparas(path):
-    """
-    :type path : str
-    :param path:
-    :return:
-    """
-    paras = None
-    try:
-        if os.path.splitext(path)[1] in acceptableexts:
-            if os.path.splitext(path)[1] == '.gb':
-                raise NotImplementedError('This format is not yet supported.')
-            elif os.path.splitext(path)[1] == '.fits':
-
-                paras = loadparas(path)
-                return paras
-            elif os.path.splitext(path)[1] == '.nxs':
-                nxroot = nx.load(path)
-                # print nxroot.tree
-                return nxroot
-
-                # print('here',data)
-
-            else:
-
-                paras = loadparas(path)
-                return paras
-    except IOError:
-        print('IO Error loading: ' + path)
-
-    return paras
 
 
 def readenergy(path):
@@ -121,12 +90,13 @@ def readvariation(path):
 
 def loadparas(path):
     try:
-        if os.path.splitext(path)[1] == '.fits':
+        extension = os.path.splitext(path)[1]
+        if extension == '.fits':
             head = pyfits.open(path)
-            print head[0].header
+            # print head[0].header
             return head[0].header
-        elif os.path.splitext(path)[1] == '.edf':
 
+        elif extension == '.edf':
             txtpath = os.path.splitext(path)[0] + '.txt'
             if os.path.isfile(txtpath):
                 return scanparas(txtpath)
@@ -140,6 +110,15 @@ def loadparas(path):
                     return scanparas(txtpath)
                 else:
                     return None
+
+        elif extension == '.gb':
+            raise NotImplementedError('This format is not yet supported.')
+
+        elif extension == '.nxs':
+            nxroot = nx.load(path)
+            # print nxroot.tree
+            return nxroot
+
     except IOError:
         print('Unexpected read error in loadparas')
     except IndexError:
@@ -248,14 +227,7 @@ def loadthumbnail(path):
         img = loadimage(path)
 
     if img is not None:
-        img = np.log(img * (img > 0) + 1.)
-        img *= 255 / np.max(np.asarray(img))
-
-        desiredsize = np.array([160., 160.])
-
-        zoomfactor = np.max(desiredsize / np.array(img.shape))
-        img = scipy.ndimage.zoom(img, zoomfactor, order=1)
-        img = img.astype(np.uint8)
+        img = writer.thumbnail(img)
     return img
 
 
@@ -309,5 +281,131 @@ def loadpath(path):
 # Ima.show()
 
 
+import integration, remesh
+from fabio import file_series
 
 
+class diffimage():
+    def __init__(self, filepath=None, data=None, detector=None, experiment=None):
+        """
+        Image class for diffraction images that caches and validates cache
+        :param filepath: str
+        :param data: numpy.multiarray.ndarray
+        :param detector: pyFAI.detectors.Detector
+        :param experiment: hipies.config.experiment
+        """
+        if data is not None:
+            self.data = data
+        elif filepath is not None:
+            self.data = loadpath(filepath)
+
+        self.filepath = filepath
+        self._detector = detector
+        self._params = None
+        self.experiment = experiment
+
+
+        ### All object I want to save that depend on config parameters must be cached in here instead!!!!
+        self.cache = dict()
+        self.cachecheck = None
+
+    def checkcache(self):
+        pass
+        # compare experiment with cachecheck
+
+    def invalidatecache(self):
+        self.cache = dict()
+
+    @property
+    def params(self):
+        if self._params is None:
+            self._params = loadparas(self.paths[0])
+        return self._params
+
+    @property
+    def detector(self):
+        if self.detector is None:
+            if self.filepath is not None:
+                name, mask, detector = finddetectorbyfilename(self.filepath)
+            elif self.data is not None:
+                name, mask, detector = finddetector(self.data)
+            else:
+                return None
+
+            self.detectorname = name
+            self.mask = mask
+            self._detector = detector
+        return self._detector
+
+    @detector.setter
+    def detector(self, value):
+        if type(value) == str:
+            try:
+                self._detector = detectors.ALL_DETECTORS[value]
+            except KeyError:
+                try:
+                    self._detector = getattr(detectors, value)
+                except AttributeError:
+                    raise KeyError('Detector not found in pyFAI registry: ' + value)
+                    return None
+        else:
+            self._detector = value
+
+    @property
+    def params(self):
+        if self._params is None:
+            self._params = loadparas(self.filepath)
+        return self._params
+
+    @property
+    def thumb(self):
+        if self._thumb is None:
+            self._thumb = writer.thumbnail(self.data)
+        return self._thumb
+
+    def iscached(self, key):
+        return hasattr(self.cache, key)
+
+    @property
+    def cake(self):
+        if not self.iscached('cake'):
+            cake, x, y = integration.cake(self.data, self.experiment)
+            cakemask, _, _ = integration.cake(self.mask, self.experiment)
+            cakemask = (cakemask > 0) * 255
+
+            self.cache['cake'] = cake
+            self.cache['cakemask'] = cakemask
+            self.cache['cakeqx'] = x
+            self.cache['cakeqy'] = y
+
+        return self.cache['cake'], self.cache['cakemask']
+
+    @property
+    def remesh(self):
+        if not self.iscached('remesh'):
+            remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
+                                             self.experiment.getGeometry())
+            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask, 1).copy(), self.filepath,
+                                             self.experiment.getGeometry())
+
+            self.cache['remesh'] = remeshdata
+            self.cache['remeshmask'] = remeshmask
+            self.cache['remeshqx'] = x
+            self.cache['remeshqy'] = y
+
+        return self.cache['remesh'], self.cache['remeshmask']
+
+    def __del__(self):
+        self.writenexus()
+
+    def writenexus(self):
+        nxpath = os.path.splitext(self.filepath)[0] + '.nxs'
+        writer.writenexus(self.data, self.thumb, nxpath, rawpath=self.filepath)
+
+
+class imageseries(fabio.file_series.file_series):
+    def __init__(self, paths, operation=None):
+        super(imageseries, self).__init__(paths)
+        self.operation = operation
+
+    def currentdiffimage(self):

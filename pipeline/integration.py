@@ -147,11 +147,10 @@ def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
     return q, radialprofile
 
 
-def cake(imgdata, experiment, mask=None):
-    if mask is None:
-        mask = np.zeros_like(imgdata)
+def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
+    # if mask is None:
+    # mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
-    xres = 1000
-    yres = 1000
+
     return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
