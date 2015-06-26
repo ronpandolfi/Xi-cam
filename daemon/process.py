@@ -37,8 +37,8 @@ def process(parent, files, experiment,
 
             variation = None
             if options['variation']:
-                prevpath = similarframe(path, -1)
-                nextpath = similarframe(path, +1)
+                prevpath = pipeline.pathtools.similarframe(path, -1)
+                nextpath = pipeline.pathtools.similarframe(path, +1)
                 if prevpath is not None and nextpath is not None:
                     # print 'comparing:', prevpath, path, nextpath
                     variation = pipeline.variation.filevariation(1, prevpath, img, nextpath)
@@ -51,27 +51,6 @@ def process(parent, files, experiment,
             if not options['savefullres']:
                 img = None
 
-            pipeline.writer.writenexus(img, thumb, path2nexus(path), path, variation)
-
-
-def similarframe(path, N):
-    """
-    Get the file path N ahead (or behind) the provided path frame.
-    """
-    try:
-        framenum = os.path.splitext(os.path.basename(path).split('_')[-1])[0]
-        prevframenum = int(framenum) + N
-        prevframenum = '{:0>5}'.format(prevframenum)
-        return string.replace(path, framenum, prevframenum)
-    except ValueError:
-        print('No earlier frame found for ' + path)
-        return None
-
-def path2nexus(path):
-    """
-    Get the path to corresponding nexus file
-    """
-    return os.path.splitext(path)[0] + '.nxs'
-
+            pipeline.writer.writenexus(img, thumb, pipeline.pathtools.path2nexus(path), path, variation)
 
 

@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import fabio
 import numpy
 import pyfits
@@ -10,6 +12,7 @@ import re
 import time
 import scipy.ndimage
 import writer
+import nexpy.api.nexus.tree as tree
 
 acceptableexts = '.fits .edf .tif .nxs .tif'
 
@@ -34,7 +37,7 @@ def loadimage(path):
                     data = nxroot.data.signal
                     return data
                 else:
-                    return loadsingle(str(nxroot.data.rawfile))
+                    return loadimage(str(nxroot.data.rawfile))
 
             else:
                 data = fabio.open(path).data
@@ -73,16 +76,18 @@ def readenergy(path):
     return None
 
 
+
 def readvariation(path):
     for i in range(20):
         try:
             nxroot = nx.load(path)
             print 'Attempt', i + 1, 'to read', path, 'succeded; continuing...'
-            return int(nxroot.data.variation)
+            return dict([[int(index), int(value)] for index, value in nxroot.data.variation])
         except IOError:
             print 'Could not load', path, ', trying again in 0.2 s'
             time.sleep(0.2)
-            nxroot = nx.load(path)
+        except nx.NeXusError:
+            print 'No variation saved in file ' + path
 
     return None
 
@@ -212,7 +217,7 @@ def finddetector(imgdata):
                 detector = detector()
                 mask = detector.calc_mask()
                 return name, mask, detector
-    return None, None
+    return None, None, None
 
 def finddetectorbyfilename(path):
     imgdata = loadsingle(path)[0].T
@@ -281,7 +286,7 @@ def loadpath(path):
 # Ima.show()
 
 
-import integration, remesh
+import integration, remesh, center_approx, variation, pathtools
 from fabio import file_series
 
 
@@ -294,20 +299,38 @@ class diffimage():
         :param detector: pyFAI.detectors.Detector
         :param experiment: hipies.config.experiment
         """
-        if data is not None:
-            self.data = data
-        elif filepath is not None:
-            self.data = loadpath(filepath)
+
+        self._data = data
 
         self.filepath = filepath
         self._detector = detector
         self._params = None
+        self._thumb = None
+        self._variation = dict()
         self.experiment = experiment
+
+
 
 
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()
         self.cachecheck = None
+
+
+    def updateexperiment(self):
+        # Force cache the detector
+        _ = self.detector
+
+        # Set experiment energy
+        if 'Beamline Energy' in self.params:
+            self.experiment.setvalue('Energy', self.params['Beamline Energy'])
+
+
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
     def checkcache(self):
         pass
@@ -315,6 +338,28 @@ class diffimage():
 
     def invalidatecache(self):
         self.cache = dict()
+
+    def cachedata(self):
+        if self._data is None:
+            if self.filepath is not None:
+                try:
+                    self._data = loadimage(self.filepath)
+                except IOError:
+                    raise IOError('File moved, corrupted, or deleted. Load failed (ﾉಥ益ಥ）ﾉ﻿ ┻━┻')
+
+    @property
+    def dataunrot(self):
+        self.cachedata()
+        return self._data
+
+    @property
+    def data(self):
+        self.cachedata()
+        return np.rot90(self._data, 3)
+
+    @data.setter
+    def data(self, data):
+        self._data = data
 
     @property
     def params(self):
@@ -324,7 +369,7 @@ class diffimage():
 
     @property
     def detector(self):
-        if self.detector is None:
+        if self._detector is None:
             if self.filepath is not None:
                 name, mask, detector = finddetectorbyfilename(self.filepath)
             elif self.data is not None:
@@ -335,6 +380,12 @@ class diffimage():
             self.detectorname = name
             self.mask = mask
             self._detector = detector
+            if detector is not None:
+                if mask is not None:
+                    self.experiment.addtomask(np.rot90(mask, 3))
+                self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                self.experiment.setvalue('Detector', name)
         return self._detector
 
     @detector.setter
@@ -347,7 +398,6 @@ class diffimage():
                     self._detector = getattr(detectors, value)
                 except AttributeError:
                     raise KeyError('Detector not found in pyFAI registry: ' + value)
-                    return None
         else:
             self._detector = value
 
@@ -364,7 +414,7 @@ class diffimage():
         return self._thumb
 
     def iscached(self, key):
-        return hasattr(self.cache, key)
+        return key in self.cache
 
     @property
     def cake(self):
@@ -378,7 +428,7 @@ class diffimage():
             self.cache['cakeqx'] = x
             self.cache['cakeqy'] = y
 
-        return self.cache['cake'], self.cache['cakemask']
+        return self.cache['cake']
 
     @property
     def remesh(self):
@@ -393,19 +443,97 @@ class diffimage():
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
-        return self.cache['remesh'], self.cache['remeshmask']
+        return self.cache['remesh']
 
     def __del__(self):
-        self.writenexus()
+        # TODO: do more here!
+        if self._data is not None:
+            self.writenexus()
 
     def writenexus(self):
         nxpath = os.path.splitext(self.filepath)[0] + '.nxs'
-        writer.writenexus(self.data, self.thumb, nxpath, rawpath=self.filepath)
+        writer.writenexus(self._data, self.thumb, nxpath, rawpath=self.filepath, variation=self._variation)
+
+    def findcenter(self):
+        # Auto find the beam center
+        [x, y] = center_approx.center_approx(self.data)
+
+        # Set the center in the experiment
+        self.experiment.setvalue('Center X', x)
+        self.experiment.setvalue('Center Y', y)
+
+    def variation(self, operationindex):
+        if not operationindex in self._variation:
+            nxpath = pathtools.path2nexus(self.filepath)
+            if os.path.exists(nxpath):
+                v = readvariation(nxpath)
+                if operationindex in v:
+                    self._variation[operationindex] = v[operationindex]
+                    print 'successful variation load!'
+                else:
+                    prv = pathtools.similarframe(self.filepath, -1)
+                    nxt = pathtools.similarframe(self.filepath, +1)
+                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+            else:
+                prv = pathtools.similarframe(self.filepath, -1)
+                nxt = pathtools.similarframe(self.filepath, +1)
+                self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+        return self._variation[operationindex]
 
 
-class imageseries(fabio.file_series.file_series):
-    def __init__(self, paths, operation=None):
-        super(imageseries, self).__init__(paths)
-        self.operation = operation
+class imageseries():
+    def __init__(self, paths, experiment):
+        self.paths = dict()
+        self.variation = dict()
+        self.appendimages(paths)
+        self.experiment = experiment
+
+    def __len__(self):
+        return len(self.paths)
+
+    def first(self):
+        if len(self.paths) > 0:
+            firstpath = sorted(list(self.paths.values()))[0]
+            print firstpath
+            return diffimage(filepath=firstpath, experiment=self.experiment)
+        else:
+            return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
+
+    def getDiffImage(self, key):
+        return diffimage(filepath=self.paths[key], experiment=self.experiment)
+
+    def appendimages(self, paths):
+        for path in paths:
+            frame = self.path2frame(path)
+            if frame is None:
+                continue
+
+            self.variation[frame] = None
+            self.paths[frame] = path
 
     def currentdiffimage(self):
+        pass
+
+    def scan(self, operationindex):
+        if len(self.paths) < 3:
+            return None
+
+        self.variation = dict()
+
+        # get the first frame's profile
+        prev = loadimage(self.paths[0])
+        curr = loadimage(self.paths[1])
+        for i in range(self.paths.__len__() - 2):
+            variationy = self.getDiffImage(i + 1).variation(operationindex)
+
+            variationx = self.path2frame(self.paths[i + 1])
+            self.variation[variationx] = variationy
+
+
+    @staticmethod
+    def path2frame(path):
+        try:
+            return int(os.path.splitext(os.path.basename(path).split('_')[-1])[0])
+        except ValueError:
+            print 'Path has no frame number:', path
+        return None

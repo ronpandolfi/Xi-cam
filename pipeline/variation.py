@@ -17,7 +17,7 @@ def normabsdiff(p, c, n):
 
 
 def sumintensity(p, c, n):
-    return np.sub(c)
+    return np.sum(c)
 
 
 def normabsdiffderiv(p, c, n):

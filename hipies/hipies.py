@@ -633,10 +633,11 @@ class MyMainWindow():
 
     def updateexperiment(self):
         self.experiment.save()
-        if self.currentImageTab().tab is not None:
-            self.currentImageTab().tab.redrawimage()
-            self.currentImageTab().tab.drawcenter()
-            self.currentImageTab().tab.replot()
+        if hasattr(self.currentImageTab(), 'tab'):
+            if self.currentImageTab().tab is not None:
+                self.currentImageTab().tab.redrawimage()
+                self.currentImageTab().tab.drawcenter()
+                self.currentImageTab().tab.replot()
 
     def filebrowserpanetoggle(self):
         """

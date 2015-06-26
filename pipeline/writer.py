@@ -1,9 +1,11 @@
 from nexpy.api import nexus
 import numpy as np
 import scipy.ndimage
+import debug
 
 
-def writenexus(img, thumb, path, rawpath=None, variation=None):
+@debug.timeit
+def writenexus(img=None, thumb=None, path=None, rawpath=None, variation=None):
     """
     Output all results to a nexus files
     """
@@ -12,7 +14,7 @@ def writenexus(img, thumb, path, rawpath=None, variation=None):
     neximg = nexus.NXdata(img)
     neximg.rawfile = rawpath
     neximg.thumbnail = thumb
-    neximg.variation = variation
+    neximg.variation = variation.items()
     nexroot = nexus.NXroot(neximg)
     # print nexroot.tree
     nexroot.save(path)

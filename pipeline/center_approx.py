@@ -226,7 +226,7 @@ def center_approx(img, log=False):
     con = signal.fftconvolve(img, img)
     #testimg(con)
 
-    cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2
+    cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.
     #print('Center quality:',log,np.sum(con/con.max()))
     return cen
 
@@ -328,13 +328,13 @@ def gisaxs_center_approx(img, log=False):
 
 #########################################################################################################
 
-def refinecenter(img, experiment):
-    imgcopy = img.T
+def refinecenter(dimg):
+    imgcopy = dimg.data.T
     # Refine calibration
     # d-spacing for Silver Behenate
     d_spacings = np.array([58.367, 29.1835, 19.45567, 14.59175, 11.6734, 9.72783, 8.33814, 7.29587, 6.48522, 5.8367])
 
-    geometry = experiment.getGeometry()
+    geometry = dimg.experiment.getGeometry()
 
     # print 'Start parameter:'
     # print geometry.getFit2D()
