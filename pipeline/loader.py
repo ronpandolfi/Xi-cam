@@ -6,15 +6,16 @@ import pyfits
 import os
 import numpy as np
 from nexpy.api import nexus as nx
-from pipeline import detectors
+import detectors
 import glob
 import re
 import time
 import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
+from hipies import debug
 
-acceptableexts = '.fits .edf .tif .nxs .tif'
+acceptableexts = '.fits .edf .tif .nxs .tif .hdf'
 
 
 def loadsingle(path):
@@ -30,7 +31,7 @@ def loadimage(path):
             elif os.path.splitext(path)[1] == '.fits':
                 data = pyfits.open(path)[2].data
                 return data
-            elif os.path.splitext(path)[1] == '.nxs':
+            elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
                 # print nxroot.tree
                 if hasattr(nxroot.data, 'signal'):
@@ -56,7 +57,7 @@ def readenergy(path):
                 print head[0].header.keys()
                 paras = scanparaslines(str(head[0].header).split('\r'))
                 print paras
-            elif os.path.splitext(path)[1] == '.nxs':
+            elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 pass
                 # nxroot = nx.load(path)
                 # # print nxroot.tree
@@ -119,7 +120,7 @@ def loadparas(path):
         elif extension == '.gb':
             raise NotImplementedError('This format is not yet supported.')
 
-        elif extension == '.nxs':
+        elif extension in ['.nxs', '.hdf']:
             nxroot = nx.load(path)
             # print nxroot.tree
             return nxroot
@@ -209,6 +210,7 @@ def finddetector(imgdata):
             if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
                 detector = detector()
                 mask = detector.calc_mask()
+                print 'Detector found: ' + name
                 return name, mask, detector
         if hasattr(detector, 'BINNED_PIXEL_SIZE'):
             #print detector.BINNED_PIXEL_SIZE.keys()
@@ -216,7 +218,9 @@ def finddetector(imgdata):
                                        detector.BINNED_PIXEL_SIZE.keys()]:
                 detector = detector()
                 mask = detector.calc_mask()
+                print 'Detector found with binning: ' + name
                 return name, mask, detector
+    raise ValueError('Detector could not be identified!')
     return None, None, None
 
 def finddetectorbyfilename(path):
@@ -224,7 +228,7 @@ def finddetectorbyfilename(path):
     return finddetector(imgdata)
 
 def loadthumbnail(path):
-    nxpath = os.path.splitext(path)[0] + '.nxs'
+    nxpath = pathtools.path2nexus(path)
     if os.path.isfile(nxpath):
         print nx.load(path).tree
         img = np.asarray(nx.load(path).data.thumbnail)
@@ -408,7 +412,7 @@ class diffimage():
         return self._params
 
     @property
-    def thumb(self):
+    def thumbnail(self):
         if self._thumb is None:
             self._thumb = writer.thumbnail(self.data)
         return self._thumb
@@ -450,9 +454,12 @@ class diffimage():
         if self._data is not None:
             self.writenexus()
 
+    @debug.timeit
     def writenexus(self):
-        nxpath = os.path.splitext(self.filepath)[0] + '.nxs'
-        writer.writenexus(self._data, self.thumb, nxpath, rawpath=self.filepath, variation=self._variation)
+        nxpath = pathtools.path2nexus(self.filepath)
+        w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
+                               variation=self._variation)
+        w.run()
 
     def findcenter(self):
         # Auto find the beam center
@@ -467,6 +474,7 @@ class diffimage():
             nxpath = pathtools.path2nexus(self.filepath)
             if os.path.exists(nxpath):
                 v = readvariation(nxpath)
+                print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
                     print 'successful variation load!'

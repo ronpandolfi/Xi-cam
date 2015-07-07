@@ -41,6 +41,7 @@ import numpy as np
 import daemon
 import pipeline
 import toolbar
+import rmc
 
 
 class MyMainWindow():
@@ -139,7 +140,7 @@ class MyMainWindow():
         self.filetree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs"]
+        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
@@ -179,8 +180,8 @@ class MyMainWindow():
         self.timeline.showAxis('bottom', False)
         self.timeline.showAxis('top', True)
         self.timeline.showGrid(x=True)
-        self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
-        self.timeline.addItem(self.timeruler)
+        # self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
+        #self.timeline.addItem(self.timeruler)
         # self.timearrow = pg.ArrowItem(angle=-60, tipAngle=30, baseAngle=20,headLen=10,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.timeline.addItem(self.timearrow)
         self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
@@ -272,9 +273,14 @@ class MyMainWindow():
         #self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
 
         # Connect top menu
-        self.ui.findChild(QtGui.QPushButton, 'librarybutton').clicked.connect(self.showlibrary)
-        self.ui.findChild(QtGui.QPushButton, 'viewerbutton').clicked.connect(self.showviewer)
-        self.ui.findChild(QtGui.QPushButton, 'timelinebutton').clicked.connect(self.showtimeline)
+        self.ui.librarybutton.clicked.connect(self.showlibrary)
+        self.ui.viewerbutton.clicked.connect(self.showviewer)
+        self.ui.timelinebutton.clicked.connect(self.showtimeline)
+
+
+        # PLUG-INS
+        self.rmcpugin = rmc.gui(self.ui)
+
 
         # CONFIG
         # Bind experiment tree to parameter
@@ -671,19 +677,24 @@ class MyMainWindow():
         """
         switch to library view
         """
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(0)
+        self.ui.viewmode.setCurrentIndex(0)
+        self.ui.sidemode.setCurrentIndex(0)
 
     def showviewer(self):
         """
         switch to viewer view
         """
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
+        self.ui.viewmode.setCurrentIndex(1)
+        self.ui.sidemode.setCurrentIndex(0)
 
     def showtimeline(self):
         """
         switch to timeline view
         """
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(2)
+        self.ui.viewmode.setCurrentIndex(2)
+        self.ui.sidemode.setCurrentIndex(0)
+
+
 
     def openwatchfolder(self):
         """

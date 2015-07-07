@@ -276,8 +276,11 @@ class imageTab(QtGui.QWidget):
         self.vLine.setVisible(True)
         self.parentwindow.qLine.setVisible(True)
 
+    def redrawimageLowRes(self):
+        self.redrawimage(forcelow=True)
 
-    def redrawimage(self):
+
+    def redrawimage(self, forcelow=False):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
@@ -287,7 +290,14 @@ class imageTab(QtGui.QWidget):
         ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
         iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
         isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
-        img = self.dimg.data.copy()
+        # img = self.dimg.data.copy()
+        if forcelow:
+            img = self.dimg.thumbnail.copy()
+            scale = 10
+        else:
+            img = self.dimg.data
+            scale = 1
+
         if isradialsymmetry:
             centerx = self.dimg.experiment.getvalue('Center X')
             centery = self.dimg.experiment.getvalue('Center Y')
@@ -346,7 +356,8 @@ class imageTab(QtGui.QWidget):
         if islogintensity:
             img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imageitem.setImage(img)
+        self.imageitem.setImage(img, scale=scale)
+        self.imageitem.setRect(QtCore.QRect(0, 0, 1475, 1679))
         #self.imageitem.setLookupTable(colormap.LUT)
 
     def linecut(self):
@@ -428,6 +439,8 @@ class imageTab(QtGui.QWidget):
     #@debug.timeit
     def calibrate(self):
 
+        # Force cache the detector
+        _ = self.dimg.detector
 
         self.findcenter()
 
@@ -449,6 +462,8 @@ class imageTab(QtGui.QWidget):
         tantth = np.tan(tth)
         sdd = bestpeak * self.dimg.experiment.getvalue('Pixel Size X') / tantth
 
+        print 'Best AgB peak gives sdd: ' + str(sdd)
+
         self.dimg.experiment.setvalue('Detector Distance', sdd)
 
         self.refinecenter()
@@ -459,6 +474,9 @@ class imageTab(QtGui.QWidget):
 
     @debug.timeit
     def refinecenter(self):
+        # Force cache the detector
+        #_=self.dimg.detector
+
         cen = pipeline.center_approx.refinecenter(self.dimg)
         self.dimg.experiment.setcenter(cen)
         self.drawcenter()

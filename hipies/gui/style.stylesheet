@@ -96,8 +96,6 @@ QToolButton
 
 QPushButton {
     padding:6px;
-    padding-left:30px;
-    padding-right:30px;
 }
 
 QTabWidget {
@@ -108,10 +106,3 @@ QMenu {
     icon-size:32px 32px;
 
 }
-/*
-QMenu::item {
-    width:32px;
-    height:32px;
-    padding:0px;
-
-}*/

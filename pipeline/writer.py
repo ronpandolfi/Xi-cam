@@ -1,25 +1,46 @@
-from nexpy.api import nexus
+import nexpy.api.nexus as nx
 import numpy as np
 import scipy.ndimage
-import debug
+from PySide import QtCore
+from hipies import debug
+import multiprocessing
+import time
+import os
 
 
-@debug.timeit
-def writenexus(img=None, thumb=None, path=None, rawpath=None, variation=None):
-    """
-    Output all results to a nexus files
-    """
+class nexusmerger(QtCore.QThread):
+    def __init__(self, *args, **kwargs):
+        super(nexusmerger, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
 
-    # x, y = np.meshgrid(*(img.shape))
-    neximg = nexus.NXdata(img)
-    neximg.rawfile = rawpath
-    neximg.thumbnail = thumb
-    neximg.variation = variation.items()
-    nexroot = nexus.NXroot(neximg)
-    # print nexroot.tree
+    def run(self):
+        p = multiprocessing.Process(target=mergenexus, kwargs=self.kwargs)
+        self.job = p
+        p.start()
+
+
+def mergenexus(**kwargs):
+    path = kwargs['path']
+
+    if os.path.isfile(path):
+        nxroot = nx.load(path, mode='rw')
+    else:
+        nxroot = nx.NXroot(nx.NXdata(kwargs['img']))
+
+    if not hasattr(nxroot.data, 'rawfile'):
+        nxroot.data.rawfile = kwargs['rawpath']
+    if not hasattr(nxroot.data, 'thumb'):
+        nxroot.data.thumbnail = kwargs['thumb']
+    # TODO: merge variation
+    if not hasattr(nxroot.data, 'variation'):
+        nxroot.data.variation = kwargs['variation'].items()
+
+    writenexus(nxroot, kwargs['path'])
+
+
+def writenexus(nexroot, path):
     nexroot.save(path)
-    return nexroot
-
 
 def thumbnail(img, size=160.):
     """
@@ -32,6 +53,10 @@ def thumbnail(img, size=160.):
     desiredsize = np.array([size, size])
 
     zoomfactor = np.max(desiredsize / np.array(img.shape))
-    img = scipy.ndimage.zoom(img, zoomfactor, order=1)
+
+    # OVERRIDE!
+    zoomfactor = 0.1
+
+    img = scipy.ndimage.zoom(img, zoomfactor, order=2) / 100
     img = img.astype(np.uint8)
     return img

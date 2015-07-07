@@ -28,9 +28,11 @@ operations = [chisquared, absdiff, normabsdiff, sumintensity, normabsdiffderiv]
 
 
 def filevariation(operationindex, filea, c, filec):
-    p, _ = loader.loadpath(filea)
+    p = loader.loadimage(filea)
     # c, _ = loader.loadpath(fileb)
-    n, _ = loader.loadpath(filec)
+    n = loader.loadimage(filec)
+    print 'previous frame:' + filea
+    print p
     return variation(operationindex, p, c, n)
 
 

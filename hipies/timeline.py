@@ -1,5 +1,5 @@
 import pyqtgraph as pg
-from PySide import QtGui
+from PySide import QtGui, QtCore
 import viewer
 import numpy as np
 import pipeline
@@ -48,13 +48,14 @@ class timelinetab(viewer.imageTab):
         self.simg = simg
         dimg = simg.first()
 
+
         super(timelinetab, self).__init__(dimg, parentwindow)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         self.parentwindow = parentwindow
         self.setvariationmode(0)
         self.gotomax()
-        self.previousPos = int(round(self.parentwindow.timeruler.value()))
+
 
     def reduce(self):
         pass
@@ -81,10 +82,11 @@ class timelinetab(viewer.imageTab):
         variation = variation[variation[:, 0].argsort()]
         self.parentwindow.timeline.clear()
         self.parentwindow.timeline.enableAutoScale()
-        self.parentwindow.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
-        self.parentwindow.timeline.addItem(self.parentwindow.timeruler)
-        self.parentwindow.timeruler.setBounds([0, max(variation[:, 0])])
-        self.parentwindow.timeruler.sigPositionChanged.connect(self.timerulermoved)
+        self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
+        self.parentwindow.timeline.addItem(self.timeruler)
+        self.timeruler.setBounds([0, max(variation[:, 0])])
+        self.timeruler.sigRedrawFrame.connect(self.redrawframe)
+
         self.parentwindow.timeline.plot(variation[:, 0], variation[:, 1])
         # self.parentwindow.timearrow = pg.ArrowItem(angle=-90, tipAngle=30, baseAngle=20,headLen=15,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
@@ -105,11 +107,44 @@ class timelinetab(viewer.imageTab):
             self.redrawframe()
         self.previousPos = pos
 
-    def redrawframe(self):
-        key = self.parentwindow.timeruler.value() + 1
+    def timerulermouserelease(self, event):
+        if event.button == QtCore.Qt.LeftButton:
+            self.redrawimageFULL()
+
+    def redrawframe(self, forcelow=False):
+        key = self.timeruler.value() + 1
         self.dimg = self.simg.getDiffImage(key)
-        self.redrawimage()
+        self.redrawimage(forcelow=forcelow)
 
     def gotomax(self):
         pass
         #self.parentwindow.timeruler.setValue(np.argmax(self.variationy))
+
+
+class TimeRuler(pg.InfiniteLine):
+    sigRedrawFrame = QtCore.Signal(bool)
+
+    def __init__(self, pen, movable=True):
+        self.previousPos = None
+        super(TimeRuler, self).__init__(pen=pen, movable=movable)
+        self.previousPos = int(round(self.value()))
+        self.sigPositionChangeFinished.connect(self.endDrag)
+
+
+    def setPos(self, pos):
+        if type(pos) is pg.Point:
+            pos = pos.x()
+
+        pos = int(round(pos))
+
+        if pos != self.previousPos:
+            # snap to int
+            self.blockSignals(True)
+            super(TimeRuler, self).setPos(pos)
+            self.blockSignals(False)
+
+            self.sigRedrawFrame.emit(True)
+            self.previousPos = pos
+
+    def endDrag(self):
+        self.sigRedrawFrame.emit(False)

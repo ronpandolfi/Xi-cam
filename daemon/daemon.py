@@ -50,7 +50,7 @@ class daemon(QtCore.QThread):
         distribute new files to cores for processing. Ignores .nxs.
         """
 
-        files = [f for f in files if not os.path.splitext(f)[1] == '.nxs']
+        files = [f for f in files if not os.path.splitext(f)[1] == '.hdf']
         if files:
             print os.path.splitext(path)[1]
 
