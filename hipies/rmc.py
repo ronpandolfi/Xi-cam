@@ -1,5 +1,7 @@
 import os
-from PySide import QtGui
+
+from PySide import QtGui,QtCore
+from pipeline import hig,loader
 
 
 class gui():
@@ -10,6 +12,7 @@ class gui():
 
         self.ui.rmcaddfiles.clicked.connect(self.addfiles)
         self.ui.rmcremovefiles.clicked.connect(self.removefiles)
+        self.ui.rmcExecute.clicked.connect(self.execute)
 
 
     def showrmc(self):
@@ -33,3 +36,25 @@ class gui():
         for index in self.ui.rmcinputpaths.selectedIndexes():
             item = self.ui.rmcinputpaths.takeItem(index)
             item = None
+
+    def execute(self):
+        tiles = self.ui.rmcTiles.value()
+        steps = self.ui.rmcSteps.value()
+        scalefactor = self.ui.rmcScalefactor.value()
+        modlestartsize = self.ui.rmcModlestartsize.value()
+        lodingfactors_1 = self.ui.rmcLoadingfactors_1.value()
+        lodingfactors_2 = self.ui.rmcLoadingfactors_2.value()
+        lodingfactors_3 = self.ui.rmcLoadingfactors_3.value()
+        rip=self.ui.rmcinputpaths
+        inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
+
+        d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
+                                             'imagesize': loader.loadimage(inputpaths[0]).shape,
+                                             'numtiles': tiles,
+                                             'loadingfactors': [lodingfactors_1, lodingfactors_2, lodingfactors_3 ]},
+                         'computation': {'runname': "test",
+                                         'modelstartsize': [modlestartsize, modlestartsize],
+                                         'numstepsfactor': steps,
+                                         'scalefactor': scalefactor}}}
+        h = hig.hig(**d)
+        h.write("test.hig")
