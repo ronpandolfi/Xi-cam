@@ -228,8 +228,13 @@ class MyMainWindow():
         # self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
 
+        # Timeline toolbar
+        self.timelinetoolbar = toolbar.difftoolbar()
+        self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
+                                             self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
+                                             self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent)
+        self.ui.timelinebox.addWidget(self.timelinetoolbar)
 
-        self.ui.timelinebox.addWidget(toolbar.difftoolbar())
 
         # Setup file operation toolbox
         self.booltoolbar = QtGui.QToolBar()
@@ -463,8 +468,12 @@ class MyMainWindow():
         """
         Get the currently shown image tab
         """
-        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
+        if self.ui.viewmode.currentIndex() == 1:
+            tabwidget = self.ui.tabWidget
+        elif self.ui.viewmode.currentIndex() == 2:
+            tabwidget = self.ui.timelinetabwidget
         return tabwidget.widget(tabwidget.currentIndex())
+
 
     def currentTimelineTab(self):
         """

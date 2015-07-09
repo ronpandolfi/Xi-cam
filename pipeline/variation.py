@@ -53,4 +53,4 @@ def variation(operationindex, imga, imgb=None, imgc=None):
             print('Variation could not be determined for a frame.')
     else:
         print('Variation could not be determined for a frame.')
-        return None
+    return 0

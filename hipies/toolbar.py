@@ -162,6 +162,9 @@ class difftoolbar(QtGui.QToolBar):
         self.actionCalibrate_AgB.setIcon(icon25)
         self.actionCalibrate_AgB.setObjectName("actionCalibrate_AgB")
 
+        # icon25 = QtGui.QIcon()
+        #icon25.
+
         menu = QtGui.QMenu()
         # menu.addAction(self.actionShow_Mask)
         menu.addAction(self.actionPolyMask)
@@ -190,9 +193,20 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionRadial_Symmetry)
         self.addAction(self.actionMirror_Symmetry)
 
-
-
-
+    def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
+                        radialsym, mirrorsym):
+        self.actionCalibrate_AgB.triggered.connect(calibrate)
+        self.actionCenterFind.triggered.connect(centerfind)
+        self.actionRefine_Center.triggered.connect(refine)
+        self.actionShow_Mask.triggered.connect(showmask)
+        self.actionCake.triggered.connect(cake)
+        self.actionRemeshing.triggered.connect(remesh)
+        self.actionLine_Cut.triggered.connect(linecut)
+        self.actionVertical_Cut.triggered.connect(vertcut)
+        self.actionHorizontal_Cut.triggered.connect(horzcut)
+        self.actionLog_Intensity.triggered.connect(logint)
+        self.actionRadial_Symmetry.triggered.connect(radialsym)
+        self.actionMirror_Symmetry.triggered.connect(mirrorsym)
 
 
 

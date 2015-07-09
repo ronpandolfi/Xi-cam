@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import time
 
 
@@ -17,3 +18,7 @@ def timeit(method):
         return result
 
     return timed
+
+
+def frustration():
+    print "(ﾉಥ益ಥ）ﾉ﻿ ┻━┻"

@@ -330,11 +330,7 @@ class diffimage():
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
 
 
-    def __getattr__(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            raise AttributeError('diffimage has no attribute: ' + name)
+
 
     def checkcache(self):
         pass
@@ -349,7 +345,9 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    raise IOError('File moved, corrupted, or deleted. Load failed (ﾉಥ益ಥ）ﾉ﻿ ┻━┻')
+                    debug.frustration()
+                    raise IOError('File moved, corrupted, or deleted. Load failed')
+
 
     @property
     def dataunrot(self):
@@ -488,6 +486,12 @@ class diffimage():
                 self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
         return self._variation[operationindex]
 
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
+
 
 class imageseries():
     def __init__(self, paths, experiment):
@@ -529,12 +533,11 @@ class imageseries():
         self.variation = dict()
 
         # get the first frame's profile
-        prev = loadimage(self.paths[0])
-        curr = loadimage(self.paths[1])
-        for i in range(self.paths.__len__() - 2):
-            variationy = self.getDiffImage(i + 1).variation(operationindex)
+        keys = self.paths.keys()
+        for key in keys:
+            variationy = self.getDiffImage(key).variation(operationindex)
 
-            variationx = self.path2frame(self.paths[i + 1])
+            variationx = self.path2frame(self.paths[key])
             self.variation[variationx] = variationy
 
 

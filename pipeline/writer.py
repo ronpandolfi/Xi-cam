@@ -23,10 +23,12 @@ class nexusmerger(QtCore.QThread):
 def mergenexus(**kwargs):
     path = kwargs['path']
 
-    if os.path.isfile(path):
-        nxroot = nx.load(path, mode='rw')
-    else:
+    newfile = not os.path.isfile(path)
+    if newfile:
         nxroot = nx.NXroot(nx.NXdata(kwargs['img']))
+    else:
+        nxroot = nx.load(path, mode='rw')
+
 
     if not hasattr(nxroot.data, 'rawfile'):
         nxroot.data.rawfile = kwargs['rawpath']
@@ -36,7 +38,8 @@ def mergenexus(**kwargs):
     if not hasattr(nxroot.data, 'variation'):
         nxroot.data.variation = kwargs['variation'].items()
 
-    writenexus(nxroot, kwargs['path'])
+    if newfile:
+        writenexus(nxroot, kwargs['path'])
 
 
 def writenexus(nexroot, path):
@@ -47,8 +50,6 @@ def thumbnail(img, size=160.):
     Generate a thumbnail from an image
     """
     size = float(size)
-    img = np.log(img * (img > 0) + 1.)
-    img *= 255 / np.max(np.asarray(img))
 
     desiredsize = np.array([size, size])
 
@@ -57,6 +58,20 @@ def thumbnail(img, size=160.):
     # OVERRIDE!
     zoomfactor = 0.1
 
-    img = scipy.ndimage.zoom(img, zoomfactor, order=2) / 100
-    img = img.astype(np.uint8)
+    # img = scipy.ndimage.zoom(img, zoomfactor, order=2)
+    img = resample(img)
+
     return img
+
+
+avg = np.vectorize(np.average)
+
+
+def resample(img, factor=10):
+    return avg(blockshaped(img, factor))
+
+
+def blockshaped(arr, factor):
+    firstslice = np.array_split(arr, arr.shape[0] // factor)
+    secondslice = map(lambda x: np.array_split(x, arr.shape[1] // factor, axis=1), firstslice)
+    return np.array(secondslice)

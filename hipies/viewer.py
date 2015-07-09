@@ -284,12 +284,22 @@ class imageTab(QtGui.QWidget):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
-        islogintensity = self.parentwindow.difftoolbar.actionLog_Intensity.isChecked()
-        isradialsymmetry = self.parentwindow.difftoolbar.actionRadial_Symmetry.isChecked()
-        ismirrorsymmetry = self.parentwindow.difftoolbar.actionMirror_Symmetry.isChecked()
-        ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
-        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
-        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
+
+        if self.parentwindow.ui.viewmode.currentIndex() == 1:
+            toolbar = self.parentwindow.difftoolbar
+        elif self.parentwindow.ui.viewmode.currentIndex() == 2:
+            toolbar = self.parentwindow.timelinetoolbar
+        else:
+            print "Redraw somehow activated from wrong tab"
+            debug.frustration()
+            toolbar = None
+
+        islogintensity = toolbar.actionLog_Intensity.isChecked()
+        isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
+        ismirrorsymmetry = toolbar.actionMirror_Symmetry.isChecked()
+        ismaskshown = toolbar.actionShow_Mask.isChecked()
+        iscake = toolbar.actionCake.isChecked()
+        isremesh = toolbar.actionRemeshing.isChecked()
         # img = self.dimg.data.copy()
         if forcelow:
             img = self.dimg.thumbnail.copy()

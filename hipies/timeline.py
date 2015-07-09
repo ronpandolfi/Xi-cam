@@ -84,7 +84,7 @@ class timelinetab(viewer.imageTab):
         self.parentwindow.timeline.enableAutoScale()
         self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.parentwindow.timeline.addItem(self.timeruler)
-        self.timeruler.setBounds([0, max(variation[:, 0])])
+        self.timeruler.setBounds([1, max(variation[:, 0])])
         self.timeruler.sigRedrawFrame.connect(self.redrawframe)
 
         self.parentwindow.timeline.plot(variation[:, 0], variation[:, 1])
