@@ -22,8 +22,12 @@ def dict2str(d, depth=0):
             content += u'{0}{1} = {{\n'.format(u'\t' * depth, str(key))
             content += dict2str(d[key], depth + 1)
             content = content[:-1] + u'\n{0}}},\n'.format(u'\t' * depth)
+        elif type(d[key]) is tuple:
+            content += u'{0}{1} = {2},\n'.format(u'\t' * depth, key, '[ ' + ' '.join(map(str, d[key])) + ' ]')
         elif type(d[key]) is list:
             content += u'{0}{1} = {2},\n'.format(u'\t' * depth, key, '[ ' + ' '.join(map(str, d[key])) + ' ]')
+        elif type(d[key]) is unicode:
+            content += u'{0}{1} = "{2}",\n'.format(u'\t' * depth, key, str(d[key]))
         elif type(d[key]) is str:
             content += u'{0}{1} = "{2}",\n'.format(u'\t' * depth, key, str(d[key]))
         else:
@@ -48,7 +52,7 @@ class hig:
         return dict2str(self.__dict__)
 
     def write(self, path):
-        with open(path) as f:
+        with open(path,'w') as f:
             f.write(str(self))
 
 

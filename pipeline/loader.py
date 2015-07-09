@@ -418,8 +418,12 @@ class diffimage():
     def iscached(self, key):
         return key in self.cache
 
+    def cachedetector(self):
+        _=self.detector
+
     @property
     def cake(self):
+        self.cachedetector()
         if not self.iscached('cake'):
             cake, x, y = integration.cake(self.data, self.experiment)
             cakemask, _, _ = integration.cake(self.mask, self.experiment)
