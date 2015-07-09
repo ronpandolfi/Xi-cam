@@ -330,11 +330,6 @@ class diffimage():
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
 
 
-    def __getattr__(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            raise AttributeError('diffimage has no attribute: ' + name)
 
     def checkcache(self):
         pass
@@ -420,8 +415,12 @@ class diffimage():
     def iscached(self, key):
         return key in self.cache
 
+    def cachedetector(self):
+        _=self.detector
+
     @property
     def cake(self):
+        self.cachedetector()
         if not self.iscached('cake'):
             cake, x, y = integration.cake(self.data, self.experiment)
             cakemask, _, _ = integration.cake(self.mask, self.experiment)
@@ -487,6 +486,13 @@ class diffimage():
                 nxt = pathtools.similarframe(self.filepath, +1)
                 self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
         return self._variation[operationindex]
+
+
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():
