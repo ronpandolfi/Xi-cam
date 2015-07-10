@@ -162,8 +162,11 @@ class difftoolbar(QtGui.QToolBar):
         self.actionCalibrate_AgB.setIcon(icon25)
         self.actionCalibrate_AgB.setObjectName("actionCalibrate_AgB")
 
-        # icon25 = QtGui.QIcon()
-        #icon25.
+        self.actionROI = QtGui.QAction(self)
+        icon25 = QtGui.QIcon()
+        icon25.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionROI.setIcon(icon25)
+        self.actionROI.setObjectName("actionROI")
 
         menu = QtGui.QMenu()
         # menu.addAction(self.actionShow_Mask)
@@ -192,9 +195,10 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionLog_Intensity)
         self.addAction(self.actionRadial_Symmetry)
         self.addAction(self.actionMirror_Symmetry)
+        self.addAction(self.actionROI)
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym):
+                        radialsym, mirrorsym, roi):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -207,6 +211,7 @@ class difftoolbar(QtGui.QToolBar):
         self.actionLog_Intensity.triggered.connect(logint)
         self.actionRadial_Symmetry.triggered.connect(radialsym)
         self.actionMirror_Symmetry.triggered.connect(mirrorsym)
+        self.actionROI.triggered.connect(roi)
 
 
 

@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 import time
+import matplotlib.pylab as plt
 
 
 def timeit(method):
@@ -22,3 +23,9 @@ def timeit(method):
 
 def frustration():
     print "(ﾉಥ益ಥ）ﾉ﻿ ┻━┻"
+
+
+def showimage(img):
+    plt.imshow(img)
+    plt.show()
+    print 'Image displayed!'

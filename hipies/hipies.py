@@ -232,7 +232,8 @@ class MyMainWindow():
         self.timelinetoolbar = toolbar.difftoolbar()
         self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
-                                             self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent)
+                                             self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
+                                             self.roi)
         self.ui.timelinebox.addWidget(self.timelinetoolbar)
 
 
@@ -326,6 +327,9 @@ class MyMainWindow():
         Connect linecut to current tab's linecut
         """
         self.currentImageTab().tab.linecut()
+
+    def roi(self):
+        self.currentImageTab().tab.roi()
 
     def opentimeline(self):
         """

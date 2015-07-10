@@ -471,10 +471,10 @@ class diffimage():
         self.experiment.setvalue('Center X', x)
         self.experiment.setvalue('Center Y', y)
 
-    def variation(self, operationindex):
-        if not operationindex in self._variation:
+    def variation(self, operationindex, roi):
+        if not operationindex in self._variation or roi is not None:
             nxpath = pathtools.path2nexus(self.filepath)
-            if os.path.exists(nxpath):
+            if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
                 print v
                 if operationindex in v:
@@ -487,7 +487,11 @@ class diffimage():
             else:
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
-                self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                if roi is None:
+                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                else:
+                    v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
+                    return v
         return self._variation[operationindex]
 
     def __getattr__(self, name):
@@ -503,6 +507,7 @@ class imageseries():
         self.variation = dict()
         self.appendimages(paths)
         self.experiment = experiment
+        self.roi = None
 
     def __len__(self):
         return len(self.paths)
@@ -530,6 +535,14 @@ class imageseries():
     def currentdiffimage(self):
         pass
 
+    # @property
+    # def roi(self):
+    # return self._roi
+    #
+    # @roi.setter
+    # def roi(self,value):
+    # self._roi=value
+
     def scan(self, operationindex):
         if len(self.paths) < 3:
             return None
@@ -539,10 +552,8 @@ class imageseries():
         # get the first frame's profile
         keys = self.paths.keys()
         for key in keys:
-            variationy = self.getDiffImage(key).variation(operationindex)
-
             variationx = self.path2frame(self.paths[key])
-            self.variation[variationx] = variationy
+            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
 
 
     @staticmethod

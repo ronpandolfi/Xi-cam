@@ -580,7 +580,7 @@ class imageTab(QtGui.QWidget):
             # Override the ROI's function to check if any points will be moved outside the boundary; False prevents move
             def checkPointMove(handle, pos, modifiers):
                 p = self.viewbox.mapToView(pos)
-                if 0 < p.y() < self.imgdata.shape[0] and 0 < p.x() < self.dimg.data.shape[1]:
+                if 0 < p.y() < self.dimg.data.shape[0] and 0 < p.x() < self.dimg.data.shape[1]:
                     return True
                 else:
                     return False

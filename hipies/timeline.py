@@ -67,10 +67,13 @@ class timelinetab(viewer.imageTab):
 
         self.plotvariation()
 
-    def setvariationmode(self, index):
-        self.operationindex = index
+    def rescan(self):
         self.simg.scan(self.operationindex)
         self.plotvariation()
+
+    def setvariationmode(self, index):
+        self.operationindex = index
+        self.rescan()
 
     def plotvariation(self):
         if len(self.simg.variation) == 0:
@@ -119,6 +122,62 @@ class timelinetab(viewer.imageTab):
     def gotomax(self):
         pass
         #self.parentwindow.timeruler.setValue(np.argmax(self.variationy))
+
+    def roi(self):
+        if self.activeaction is None:  # If there is no active action
+            self.activeaction = 'roi'
+
+            # Start with a box around the center
+            left = self.dimg.experiment.getvalue('Center X') - 100
+            right = self.dimg.experiment.getvalue('Center X') + 100
+            up = self.dimg.experiment.getvalue('Center Y') - 100
+            down = self.dimg.experiment.getvalue('Center Y') + 100
+
+            # Add ROI item to the image
+            self.ROI = pg.PolyLineROI([[left, up], [left, down], [right, down], [right, up]], pen=(6, 9),
+                                      closed=True)
+            self.viewbox.addItem(self.ROI)
+
+            # Override the ROI's function to check if any points will be moved outside the boundary; False prevents move
+            def checkPointMove(handle, pos, modifiers):
+                p = self.viewbox.mapToView(pos)
+                if 0 < p.y() < self.dimg.data.shape[0] and 0 < p.x() < self.dimg.data.shape[1]:
+                    return True
+                else:
+                    return False
+
+            self.ROI.checkPointMove = checkPointMove
+
+        elif self.activeaction == 'roi':  # If the mask is completed
+            self.activeaction = None
+
+            # Get the region of the image that was selected; unforunately the region is trimmed
+            roiarea = self.ROI.getArrayRegion(np.ones_like(self.dimg.data.T), self.imageitem,
+                                              returnMappedCoords=True)  # levels=(0, arr.max()
+            # print maskedarea.shape
+
+            # Decide how much to left and top pad based on the ROI bounding rectangle
+            boundrect = self.viewbox.itemBoundingRect(self.ROI)
+            leftpad = boundrect.x()
+            toppad = boundrect.y()
+
+            # Pad the mask so it has the same shape as the image
+            roiarea = np.pad(roiarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
+            roiarea = np.pad(roiarea, (
+                (0, self.dimg.data.shape[0] - roiarea.shape[0]), (0, self.dimg.data.shape[1] - roiarea.shape[1])),
+                             mode='constant')
+
+            # Add the masked area to the active mask
+            self.simg.roi = roiarea
+
+            # Draw the overlay
+            # self.maskoverlay()
+
+            # Remove the ROI
+            self.viewbox.removeItem(self.ROI)
+
+            # Redo the integration
+            self.rescan()
 
 
 class TimeRuler(pg.InfiniteLine):
