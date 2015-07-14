@@ -154,16 +154,17 @@ class thumbwidgetitem(QtGui.QFrame):
 
         self.path = path
         # print path
+        self.dimg = pipeline.loader.diffimage(filepath=self.path)
         self.image = QtGui.QImage()
         #print os.path.splitext(path)[1]
         if os.path.isdir(path):
             self.image.load('gui/GenericFolderIcon.png')
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.imgdata = pipeline.loader.loadthumbnail(path)
+            self.thumb = self.dimg.thumbnail
 
-            if self.imgdata.size > 0:
-                im = Image.fromarray(self.imgdata, 'L')
+            if self.thumb is not None:
+                im = Image.fromarray(self.thumb, 'L')
                 # TODO: use scipy zoom or pull from .nxs for thumbnails
                 self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
                                           QtGui.QImage.Format_Indexed8)
