@@ -134,7 +134,7 @@ class MyMainWindow():
         self.filetreemodel = QtGui.QFileSystemModel()
         self.filetree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         self.filetree.setModel(self.filetreemodel)
-        self.filetreepath = '/Volumes/'
+        self.filetreepath = '/'
         self.treerefresh(self.filetreepath)
         header = self.filetree.header()
         self.filetree.setHeaderHidden(True)
@@ -150,7 +150,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout(self, '/Volumes/')
+        self.libraryview = library.librarylayout(self, '/')
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list

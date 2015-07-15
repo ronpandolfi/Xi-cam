@@ -5,7 +5,7 @@ from PIL import Image
 import viewer
 import os
 import pipeline
-
+import numpy as np
 
 
 class FlowLayout(QtGui.QLayout):
@@ -117,14 +117,13 @@ class librarylayout(FlowLayout):
         self.parent = QtCore.QDir()
         self.parent.cd(path)
 
-        diriterator = QtCore.QDirIterator(self.parent)
+        dir = QtCore.QDir(self.parent)
+        entries = dir.entryList()
 
-        while diriterator.hasNext():
-            diriterator.next()
-            fileinfo = diriterator.fileInfo()
+        for entry in entries:
             # print fileinfo.fileName()
-            if not (fileinfo.fileName() == '..' and path == '/Volumes/') and not fileinfo.fileName() == '.':
-                self.addWidget(thumbwidgetitem(diriterator.filePath(), parentwindow=self.parentwindow))
+            if not (entry == '..' and path == '/Volumes/') and not entry == '.':
+                self.addWidget(thumbwidgetitem(os.path.join(path,entry), parentwindow=self.parentwindow))
 
 
     def clear(self):
@@ -139,6 +138,7 @@ class thumbwidgetitem(QtGui.QFrame):
     A single icon representing a file/folder that can be accessed/opened
     """
     def __init__(self, path, parentwindow):
+        print 'Library widget generated for ' +  path
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -161,11 +161,12 @@ class thumbwidgetitem(QtGui.QFrame):
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
             self.imgdata = pipeline.loader.loadthumbnail(path)
+            self.imgdata *=255./np.max(self.imgdata)
 
             if self.imgdata.size > 0:
-                im = Image.fromarray(self.imgdata, 'L')
+
                 # TODO: use scipy zoom or pull from .nxs for thumbnails
-                self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                self.image = QtGui.QImage(self.imgdata.astype(np.uint8), self.imgdata.shape[1], self.imgdata.shape[0], self.imgdata.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             else:
                 self.image.load('gui/post-360412-0-09676400-1365986245.png')

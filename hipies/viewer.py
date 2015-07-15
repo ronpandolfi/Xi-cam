@@ -318,7 +318,7 @@ class imageTab(QtGui.QWidget):
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
             # imtest(symimg)
-            marginmask = 1 - self.dimg.experiment.getDetector().calc_mask().T
+            marginmask = 1 - self.dimg.experiment.mask
             #imtest(marginmask)
 
             x, y = np.indices(img.shape)

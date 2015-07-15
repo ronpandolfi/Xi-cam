@@ -15,7 +15,7 @@ import writer
 import nexpy.api.nexus.tree as tree
 from hipies import debug
 
-acceptableexts = '.fits .edf .tif .nxs .tif .hdf'
+acceptableexts = ['.fits','.edf','.tif','.nxs','.tif','.hdf']
 
 
 def loadsingle(path):
@@ -229,11 +229,8 @@ def finddetectorbyfilename(path):
 
 def loadthumbnail(path):
     nxpath = pathtools.path2nexus(path)
-    if os.path.isfile(nxpath):
-        print nx.load(path).tree
-        img = np.asarray(nx.load(path).data.thumbnail)
-    else:
-        img = loadimage(path)
+
+    img=diffimage(filepath=path).thumbnail
 
     if img is not None:
         img = writer.thumbnail(img)
@@ -303,6 +300,8 @@ class diffimage():
         :param detector: pyFAI.detectors.Detector
         :param experiment: hipies.config.experiment
         """
+
+        print 'Loading ' + str(filepath) + '...'
 
         self._data = data
 
