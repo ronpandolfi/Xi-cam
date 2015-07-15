@@ -144,6 +144,7 @@ class MyMainWindow():
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
+        self.filetree.expandAll()
 
         # Setup preview
         self.preview = viewer.previewwidget(self.filetreemodel)

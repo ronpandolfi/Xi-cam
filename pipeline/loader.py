@@ -41,6 +41,7 @@ def loadimage(path):
                     return loadimage(str(nxroot.data.rawfile))
 
             else:
+                print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
                 return data
     except IOError:
