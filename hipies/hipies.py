@@ -130,6 +130,9 @@ class MyMainWindow():
         settingsList = self.ui.findChild(QtGui.QVBoxLayout, 'propertiesBox')
         settingsList.addWidget(self.experimentTree)
 
+
+
+
         # Setup file tree
         self.filetreemodel = QtGui.QFileSystemModel()
         self.filetree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
@@ -144,6 +147,9 @@ class MyMainWindow():
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
+
+
+
 
         # Setup preview
         self.preview = viewer.previewwidget(self.filetreemodel)
