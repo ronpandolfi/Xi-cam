@@ -204,6 +204,7 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
+@debug.timeit
 def finddetector(imgdata):
     for name, detector in detectors.ALL_DETECTORS.iteritems():
         if hasattr(detector, 'MAX_SHAPE'):

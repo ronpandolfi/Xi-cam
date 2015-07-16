@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 import time
 import matplotlib.pylab as plt
+import inspect
 
 
 def timeit(method):
@@ -9,6 +10,9 @@ def timeit(method):
     """
 
     def timed(*args, **kw):
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        print 'Find peaks called from ' + calframe[1][3]
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()

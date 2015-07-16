@@ -137,6 +137,13 @@ class thumbwidgetitem(QtGui.QFrame):
     """
     A single icon representing a file/folder that can be accessed/opened
     """
+
+    foldericon = QtGui.QImage()
+    foldericon.load('gui/GenericFolderIcon.png')
+
+    fileicon = QtGui.QImage()
+    fileicon.load('gui/post-360412-0-09676400-1365986245.png')
+
     def __init__(self, path, parentwindow):
         print 'Library widget generated for ' +  path
         super(thumbwidgetitem, self).__init__()
@@ -158,21 +165,21 @@ class thumbwidgetitem(QtGui.QFrame):
         self.image = QtGui.QImage()
         #print os.path.splitext(path)[1]
         if os.path.isdir(path):
-            self.image.load('gui/GenericFolderIcon.png')
+            self.image = self.foldericon
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.thumb = self.dimg.thumbnail
-            self.thumb *=255./np.max(self.imgdata)
+            self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
+            self.thumb *= 255. / np.max(self.thumb)
 
             if self.thumb is not None:
-                im = Image.fromarray(self.thumb, 'L')
                 # TODO: use scipy zoom or pull from .nxs for thumbnails
-                self.image = QtGui.QImage(self.thumb.astype(np.uint8), self.thumb.shape[1], self.thumb.shape[0], self.imgdata.shape[1],
+                self.image = QtGui.QImage(self.thumb.astype(np.uint8), self.thumb.shape[1], self.thumb.shape[0],
+                                          self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             else:
-                self.image.load('gui/post-360412-0-09676400-1365986245.png')
+                self.image = self.fileicon
         else:
-            self.image.load('gui/post-360412-0-09676400-1365986245.png')
+            self.image = self.fileicon
 
         image_label = ScaledLabel(self.image)
         image_label.setAlignment(Qt.AlignHCenter)
