@@ -15,7 +15,7 @@ import writer
 import nexpy.api.nexus.tree as tree
 from hipies import debug
 
-acceptableexts = '.fits .edf .tif .nxs .tif .hdf'
+acceptableexts = ['.fits','.edf','.tif','.nxs','.tif','.hdf']
 
 
 def loadsingle(path):
@@ -41,6 +41,7 @@ def loadimage(path):
                     return loadimage(str(nxroot.data.rawfile))
 
             else:
+                print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
                 return data
     except IOError:
@@ -203,6 +204,7 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
+@debug.timeit
 def finddetector(imgdata):
     for name, detector in detectors.ALL_DETECTORS.iteritems():
         if hasattr(detector, 'MAX_SHAPE'):
@@ -229,11 +231,8 @@ def finddetectorbyfilename(path):
 
 def loadthumbnail(path):
     nxpath = pathtools.path2nexus(path)
-    if os.path.isfile(nxpath):
-        print nx.load(path).tree
-        img = np.asarray(nx.load(path).data.thumbnail)
-    else:
-        img = loadimage(path)
+
+    img=diffimage(filepath=path).thumbnail
 
     if img is not None:
         img = writer.thumbnail(img)
@@ -304,6 +303,8 @@ class diffimage():
         :param experiment: hipies.config.experiment
         """
 
+        print 'Loading ' + str(filepath) + '...'
+
         self._data = data
 
         self.filepath = filepath
@@ -330,11 +331,7 @@ class diffimage():
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
 
 
-    def __getattr__(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            raise AttributeError('diffimage has no attribute: ' + name)
+
 
     def checkcache(self):
         pass
@@ -349,7 +346,9 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    raise IOError('File moved, corrupted, or deleted. Load failed (ﾉಥ益ಥ）ﾉ﻿ ┻━┻')
+                    debug.frustration()
+                    raise IOError('File moved, corrupted, or deleted. Load failed')
+
 
     @property
     def dataunrot(self):
@@ -420,8 +419,12 @@ class diffimage():
     def iscached(self, key):
         return key in self.cache
 
+    def cachedetector(self):
+        _=self.detector
+
     @property
     def cake(self):
+        self.cachedetector()
         if not self.iscached('cake'):
             cake, x, y = integration.cake(self.data, self.experiment)
             cakemask, _, _ = integration.cake(self.mask, self.experiment)
@@ -469,10 +472,10 @@ class diffimage():
         self.experiment.setvalue('Center X', x)
         self.experiment.setvalue('Center Y', y)
 
-    def variation(self, operationindex):
-        if not operationindex in self._variation:
+    def variation(self, operationindex, roi):
+        if not operationindex in self._variation or roi is not None:
             nxpath = pathtools.path2nexus(self.filepath)
-            if os.path.exists(nxpath):
+            if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
                 print v
                 if operationindex in v:
@@ -485,8 +488,18 @@ class diffimage():
             else:
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
-                self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                if roi is None:
+                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                else:
+                    v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
+                    return v
         return self._variation[operationindex]
+
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():
@@ -495,6 +508,7 @@ class imageseries():
         self.variation = dict()
         self.appendimages(paths)
         self.experiment = experiment
+        self.roi = None
 
     def __len__(self):
         return len(self.paths)
@@ -522,6 +536,14 @@ class imageseries():
     def currentdiffimage(self):
         pass
 
+    # @property
+    # def roi(self):
+    # return self._roi
+    #
+    # @roi.setter
+    # def roi(self,value):
+    # self._roi=value
+
     def scan(self, operationindex):
         if len(self.paths) < 3:
             return None
@@ -529,13 +551,10 @@ class imageseries():
         self.variation = dict()
 
         # get the first frame's profile
-        prev = loadimage(self.paths[0])
-        curr = loadimage(self.paths[1])
-        for i in range(self.paths.__len__() - 2):
-            variationy = self.getDiffImage(i + 1).variation(operationindex)
-
-            variationx = self.path2frame(self.paths[i + 1])
-            self.variation[variationx] = variationy
+        keys = self.paths.keys()
+        for key in keys:
+            variationx = self.path2frame(self.paths[key])
+            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
 
 
     @staticmethod

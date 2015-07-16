@@ -1,9 +1,10 @@
 from pylab import *
 from scipy import signal
 from scipy.ndimage import filters
-from scipy import stats
+import debug
 import pyqtgraph as pg
 from PySide import QtCore
+import inspect
 
 maxfiltercoef = 5
 cwtrange = np.arange(1, 100)
@@ -14,6 +15,7 @@ gaussiancentersigma = 2
 gaussianwidthsigma = 5
 
 
+@debug.timeit
 def findpeaks(x, y):
     cwtdata = filters.gaussian_filter1d(
         filters.gaussian_filter1d(signal.cwt(y, signal.ricker, cwtrange), gaussiancentersigma, axis=1),

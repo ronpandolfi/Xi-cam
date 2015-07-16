@@ -137,7 +137,7 @@ class MyMainWindow():
         self.filetreemodel = QtGui.QFileSystemModel()
         self.filetree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         self.filetree.setModel(self.filetreemodel)
-        self.filetreepath = '/Volumes/'
+        self.filetreepath = '/'
         self.treerefresh(self.filetreepath)
         header = self.filetree.header()
         self.filetree.setHeaderHidden(True)
@@ -147,6 +147,7 @@ class MyMainWindow():
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
+        self.filetree.expandAll()
 
 
 
@@ -156,7 +157,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout(self, '/Volumes/')
+        self.libraryview = library.librarylayout(self, '/')
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list
@@ -234,8 +235,14 @@ class MyMainWindow():
         # self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
 
 
+        # Timeline toolbar
+        self.timelinetoolbar = toolbar.difftoolbar()
+        self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
+                                             self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
+                                             self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
+                                             self.roi)
+        self.ui.timelinebox.addWidget(self.timelinetoolbar)
 
-        self.ui.timelinebox.addWidget(toolbar.difftoolbar())
 
         # Setup file operation toolbox
         self.booltoolbar = QtGui.QToolBar()
@@ -327,6 +334,9 @@ class MyMainWindow():
         Connect linecut to current tab's linecut
         """
         self.currentImageTab().tab.linecut()
+
+    def roi(self):
+        self.currentImageTab().tab.roi()
 
     def opentimeline(self):
         """
@@ -469,8 +479,12 @@ class MyMainWindow():
         """
         Get the currently shown image tab
         """
-        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
+        if self.ui.viewmode.currentIndex() == 1:
+            tabwidget = self.ui.tabWidget
+        elif self.ui.viewmode.currentIndex() == 2:
+            tabwidget = self.ui.timelinetabwidget
         return tabwidget.widget(tabwidget.currentIndex())
+
 
     def currentTimelineTab(self):
         """
