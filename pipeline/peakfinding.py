@@ -1,7 +1,7 @@
 from pylab import *
 from scipy import signal
 from scipy.ndimage import filters
-import debug
+from hipies import debug
 import pyqtgraph as pg
 from PySide import QtCore
 import inspect

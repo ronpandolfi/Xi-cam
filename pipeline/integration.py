@@ -157,3 +157,18 @@ def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
     """:type : pyFAI.AzimuthalIntegrator"""
 
     return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
+
+
+def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):
+    mask = np.zeros_like(Imagedata)
+
+    centerx = center[0]
+    centery = center[1]
+    y, x = np.indices(Imagedata.shape)
+    r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
+    mask = (r > radius1) & (r < radius2)
+    theta = np.arctan2(y - centery, x - centerx) / 2 / np.pi * 360
+    mask &= (theta > angle1) & (theta < angle2)
+
+    mask = np.flipud(mask)
+    return mask * Imagedata

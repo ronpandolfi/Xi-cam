@@ -228,7 +228,7 @@ class imageTab(QtGui.QWidget):
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
-                                         u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>" % (
+                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>,  r=%0.1f" % (
                                          mousePoint.x(),
                                          mousePoint.y(),
                                          self.dimg.data[int(mousePoint.x()),
@@ -241,7 +241,9 @@ class imageTab(QtGui.QWidget):
                                                  self.dimg.experiment),
                                          pixel2q(mousePoint.x(),
                                                  None,
-                                                 self.dimg.experiment)))
+                                                 self.dimg.experiment),
+                                         np.sqrt((mousePoint.x() - self.dimg.experiment.getvalue("Center X")) ** 2 + (
+                                         mousePoint.y() - self.dimg.experiment.getvalue("Center Y")) ** 2)))
                 else:
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
