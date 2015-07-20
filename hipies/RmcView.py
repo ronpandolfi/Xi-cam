@@ -27,7 +27,7 @@ class imagetimeline(list):  # Sets up the image so it will fin the the viewer
         return list.__getitem__(self, item)
 
     @property
-    def ndim(self):  # Defines ndim function
+    def ndim(self):  # Defines ndim functionq
         return 3
 
     @property

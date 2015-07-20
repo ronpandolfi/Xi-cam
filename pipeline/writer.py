@@ -43,7 +43,10 @@ def mergenexus(**kwargs):
 
 
 def writenexus(nexroot, path):
-    nexroot.save(path)
+    try:
+        nexroot.save(path)
+    except IOError:
+        print('IOError: Check that you have write permissions.')
 
 def thumbnail(img, size=160.):
     """

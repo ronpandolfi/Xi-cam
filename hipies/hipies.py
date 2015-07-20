@@ -757,6 +757,12 @@ class MyMainWindow():
                 self.currentTimelineTab().load()
             self.currentTimelineTab().tab.appendimage(d, paths)
 
+            # def loadhiprmc(self):
+            #     self.loadplugin(hiprmc)
+            #
+            # def loadplugin(self,module):
+
+
 
 
 if __name__ == '__main__':

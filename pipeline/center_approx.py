@@ -213,11 +213,15 @@ def fitpointstocircle(cnt):
 #         print "The center was unable to be found for an image."
 #         return None
 
+from hipies import debug
 
+
+@debug.timeit
 def center_approx(img, log=False):
-    img = img.astype(np.float)
+
     if log:
         # Rescale brightness of the image with log depth
+        img = img.astype(np.float)
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img * (img > 0) + 1)
 
@@ -340,12 +344,12 @@ def refinecenter(dimg):
     # print 'Start parameter:'
     # print geometry.getFit2D()
 
-    fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
+    fit_param = ['center_x', 'center_y', 'distance', 'rotation', 'tilt']
     fit_thread = saxs_calibration.FitThread(geometry, d_spacings, imgcopy, fit_param, 40)
     fit_thread.start()
     while fit_thread.is_alive():
         #print fit_thread.status
-        time.sleep(1)
+        time.sleep(.1)
 
     # print 'Final parameter:'
     #print geometry.getFit2D()
