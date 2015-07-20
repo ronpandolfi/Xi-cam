@@ -296,12 +296,12 @@ class imageTab(QtGui.QWidget):
             debug.frustration()
             toolbar = None
 
-        islogintensity = toolbar.actionLog_Intensity.isChecked()
-        isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
-        ismirrorsymmetry = toolbar.actionMirror_Symmetry.isChecked()
-        ismaskshown = toolbar.actionShow_Mask.isChecked()
-        iscake = toolbar.actionCake.isChecked()
-        isremesh = toolbar.actionRemeshing.isChecked()
+        islogintensity = self.parentwindow.difftoolbar.actionLog_Intensity.isChecked()
+        isradialsymmetry = self.parentwindow.difftoolbar.actionRadial_Symmetry.isChecked()
+        ismirrorsymmetry = self.parentwindow.difftoolbar.actionMirror_Symmetry.isChecked()
+        ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
+        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
         # img = self.dimg.data.copy()
         if forcelow:
             img = self.dimg.thumbnail.copy()
@@ -336,7 +336,7 @@ class imageTab(QtGui.QWidget):
             yshift = -(img.shape[1] - 2 * centery)
             symimg = np.roll(symimg, int(yshift), axis=1)
             #imtest(symimg)
-            marginmask = 1 - self.dimg.detector.calc_mask().T
+            marginmask = 1 - self.dimg.experiment.mask
             #imtest(marginmask)
 
             x, y = np.indices(img.shape)
@@ -502,6 +502,10 @@ class imageTab(QtGui.QWidget):
         self.parentwindow.integration.addItem(self.parentwindow.qLine)
 
     def replotprimary(self):
+        if not self.dimg.experiment.iscalibrated:
+            return None
+
+
         cut = None
 
         if self.parentwindow.difftoolbar.actionMultiPlot.isChecked():

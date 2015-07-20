@@ -41,7 +41,7 @@ def loadimage(path):
                     return loadimage(str(nxroot.data.rawfile))
 
             else:
-                print 'Unhandled data type: ' + path
+                # print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
                 return data
     except IOError:
@@ -83,7 +83,7 @@ def readvariation(path):
     for i in range(20):
         try:
             nxroot = nx.load(path)
-            print 'Attempt', i + 1, 'to read', path, 'succeded; continuing...'
+            print 'Attempt', i + 1, 'to read', path, 'succeeded; continuing...'
             return dict([[int(index), int(value)] for index, value in nxroot.data.variation])
         except IOError:
             print 'Could not load', path, ', trying again in 0.2 s'
@@ -205,29 +205,29 @@ def loadstichted(filepath2, filepath1):
 
 
 @debug.timeit
-def finddetector(imgdata):
-    for name, detector in detectors.ALL_DETECTORS.iteritems():
-        if hasattr(detector, 'MAX_SHAPE'):
-            #print name, detector.MAX_SHAPE, imgdata.shape[::-1]
-            if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
-                detector = detector()
-                mask = detector.calc_mask()
-                print 'Detector found: ' + name
-                return name, mask, detector
-        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
-            #print detector.BINNED_PIXEL_SIZE.keys()
-            if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
-                                       detector.BINNED_PIXEL_SIZE.keys()]:
-                detector = detector()
-                mask = detector.calc_mask()
-                print 'Detector found with binning: ' + name
-                return name, mask, detector
-    raise ValueError('Detector could not be identified!')
-    return None, None, None
+# def finddetector(imgdata):
+#     for name, detector in detectors.ALL_DETECTORS.iteritems():
+#         if hasattr(detector, 'MAX_SHAPE'):
+#             #print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+#             if detector.MAX_SHAPE == imgdata.shape[::-1]:  #
+#                 detector = detector()
+#                 mask = detector.calc_mask()
+#                 print 'Detector found: ' + name
+#                 return name, mask, detector
+#         if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+#             #print detector.BINNED_PIXEL_SIZE.keys()
+#             if imgdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+#                                        detector.BINNED_PIXEL_SIZE.keys()]:
+#                 detector = detector()
+#                 mask = detector.calc_mask()
+#                 print 'Detector found with binning: ' + name
+#                 return name, mask, detector
+#     raise ValueError('Detector could not be identified!')
+#     return None, None, None
 
 def finddetectorbyfilename(path):
-    imgdata = loadsingle(path)[0].T
-    return finddetector(imgdata)
+    dimg = diffimage(filepath=path)
+    return dimg.detector
 
 def loadthumbnail(path):
     nxpath = pathtools.path2nexus(path)
@@ -349,6 +349,9 @@ class diffimage():
                     debug.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
+    @property
+    def mask(self):
+        return self.experiment.mask
 
     @property
     def dataunrot(self):
@@ -373,15 +376,13 @@ class diffimage():
     @property
     def detector(self):
         if self._detector is None:
-            if self.filepath is not None:
-                name, mask, detector = finddetectorbyfilename(self.filepath)
-            elif self.data is not None:
-                name, mask, detector = finddetector(self.data)
+            if self.data is not None:
+                name, detector = self.finddetector()
             else:
                 return None
 
             self.detectorname = name
-            self.mask = mask
+            mask = detector.calc_mask()
             self._detector = detector
             if detector is not None:
                 if mask is not None:
@@ -390,6 +391,23 @@ class diffimage():
                 self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                 self.experiment.setvalue('Detector', name)
         return self._detector
+
+    def finddetector(self):
+        for name, detector in detectors.ALL_DETECTORS.iteritems():
+            if hasattr(detector, 'MAX_SHAPE'):
+                # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+                if detector.MAX_SHAPE == self.data.shape[::-1]:  #
+                    detector = detector()
+                    print 'Detector found: ' + name
+                    return name, detector
+            if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+                # print detector.BINNED_PIXEL_SIZE.keys()
+                if self.data.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                                             detector.BINNED_PIXEL_SIZE.keys()]:
+                    detector = detector()
+                    print 'Detector found with binning: ' + name
+                    return name, detector
+        raise ValueError('Detector could not be identified!')
 
     @detector.setter
     def detector(self, value):
@@ -495,6 +513,7 @@ class diffimage():
                     return v
         return self._variation[operationindex]
 
+    
     def __getattr__(self, name):
         if name in self.cache:
             return self.cache[name]
