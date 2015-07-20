@@ -84,10 +84,12 @@ class gui():
                                          'numstepsfactor': steps,
                                          'scalefactor': scalefactor}}}
         h = hig.hig(**d)
-        h.write("test.hig")
+        h.write("test_input.hig")
+        os.system("./hiprmc test_input.hig")
+
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
- 
+
         layout = self.ui.rmclayout
         layout.addWidget(RmcView.rmcView(path))
