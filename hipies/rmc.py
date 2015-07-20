@@ -1,5 +1,5 @@
 import os
-
+import RmcView
 from PySide import QtGui,QtCore
 from pipeline import hig,loader
 
@@ -17,6 +17,7 @@ class gui():
         self.ui.rmcSubtractloadingfactor.clicked.connect(self.subtractloadingfactor)
         self.ui.rmcopen.clicked.connect(self.open)
         self.ui.rmcreset.clicked.connect(self.reset)
+        self.ui.rmcreset_2.clicked.connect(self.reset2)
 
 
     def open(self):
@@ -25,6 +26,15 @@ class gui():
 
     def reset(self):
         self.ui.rmcoutput.setText("")
+
+    def reset2(self):
+        self.ui.rmcoutput.setText("")
+        self.ui.rmcLoadingfactors.clear()
+        self.ui.rmcTiles.setValue(1)
+        self.ui.rmcSteps.setValue(99)
+        self.ui.rmcScalefactor.setValue(1)
+        self.ui.rmcModlestartsize.setValue(1)
+
 
     def showrmc(self):
         """
@@ -62,7 +72,6 @@ class gui():
         #lodingfactors = self.ui.rmcLoadingfactors.
 
 
-
         rip=self.ui.rmcinputpaths
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
 
@@ -70,9 +79,15 @@ class gui():
                                              'imagesize': loader.loadimage(inputpaths[0]).shape,
                                              'numtiles': tiles,
                                              'loadingfactors': [lodingfactors ]},
-                         'computation': {'runname': "test",
+                             'computation': {'runname': self.ui.rmcoutput.text(),
                                          'modelstartsize': [modlestartsize, modlestartsize],
                                          'numstepsfactor': steps,
                                          'scalefactor': scalefactor}}}
         h = hig.hig(**d)
         h.write("test.hig")
+
+    def displayoutput(self):
+        path = self.ui.rmcoutput.text()
+
+        layout = self.ui.rmclayout
+        layout.addWidget(RmcView.rmcView(path))
