@@ -88,6 +88,6 @@ class gui():
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
-
+ 
         layout = self.ui.rmclayout
         layout.addWidget(RmcView.rmcView(path))
