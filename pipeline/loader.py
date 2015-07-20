@@ -349,6 +349,9 @@ class diffimage():
                     debug.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
+    @property
+    def mask(self):
+        return self.experiment.mask
 
     @property
     def dataunrot(self):
@@ -510,6 +513,7 @@ class diffimage():
                     return v
         return self._variation[operationindex]
 
+    
     def __getattr__(self, name):
         if name in self.cache:
             return self.cache[name]

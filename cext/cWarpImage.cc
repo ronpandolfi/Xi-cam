@@ -14,75 +14,67 @@ PyMODINIT_FUNC initcWarpImage() {
 	import_array();
 }
 
-float * pymatrix_to_C1darrayptrs (PyArrayObject *arrayin) {
-    return (float *) arrayin->data;
-}
-
-float ** pymatrix_to_C2darrayptrs (PyArrayObject *arrayin)  {
-    float **c, *a;
-    int i,n,m;
- 
-    n=arrayin->dimensions[0];
-    m=arrayin->dimensions[1];
-    c= new float *[n];
-    a=(float *) arrayin->data;  /* pointer to arrayin data */
-    for ( i=0; i<n; i++)  {
-         c[i]=a+i*m;  }
-     return c;
- }
-
-/* ==== Free vec of pointers ============== */ 
-void free_Carrayptrs(float **v)  {
-    delete [] v;
-}
-
- 
-static PyObject * warp_image (PyObject *self, PyObject *args)
-{
-	PyArrayObject *PyImg, *PyCrd1, *PyCrd2;
-    PyArrayObject *PyXout, *PyYout, *PyOut;
-	float *img, *crd1, *crd2; 
-    float *xout, *yout, *out;
-	int nrow, ncol, dims[2];
-    int nx, ny, outdims[2];
+static PyObject * warp_image (PyObject *self, PyObject *args){
+	PyObject *arr1, *arr2, *arr3, *arr4, *arr5;
+	PyObject *PyImg, *Py_Qp, *Py_Qz, *Pixel, *Center;
+    PyArrayObject *PyOut;
+	int nrow, ncol;
+    int np, nz, outdims[2];
+	double alphai, k0, sdd;
     int method;
 
 	/* Parse tuples */
-	if (!PyArg_ParseTuple(args, "OOOOOI", &PyImg, &PyCrd1, &PyCrd2, &PyXout, &PyYout, &method))
+	if (!PyArg_ParseTuple(args, "OOOOOdddI", &arr1, &arr2, &arr3, &arr4, &arr5, 
+		&alphai, &k0, &sdd, &method))
 		return NULL;
-	if (NULL == PyImg) return NULL;
-	if (NULL == PyCrd1) return NULL;
-	if (NULL == PyCrd2) return NULL;
-	if (NULL == PyXout) return NULL;
-	if (NULL == PyYout) return NULL;
+
+	/* Interpret the input objects as numpy arrays. */
+    PyImg = PyArray_FROM_OTF(arr1, NPY_DOUBLE, NPY_IN_ARRAY);
+    Py_Qp = PyArray_FROM_OTF(arr2, NPY_DOUBLE, NPY_IN_ARRAY);
+    Py_Qz = PyArray_FROM_OTF(arr3, NPY_DOUBLE, NPY_IN_ARRAY);
+	Pixel = PyArray_FROM_OTF(arr4, NPY_DOUBLE, NPY_IN_ARRAY);
+	Center= PyArray_FROM_OTF(arr5, NPY_DOUBLE, NPY_IN_ARRAY);
+
+	if (PyImg == NULL || Py_Qp == NULL || Py_Qz == NULL ||
+		Pixel == NULL || Center == NULL){
+		Py_XDECREF(PyImg);
+		Py_XDECREF(Py_Qp);
+		Py_XDECREF(Py_Qz);
+		Py_XDECREF(Pixel);
+		Py_XDECREF(Center);
+		return NULL;
+	}
 
 	/* matrix dimensions */
-	nrow = dims[0] = PyImg->dimensions[0];
-	ncol = dims[1] = PyImg->dimensions[1];
+	nrow = (int) PyArray_DIM(PyImg, 0);
+	ncol = (int) PyArray_DIM(PyImg, 1);
 
     /* output dimensions */
-    ny = outdims[0] = PyXout->dimensions[0];
-    nx = outdims[1] = PyXout->dimensions[1];
+    np = outdims[0] = (int) PyArray_DIM(Py_Qp, 0);
+    nz = outdims[1] = (int) PyArray_DIM(Py_Qp, 1);
      
 	/* contruct output array */
-	PyOut = (PyArrayObject *) PyArray_FromDims (2, outdims, NPY_FLOAT);
+	PyOut = (PyArrayObject *) PyArray_FromDims (2, outdims, NPY_DOUBLE);
 
-	/* change Numpy arrays to 2-D c arrays */
-	img = pymatrix_to_C1darrayptrs (PyImg);
-	out = pymatrix_to_C1darrayptrs (PyOut);
-	crd1 = pymatrix_to_C1darrayptrs (PyCrd1);
-	crd2 = pymatrix_to_C1darrayptrs (PyCrd2);
-	xout = pymatrix_to_C1darrayptrs (PyXout);
-	yout = pymatrix_to_C1darrayptrs (PyYout);
+	/* map PyArrays to c-arrays */
+	double * img = (double *) PyArray_DATA(PyImg);
+	double *qpar = (double *) PyArray_DATA(Py_Qp);
+	double *qvrt = (double *) PyArray_DATA(Py_Qz);
+	double *pixel= (double *) PyArray_DATA(Pixel);
+	double *cen  = (double *) PyArray_DATA(Center);
+	double * out = (double *) PyArray_DATA(PyOut);
 
-	/*** C calls begin ***/
-    //    if (remesh (nrow, ncol, img, crd1, crd2, nx, ny, out, xout, yout))
+    // if(knn_interp (nrow*ncol, img, crd1, crd2, nx, ny, out, xout, yout, method))
     //    return NULL;
+	if(!(remap(nrow, ncol, img, np, nz, qpar, qvrt, pixel, cen, alphai, k0, sdd, method, out)))
+		return NULL;
 
-    
-    if (knn_interp (nrow*ncol, img, crd1, crd2, nx, ny, out, xout, yout, method))
-        return NULL;
-	/*** C calls end ***/
-	
+	///*** C calls end ***/
+	//
+	Py_XDECREF(PyImg);
+	Py_XDECREF(Py_Qp);
+	Py_XDECREF(Py_Qz);
+	Py_XDECREF(Pixel);
+	Py_XDECREF(Center);
 	return PyArray_Return (PyOut);
 }
