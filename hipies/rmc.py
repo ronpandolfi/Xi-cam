@@ -76,13 +76,14 @@ class gui():
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
 
         d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
-                                             'imagesize': loader.loadimage(inputpaths[0]).shape,
-                                             'numtiles': tiles,
-                                             'loadingfactors': [lodingfactors ]},
+                                                 'imagesize': loader.loadimage(inputpaths[0]).shape,
+                                                 'numtiles': tiles,
+                                                 'loadingfactors': [lodingfactors],
+                                                 'maskimage': ["data/mask.tif"]},  # optional
                              'computation': {'runname': self.ui.rmcoutput.text(),
                                          'modelstartsize': [modlestartsize, modlestartsize],
                                          'numstepsfactor': steps,
-                                         'scalefactor': scalefactor}}}
+                                             'scalefactor': scalefactor}}},
         h = hig.hig(**d)
         h.write("test_input.hig")
         os.system("./hiprmc test_input.hig")
