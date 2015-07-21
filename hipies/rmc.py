@@ -69,7 +69,7 @@ class gui():
         steps = self.ui.rmcSteps.value()
         scalefactor = self.ui.rmcScalefactor.value()
         modlestartsize = self.ui.rmcModlestartsize.value()
-        #lodingfactors = self.ui.rmcLoadingfactors.
+        lodingfactors = self.ui.rmcLoadingfactors.
 
 
         rip=self.ui.rmcinputpaths
