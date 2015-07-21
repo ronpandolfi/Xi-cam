@@ -78,7 +78,7 @@ class gui():
         d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
                                                  'imagesize': loader.loadimage(inputpaths[0]).shape,
                                                  'numtiles': tiles,
-                                                 
+                                                 # 'loadingfactors': [lodingfactors],
                                                  'maskimage': ["data/mask.tif"]},  # optional
                              'computation': {'runname': self.ui.rmcoutput.text(),
                                          'modelstartsize': [modlestartsize, modlestartsize],
