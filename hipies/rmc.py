@@ -69,7 +69,7 @@ class gui():
         steps = self.ui.rmcSteps.value()
         scalefactor = self.ui.rmcScalefactor.value()
         modlestartsize = self.ui.rmcModlestartsize.value()
-        lodingfactors = self.ui.rmcLoadingfactors.
+        # lodingfactors = self.ui.rmcLoadingfactors.
 
 
         rip=self.ui.rmcinputpaths
@@ -78,7 +78,7 @@ class gui():
         d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
                                                  'imagesize': loader.loadimage(inputpaths[0]).shape,
                                                  'numtiles': tiles,
-                                                 'loadingfactors': [lodingfactors],
+                                                 #'loadingfactors': [lodingfactors],
                                                  'maskimage': ["data/mask.tif"]},  # optional
                              'computation': {'runname': self.ui.rmcoutput.text(),
                                          'modelstartsize': [modlestartsize, modlestartsize],
