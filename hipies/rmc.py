@@ -113,7 +113,7 @@ def iterAllItems(w):
 
 
 class RMCThread(QtCore.QThread):
-    sig_finished = QtCore.Signal()
+    sig_finished = QtCore.Signal(int)
     def run(self):
         process = subprocess.Popen(['./hiprmc', 'test_input.hig'])
         while process.poll is None:
