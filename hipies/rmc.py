@@ -1,6 +1,7 @@
 import os
 import RmcView
 import time
+import subprocess
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
@@ -109,9 +110,6 @@ def iterAllItems(w):
 
 class RMCThread(QtCore.QThread):
     def run(self):
-        import subprocess
-        import time
-
         process = subprocess.Popen(['./hiprmc', 'test_input.hig'])
         while process.poll is None:
             time.sleep(0.5)
