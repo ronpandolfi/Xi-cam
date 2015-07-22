@@ -94,11 +94,8 @@ class gui():
             h.write("test_input.hig")
             # os.system("./hiprmc test_input.hig")
             rmcdaemon = RMCThread()
-            rmcdaemon.sig_finished.connect(self.show_output)
+            rmcdaemon.sig_finished.connect(self.displayoutput)
             rmcdaemon.start()
-
-    def show_output(self):
-        print "Finished"
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
@@ -128,5 +125,4 @@ class RMCThread(QtCore.QThread):
 
     def __del__(self):
         self.exiting = True
-
         self.wait()
