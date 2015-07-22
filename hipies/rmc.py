@@ -80,7 +80,7 @@ class gui():
 
         for path in inputpaths:
             d = {'hipRMCInput': {'instrumentation': {'inputimage': path,
-                                                     'imagesize': loader.loadimage(path).shape[0: 1],
+                                                     'imagesize': loader.loadimage(path).shape[0: 2],
                                                      'numtiles': tiles,
                                                      'loadingfactors': loadingfactors,
                                                      'maskimage': ["data/mask.tif"]
