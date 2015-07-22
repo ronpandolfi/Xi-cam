@@ -70,29 +70,36 @@ class gui():
         modlestartsize = self.ui.rmcModlestartsize.value()
 
         loadingfactors = []
-        all_items = self.ui.rmcLoadingfactors.findItems('', QtCore.Qt.MatchRegExp)
-        for item in all_items:
+
+        for item in iterAllItems(self.ui.rmcLoadingfactors):
             loadingfactors.append(item.text())
+
 
         rip = self.ui.rmcinputpaths
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
 
-        d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
-                                                 'imagesize': loader.loadimage(inputpaths[0]).shape,
-                                                 'numtiles': tiles,
-                                                 'loadingfactors': loadingfactors,
-                                                 'maskimage': ["data/mask.tif"]
-                                                 },  # optional
-                             'computation': {'runname': self.ui.rmcoutput.text(),
-                                             'modelstartsize': [modlestartsize, modlestartsize],
-                                             'numstepsfactor': steps,
-                                             'scalefactor': scalefactor}}}
-        h = hig.hig(**d)
-        h.write("test_input.hig")
-        os.system("./hiprmc test_input.hig")
+        for path in inputpaths:
+            d = {'hipRMCInput': {'instrumentation': {'inputimage': path,
+                                                     'imagesize': loader.loadimage(path).shape,
+                                                     'numtiles': tiles,
+                                                     'loadingfactors': loadingfactors,
+                                                     'maskimage': ["data/mask.tif"]
+                                                     },  # optional
+                                 'computation': {'runname': self.ui.rmcoutput.text(),
+                                                 'modelstartsize': [modlestartsize, modlestartsize],
+                                                 'numstepsfactor': steps,
+                                                 'scalefactor': scalefactor}}}
+            h = hig.hig(**d)
+            h.write("test_input.hig")
+            os.system("./hiprmc test_input.hig")
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
 
         layout = self.ui.rmclayout
         layout.addWidget(RmcView.rmcView(path))
+
+
+def iterAllItems(w):
+    for i in range(w.count()):
+        yield w.item(i)
