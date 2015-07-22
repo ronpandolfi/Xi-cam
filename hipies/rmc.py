@@ -1,5 +1,6 @@
 import os
 import RmcView
+import time
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
@@ -74,7 +75,6 @@ class gui():
         for item in iterAllItems(self.ui.rmcLoadingfactors):
             loadingfactors.append(item.text())
 
-
         rip = self.ui.rmcinputpaths
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
 
@@ -91,7 +91,9 @@ class gui():
                                                  'scalefactor': scalefactor}}}
             h = hig.hig(**d)
             h.write("test_input.hig")
-            os.system("./hiprmc test_input.hig")
+            # os.system("./hiprmc test_input.hig")
+            rmcdaemon = daemon()
+            rmcdaemon.run()
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
@@ -103,3 +105,22 @@ class gui():
 def iterAllItems(w):
     for i in range(w.count()):
         yield w.item(i)
+
+
+class daemon(QtCore.QThread):
+    def run(self):
+        os.system("./hiprmc test_input.hig")
+
+        try:
+            while not self.exiting:
+                time.sleep(.1)
+        except KeyboardInterrupt:
+            pass
+    
+    def stop(self):
+        self.exiting = True
+        print ("thread stop - %s" % self.exiting)
+
+    def __del__(self):
+        self.exiting = True
+        self.wait()
