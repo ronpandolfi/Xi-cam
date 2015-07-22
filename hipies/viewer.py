@@ -225,6 +225,23 @@ class imageTab(QtGui.QWidget):
                             0 < mousePoint.y() < self.dimg.data.shape[1]):  # within bounds
                 #angstrom=QChar(0x00B5)
                 if self.dimg.experiment.iscalibrated:
+                    x = mousePoint.x()
+                    y = mousePoint.y()
+
+                    iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+                    isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
+
+                    if iscake:
+                        q = pixel2cake(x, y, self.dimg)
+
+                    elif isremesh:
+                        pass
+                    else:
+                        q = pixel2q(x, y, self.dimg.experiment)
+
+                    print q
+
+
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
@@ -233,9 +250,7 @@ class imageTab(QtGui.QWidget):
                                          mousePoint.y(),
                                          self.dimg.data[int(mousePoint.x()),
                                                       int(mousePoint.y())],
-                                         pixel2q(mousePoint.x(),
-                                                 mousePoint.y(),
-                                                 self.dimg.experiment),
+                                         q,
                                          pixel2q(None,
                                                  mousePoint.y(),
                                                  self.dimg.experiment),
@@ -359,6 +374,11 @@ class imageTab(QtGui.QWidget):
             print self.dimg.remeshqx
             print self.dimg.remeshqy
 
+        if iscake or isremesh:
+            self.centerplot.clear()
+        else:
+            self.drawcenter()
+
         if ismaskshown:
             self.maskimage.setImage(np.dstack((mask, np.zeros_like(mask), np.zeros_like(mask), mask)), opacity=.25)
         else:
@@ -369,7 +389,7 @@ class imageTab(QtGui.QWidget):
             img = (np.log(img * (img > 0) + (img < 1)))
 
         self.imageitem.setImage(img, scale=scale)
-        self.imageitem.setRect(QtCore.QRect(0, 0, 1475, 1679))
+
         #self.imageitem.setLookupTable(colormap.LUT)
 
     def linecut(self):
@@ -684,8 +704,10 @@ class previewwidget(pg.GraphicsLayoutWidget):
 #         cv2.waitKey(0)
 #         cv2.destroyAllWindows()
 
-def pixel2cake(x, y, cakex, cakey):
-    return
+def pixel2cake(x, y, dimg):
+    cakeqx = dimg.cakeqx
+    cakeqy = dimg.cakeqy
+    return np.sqrt(cakeqx[x] ** 2 + cakeqy[y] ** 2)
 
 
 def pixel2q(x, y, experiment):

@@ -92,8 +92,8 @@ class gui():
             h = hig.hig(**d)
             h.write("test_input.hig")
             # os.system("./hiprmc test_input.hig")
-            rmcdaemon = daemon()
-            rmcdaemon.run()
+            rmcdaemon = RMCThread()
+            rmcdaemon.start()
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
@@ -107,9 +107,16 @@ def iterAllItems(w):
         yield w.item(i)
 
 
-class daemon(QtCore.QThread):
+class RMCThread(QtCore.QThread):
     def run(self):
-        os.system("./hiprmc test_input.hig")
+        import subprocess
+        import time
+
+        process = subprocess.Popen(['./hiprmc', 'test_input.hig'])
+        while process.poll is None:
+            time.sleep(0.5)
+
+            # os.system("./hiprmc test_input.hig")
 
     def stop(self):
         self.exiting = True
