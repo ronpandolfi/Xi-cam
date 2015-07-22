@@ -111,12 +111,6 @@ class daemon(QtCore.QThread):
     def run(self):
         os.system("./hiprmc test_input.hig")
 
-        try:
-            while not self.exiting:
-                time.sleep(.1)
-        except KeyboardInterrupt:
-            pass
-    
     def stop(self):
         self.exiting = True
         print ("thread stop - %s" % self.exiting)
