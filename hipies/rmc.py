@@ -83,7 +83,7 @@ class gui():
                                                      'imagesize': loader.loadimage(path).shape[0: 2],
                                                      'numtiles': tiles,
                                                      'loadingfactors': loadingfactors,
-                                                     'maskimage': ["data/mask.tif"]
+                                                     'maskimage': "data/mask.tif"
                                                      },  # optional
                                  'computation': {'runname': self.ui.rmcoutput.text(),
                                                  'modelstartsize': [modlestartsize, modlestartsize],
