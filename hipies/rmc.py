@@ -97,7 +97,9 @@ class gui():
             rmcdaemon.sig_finished.connect(self.displayoutput)
             rmcdaemon.start()
 
-    def displayoutput(self):
+    def displayoutput(self, exitcode):
+        print "Finished", exitcode
+
         path = self.ui.rmcoutput.text()
 
         layout = self.ui.rmclayout
