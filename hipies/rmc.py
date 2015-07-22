@@ -1,7 +1,7 @@
 import os
 import RmcView
-from PySide import QtGui,QtCore
-from pipeline import hig,loader
+from PySide import QtGui, QtCore
+from pipeline import hig, loader
 
 
 class gui():
@@ -19,9 +19,8 @@ class gui():
         self.ui.rmcreset.clicked.connect(self.reset)
         self.ui.rmcreset_2.clicked.connect(self.reset2)
 
-
     def open(self):
-        Outputdirectory= QtGui.QFileDialog.getExistingDirectory(self.ui,"Select an Output directory")
+        Outputdirectory = QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory")
         self.ui.rmcoutput.setText(Outputdirectory)
 
     def reset(self):
@@ -34,7 +33,6 @@ class gui():
         self.ui.rmcSteps.setValue(99)
         self.ui.rmcScalefactor.setValue(1)
         self.ui.rmcModlestartsize.setValue(1)
-
 
     def showrmc(self):
         """
@@ -54,7 +52,8 @@ class gui():
             item = None
 
     def addloadingfactor(self):
-        loadingfactor,_=QtGui.QInputDialog.getDouble(self.ui, "Loading Factor", "Enter a loading factor:", value=0, minValue=-0, maxValue=1000, decimals=3 )
+        loadingfactor, _ = QtGui.QInputDialog.getDouble(self.ui, "Loading Factor", "Enter a loading factor:", value=0,
+                                                        minValue=-0, maxValue=1000, decimals=3)
         newItem = QtGui.QListWidgetItem()
         newItem.setText(str(loadingfactor))
         self.ui.rmcLoadingfactors.addItem(newItem)
@@ -75,23 +74,22 @@ class gui():
         for item in all_items:
             loadingfactors.append(item.text())
 
-
-        rip=self.ui.rmcinputpaths
+        rip = self.ui.rmcinputpaths
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
 
         d = {'hipRMCInput': {'instrumentation': {'inputimage': inputpaths[0],
                                                  'imagesize': loader.loadimage(inputpaths[0]).shape,
                                                  'numtiles': tiles,
                                                  'loadingfactors': loadingfactors,
-                                                 'maskimage': ["data/mask.tif"]},  # optional
+                                                 'maskimage': ["data/mask.tif"]
+                                                 },  # optional
                              'computation': {'runname': self.ui.rmcoutput.text(),
-                                         'modelstartsize': [modlestartsize, modlestartsize],
-                                         'numstepsfactor': steps,
-                                             'scalefactor': scalefactor}}},
+                                             'modelstartsize': [modlestartsize, modlestartsize],
+                                             'numstepsfactor': steps,
+                                             'scalefactor': scalefactor}}}
         h = hig.hig(**d)
         h.write("test_input.hig")
         os.system("./hiprmc test_input.hig")
-
 
     def displayoutput(self):
         path = self.ui.rmcoutput.text()
