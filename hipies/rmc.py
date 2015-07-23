@@ -103,8 +103,13 @@ class gui():
 
         path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
+        loadingfactors = []
+
+        for item in iterAllItems(self.ui.rmcLoadingfactors):
+            loadingfactors.append(item.text())
+
         layout = self.ui.rmclayout
-        layout.addWidget(RmcView.rmcView(path))
+        layout.addWidget(RmcView.rmcView(path, loadingfactors))
 
 
 def iterAllItems(w):

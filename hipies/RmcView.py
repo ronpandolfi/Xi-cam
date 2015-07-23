@@ -77,7 +77,7 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
 
 
 class rmcView(QtGui.QTabWidget):
-    def __init__(self, root, loadingfactor=None):
+    def __init__(self, root, loadingfactors=None):
         super(rmcView, self).__init__()
 
 
@@ -120,10 +120,10 @@ class rmcView(QtGui.QTabWidget):
             view.getHistogramWidget().setHidden(True)
             view.ui.roiBtn.setHidden(True)
             view.ui.menuBtn.setHidden(True)
-            if loadingfactor is None:
+            if loadingfactors is None:
                 self.addTab(view, u"Tile " + str(tile + 1))
             else:
-                self.addTab(view, str(loadingfactor))
+                self.addTab(view, str(loadingfactors.pop[0]))
 
 
 if __name__ == '__main__':  # Start Qt event loop unless running in interactive mode.
