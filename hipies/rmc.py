@@ -101,7 +101,7 @@ class gui():
     def displayoutput(self, exitcode):
         print "Finished", exitcode
 
-        path = self.ui.rmcoutput.text()
+        path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
         layout = self.ui.rmclayout
         layout.addWidget(RmcView.rmcView(path))
