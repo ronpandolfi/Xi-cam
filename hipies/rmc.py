@@ -67,7 +67,6 @@ class gui():
             item = None
 
     def execute(self):
-        tiles = self.ui.rmcTiles.value()
         steps = self.ui.rmcSteps.value()
         scalefactor = self.ui.rmcScalefactor.value()
         modlestartsize = self.ui.rmcModlestartsize.value()
@@ -79,6 +78,8 @@ class gui():
 
         rip = self.ui.rmcinputpaths
         inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
+
+        tiles = len(loadingfactors)
 
         for path in inputpaths:
             d = {'hipRMCInput': {'instrumentation': {'inputimage': path,
