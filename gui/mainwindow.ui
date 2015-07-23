@@ -347,8 +347,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>302</width>
-              <height>490</height>
+              <width>98</width>
+              <height>28</height>
              </rect>
             </property>
            </widget>
@@ -648,6 +648,9 @@
             </layout>
            </widget>
            <widget class="QScrollArea" name="scrollArea_2">
+            <property name="verticalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOn</enum>
+            </property>
             <property name="horizontalScrollBarPolicy">
              <enum>Qt::ScrollBarAlwaysOff</enum>
             </property>
@@ -658,12 +661,15 @@
              <property name="geometry">
               <rect>
                <x>0</x>
-               <y>-28</y>
+               <y>0</y>
                <width>366</width>
-               <height>363</height>
+               <height>386</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">
+              <property name="margin">
+               <number>0</number>
+              </property>
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_11">
                 <item>
@@ -705,14 +711,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="0">
+                  <item row="6" column="0">
                    <widget class="QLabel" name="label">
                     <property name="text">
                      <string>Tiles</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="1">
+                  <item row="6" column="1">
                    <widget class="QSpinBox" name="rmcTiles">
                     <property name="minimum">
                      <number>1</number>
@@ -722,14 +728,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="5" column="0">
+                  <item row="7" column="0">
                    <widget class="QLabel" name="label_3">
                     <property name="text">
                      <string>Steps</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="5" column="1">
+                  <item row="7" column="1">
                    <widget class="QSpinBox" name="rmcSteps">
                     <property name="suffix">
                      <string/>
@@ -751,14 +757,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
+                  <item row="8" column="0">
                    <widget class="QLabel" name="label_4">
                     <property name="text">
                      <string>Scale Factor</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="1">
+                  <item row="8" column="1">
                    <widget class="QSpinBox" name="rmcScalefactor">
                     <property name="minimum">
                      <number>1</number>
@@ -771,14 +777,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="7" column="0">
+                  <item row="9" column="0">
                    <widget class="QLabel" name="label_5">
                     <property name="text">
                      <string>Model Start Size</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="7" column="1">
+                  <item row="9" column="1">
                    <widget class="QSpinBox" name="rmcModlestartsize">
                     <property name="minimum">
                      <number>1</number>
@@ -794,6 +800,19 @@
                      <string>Output directory</string>
                     </property>
                    </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="rmcRunName">
+                    <property name="text">
+                     <string>Run Name</string>
+                    </property>
+                    <property name="textFormat">
+                     <enum>Qt::AutoText</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="lineEdit"/>
                   </item>
                  </layout>
                 </item>
@@ -839,19 +858,6 @@
                      </spacer>
                     </item>
                    </layout>
-                  </item>
-                  <item>
-                   <spacer name="horizontalSpacer_2">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
                   </item>
                  </layout>
                 </item>
