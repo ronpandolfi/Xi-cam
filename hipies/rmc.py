@@ -88,7 +88,8 @@ class gui():
                                                      'loadingfactors': loadingfactors,
                                                      # 'maskimage': "data/mask.tif"
                                                      },  # optional
-                                 'computation': {'runname': self.ui.rmcoutput.text(),
+                                 'computation': {
+                                 'runname': os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text()),
                                                  'modelstartsize': [modlestartsize, modlestartsize],
                                                  'numstepsfactor': steps,
                                                  'scalefactor': scalefactor}}}
