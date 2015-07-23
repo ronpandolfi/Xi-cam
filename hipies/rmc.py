@@ -93,9 +93,9 @@ class gui():
             h = hig.hig(**d)
             h.write("test_input.hig")
             # os.system("./hiprmc test_input.hig")
-            rmcdaemon = RMCThread()
-            rmcdaemon.sig_finished.connect(self.displayoutput)
-            rmcdaemon.start()
+            self.rmcdaemon = RMCThread()
+            self.rmcdaemon.sig_finished.connect(self.displayoutput)
+            self.rmcdaemon.start()
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
