@@ -92,7 +92,6 @@ class gui():
                                                  'scalefactor': scalefactor}}}
             h = hig.hig(**d)
             h.write("test_input.hig")
-            # os.system("./hiprmc test_input.hig")
             self.rmcdaemon = RMCThread()
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
@@ -115,9 +114,9 @@ class RMCThread(QtCore.QThread):
     sig_finished = QtCore.Signal(int)
     def run(self):
         process = subprocess.Popen(['./hiprmc', 'test_input.hig'])
-        while process.poll is None:
+        while process.poll() is None:
             time.sleep(0.5)
-        self.sig_finished.emit()
+        self.sig_finished.emit(process.poll())
 
             # os.system("./hiprmc test_input.hig")
 
