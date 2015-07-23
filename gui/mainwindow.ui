@@ -663,7 +663,7 @@
                <x>0</x>
                <y>0</y>
                <width>366</width>
-               <height>386</height>
+               <height>352</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">
@@ -690,6 +690,13 @@
                   <property name="fieldGrowthPolicy">
                    <enum>QFormLayout::FieldsStayAtSizeHint</enum>
                   </property>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_7">
+                    <property name="text">
+                     <string>Output directory</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="1" column="1">
                    <widget class="QLabel" name="rmcoutput">
                     <property name="text">
@@ -711,31 +718,27 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
-                   <widget class="QLabel" name="label">
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="RunName">
                     <property name="text">
-                     <string>Tiles</string>
+                     <string>Run Name</string>
+                    </property>
+                    <property name="textFormat">
+                     <enum>Qt::AutoText</enum>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="1">
-                   <widget class="QSpinBox" name="rmcTiles">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>10</number>
-                    </property>
-                   </widget>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="lineEdit"/>
                   </item>
-                  <item row="7" column="0">
+                  <item row="5" column="0">
                    <widget class="QLabel" name="label_3">
                     <property name="text">
                      <string>Steps</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="7" column="1">
+                  <item row="5" column="1">
                    <widget class="QSpinBox" name="rmcSteps">
                     <property name="suffix">
                      <string/>
@@ -757,14 +760,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="8" column="0">
+                  <item row="6" column="0">
                    <widget class="QLabel" name="label_4">
                     <property name="text">
                      <string>Scale Factor</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="8" column="1">
+                  <item row="6" column="1">
                    <widget class="QSpinBox" name="rmcScalefactor">
                     <property name="minimum">
                      <number>1</number>
@@ -777,14 +780,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="9" column="0">
+                  <item row="7" column="0">
                    <widget class="QLabel" name="label_5">
                     <property name="text">
                      <string>Model Start Size</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="9" column="1">
+                  <item row="7" column="1">
                    <widget class="QSpinBox" name="rmcModlestartsize">
                     <property name="minimum">
                      <number>1</number>
@@ -793,26 +796,6 @@
                      <number>10000000</number>
                     </property>
                    </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="label_7">
-                    <property name="text">
-                     <string>Output directory</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="RunName">
-                    <property name="text">
-                     <string>Run Name</string>
-                    </property>
-                    <property name="textFormat">
-                     <enum>Qt::AutoText</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="1">
-                   <widget class="QLineEdit" name="rmcRunName"/>
                   </item>
                  </layout>
                 </item>
