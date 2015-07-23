@@ -662,8 +662,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>366</width>
-               <height>352</height>
+               <width>307</width>
+               <height>342</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">
@@ -729,7 +729,7 @@
                    </widget>
                   </item>
                   <item row="4" column="1">
-                   <widget class="QLineEdit" name="lineEdit"/>
+                   <widget class="QLineEdit" name="rmcRunName"/>
                   </item>
                   <item row="5" column="0">
                    <widget class="QLabel" name="label_3">
