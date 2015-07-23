@@ -123,7 +123,7 @@ class rmcView(QtGui.QTabWidget):
             if loadingfactors is None:
                 self.addTab(view, u"Tile " + str(tile + 1))
             else:
-                self.addTab(view, str(loadingfactors.pop[0]))
+                self.addTab(view, str(loadingfactors.pop([0])))
 
 
 if __name__ == '__main__':  # Start Qt event loop unless running in interactive mode.
