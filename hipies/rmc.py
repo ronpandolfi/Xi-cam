@@ -22,7 +22,8 @@ class gui():
         self.ui.rmcreset_2.clicked.connect(self.reset2)
 
     def open(self):
-        Outputdirectory = QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory")
+        Outputdirectory = QtGui.QFileDialog.OpenFileName(self.ui, "Select an Output directory",
+                                                         options=QtGui.QFileDialog.ShowDirsOnly)
         self.ui.rmcoutput.setText(Outputdirectory)
 
     def reset(self):
