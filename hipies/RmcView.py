@@ -94,7 +94,7 @@ class rmcView(QtGui.QTabWidget):
             else:
                 tiles[int(ind[1])] = [path]
 
-        for tile in tiles:
+        for tile, loadingfactor in zip(tiles, loadingfactors):
             images = []
             paths = sorted(tiles[tile])
             for path in paths:
@@ -123,7 +123,7 @@ class rmcView(QtGui.QTabWidget):
             if loadingfactors is None:
                 self.addTab(view, u"Tile " + str(tile + 1))
             else:
-                self.addTab(view, str(loadingfactors.pop(0)))
+                self.addTab(view, str(loadingfactor))
 
 
 if __name__ == '__main__':  # Start Qt event loop unless running in interactive mode.
