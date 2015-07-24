@@ -20,6 +20,7 @@ class gui():
         self.ui.rmcopen.clicked.connect(self.open)
         self.ui.rmcreset.clicked.connect(self.reset)
         self.ui.rmcreset_2.clicked.connect(self.reset2)
+        self.ui.rmcRunRemotely.stateChanged.connect(self.runRemotely)
 
     def open(self):
         Outputdirectory = QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory")
@@ -64,6 +65,15 @@ class gui():
         for index in self.ui.rmcLoadingfactors.selectedIndexes():
             item = self.ui.rmcLoadingfactors.takeItem(index.row())
             item = None
+
+    def runRemotely(self):
+
+        ["scp test_input.hig ablair@parratt.lbl.gov:~/  "
+            , "ssh -t ablair@parratt.lbl.gov "" "" "]
+
+        RemoteProcess = subprocess.Popen("scp test_input.hig ablair@parratt.lbl.gov:~/  ")
+
+        print RemoteProcess
 
     def execute(self):
         steps = self.ui.rmcSteps.value()
