@@ -19,7 +19,7 @@
 import sys
 import os
 
-print os.getcwd()
+# print os.getcwd()
 
 # import loader
 
@@ -50,7 +50,7 @@ class MyMainWindow():
         # Load the gui from file
         self.app = QtGui.QApplication(sys.argv)
         guiloader = QUiLoader()
-        print os.getcwd()
+        #print os.getcwd()
         f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
@@ -70,43 +70,43 @@ class MyMainWindow():
         self.folderwatcher = watcher.newfilewatcher()
 
         # TOOLBARS
-        self.difftoolbar = toolbar.difftoolbar()
-        self.difftoolbar.actionCenterFind.triggered.connect(self.centerfind)
-        self.difftoolbar.actionPolyMask.triggered.connect(self.polymask)
-        self.difftoolbar.actionLog_Intensity.triggered.connect(self.redrawcurrent)
-        self.difftoolbar.actionRemove_Cosmics.triggered.connect(self.removecosmics)
-        self.difftoolbar.actionMultiPlot.triggered.connect(self.multiplottoggle)
-        self.difftoolbar.actionMaskLoad.triggered.connect(self.maskload)
-        self.difftoolbar.actionRadial_Symmetry.triggered.connect(self.redrawcurrent)
-        self.difftoolbar.actionMirror_Symmetry.triggered.connect(self.redrawcurrent)
-        self.difftoolbar.actionShow_Mask.triggered.connect(self.redrawcurrent)
-        self.difftoolbar.actionCake.triggered.connect(self.redrawcurrent)
-        self.difftoolbar.actionLine_Cut.triggered.connect(self.linecut)
-        self.difftoolbar.actionVertical_Cut.triggered.connect(self.vertcut)
-        self.difftoolbar.actionHorizontal_Cut.triggered.connect(self.horzcut)
-        self.difftoolbar.actionRemeshing.triggered.connect(self.remeshmode)
-        self.difftoolbar.actionCalibrate_AgB.triggered.connect(self.calibrate)
-        self.difftoolbar.actionRefine_Center.triggered.connect(self.refinecenter)
+        # self.difftoolbar = toolbar.difftoolbar()
+        # self.difftoolbar.actionCenterFind.triggered.connect(self.centerfind)
+        # self.difftoolbar.actionPolyMask.triggered.connect(self.polymask)
+        # self.difftoolbar.actionLog_Intensity.triggered.connect(self.redrawcurrent)
+        # self.difftoolbar.actionRemove_Cosmics.triggered.connect(self.removecosmics)
+        # self.difftoolbar.actionMultiPlot.triggered.connect(self.multiplottoggle)
+        # self.difftoolbar.actionMaskLoad.triggered.connect(self.maskload)
+        # self.difftoolbar.actionRadial_Symmetry.triggered.connect(self.redrawcurrent)
+        # self.difftoolbar.actionMirror_Symmetry.triggered.connect(self.redrawcurrent)
+        # self.difftoolbar.actionShow_Mask.triggered.connect(self.redrawcurrent)
+        # self.difftoolbar.actionCake.triggered.connect(self.redrawcurrent)
+        # self.difftoolbar.actionLine_Cut.triggered.connect(self.linecut)
+        # self.difftoolbar.actionVertical_Cut.triggered.connect(self.vertcut)
+        # self.difftoolbar.actionHorizontal_Cut.triggered.connect(self.horzcut)
+        # self.difftoolbar.actionRemeshing.triggered.connect(self.remeshmode)
+        # self.difftoolbar.actionCalibrate_AgB.triggered.connect(self.calibrate)
+        # self.difftoolbar.actionRefine_Center.triggered.connect(self.refinecenter)
 
-        self.ui.diffbox.addWidget(self.difftoolbar)
+        #self.ui.diffbox.insertWidget(0,self.difftoolbar)
 
 
         # ACTIONS
         # Wire up action buttons
-        self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
-        self.ui.findChild(QtGui.QAction, 'actionCenterFind').triggered.connect(self.centerfind)
-        self.ui.findChild(QtGui.QAction, 'actionPolyMask').triggered.connect(self.polymask)
-        self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
-        self.ui.findChild(QtGui.QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
-        self.ui.findChild(QtGui.QAction, 'actionMaskLoad').triggered.connect(self.maskload)
-        self.ui.findChild(QtGui.QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
-        self.ui.findChild(QtGui.QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
-        self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QtGui.QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QtGui.QAction, 'actionCake').triggered.connect(self.redrawcurrent)
-        self.ui.findChild(QtGui.QAction, 'actionLine_Cut').triggered.connect(self.linecut)
+        # self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        # self.ui.findChild(QtGui.QAction, 'actionCenterFind').triggered.connect(self.centerfind)
+        # self.ui.findChild(QtGui.QAction, 'actionPolyMask').triggered.connect(self.polymask)
+        # self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics').triggered.connect(self.removecosmics)
+        # self.ui.findChild(QtGui.QAction, 'actionMultiPlot').triggered.connect(self.multiplottoggle)
+        # self.ui.findChild(QtGui.QAction, 'actionMaskLoad').triggered.connect(self.maskload)
+        # self.ui.findChild(QtGui.QAction, 'actionSaveExperiment').triggered.connect(self.experiment.save)
+        # self.ui.findChild(QtGui.QAction, 'actionLoadExperiment').triggered.connect(self.loadexperiment)
+        # self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QtGui.QAction, 'actionShow_Mask').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QtGui.QAction, 'actionCake').triggered.connect(self.redrawcurrent)
+        # self.ui.findChild(QtGui.QAction, 'actionLine_Cut').triggered.connect(self.linecut)
         self.ui.findChild(QtGui.QAction, 'actionTimeline').triggered.connect(self.opentimeline)
         self.ui.findChild(QtGui.QAction, 'actionAdd').triggered.connect(self.addmode)
         self.ui.findChild(QtGui.QAction, 'actionSubtract').triggered.connect(self.subtractmode)
@@ -114,12 +114,12 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient').triggered.connect(self.subtractwithcoefmode)
         self.ui.findChild(QtGui.QAction, 'actionDivide').triggered.connect(self.dividemode)
         self.ui.findChild(QtGui.QAction, 'actionAverage').triggered.connect(self.averagemode)
-        self.ui.findChild(QtGui.QAction, 'actionVertical_Cut').triggered.connect(self.vertcut)
-        self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
-        self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
-        self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
-        self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB').triggered.connect(self.calibrate)
-        self.ui.findChild(QtGui.QAction, 'actionRefine_Center').triggered.connect(self.refinecenter)
+        # self.ui.findChild(QtGui.QAction, 'actionVertical_Cut').triggered.connect(self.vertcut)
+        # self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
+        # self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
+        # self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
+        # self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB').triggered.connect(self.calibrate)
+        # self.ui.findChild(QtGui.QAction, 'actionRefine_Center').triggered.connect(self.refinecenter)
 
         # set inital state
         self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').setChecked(True)
@@ -137,7 +137,7 @@ class MyMainWindow():
         self.filetreemodel = QtGui.QFileSystemModel()
         self.filetree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         self.filetree.setModel(self.filetreemodel)
-        self.filetreepath = '/'
+        self.filetreepath = '/Volumes'
         self.treerefresh(self.filetreepath)
         header = self.filetree.header()
         self.filetree.setHeaderHidden(True)
@@ -157,7 +157,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout(self, '/')
+        self.libraryview = library.librarylayout(self, '/Volumes')
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list
@@ -208,14 +208,14 @@ class MyMainWindow():
 
 
         # Setup viewer tool menu
-        menu = QtGui.QMenu()
-        menu.addAction(self.ui.findChild(QtGui.QAction, 'actionPolyMask'))
-        menu.addAction(self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics'))
-        menu.addAction(self.ui.findChild(QtGui.QAction, 'actionMaskLoad'))
-        toolbuttonMasking = QtGui.QToolButton()
-        toolbuttonMasking.setDefaultAction(self.ui.findChild(QtGui.QAction, 'actionMasking'))
-        toolbuttonMasking.setMenu(menu)
-        toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
+        # menu = QtGui.QMenu()
+        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionPolyMask'))
+        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics'))
+        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionMaskLoad'))
+        # toolbuttonMasking = QtGui.QToolButton()
+        # toolbuttonMasking.setDefaultAction(self.ui.findChild(QtGui.QAction, 'actionMasking'))
+        # toolbuttonMasking.setMenu(menu)
+        # toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
         # self.difftoolbar = QtGui.QToolBar()
         # self.difftoolbar.addWidget(toolbuttonMasking)
         # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
@@ -241,8 +241,19 @@ class MyMainWindow():
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                              self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                              self.roi)
-        self.ui.timelinebox.addWidget(self.timelinetoolbar)
+        self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
 
+        self.timelinetoolbar.actionHorizontal_Cut.setEnabled(False)
+        self.timelinetoolbar.actionVertical_Cut.setEnabled(False)
+        self.timelinetoolbar.actionLine_Cut.setEnabled(False)
+
+        # Viewer toolbar
+        self.difftoolbar = toolbar.difftoolbar()
+        self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
+                                         self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
+                                         self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
+                                         self.roi)
+        self.ui.diffbox.insertWidget(0, self.difftoolbar)
 
         # Setup file operation toolbox
         self.booltoolbar = QtGui.QToolBar()
@@ -309,7 +320,9 @@ class MyMainWindow():
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
         self.ui.show()
+        print("BLAH!")
         sys.exit(self.app.exec_())
+
 
     def treerefresh(self, path=None):
         """
@@ -413,6 +426,7 @@ class MyMainWindow():
         filenames = [path.split('/')[-1] for path in paths]
         tabwidget = self.ui.tabWidget
         tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, operationname + ': ' + ', '.join(filenames)))
+        self.showviewer()
 
     def vertcut(self):
         """
@@ -509,10 +523,12 @@ class MyMainWindow():
         """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.ui.filenamelabel.setText('')
 
     def timelinetabCloseRequested(self, index):
         self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.ui.filenamelabel.setText('')
 
     def polymask(self):
         """
@@ -574,7 +590,7 @@ class MyMainWindow():
         """
         Calibrate using the currently active tab
         """
-        self.currentImageTab().load()
+        #self.currentImageTab().load()
         self.currentImageTab().tab.calibrate()
 
     def openimage(self, path):
@@ -615,7 +631,8 @@ class MyMainWindow():
         """
         redraw the current tab's view
         """
-        self.currentImageTab().tab.redrawimage()
+        if self.currentImageTab() is not None:
+            self.currentImageTab().tab.redrawimage()
 
 
     def removecosmics(self):

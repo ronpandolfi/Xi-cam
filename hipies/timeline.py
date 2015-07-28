@@ -55,6 +55,7 @@ class timelinetab(viewer.imageTab):
         self.parentwindow = parentwindow
         self.setvariationmode(0)
         self.gotomax()
+        self.istimeline = True
 
 
     def reduce(self):
@@ -106,7 +107,7 @@ class timelinetab(viewer.imageTab):
         #self.parentwindow.timearrow.setPos(pos,self.variation[pos])
 
         if pos != self.previousPos:
-            print pos
+            # print pos
             self.redrawframe()
         self.previousPos = pos
 

@@ -103,7 +103,8 @@ class librarylayout(FlowLayout):
     """
     Extend the flow layout to fill it with thumbwidgetitems representing files/folders
     """
-    def __init__(self, parentwindow, path='samples/'):
+
+    def __init__(self, parentwindow, path='/Volumes'):
         super(librarylayout, self).__init__()
         self.parent = None
         self.parentwindow = parentwindow
@@ -111,7 +112,7 @@ class librarylayout(FlowLayout):
 
     def chdir(self, path):
         self.clear()
-        self.populate(path)
+        self.populate(os.path.normpath(path))
 
     def populate(self, path):
         self.parent = QtCore.QDir()
@@ -122,7 +123,7 @@ class librarylayout(FlowLayout):
 
         for entry in entries:
             # print fileinfo.fileName()
-            if not (entry == '..' and path == '/Volumes/') and not entry == '.':
+            if not (entry == '..' and os.path.normpath(path) == '/Volumes') and not entry == '.':
                 self.addWidget(thumbwidgetitem(os.path.join(path,entry), parentwindow=self.parentwindow))
 
 

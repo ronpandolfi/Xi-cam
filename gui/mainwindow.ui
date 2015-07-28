@@ -49,7 +49,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Test Experiment #1</string>
+              <string/>
           </property>
          </widget>
         </item>
@@ -324,7 +324,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+           <number>0</number>
        </property>
        <widget class="QWidget" name="page_2">
         <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -347,8 +347,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>98</width>
-              <height>28</height>
+                 <width>363</width>
+                 <height>494</height>
              </rect>
             </property>
            </widget>
@@ -403,6 +403,9 @@
                <property name="styleSheet">
                 <string notr="true"/>
                </property>
+                  <property name="tabPosition">
+                      <enum>QTabWidget::South</enum>
+                  </property>
                <property name="tabShape">
                 <enum>QTabWidget::Rounded</enum>
                </property>
@@ -455,6 +458,9 @@
                <property name="styleSheet">
                 <string notr="true"/>
                </property>
+                  <property name="tabPosition">
+                      <enum>QTabWidget::South</enum>
+               </property>
                <property name="currentIndex">
                 <number>-1</number>
                </property>
@@ -485,7 +491,7 @@
       </widget>
       <widget class="QStackedWidget" name="sidemode">
        <property name="currentIndex">
-        <number>1</number>
+           <number>0</number>
        </property>
        <widget class="QWidget" name="page_5">
         <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -662,8 +668,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>307</width>
-               <height>342</height>
+                  <width>305</width>
+                  <height>336</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">

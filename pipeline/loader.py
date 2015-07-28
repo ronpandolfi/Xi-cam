@@ -55,9 +55,9 @@ def readenergy(path):
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.fits':
                 head = pyfits.open(path)
-                print head[0].header.keys()
+                # print head[0].header.keys()
                 paras = scanparaslines(str(head[0].header).split('\r'))
-                print paras
+                #print paras
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 pass
                 # nxroot = nx.load(path)

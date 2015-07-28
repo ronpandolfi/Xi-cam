@@ -49,7 +49,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Test Experiment #1</string>
+              <string/>
           </property>
          </widget>
         </item>
@@ -324,7 +324,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+           <number>0</number>
        </property>
        <widget class="QWidget" name="page_2">
         <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -347,8 +347,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>98</width>
-              <height>28</height>
+                 <width>363</width>
+                 <height>494</height>
              </rect>
             </property>
            </widget>
@@ -403,6 +403,9 @@
                <property name="styleSheet">
                 <string notr="true"/>
                </property>
+                  <property name="tabPosition">
+                      <enum>QTabWidget::South</enum>
+                  </property>
                <property name="tabShape">
                 <enum>QTabWidget::Rounded</enum>
                </property>
@@ -455,6 +458,9 @@
                <property name="styleSheet">
                 <string notr="true"/>
                </property>
+                  <property name="tabPosition">
+                      <enum>QTabWidget::South</enum>
+               </property>
                <property name="currentIndex">
                 <number>-1</number>
                </property>
@@ -476,45 +482,16 @@
         </layout>
        </widget>
        <widget class="QWidget" name="page_6">
-        <layout class="QVBoxLayout" name="verticalLayout_13">
+        <layout class="QVBoxLayout" name="rmclayout">
          <property name="margin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QTabWidget" name="tabWidget_2">
-           <property name="tabPosition">
-            <enum>QTabWidget::South</enum>
-           </property>
-           <property name="tabShape">
-            <enum>QTabWidget::Rounded</enum>
-           </property>
-           <property name="currentIndex">
-            <number>0</number>
-           </property>
-           <property name="documentMode">
-            <bool>true</bool>
-           </property>
-           <property name="tabBarAutoHide" stdset="0">
-            <bool>false</bool>
-           </property>
-           <widget class="QWidget" name="tab">
-            <attribute name="title">
-             <string>Tab 1</string>
-            </attribute>
-           </widget>
-           <widget class="QWidget" name="tab_2">
-            <attribute name="title">
-             <string>Tab 2</string>
-            </attribute>
-           </widget>
-          </widget>
-         </item>
         </layout>
        </widget>
       </widget>
       <widget class="QStackedWidget" name="sidemode">
        <property name="currentIndex">
-        <number>1</number>
+           <number>0</number>
        </property>
        <widget class="QWidget" name="page_5">
         <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -677,6 +654,9 @@
             </layout>
            </widget>
            <widget class="QScrollArea" name="scrollArea_2">
+            <property name="verticalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOn</enum>
+            </property>
             <property name="horizontalScrollBarPolicy">
              <enum>Qt::ScrollBarAlwaysOff</enum>
             </property>
@@ -687,12 +667,15 @@
              <property name="geometry">
               <rect>
                <x>0</x>
-               <y>-120</y>
-               <width>278</width>
-               <height>385</height>
+               <y>0</y>
+                  <width>305</width>
+                  <height>336</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">
+              <property name="margin">
+               <number>0</number>
+              </property>
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_11">
                 <item>
@@ -727,45 +710,41 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="2" column="0">
+                  <item row="3" column="0">
                    <widget class="QPushButton" name="rmcreset">
                     <property name="text">
                      <string>Reset</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="2" column="1">
+                  <item row="3" column="1">
                    <widget class="QPushButton" name="rmcopen">
                     <property name="text">
                      <string>Open</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label">
-                    <property name="text">
-                     <string>Tiles</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="1">
-                   <widget class="QSpinBox" name="rmcTiles">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>10</number>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="4" column="0">
+                   <widget class="QLabel" name="RunName">
+                    <property name="text">
+                     <string>Run Name</string>
+                    </property>
+                    <property name="textFormat">
+                     <enum>Qt::AutoText</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="rmcRunName"/>
+                  </item>
+                  <item row="5" column="0">
                    <widget class="QLabel" name="label_3">
                     <property name="text">
                      <string>Steps</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="1">
+                  <item row="5" column="1">
                    <widget class="QSpinBox" name="rmcSteps">
                     <property name="suffix">
                      <string/>
@@ -787,14 +766,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="5" column="0">
+                  <item row="6" column="0">
                    <widget class="QLabel" name="label_4">
                     <property name="text">
                      <string>Scale Factor</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="5" column="1">
+                  <item row="6" column="1">
                    <widget class="QSpinBox" name="rmcScalefactor">
                     <property name="minimum">
                      <number>1</number>
@@ -807,14 +786,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
+                  <item row="7" column="0">
                    <widget class="QLabel" name="label_5">
                     <property name="text">
                      <string>Model Start Size</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="1">
+                  <item row="7" column="1">
                    <widget class="QSpinBox" name="rmcModlestartsize">
                     <property name="minimum">
                      <number>1</number>
@@ -894,7 +873,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_3">
+            <widget class="QPushButton" name="rmcreset_2">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>

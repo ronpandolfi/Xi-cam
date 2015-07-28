@@ -20,7 +20,7 @@ class gui():
         self.ui.rmcopen.clicked.connect(self.open)
         self.ui.rmcreset.clicked.connect(self.reset)
         self.ui.rmcreset_2.clicked.connect(self.reset2)
-        self.ui.rmcRunRemotely.stateChanged.connect(self.runRemotely)
+        # self.ui.rmcRunRemotely.stateChanged.connect(self.runRemotely)
 
     def open(self):
         Outputdirectory = QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory")
@@ -73,7 +73,7 @@ class gui():
 
         RemoteProcess = subprocess.Popen("scp test_input.hig ablair@parratt.lbl.gov:~/  ")
 
-        print RemoteProcess
+        #print RemoteProcess
 
     def execute(self):
         steps = self.ui.rmcSteps.value()

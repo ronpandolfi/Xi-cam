@@ -375,7 +375,7 @@ def inpaint(img,mask):
 
         filled = it(list(np.ndindex(img.shape))).reshape(img.shape)
 
-        plt.imshow(filled)
+        plt.imshow(np.rot90(filled))
         plt.show()
 
     return filled
@@ -383,17 +383,26 @@ def inpaint(img,mask):
 
 def findmaxs(orig):
     img = orig.copy()
+    img = filters.gaussian_filter(img, 3)
     img = filters.minimum_filter(img, 4)
-    img = filters.gaussian_filter(img, 2)
+
     img = filters.median_filter(img, 4)
+
     img -= np.min(img)
-    img = denoise_bilateral(img, sigma_range=0.05, sigma_spatial=15)
+    img = denoise_bilateral(img, sigma_range=0.5, sigma_spatial=15)
+
+    plt.imshow(np.rot90(img))
+    plt.show()
+
     #img = filters.percentile_filter(img,50,50)
 
-    maxima = np.array(img == filters.maximum_filter(img, (10, 10))) & (img > np.percentile(orig, 90))
+    maxima = ((img == filters.maximum_filter(img, (10, 10))) & (
+    filters.maximum_filter(img, (50, 50)) > 1.5 * filters.minimum_filter(img, (50, 50))) & (img > 2))
     maximachis, maximaqs = np.where(maxima == 1)
-    plt.imshow(orig, interpolation='nearest')
-    plt.plot(maximaqs, maximachis, 'ro')
+    plt.imshow(np.rot90(orig), interpolation='nearest')
+    plt.plot(maximachis, 1000 - maximaqs, 'ro')
+    plt.ylim([1000, 0])
+    plt.xlim([0, 1000])
     plt.show()
 
     return maximachis, maximaqs
@@ -466,7 +475,7 @@ def fitarcgaussian(chiprofile, chi):
     # A, chimu, sigma, baseline = popt
     # FWHM = sigma * tworoot2ln2
 
-    return params
+    return popt
 
 
 def findgisaxsarcs2(img, experiment):

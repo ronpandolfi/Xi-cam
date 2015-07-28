@@ -334,7 +334,6 @@ def gisaxs_center_approx(img, log=False):
 
 def refinecenter(dimg):
     imgcopy = dimg.data.T
-    print imgcopy.shape
     # Refine calibration
     # d-spacing for Silver Behenate
     d_spacings = np.array([58.367, 29.1835, 19.45567, 14.59175, 11.6734, 9.72783, 8.33814, 7.29587, 6.48522, 5.8367])

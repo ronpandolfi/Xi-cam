@@ -12,8 +12,8 @@ from numpy.distutils.core import Extension
 import numpy as np
 import os
 
-os.environ["CC"] = "gcc"
-os.environ["CXX"] = "g++"
+os.environ["CC"] = "gcc-4.9"
+os.environ["CXX"] = "g++-4.9"
 
 APP = ['main.py']
 DATA_FILES = []
@@ -34,20 +34,22 @@ OPTIONS = {'argv_emulation': True,
                          ],
                 'packages' : [ 'pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py' ]
             }
-
-EXT = Extension(name = 'pipeline.cWarpImage',
-                sources = ['cext/cWarpImage.cc', 'cext/remesh.cc'],
-                extra_compile_args = ['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include' ],
-                extra_link_args  = ['-fopenmp' ]
-               )
+#
+# EXT = Extension(name = 'pipeline.cWarpImage',
+# sources = ['cext/cWarpImage.cc', 'cext/remesh.cc'],
+#                 extra_compile_args = ['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include' ],
+#                 extra_link_args  = ['-fopenmp' ],
+#                 include_dirs=[np.get_include()],
+#
+#                )
 
 setup(
-    #app=APP,
-    data_files=DATA_FILES,
-    #options={'py2app': OPTIONS},
-    #setup_requires=['py2app'],
-    include_dirs=[np.get_include()],
-    ext_modules=[EXT]
+    app=APP,
+    options={'py2app': OPTIONS},
+    setup_requires=['py2app'],
+    include_dirs=[np.get_include()]  # ,
+    #ext_modules=[EXT],
+
 
 )
 

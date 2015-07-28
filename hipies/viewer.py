@@ -58,7 +58,7 @@ class imageTabTracker(QtGui.QWidget):
 
             self.layout = QtGui.QHBoxLayout(self)
             self.layout.setContentsMargins(0, 0, 0, 0)
-            print self.paths
+            # print self.paths
             self.tab = imageTab(dimg, self.parent, self.paths)
             self.layout.addWidget(self.tab)
             self.isloaded = True
@@ -108,8 +108,9 @@ class imageTab(QtGui.QWidget):
         super(imageTab, self).__init__()
         self.region = None
         self.maskROI = None
+        self.istimeline = False
         self.layout = QtGui.QStackedLayout(self)
-        print 'paths', paths
+        #print 'paths', paths
         if paths is not None:
             self.path = paths[0]
         else:
@@ -221,6 +222,8 @@ class imageTab(QtGui.QWidget):
         pos = evt  ## using signal proxy turns original arguments into a tuple
         if self.viewbox.sceneBoundingRect().contains(pos):
             mousePoint = self.viewbox.mapSceneToView(pos)
+            self.vLine.setPos(mousePoint.x())
+            self.hLine.setPos(mousePoint.y())
             if (0 < mousePoint.x() < self.dimg.data.shape[0]) & (
                             0 < mousePoint.y() < self.dimg.data.shape[1]):  # within bounds
                 #angstrom=QChar(0x00B5)
@@ -235,11 +238,10 @@ class imageTab(QtGui.QWidget):
                         q = pixel2cake(x, y, self.dimg)
 
                     elif isremesh:
-                        pass
+                        return
                     else:
                         q = pixel2q(x, y, self.dimg.experiment)
 
-                    print q
 
 
                     self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
@@ -272,8 +274,7 @@ class imageTab(QtGui.QWidget):
                 self.coordslabel.setVisible(True)
             else:
                 self.coordslabel.setVisible(False)
-            self.vLine.setPos(mousePoint.x())
-            self.hLine.setPos(mousePoint.y())
+
             self.parentwindow.qLine.setPos(pixel2q(mousePoint.x(), mousePoint.y(), self.dimg.experiment))
 
     def leaveEvent(self, evt):
@@ -302,21 +303,21 @@ class imageTab(QtGui.QWidget):
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
 
-        if self.parentwindow.ui.viewmode.currentIndex() == 1:
+        if self.parentwindow.ui.viewmode.currentIndex() == 1 or not self.istimeline:
             toolbar = self.parentwindow.difftoolbar
-        elif self.parentwindow.ui.viewmode.currentIndex() == 2:
+        elif self.parentwindow.ui.viewmode.currentIndex() == 2 or self.istimeline:
             toolbar = self.parentwindow.timelinetoolbar
         else:
             print "Redraw somehow activated from wrong tab"
             debug.frustration()
             toolbar = None
 
-        islogintensity = self.parentwindow.difftoolbar.actionLog_Intensity.isChecked()
-        isradialsymmetry = self.parentwindow.difftoolbar.actionRadial_Symmetry.isChecked()
-        ismirrorsymmetry = self.parentwindow.difftoolbar.actionMirror_Symmetry.isChecked()
-        ismaskshown = self.parentwindow.difftoolbar.actionShow_Mask.isChecked()
-        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
-        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
+        islogintensity = toolbar.actionLog_Intensity.isChecked()
+        isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
+        ismirrorsymmetry = toolbar.actionMirror_Symmetry.isChecked()
+        ismaskshown = toolbar.actionShow_Mask.isChecked()
+        iscake = toolbar.actionCake.isChecked()
+        isremesh = toolbar.actionRemeshing.isChecked()
         # img = self.dimg.data.copy()
         if forcelow:
             img = self.dimg.thumbnail.copy()
@@ -365,17 +366,18 @@ class imageTab(QtGui.QWidget):
         if iscake:
             img = self.dimg.cake
             mask = self.dimg.cakemask
-            print self.dimg.cakeqx
-            print self.dimg.cakeqy
+            # print self.dimg.cakeqx
+            #print self.dimg.cakeqy
 
         elif isremesh:
             img = self.dimg.remesh
             mask = self.dimg.remeshmask
-            print self.dimg.remeshqx
-            print self.dimg.remeshqy
+            # print self.dimg.remeshqx
+            #print self.dimg.remeshqy
 
         if iscake or isremesh:
-            self.centerplot.clear()
+            if self.centerplot is not None:
+                self.centerplot.clear()
         else:
             self.drawcenter()
 
@@ -390,12 +392,18 @@ class imageTab(QtGui.QWidget):
 
         self.imageitem.setImage(img, scale=scale)
 
+        if not iscake and not isremesh:
+            self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
+
         #self.imageitem.setLookupTable(colormap.LUT)
 
     def linecut(self):
         """
         toggles the line cut
         """
+        self.viewbox.removeItem(self.region)
+        self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
+        self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
         if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
             self.region = pg.LineSegmentROI(
                 [[self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
@@ -404,12 +412,15 @@ class imageTab(QtGui.QWidget):
             self.replot()
             self.region.sigRegionChanged.connect(self.replot)
         else:
-            self.viewbox.removeItem(self.region)
+            #self.viewbox.removeItem(self.region)
             self.region = None
             self.replot()
 
     def verticalcut(self):
-        if self.parentwindow.ui.difftoolbar.actionVertical_Cut.isChecked():
+        self.viewbox.removeItem(self.region)
+        self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
+        self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
+        if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
             except AttributeError:
@@ -423,11 +434,14 @@ class imageTab(QtGui.QWidget):
             self.region.sigRegionChangeFinished.connect(self.replot)
             self.viewbox.addItem(self.region)
         else:
-            self.viewbox.removeItem(self.region)
+            #self.viewbox.removeItem(self.region)
             self.region = None
         self.replot()
 
     def horizontalcut(self):
+        self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
+        self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
+        self.viewbox.removeItem(self.region)
         if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
             try:
                 self.viewbox.removeItem(self.region)
@@ -442,7 +456,7 @@ class imageTab(QtGui.QWidget):
             self.region.sigRegionChangeFinished.connect(self.replot)
             self.viewbox.addItem(self.region)
         else:
-            self.viewbox.removeItem(self.region)
+            #self.viewbox.removeItem(self.region)
             self.region = None
         self.replot()
 
@@ -470,6 +484,7 @@ class imageTab(QtGui.QWidget):
 
     #@debug.timeit
     def calibrate(self):
+        self.dimg.experiment.iscalibrated = False
 
         # Force cache the detector
         _ = self.dimg.detector
@@ -486,7 +501,7 @@ class imageTab(QtGui.QWidget):
         for peak in peaks:
             if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
                 bestpeak = peak[0]
-                print peak
+                #print peak
                 break
 
         # Calculate sample to detector distance for lowest q peak
@@ -567,11 +582,11 @@ class imageTab(QtGui.QWidget):
         else:
             if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
                 regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.imgdata)
+                cut = np.zeros_like(self.dimg.data)
                 cut[:, regionbounds[0]:regionbounds[1]] = 1
             if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
                 regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.imgdata)
+                cut = np.zeros_like(self.dimg.data)
                 cut[regionbounds[0]:regionbounds[1], :] = 1
 
 

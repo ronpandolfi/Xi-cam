@@ -4,7 +4,11 @@
 import loader
 import numpy as np
 from pyFAI import geometry
-from cWarpImage import warp_image
+
+try:
+    from cWarpImage import warp_image
+except ImportError:
+    print "Remeshing C extension is NOT LOADED!"
 
 def calc_q_range(lims, geometry, alphai, cen):
 
@@ -51,6 +55,7 @@ def remesh(image, filename, geometry):
     pixel[1] = geometry.get_pixel2() * nanometer
     center[0] = geometry.get_poni2() * nanometer
     center[1] = shape[0] * pixel[0] - geometry.get_poni1() * nanometer
+    print center
 
     # read paras
     paras = loader.loadparas(filename)
@@ -58,11 +63,13 @@ def remesh(image, filename, geometry):
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
-        return np.rot90(image, 3)
+        return np.rot90(image, 3), None, None
     if "Sample Alpha Stage" in paras:
         alphai = np.deg2rad(float(paras["Sample Alpha Stage"]))
     elif "Alpha" in paras:
         alphai = np.deg2rad(float(paras['Alpha']))
+    else:
+        return np.rot90(image, 3), None, None
 
     # calculate q values
     qrange, k0 = calc_q_range(image.shape, geometry, alphai, center)
