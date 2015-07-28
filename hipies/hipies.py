@@ -93,7 +93,7 @@ class MyMainWindow():
 
         # ACTIONS
         # Wire up action buttons
-        # self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
         # self.ui.findChild(QtGui.QAction, 'actionCenterFind').triggered.connect(self.centerfind)
         # self.ui.findChild(QtGui.QAction, 'actionPolyMask').triggered.connect(self.polymask)
         # self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
