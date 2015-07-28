@@ -117,7 +117,7 @@ class MyMainWindow():
         # self.ui.findChild(QtGui.QAction, 'actionVertical_Cut').triggered.connect(self.vertcut)
         # self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut').triggered.connect(self.horzcut)
         # self.ui.findChild(QtGui.QAction, 'actionRemeshing').triggered.connect(self.remeshmode)
-        # self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
+        self.ui.findChild(QtGui.QAction, 'actionExport_Image').triggered.connect(self.exportimage)
         # self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB').triggered.connect(self.calibrate)
         # self.ui.findChild(QtGui.QAction, 'actionRefine_Center').triggered.connect(self.refinecenter)
 
