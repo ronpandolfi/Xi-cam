@@ -108,11 +108,11 @@ class gui():
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
 
-            test_call = True
-        if test_call == True:
-            print "It worked. This way will work!"
-        else:
-            print "It failed. But you shpuld still see this!"
+    test_call = True
+    if test_call == True:
+        print "It worked. This way will work!"
+    else:
+        print "It failed. But you shpuld still see this!"
 
 
 
