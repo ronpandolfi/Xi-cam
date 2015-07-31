@@ -108,6 +108,12 @@ class gui():
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
 
+            test_call = True
+        if test_call is True:
+            print "It worked. This way will work!"
+
+
+
     def displayoutput(self, exitcode):
         print "Finished", exitcode
 
