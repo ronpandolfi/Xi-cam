@@ -109,7 +109,7 @@ class gui():
             self.rmcdaemon.start()
 
             test_call = True
-        if test_call is True:
+        if test_call == True:
             print "It worked. This way will work!"
 
 
