@@ -2,6 +2,7 @@ import os
 import RmcView
 import time
 import subprocess
+import count
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
@@ -73,8 +74,9 @@ class gui():
             , "ssh -t ablair@parratt.lbl.gov "" "" "]
 
         RemoteProcess = subprocess.Popen("scp test_input.hig ablair@parratt.lbl.gov:~/  ")
+        # print RemoteProcess
 
-        #print RemoteProcess
+    executeNumber = 0
 
     def execute(self):
         steps = self.ui.rmcSteps.value()
@@ -112,6 +114,10 @@ class gui():
         if test_call == 1:
             self.execute()  # Trying to get the window to delete after a new window is opened.
 
+    while executeNumber < 1:
+        executeNumber += 1
+        if executeNumber >= 2:
+            break
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
