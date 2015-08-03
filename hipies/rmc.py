@@ -107,9 +107,9 @@ class gui():
             self.rmcdaemon = RMCThread()
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
-            test_call = False
-        test_cal = True
-        if test_call == True:
+            test_call = 2
+        test_cal = 1
+        if test_call == 1:
             print "It worked. This way will work!"  # Trying to get the window to delete after a new window is opened.
         else:
             print "It did not work!!!!"
