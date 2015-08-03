@@ -107,12 +107,10 @@ class gui():
             self.rmcdaemon = RMCThread()
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
-            # test_call = 2
         test_call = 1
         if test_call == 1:
-            print "It worked. This way will work!"  # Trying to get the window to delete after a new window is opened.
-        else:
-            print "It did not work!!!!"
+            self.execute()  # Trying to get the window to delete after a new window is opened.
+
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
