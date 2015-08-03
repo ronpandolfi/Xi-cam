@@ -32,10 +32,10 @@ class gui():
     def reset2(self):
         self.ui.rmcoutput.setText("")
         self.ui.rmcLoadingfactors.clear()
-        self.ui.rmcTiles.setValue(1)
         self.ui.rmcSteps.setValue(99)
         self.ui.rmcScalefactor.setValue(1)
         self.ui.rmcModlestartsize.setValue(1)
+        self.ui.rmcTiles.setValue(1)
 
     def showrmc(self):
         """
