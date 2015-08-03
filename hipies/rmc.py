@@ -36,7 +36,7 @@ class gui():
         self.ui.rmcScalefactor.setValue(1)
         self.ui.rmcModlestartsize.setValue(1)
         self.ui.rmcRunName.setText("")
-        self.ui.rmcTiles.setValue(1)
+        self.ui.rmcinputpaths.estText("")
 
     def showrmc(self):
         """
