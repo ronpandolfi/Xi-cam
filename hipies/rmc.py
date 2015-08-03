@@ -2,7 +2,6 @@ import os
 import RmcView
 import time
 import subprocess
-import count
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
