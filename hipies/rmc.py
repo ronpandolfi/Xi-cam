@@ -29,13 +29,14 @@ class gui():
     def reset(self):
         self.ui.rmcoutput.setText("")
 
-    def reset2(self):
-        self.ui.rmcoutput.setText("")
-        self.ui.rmcLoadingfactors.clear()
-        self.ui.rmcTiles.setValue(1)
-        self.ui.rmcSteps.setValue(99)
-        self.ui.rmcScalefactor.setValue(1)
-        self.ui.rmcModlestartsize.setValue(1)
+    #
+    # def reset2(self):
+    #     self.ui.rmcoutput.setText("")
+    #     self.ui.rmcLoadingfactors.clear()
+    #     self.ui.rmcTiles.setValue(1)
+    #     self.ui.rmcSteps.setValue(99)
+    #     self.ui.rmcScalefactor.setValue(1)
+    #     self.ui.rmcModlestartsize.setValue(1)
 
     def showrmc(self):
         """
@@ -108,13 +109,11 @@ class gui():
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
             test_call = False
-        test_call = True
+        test_cal = True
         if test_call == True:
-            print "It worked. This way will work!"
+            print "It worked. This way will work!"  # Trying to get the window to delete after a new window is opened.
         else:
-            print "It failed. But you shpuld still see this!"
-
-
+            print "It did not work!!!!"
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
