@@ -32,10 +32,11 @@ class gui():
     def reset2(self):
         self.ui.rmcoutput.setText("")
         self.ui.rmcLoadingfactors.clear()
-        self.ui.rmcTiles.setValue(1)
         self.ui.rmcSteps.setValue(99)
         self.ui.rmcScalefactor.setValue(1)
         self.ui.rmcModlestartsize.setValue(1)
+        self.ui.rmcRunName.setText("")
+        self.ui.rmcinputpaths.clear()
 
     def showrmc(self):
         """
@@ -72,8 +73,9 @@ class gui():
             , "ssh -t ablair@parratt.lbl.gov "" "" "]
 
         RemoteProcess = subprocess.Popen("scp test_input.hig ablair@parratt.lbl.gov:~/  ")
+        # print RemoteProcess
 
-        #print RemoteProcess
+    executeNumber = 0
 
     def execute(self):
         steps = self.ui.rmcSteps.value()
@@ -107,6 +109,14 @@ class gui():
             self.rmcdaemon = RMCThread()
             self.rmcdaemon.sig_finished.connect(self.displayoutput)
             self.rmcdaemon.start()
+            # test_call = 1
+            # if test_call == 1:
+            #     self.execute()  # Trying to get the window to delete after a new window is opened.
+
+    while executeNumber < 1:
+        executeNumber += 1
+        if executeNumber >= 2:
+            break
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
