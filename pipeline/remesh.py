@@ -5,9 +5,18 @@ import loader
 import numpy as np
 from pyFAI import geometry
 
+import sys
+import os
+
+print os.getcwd()
+
+
 try:
     from cWarpImage import warp_image
 except ImportError:
+    import sys
+
+    print sys.path
     print "Remeshing C extension is NOT LOADED!"
 
 def calc_q_range(lims, geometry, alphai, cen):

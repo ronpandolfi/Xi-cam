@@ -113,10 +113,13 @@ class gui():
             # if test_call == 1:
             #     self.execute()  # Trying to get the window to delete after a new window is opened.
 
-    while executeNumber < 1:
-        executeNumber += 1
-        if executeNumber >= 2:
-            break
+    # while executeNumber < 1:
+    # executeNumber += 1
+    #     if executeNumber >= 2:
+    #         break
+
+    def checkforresults(self):
+        pass
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
