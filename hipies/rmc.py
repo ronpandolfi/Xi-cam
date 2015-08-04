@@ -119,7 +119,8 @@ class gui():
     #         break
 
     def checkforresults(self):
-        pass
+        if os.path.exists(self.ui.rmcoutput.setText(Outputdirectory)):
+            pass
 
     def displayoutput(self, exitcode):
         print "Finished", exitcode
