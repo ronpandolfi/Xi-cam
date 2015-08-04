@@ -121,19 +121,19 @@ class gui():
     def checkforresults(self):
         os.path.exists(QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory"))
         # if function returns true, run display output function
+    if checkforresults() == True:
+        def displayoutput(self, exitcode):
+            print "Finished", exitcode
 
-    def displayoutput(self, exitcode):
-        print "Finished", exitcode
+            path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
-        path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
+            loadingfactors = []
 
-        loadingfactors = []
+            for item in iterAllItems(self.ui.rmcLoadingfactors):
+                loadingfactors.append(item.text())
 
-        for item in iterAllItems(self.ui.rmcLoadingfactors):
-            loadingfactors.append(item.text())
-
-        layout = self.ui.rmclayout
-        layout.addWidget(RmcView.rmcView(path, loadingfactors))
+            layout = self.ui.rmclayout
+            layout.addWidget(RmcView.rmcView(path, loadingfactors))
 
 
 def iterAllItems(w):
