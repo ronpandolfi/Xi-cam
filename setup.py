@@ -11,6 +11,11 @@ from setuptools import setup
 from numpy.distutils.core import Extension
 import numpy as np
 import os
+import shutil
+
+cextTarget = 'dist/HiPIES.app/Contents/Resources/lib/python2.7/pipeline/'
+cextSource = 'build/lib.macosx-10.10-x86_64-2.7/pipeline/cWarpImage.so'
+
 
 os.environ["CC"] = "gcc-4.9"
 os.environ["CXX"] = "g++-4.9"
@@ -30,25 +35,25 @@ OPTIONS = {'argv_emulation': True,
                 },
             'includes' : [
                 'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
-                           'PySide.QtXml', 'PIL'
+                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage'
                          ],
-                'packages' : [ 'pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py' ]
+           'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
             }
-#
-# EXT = Extension(name = 'pipeline.cWarpImage',
-# sources = ['cext/cWarpImage.cc', 'cext/remesh.cc'],
-#                 extra_compile_args = ['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include' ],
-#                 extra_link_args  = ['-fopenmp' ],
-#                 include_dirs=[np.get_include()],
-#
-#                )
+
+EXT = Extension(name='pipeline.cWarpImage',
+                sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
+                extra_compile_args=['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include'],
+                extra_link_args=['-fopenmp'],
+                include_dirs=[np.get_include()],
+
+)
 
 setup(
     app=APP,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
-    include_dirs=[np.get_include()]  # ,
-    #ext_modules=[EXT],
+    include_dirs=[np.get_include()],
+    ext_modules=[EXT],
 
 
 )

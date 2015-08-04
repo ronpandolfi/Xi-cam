@@ -12,9 +12,15 @@
 ## TODO: Use detector mask in centerfinder
 
 
-
-
-
+# import numpy as rmc
+# import numpy as toolbar
+# import numpy as pipeline
+# import numpy as watcher
+# import numpy as timeline
+import numpy as viewer
+import numpy as config
+import numpy as models
+import numpy as pyqtgraph
 
 import sys
 import os
@@ -55,6 +61,7 @@ class MyMainWindow():
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
+
 
         # STYLE
         self.app.setStyle('Plastique')
@@ -398,7 +405,7 @@ class MyMainWindow():
 
         if coef and ok:
             operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
-            self.launchmultimode(operation, 'Subtraction with coef (x=' + coef)
+            self.launchmultimode(operation, 'Subtraction with coef (x=' + str(coef))
 
     def dividemode(self):
         """
