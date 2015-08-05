@@ -139,13 +139,16 @@ class thumbwidgetitem(QtGui.QFrame):
     A single icon representing a file/folder that can be accessed/opened
     """
 
-    foldericon = QtGui.QImage()
-    foldericon.load('gui/GenericFolderIcon.png')
 
-    fileicon = QtGui.QImage()
-    fileicon.load('gui/post-360412-0-09676400-1365986245.png')
 
     def __init__(self, path, parentwindow):
+
+        self.foldericon = QtGui.QImage()
+        self.foldericon.load('gui/GenericFolderIcon.png')
+
+        self.fileicon = QtGui.QImage()
+        self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
+
         print 'Library widget generated for ' +  path
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow

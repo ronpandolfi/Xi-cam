@@ -391,8 +391,8 @@ def findmaxs(orig):
     img -= np.min(img)
     img = denoise_bilateral(img, sigma_range=0.5, sigma_spatial=15)
 
-    plt.imshow(np.rot90(img))
-    plt.show()
+    # plt.imshow(np.rot90(img))
+    #plt.show()
 
     #img = filters.percentile_filter(img,50,50)
 
@@ -400,7 +400,7 @@ def findmaxs(orig):
     filters.maximum_filter(img, (50, 50)) > 1.5 * filters.minimum_filter(img, (50, 50))) & (img > 2))
     maximachis, maximaqs = np.where(maxima == 1)
     plt.imshow(np.rot90(orig), interpolation='nearest')
-    plt.plot(maximachis, 1000 - maximaqs, 'ro')
+    plt.plot(maximachis, 1000 - maximaqs, 'o', markersize=10, markeredgecolor='red', markerfacecolor="None", mew="4")
     plt.ylim([1000, 0])
     plt.xlim([0, 1000])
     plt.show()
