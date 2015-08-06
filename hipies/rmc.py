@@ -119,9 +119,15 @@ class gui():
     #         break
 
     def checkforresults(self):
-        os.path.exists(QtGui.QFileDialog.getExistingDirectory(self.ui, "Select an Output directory"))
-        # if function returns true, run display output function
-    if checkforresults() == True:
+        os.path.exists(self.ui.rmcoutput.text())
+
+    def checkforresults2(self):
+        if os.listdir(self.ui.rmcoutput.text()) == []:
+            return False
+        else:
+            return True
+
+    if checkforresults() and checkforresults2():           # if functions return true, run display output function
         def displayoutput(self, exitcode):
             print "Finished", exitcode
 
