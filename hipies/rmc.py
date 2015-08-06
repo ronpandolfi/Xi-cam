@@ -118,21 +118,26 @@ class gui():
     #     if executeNumber >= 2:
     #         break
 
-    def checkforresults(self):
-        pass
-
     def displayoutput(self, exitcode):
-        print "Finished", exitcode
+        def checkforresults(self):
+            os.path.exists(self.ui.rmcoutput.text())
 
-        path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
+        def checkforresults2(self):
+            if os.listdir(self.ui.rmcoutput.text()) == []:
+                return False
+            else:
+                return True
+        if checkforresults(self) is True and checkforresults2(self) is True:
+            print "Finished", exitcode
+            path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
-        loadingfactors = []
+            loadingfactors = []
 
-        for item in iterAllItems(self.ui.rmcLoadingfactors):
-            loadingfactors.append(item.text())
+            for item in iterAllItems(self.ui.rmcLoadingfactors):
+                loadingfactors.append(item.text())
 
-        layout = self.ui.rmclayout
-        layout.addWidget(RmcView.rmcView(path, loadingfactors))
+            layout = self.ui.rmclayout
+            layout.addWidget(RmcView.rmcView(path, loadingfactors))
 
 
 def iterAllItems(w):
