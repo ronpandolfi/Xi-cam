@@ -118,19 +118,17 @@ class gui():
     #     if executeNumber >= 2:
     #         break
 
-    def checkforresults(self):
-        os.path.exists(self.ui.rmcoutput.text())
+    def displayoutput(self, exitcode):
+        def checkforresults(self):
+            os.path.exists(self.ui.rmcoutput.text())
 
-    def checkforresults2(self):
-        if os.listdir(self.ui.rmcoutput.text()) == []:
-            return False
-        else:
-            return True
-
-    if checkforresults() and checkforresults2():           # if functions return true, run display output function
-        def displayoutput(self, exitcode):
+        def checkforresults2(self):
+            if os.listdir(self.ui.rmcoutput.text()) == []:
+                return False
+            else:
+                return True
+        if checkforresults(self) is True and checkforresults2(self) is True:
             print "Finished", exitcode
-
             path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
             loadingfactors = []
