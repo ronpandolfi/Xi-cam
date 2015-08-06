@@ -77,7 +77,7 @@ class gui():
 
     executeNumber = 0
 
-    def execute(self, executeNumber=none):
+    def execute(self):
         steps = self.ui.rmcSteps.value()
         scalefactor = self.ui.rmcScalefactor.value()
         modlestartsize = self.ui.rmcModlestartsize.value()
