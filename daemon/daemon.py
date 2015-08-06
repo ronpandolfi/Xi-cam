@@ -3,7 +3,7 @@ import time
 import process
 from PySide import QtCore
 import multiprocessing
-#from hipies import debug
+from hipies import debug
 
 
 class daemon(QtCore.QThread):
@@ -44,13 +44,13 @@ class daemon(QtCore.QThread):
         self.exiting = True
         self.wait()
 
-    #@debug.timeit
+    @debug.timeit
     def processfiles(self, path, files):
         """
         distribute new files to cores for processing. Ignores .nxs.
         """
 
-        files = [f for f in files if not os.path.splitext(f)[1] == '.nxs']
+        files = [f for f in files if not os.path.splitext(f)[1] == '.hdf']
         if files:
             print os.path.splitext(path)[1]
 

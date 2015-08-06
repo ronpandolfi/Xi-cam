@@ -1,20 +1,20 @@
 import numpy as np
 
 
-
-
-def radialintegrate(imgdata, experiment, mask=None, cut=None):
-    centerx = experiment.getvalue('Center X')
-    centery = experiment.getvalue('Center Y')
+def radialintegrate(dimg, cut=None):
+    centerx = dimg.experiment.getvalue('Center X')
+    centery = dimg.experiment.getvalue('Center Y')
 
     # TODO: add checks for mask and center
     # print(self.config.maskingmat)
+    mask = dimg.experiment.mask
+
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(imgdata)
-    elif not mask.shape == imgdata.shape:
+        mask = np.zeros_like(dimg.data)
+    elif not mask.shape == dimg.data.shape:
         print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
-        mask = np.zeros_like(imgdata)
+        mask = np.zeros_like(dimg.data)
 
 
 
@@ -24,7 +24,7 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     invmask=1-mask
 
     #mask data
-    data = imgdata * (invmask)
+    data = dimg.data * (invmask)
 
     if cut is not None:
         invmask *= cut
@@ -42,13 +42,13 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
 
     q = np.arange(radialprofile.shape[0])
 
-    if experiment.iscalibrated:
+    if dimg.experiment.iscalibrated:
         # calculate q spacings
         x = np.arange(radialprofile.shape[0])
-        theta = np.arctan2(x * experiment.getvalue('Pixel Size X'),
-                           experiment.getvalue('Detector Distance'))
+        theta = np.arctan2(x * dimg.experiment.getvalue('Pixel Size X'),
+                           dimg.experiment.getvalue('Detector Distance'))
         #theta=x*self.config.getfloat('Detector','Pixel Size')*0.000001/self.config.getfloat('Beamline','Detector Distance')
-        wavelength = experiment.getvalue('Wavelength')
+        wavelength = dimg.experiment.getvalue('Wavelength')
         q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
 
 
@@ -66,17 +66,20 @@ def radialintegrate(imgdata, experiment, mask=None, cut=None):
     return (q, radialprofile)
 
 
-def pixel_2Dintegrate(imgdata, cen, mask=None):
+def pixel_2Dintegrate(dimg, mask=None):
+    centerx = dimg.experiment.getvalue('Center X')
+    centery = dimg.experiment.getvalue('Center Y')
+
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(imgdata)
+        mask = np.zeros_like(dimg.data)
 
     # mask data
-    data = imgdata * (1 - mask)
+    data = dimg.data * (1 - mask)
 
     # calculate data radial profile
     x, y = np.indices(data.shape)
-    r = np.sqrt((x - cen[0]) ** 2 + (y - cen[1]) ** 2)
+    r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
@@ -147,11 +150,25 @@ def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
     return q, radialprofile
 
 
-def cake(imgdata, experiment, mask=None):
-    if mask is None:
-        mask = np.zeros_like(imgdata)
+def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
+    # if mask is None:
+    # mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
-    xres = 1000
-    yres = 1000
+
     return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
+
+
+def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):
+    mask = np.zeros_like(Imagedata)
+
+    centerx = center[0]
+    centery = center[1]
+    y, x = np.indices(Imagedata.shape)
+    r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
+    mask = (r > radius1) & (r < radius2)
+    theta = np.arctan2(y - centery, x - centerx) / 2 / np.pi * 360
+    mask &= (theta > angle1) & (theta < angle2)
+
+    mask = np.flipud(mask)
+    return mask * Imagedata

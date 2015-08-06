@@ -5,7 +5,7 @@ from PIL import Image
 import viewer
 import os
 import pipeline
-
+import numpy as np
 
 
 class FlowLayout(QtGui.QLayout):
@@ -103,7 +103,8 @@ class librarylayout(FlowLayout):
     """
     Extend the flow layout to fill it with thumbwidgetitems representing files/folders
     """
-    def __init__(self, parentwindow, path='samples/'):
+
+    def __init__(self, parentwindow, path='/Volumes'):
         super(librarylayout, self).__init__()
         self.parent = None
         self.parentwindow = parentwindow
@@ -111,20 +112,19 @@ class librarylayout(FlowLayout):
 
     def chdir(self, path):
         self.clear()
-        self.populate(path)
+        self.populate(os.path.normpath(path))
 
     def populate(self, path):
         self.parent = QtCore.QDir()
         self.parent.cd(path)
 
-        diriterator = QtCore.QDirIterator(self.parent)
+        dir = QtCore.QDir(self.parent)
+        entries = dir.entryList()
 
-        while diriterator.hasNext():
-            diriterator.next()
-            fileinfo = diriterator.fileInfo()
+        for entry in entries:
             # print fileinfo.fileName()
-            if not (fileinfo.fileName() == '..' and path == 'Computer') and not fileinfo.fileName() == '.':
-                self.addWidget(thumbwidgetitem(diriterator.filePath(), parentwindow=self.parentwindow))
+            if not (entry == '..' and os.path.normpath(path) == '/Volumes') and not entry == '.':
+                self.addWidget(thumbwidgetitem(os.path.join(path,entry), parentwindow=self.parentwindow))
 
 
     def clear(self):
@@ -138,7 +138,18 @@ class thumbwidgetitem(QtGui.QFrame):
     """
     A single icon representing a file/folder that can be accessed/opened
     """
+
+
+
     def __init__(self, path, parentwindow):
+
+        self.foldericon = QtGui.QImage()
+        self.foldericon.load('gui/GenericFolderIcon.png')
+
+        self.fileicon = QtGui.QImage()
+        self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
+
+        print 'Library widget generated for ' +  path
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -154,24 +165,25 @@ class thumbwidgetitem(QtGui.QFrame):
 
         self.path = path
         # print path
+        self.dimg = pipeline.loader.diffimage(filepath=self.path)
         self.image = QtGui.QImage()
         #print os.path.splitext(path)[1]
         if os.path.isdir(path):
-            self.image.load('gui/GenericFolderIcon.png')
+            self.image = self.foldericon
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.imgdata = pipeline.loader.loadthumbnail(path)
-            if self.imgdata is None:
-                self.image.load('gui/post-360412-0-09676400-1365986245.png')
-            elif self.imgdata.size > 0:
-                im = Image.fromarray(self.imgdata, 'L')
+            self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
+            self.thumb *= 255. / np.max(self.thumb)
+
+            if self.thumb is not None:
                 # TODO: use scipy zoom or pull from .nxs for thumbnails
-                self.image = QtGui.QImage(im.tobytes('raw', 'L'), im.size[0], im.size[1], im.size[0],
+                self.image = QtGui.QImage(self.thumb.astype(np.uint8), self.thumb.shape[1], self.thumb.shape[0],
+                                          self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             else:
-                self.image.load('gui/post-360412-0-09676400-1365986245.png')
+                self.image = self.fileicon
         else:
-            self.image.load('gui/post-360412-0-09676400-1365986245.png')
+            self.image = self.fileicon
 
         image_label = ScaledLabel(self.image)
         image_label.setAlignment(Qt.AlignHCenter)

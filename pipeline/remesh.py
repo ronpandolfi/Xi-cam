@@ -5,6 +5,15 @@ import loader
 import numpy as np
 from pyFAI import geometry
 
+import sys
+import os
+
+try:
+    from cWarpImage import warp_image
+except ImportError:
+
+    print "Remeshing C extension is NOT LOADED!"
+
 def calc_q_range(lims, geometry, alphai, cen):
 
     nanometer = 1.0E+09
@@ -40,15 +49,17 @@ def calc_q_range(lims, geometry, alphai, cen):
 def remesh(image, filename, geometry):
 
     shape = image.shape
-    cen = np.zeros(2, dtype=np.float)
+    center = np.zeros(2, dtype=np.float)
+    pixel = np.zeros(2, dtype=np.float)
 
     # get calibrated parameters
     nanometer = 1.0E+09
     sdd = geometry.get_dist() * nanometer
-    pixel1 = geometry.get_pixel1() * nanometer
-    pixel2 = geometry.get_pixel2() * nanometer
-    cen[0] = geometry.get_poni2() * nanometer
-    cen[1] = shape[0] * pixel1 - geometry.get_poni1() * nanometer
+    pixel[0] = geometry.get_pixel1() * nanometer
+    pixel[1] = geometry.get_pixel2() * nanometer
+    center[0] = geometry.get_poni2() * nanometer
+    center[1] = shape[0] * pixel[0] - geometry.get_poni1() * nanometer
+    print center
 
     # read paras
     paras = loader.loadparas(filename)
@@ -56,14 +67,16 @@ def remesh(image, filename, geometry):
     # read incident angle
     if paras is None:
         print "Failed to read incident angle"
-        return np.rot90(image, 3)
+        return np.rot90(image, 3), None, None
     if "Sample Alpha Stage" in paras:
         alphai = np.deg2rad(float(paras["Sample Alpha Stage"]))
     elif "Alpha" in paras:
         alphai = np.deg2rad(float(paras['Alpha']))
+    else:
+        return np.rot90(image, 3), None, None
 
     # calculate q values
-    qrange, k0 = calc_q_range(image.shape, geometry, alphai, cen)
+    qrange, k0 = calc_q_range(image.shape, geometry, alphai, center)
     
     # uniformly spaced q-values for remeshed image
     nqz = image.shape[0]
@@ -73,39 +86,45 @@ def remesh(image, filename, geometry):
     qpar = qrange[0] + np.arange(nqp) * dqz
     qpar,qvrt = np.meshgrid(qpar, qvrt)
 
-    # find inverse map
-    cosi = np.cos(alphai)
-    sini = np.sin(alphai)
+    try:
+        center /= pixel
+        qimg = warp_image(image,qpar,qvrt,pixel,center,alphai,k0,sdd,0)
+        return np.rot90(qimg,3),qpar,qvrt
+    except:
 
-    sina = (qvrt/k0) - sini
-    cosa2= 1 - sina**2
-    cosa = np.sqrt(cosa2)
-    tana = sina / cosa
+        # find inverse map
+        cosi = np.cos(alphai)
+        sini = np.sin(alphai)
 
-    t1 = cosa2 + cosi**2 - (qpar/k0)**2
-    t2 = 2. * cosa * cosi
-    cost = t1 / t2
-    cost[t1 > t2] = 0
-    with np.errstate(divide='ignore'):
-        tant = np.sign(qpar) * np.sqrt(1. - cost**2) / cost
-        tant [cost == 0 ] = 0
+        sina = (qvrt/k0) - sini
+        cosa2= 1 - sina**2
+        cosa = np.sqrt(cosa2)
+        tana = sina / cosa
+
+        t1 = cosa2 + cosi**2 - (qpar/k0)**2
+        t2 = 2. * cosa * cosi
+        cost = t1 / t2
+        cost[t1 > t2] = 0
+        with np.errstate(divide='ignore'):
+            tant = np.sign(qpar) * np.sqrt(1. - cost**2) / cost
+            tant [cost == 0 ] = 0
     
-    # F : (qp,qz) --> (x,y)
-    map_x = (tant * sdd + cen[0]) / pixel1
-    map_y = (tana * sdd + cen[1]) / pixel2
+        # F : (qp,qz) --> (x,y)
+        map_x = (tant * sdd + center[0]) / pixel[0]
+        map_y = (tana * sdd + center[1]) / pixel[1]
     
-    # compute null space
-    m1 = t1 > t2
-    m2 = np.logical_or(map_x < 0, map_x > 1474)
-    mask = np.logical_or(m1, m2)
-    map_x[mask] = -1
+        # compute null space
+        m1 = t1 > t2
+        m2 = np.logical_or(map_x < 0, map_x > 1474)
+        mask = np.logical_or(m1, m2)
+        map_x[mask] = -1
 
-    qsize = map_x.size
-    qshape = map_x.shape
-    qimg = np.fromiter((image[i,j] for i,j in np.nditer([map_y.astype(int),
-        map_x.astype(int)])),dtype=np.float, count=qsize).reshape(qshape)
-    qimg[mask] = 0.
-    return np.rot90(qimg, 3),qpar,qvrt
+        qsize = map_x.size
+        qshape = map_x.shape
+        qimg = np.fromiter((image[i,j] for i,j in np.nditer([map_y.astype(int),
+            map_x.astype(int)])),dtype=np.float, count=qsize).reshape(qshape)
+        qimg[mask] = 0.
+        return np.rot90(qimg,3),qpar,qvrt
 
 if __name__ == "__main__":
 # create a test case with known geometry

@@ -96,8 +96,6 @@ QToolButton
 
 QPushButton {
     padding:6px;
-    padding-left:30px;
-    padding-right:30px;
 }
 
 QTabWidget {
