@@ -11,10 +11,6 @@ from setuptools import setup
 from numpy.distutils.core import Extension
 import numpy as np
 import os
-import shutil
-
-cextTarget = 'dist/HiPIES.app/Contents/Resources/lib/python2.7/pipeline/'
-cextSource = 'build/lib.macosx-10.10-x86_64-2.7/pipeline/cWarpImage.so'
 
 
 os.environ["CC"] = "gcc-4.9"
