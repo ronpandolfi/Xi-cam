@@ -236,6 +236,7 @@ class imageTab(QtGui.QWidget):
                     isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
 
                     if iscake:
+                        return
                         q = pixel2cake(x, y, self.dimg)
 
                     elif isremesh:
@@ -549,17 +550,18 @@ class imageTab(QtGui.QWidget):
                 if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
                     tabtracker.replotassecondary()
 
+        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
+
+        if iscake:
+            data = self.dimg.cake
+        elif isremesh:
+            data = self.dimg.remesh
+        else:
+            data = self.dimg.data
+
         if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
 
-            iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
-            isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
-
-            if iscake:
-                data = self.dimg.cake
-            elif isremesh:
-                data = self.dimg.remesh
-            else:
-                data = self.dimg.data
 
             cut = self.region.getArrayRegion(data, self.imageitem)
 
@@ -583,16 +585,17 @@ class imageTab(QtGui.QWidget):
         else:
             if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
                 regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.dimg.data)
+                cut = np.zeros_like(data)
                 cut[:, regionbounds[0]:regionbounds[1]] = 1
             if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
                 regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.dimg.data)
+                cut = np.zeros_like(data)
                 cut[regionbounds[0]:regionbounds[1], :] = 1
 
+            dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
 
             # Radial integration
-            self.q, self.radialprofile = pipeline.integration.radialintegrate(self.dimg, cut=cut)
+            self.q, self.radialprofile = pipeline.integration.radialintegrate(dimg, cut=cut)
             self.cache1Dintegration.emit(self.q, self.radialprofile)
 
             self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,

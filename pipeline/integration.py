@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def radialintegrate(dimg, cut=None):
+def radialintegrate(dimg, cut=None, data=None):
     centerx = dimg.experiment.getvalue('Center X')
     centery = dimg.experiment.getvalue('Center Y')
 

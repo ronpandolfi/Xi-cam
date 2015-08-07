@@ -3,6 +3,24 @@ from PySide import QtGui, QtCore
 import numpy as np
 
 
+class QCircRectF(QtCore.QRectF):
+    def __init__(self, center, radius):
+        self.center = QtCore.QPointF
+        self.radius = QtCore.qreal(radius)
+        super(QCircRectF, self).__init__(center - radius, center + radius)
+
+    def scale(self, ratio):
+        self.radius = self.radius * ratio
+        self.setCoords(*(self.getCoords() * ratio))
+
+
+class QRectF(QtCore.QRectF):
+    def scale(self, ratio):
+        coords = [coord * ratio for coord in self.getCoords()]
+
+        self.setCoords(*coords)
+
+
 class ArcROI(pg.ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
@@ -23,7 +41,9 @@ class ArcROI(pg.ROI):
         #self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         #self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
         self.addScaleRotateHandle([.5, 1], [.5, .5])
+        self.innerhandle = self.addFreeHandle([.5, .75])
         self.aspectLocked = True
+        self.translatable = False
 
     def paint(self, p, opt, widget):
         r = self.boundingRect()
@@ -32,9 +52,14 @@ class ArcROI(pg.ROI):
 
         p.scale(r.width(), r.height())  ## workaround for GL bug
 
-        r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
+        r = QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
         # p.drawEllipse(r)
-        p.drawArc(r, 30 * 16, 120 * 16)
+        p.drawArc(r, (180 + 30) * 16, (120) * 16)
+        pos = self.innerhandle.mapToView(self.innerhandle.pos())
+        radiusscale = np.sqrt(pos.x() ** 2. + pos.y() ** 2) / 10.
+
+        r.scale(radiusscale)
+        p.drawArc(r, (180 + 30) * 16, (120) * 16)
 
 
 

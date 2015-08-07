@@ -689,6 +689,7 @@ class MyMainWindow():
                 self.currentImageTab().tab.redrawimage()
                 self.currentImageTab().tab.drawcenter()
                 self.currentImageTab().tab.replot()
+                self.currentImageTab().tab.dimg.invalidatecache()
 
     def filebrowserpanetoggle(self):
         """
