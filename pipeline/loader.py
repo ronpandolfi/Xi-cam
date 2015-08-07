@@ -126,6 +126,12 @@ def loadparas(path):
             # print nxroot.tree
             return nxroot
 
+        elif extension == '.tif':
+            frame = int(re.search('\d+(?=.tif)', path).group(0))
+            paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
+
+            return scanparas(paraspath, frame)
+
     except IOError:
         print('Unexpected read error in loadparas')
     except IndexError:
@@ -133,11 +139,14 @@ def loadparas(path):
     return None
 
 
-def scanparas(path):
+def scanparas(path, frame=None):
     with open(path, 'r') as f:
         lines = f.readlines()
 
-    paras = scanparaslines(lines)
+    if lines[0][:2] == '#F':
+        paras = scanalesandroparaslines(lines, frame)
+    else:
+        paras = scanparaslines(lines)
 
     return paras
 
@@ -155,6 +164,26 @@ def scanparaslines(lines):
             paras[key] = cells[0]
 
     return paras
+
+
+def scanalesandroparaslines(lines, frame):
+    paras = dict()
+    keys = []
+    values = []
+    correctframe = False
+    for line in lines:
+        token = line[:2]
+        if token == '#O':
+            keys.extend(line.split()[1:])
+        elif token == '#S':
+            if int(line.split()[1]) == frame:
+                correctframe = True
+            else:
+                correctframe = False
+        elif token == '#P' and correctframe:
+            values.extend(line.split()[1:])
+
+    return dict(zip(keys, values))
 
 
 def loadstichted(filepath2, filepath1):
@@ -472,7 +501,7 @@ class diffimage():
 
     def __del__(self):
         # TODO: do more here!
-        #if self._data is not None:
+        # if self._data is not None:
         #    self.writenexus()
         pass
 
