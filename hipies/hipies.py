@@ -790,5 +790,3 @@ class MyMainWindow():
 
 
 
-if __name__ == '__main__':
-    window = MyMainWindow()

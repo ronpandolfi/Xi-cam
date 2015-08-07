@@ -472,8 +472,9 @@ class diffimage():
 
     def __del__(self):
         # TODO: do more here!
-        if self._data is not None:
-            self.writenexus()
+        #if self._data is not None:
+        #    self.writenexus()
+        pass
 
     @hipiesdebug.timeit
     def writenexus(self):

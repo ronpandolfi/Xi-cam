@@ -581,14 +581,16 @@ class imageTab(QtGui.QWidget):
 
 
         else:
-            if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
-                regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.dimg.data)
-                cut[:, regionbounds[0]:regionbounds[1]] = 1
-            if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
-                regionbounds = self.region.getRegion()
-                cut = np.zeros_like(self.dimg.data)
-                cut[regionbounds[0]:regionbounds[1], :] = 1
+            if self.region is not None:
+
+                if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
+                    regionbounds = self.region.getRegion()
+                    cut = np.zeros_like(self.dimg.data)
+                    cut[:, regionbounds[0]:regionbounds[1]] = 1
+                if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
+                    regionbounds = self.region.getRegion()
+                    cut = np.zeros_like(self.dimg.data)
+                    cut[regionbounds[0]:regionbounds[1], :] = 1
 
 
             # Radial integration
