@@ -213,10 +213,10 @@ def fitpointstocircle(cnt):
 #         print "The center was unable to be found for an image."
 #         return None
 
-from hipies import debug
+from hipies import hipiesdebug
 
 
-@debug.timeit
+@hipiesdebug.timeit
 def center_approx(img, log=False):
 
     if log:

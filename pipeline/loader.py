@@ -13,7 +13,7 @@ import time
 import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
-from hipies import debug
+from hipies import hipiesdebug
 
 acceptableexts = ['.fits','.edf','.tif','.nxs','.tif','.hdf']
 
@@ -204,7 +204,7 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
-@debug.timeit
+@hipiesdebug.timeit
 # def finddetector(imgdata):
 #     for name, detector in detectors.ALL_DETECTORS.iteritems():
 #         if hasattr(detector, 'MAX_SHAPE'):
@@ -346,7 +346,7 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    debug.frustration()
+                    hipiesdebug.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
     @property
@@ -475,7 +475,7 @@ class diffimage():
         if self._data is not None:
             self.writenexus()
 
-    @debug.timeit
+    @hipiesdebug.timeit
     def writenexus(self):
         nxpath = pathtools.path2nexus(self.filepath)
         w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,

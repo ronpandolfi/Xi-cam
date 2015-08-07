@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 import time
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 import inspect
 
 
@@ -30,6 +30,7 @@ def frustration():
 
 
 def showimage(img):
-    plt.imshow(img)
-    plt.show()
-    print 'Image displayed!'
+    pass
+    # plt.imshow(img)
+    # plt.show()
+    # print 'Image displayed!'

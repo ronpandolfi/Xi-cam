@@ -9,7 +9,7 @@ import pyqtgraph as pg
 import numpy as np
 from pipeline import detectors
 from fabio import edfimage
-import debug
+import hipiesdebug
 
 
 import pipeline
@@ -309,7 +309,7 @@ class imageTab(QtGui.QWidget):
             toolbar = self.parentwindow.timelinetoolbar
         else:
             print "Redraw somehow activated from wrong tab"
-            debug.frustration()
+            hipiesdebug.frustration()
             toolbar = None
 
         islogintensity = toolbar.actionLog_Intensity.isChecked()
@@ -467,7 +467,7 @@ class imageTab(QtGui.QWidget):
         self.dimg.experiment.addtomask(c.mask)
         #self.maskoverlay()
 
-    @debug.timeit
+    @hipiesdebug.timeit
     def findcenter(self):
         # Auto find the beam center
         self.dimg.findcenter()
@@ -482,7 +482,7 @@ class imageTab(QtGui.QWidget):
                                              brush=pg.mkBrush('#FFA500'))
         self.viewbox.addItem(self.centerplot)
 
-    #@debug.timeit
+    #@hipiesdebug.timeit
     def calibrate(self):
         self.dimg.experiment.iscalibrated = False
 
@@ -519,7 +519,7 @@ class imageTab(QtGui.QWidget):
 
         self.replot()
 
-    @debug.timeit
+    @hipiesdebug.timeit
     def refinecenter(self):
         # Force cache the detector
         #_=self.dimg.detector
