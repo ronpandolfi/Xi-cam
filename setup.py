@@ -13,8 +13,8 @@ import numpy as np
 import os
 
 
-os.environ["CC"] = "gcc-4.9"
-os.environ["CXX"] = "g++-4.9"
+#os.environ["CC"] = "gcc"
+#os.environ["CXX"] = "g++"
 
 APP = ['main.py']
 DATA_FILES = []
@@ -38,8 +38,8 @@ OPTIONS = {'argv_emulation': True,
 
 EXT = Extension(name='pipeline.cWarpImage',
                 sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
-                extra_compile_args=['-fopenmp', '-O3', '-ffast-math', '-I/opt/local/include'],
-                extra_link_args=['-fopenmp'],
+                extra_compile_args=[ '-O3', '-ffast-math'],#'-fopenmp',, '-I/opt/local/include'
+                #extra_link_args=['-fopenmp'],
                 include_dirs=[np.get_include()],
 
 )
