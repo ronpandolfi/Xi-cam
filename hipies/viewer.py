@@ -194,7 +194,8 @@ class imageTab(QtGui.QWidget):
         self.viewbox.addItem(self.maskimage)
 
 
-
+        # import ROI
+        #self.viewbox.addItem(ROI.ArcROI((-5,-5),(10,10)))
 
 
         # Cache radial integration

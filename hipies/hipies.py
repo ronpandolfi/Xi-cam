@@ -150,7 +150,7 @@ class MyMainWindow():
         self.filetree.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf"]
+        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf", "*.cbf"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
@@ -547,7 +547,8 @@ class MyMainWindow():
         """
         Open a file dialog then open that image
         """
-        filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.tif *.edf *.fits *.tif")
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir,
+                                                         "*.tif *.edf *.fits *.tif *.cdf")
         if filename and ok:
             self.openfile(filename)
 

@@ -1,8 +1,9 @@
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
+import numpy as np
 
 
-class EllipseROI(pg.ROI):
+class ArcROI(pg.ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
 
@@ -21,7 +22,8 @@ class EllipseROI(pg.ROI):
         pg.ROI.__init__(self, pos, size, **args)
         #self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         #self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
-        self.addScaleRotateHandle([.5, .5], [0, 0])
+        self.addScaleRotateHandle([.5, 1], [.5, .5])
+        self.aspectLocked = True
 
     def paint(self, p, opt, widget):
         r = self.boundingRect()
@@ -29,9 +31,11 @@ class EllipseROI(pg.ROI):
         p.setPen(self.currentPen)
 
         p.scale(r.width(), r.height())  ## workaround for GL bug
-        r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
 
-        p.drawEllipse(r)
+        r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
+        # p.drawEllipse(r)
+        p.drawArc(r, 30 * 16, 120 * 16)
+
 
 
     def getArrayRegion(self, arr, img=None):
@@ -39,7 +43,7 @@ class EllipseROI(pg.ROI):
         Return the result of ROI.getArrayRegion() masked by the elliptical shape
         of the ROI. Regions outside the ellipse are set to 0.
         """
-        arr = ROI.getArrayRegion(self, arr, img)
+        arr = pg.ROI.getArrayRegion(self, arr, img)
         if arr is None or arr.shape[0] == 0 or arr.shape[1] == 0:
             return None
         w = arr.shape[0]

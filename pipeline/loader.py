@@ -15,7 +15,7 @@ import writer
 import nexpy.api.nexus.tree as tree
 from hipies import hipiesdebug
 
-acceptableexts = ['.fits','.edf','.tif','.nxs','.tif','.hdf']
+acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
 
 
 def loadsingle(path):
