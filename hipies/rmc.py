@@ -5,7 +5,6 @@ import subprocess
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
-
 class gui():
     def __init__(self, ui):
         self.ui = ui
@@ -75,7 +74,6 @@ class gui():
         RemoteProcess = subprocess.Popen("scp test_input.hig ablair@parratt.lbl.gov:~/  ")
         # print RemoteProcess
 
-    executeNumber = 0
 
     def execute(self):
         steps = self.ui.rmcSteps.value()
@@ -127,8 +125,11 @@ class gui():
                 return False
             else:
                 return True
+
         if checkforresults(self) is True and checkforresults2(self) is True:
+
             print "Finished", exitcode
+
             path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 
             loadingfactors = []
