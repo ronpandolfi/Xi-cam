@@ -247,7 +247,7 @@ class MyMainWindow():
         self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                              self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                             self.roi)
+                                             self.roi, self.arccut)
         self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
 
         self.timelinetoolbar.actionHorizontal_Cut.setEnabled(False)
@@ -259,7 +259,7 @@ class MyMainWindow():
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                          self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                          self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                         self.roi)
+                                         self.roi, self.arccut)
         self.ui.diffbox.insertWidget(0, self.difftoolbar)
 
         # Setup file operation toolbox
@@ -319,7 +319,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        # self.openimage('../samples/AgB_00016.edf')
+        self.openimage('../samples/AgB_00016.edf')
         #self.calibrate()
         # self.updatepreprocessing()
         ##
@@ -354,6 +354,9 @@ class MyMainWindow():
         Connect linecut to current tab's linecut
         """
         self.currentImageTab().tab.linecut()
+
+    def arccut(self):
+        self.currentImageTab().tab.arccut()
 
     def roi(self):
         self.currentImageTab().tab.roi()

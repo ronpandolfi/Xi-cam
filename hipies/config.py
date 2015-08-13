@@ -116,9 +116,15 @@ class experiment(Parameter):
         # Set the value of the named child
         self.child(name).setValue(value)
 
-    def setcenter(self, cen):
+    @property
+    def center(self):
+        return self.getvalue('Center X'), self.getvalue('Center Y')
+
+    @center.setter
+    def center(self, cen):
         self.setvalue('Center X', cen[0])
         self.setvalue('Center Y', cen[1])
+
 
     def getAI(self):
         """

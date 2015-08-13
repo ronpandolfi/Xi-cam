@@ -161,6 +161,11 @@ class difftoolbar(QtGui.QToolBar):
         icon25.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCalibrate_AgB.setIcon(icon25)
         self.actionCalibrate_AgB.setObjectName("actionCalibrate_AgB")
+        self.actionArc = QtGui.QAction(self)
+        icon26 = QtGui.QIcon()
+        icon26.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionCalibrate_AgB.setIcon(icon25)
+        self.actionCalibrate_AgB.setObjectName("actionArc")
 
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()
@@ -189,6 +194,7 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(toolbuttonMaskingAction)
         self.addAction(self.actionCake)
         self.addAction(self.actionRemeshing)
+        self.addAction(self.actionArc)
         self.addAction(self.actionLine_Cut)
         self.addAction(self.actionVertical_Cut)
         self.addAction(self.actionHorizontal_Cut)
@@ -198,7 +204,7 @@ class difftoolbar(QtGui.QToolBar):
         #self.addAction(self.actionROI)
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi):
+                        radialsym, mirrorsym, roi, arc):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -212,6 +218,19 @@ class difftoolbar(QtGui.QToolBar):
         self.actionRadial_Symmetry.triggered.connect(radialsym)
         self.actionMirror_Symmetry.triggered.connect(mirrorsym)
         #self.actionROI.triggered.connect(roi)
+        self.actionArc.triggered.connect(arc)
+
+        self.actionCake.triggered.connect(self.caketoggle)
+        self.actionRemeshing.triggered.connect(self.remeshtoggle)
+
+    def caketoggle(self):
+        if self.actionCake.isChecked():
+            self.actionRemeshing.setChecked(False)
+
+    def remeshtoggle(self):
+        if self.actionRemeshing.isChecked():
+            self.actionCake.setChecked(False)
+
 
 
 

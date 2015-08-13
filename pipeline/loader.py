@@ -33,12 +33,13 @@ def loadimage(path):
                 return data
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
-                # print nxroot.tree
-                if hasattr(nxroot.data, 'signal'):
-                    data = nxroot.data.signal
-                    return data
-                else:
-                    return loadimage(str(nxroot.data.rawfile))
+                print nxroot.tree
+                if hasattr(nxroot, 'data'):
+                    if hasattr(nxroot.data, 'signal'):
+                        data = nxroot.data.signal
+                        return data
+                    else:
+                        return loadimage(str(nxroot.data.rawfile))
 
             else:
                 # print 'Unhandled data type: ' + path
@@ -380,7 +381,7 @@ class diffimage():
 
     @property
     def mask(self):
-        return self.experiment.mask
+        return self.experiment.mask.T
 
     @property
     def dataunrot(self):
@@ -390,7 +391,10 @@ class diffimage():
     @property
     def data(self):
         self.cachedata()
-        return np.rot90(self._data, 3)
+        data = self._data
+        if self._data is not None:
+            data = np.rot90(self._data, 3)
+        return data
 
     @data.setter
     def data(self, data):

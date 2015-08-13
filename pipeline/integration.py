@@ -1,11 +1,15 @@
 import numpy as np
+import debug
+from PySide import QtCore
+import subprocess
+import time
 
 
-def radialintegrate(dimg, cut=None, data=None):
-    centerx = dimg.experiment.getvalue('Center X')
-    centery = dimg.experiment.getvalue('Center Y')
+def radialintegrate(dimg, cut=None):
+    print 'WARNING: Histogram binning method of radial integration is in use.'
 
-    # TODO: add checks for mask and center
+    center = dimg.experiment.center
+
     # print(self.config.maskingmat)
     mask = dimg.experiment.mask
 
@@ -15,6 +19,10 @@ def radialintegrate(dimg, cut=None, data=None):
     elif not mask.shape == dimg.data.shape:
         print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
         mask = np.zeros_like(dimg.data)
+
+    print 'Mask:', mask.shape
+    print 'Image:', dimg.data.shape
+    print 'Center:', dimg.experiment.center
 
 
 
@@ -26,13 +34,15 @@ def radialintegrate(dimg, cut=None, data=None):
     #mask data
     data = dimg.data * (invmask)
 
+    print 'invmask:', invmask.shape
+
     if cut is not None:
         invmask *= cut
         data *= cut
 
     #calculate data radial profile
-    x, y = np.indices(data.shape)
-    r = np.sqrt((x - centerx) ** 2 + (y - centery) ** 2)
+    y, x = np.indices(data.shape)
+    r = np.sqrt((x - center[1]) ** 2 + (y - center[0]) ** 2)
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
@@ -62,6 +72,12 @@ def radialintegrate(dimg, cut=None, data=None):
         # (q, radialprofile) = ([qvalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0],
         #                      [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
         radialprofile = radialprofile * (radialprofile > 0) + 0.0001 * (radialprofile <= 0)
+
+        # import hipies.debug
+        # hipies.debug.showimage(data)
+        # hipies.debug.showimage(invmask)
+        # hipies.debug.showimage(r)
+
 
     return (q, radialprofile)
 
@@ -130,23 +146,59 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
     return angleprofile
 
 
+class IntegrationThread(QtCore.QThread):
+    sig_Integration = QtCore.Signal(np.ndarray, np.ndarray)
+
+    def run(self, dimg, cut=None):
+        q, radialprofile = radialintegratepyFAI(dimg, cut)
+        self.sig_Integration.emit(q, radialprofile)
 
 
-def radialintegratepyFAI(imgdata, experiment, mask=None, cut=None):
-    data = imgdata.copy()
-    AI = experiment.getAI()
-    """:type : pyFAI.AzimuthalIntegrator"""
+    def stop(self):
+        self.exiting = True
+        print ("thread stop - %s" % self.exiting)
+
+    def __del__(self):
+        self.exiting = True
+        self.wait()
+
+
+@debug.timeit
+def radialintegratepyFAI(dimg, cut=None):
+    # print(self.config.maskingmat)
+    mask = dimg.experiment.mask.copy()
+
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(data)
+        mask = np.zeros_like(dimg.data)
+    elif not mask.shape == dimg.data.shape:
+        print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
+        mask = np.zeros_like(dimg.data)
+
+    # invmask=1-mask
+
+    #mask data
+    #data = dimg.data * (invmask)
+
+    #print 'invmask:',invmask.shape
+
     if cut is not None:
-        mask *= cut
-        data *= cut
-    xres = 10000
-    (q, radialprofile) = AI.integrate1d(data, xres, mask=mask, method='full_csr')
+        mask |= 1 - cut
+    #        data *= cut
+
+    import debug
+
+    debug.showimage(mask)
+
+    AI = dimg.experiment.getAI()
+    """:type : pyFAI.AzimuthalIntegrator"""
+
+    xres = 1000
+    (q, radialprofile) = AI.integrate1d(dimg.data.T, xres, mask=mask.T, method='lut_ocl')
     # Truncate last 3 points, which typically have very high error?
-    q = q[:-3] / 10.0
-    radialprofile = radialprofile[:-3]
+
+    radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
+    q = q[:len(radialprofile)] / 10.0
     return q, radialprofile
 
 

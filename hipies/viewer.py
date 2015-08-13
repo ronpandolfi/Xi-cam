@@ -127,18 +127,27 @@ class imageTab(QtGui.QWidget):
         self.activeaction = None
 
         # Make an imageview for the image
-        # self.imgview = pg.ImageView(self)
-        #self.imgview.setImage(self.imgdata.T)
-        #self.imgview.autoRange()
-        #self.imageitem = self.imgview.getImageItem()
-        self.viewbox = pg.ViewBox()  # enableMenu=False)
-        self.imageitem = pg.ImageItem()
-        self.viewbox.addItem(self.imageitem)
-        self.graphicslayoutwidget = pg.GraphicsLayoutWidget()
-        self.graphicslayoutwidget.addItem(self.viewbox)
-        self.viewbox.setAspectLocked(True)
-        self.imghistLUT = pg.HistogramLUTItem(self.imageitem)
-        self.graphicslayoutwidget.addItem(self.imghistLUT, 0, 1)
+        self.imgview = ImageView(self)
+        self.imageitem = self.imgview.getImageItem()
+        self.graphicslayoutwidget = self.imgview
+        self.imgview.ui.roiBtn.setParent(None)
+
+        self.viewbox = self.imageitem.getViewBox()
+        self.imgview.view.removeItem(self.imgview.roi)
+        self.imgview.roi.parent = None
+        self.imgview.roi.deleteLater()
+        self.imgview.view.removeItem(self.imgview.normRoi)
+        self.imgview.normRoi.parent = None
+        self.imgview.normRoi.deleteLater()
+        self.viewbox.invertY(False)
+        reset = QtGui.QAction('Reset', self.imgview.getHistogramWidget().item.vb.menu)
+        self.imgview.getHistogramWidget().item.vb.menu.addAction(reset)
+        reset.triggered.connect(self.resetLUT)
+
+        # self.imgview.getHistogramWidget().plot.setLogMode(True,False)
+
+
+        self.integrators = []
 
 
 
@@ -156,11 +165,12 @@ class imageTab(QtGui.QWidget):
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
 
-        self.coordslabel = QtGui.QLabel('')
-        self.layout.addWidget(self.coordslabel)
+        self.coordslabel = QtGui.QLabel(' ')
+        self.imgview.layout().addWidget(self.coordslabel)
+        self.imgview.setStyleSheet("background-color: rgba(0,0,0,0%)")
         self.coordslabel.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
         self.coordslabel.setStyleSheet("background-color: rgba(0,0,0,0%)")
-        self.graphicslayoutwidget.scene().sigMouseMoved.connect(self.mouseMoved)
+        self.graphicslayoutwidget.scene.sigMouseMoved.connect(self.mouseMoved)
         self.layout.setStackingMode(QtGui.QStackedLayout.StackAll)
         self.coordslabel.mouseMoveEvent = self.graphicslayoutwidget.mouseMoveEvent
         self.coordslabel.mousePressEvent = self.graphicslayoutwidget.mousePressEvent
@@ -195,7 +205,13 @@ class imageTab(QtGui.QWidget):
 
 
         # import ROI
-        #self.viewbox.addItem(ROI.ArcROI((-5,-5),(10,10)))
+        # self.arc=ROI.ArcROI((620.,29.),500.)
+        # self.viewbox.addItem(self.arc)
+        #print self.dimg.data
+        #print self.imageitem
+
+
+        #self.viewbox.addItem(pg.SpiralROI((0,0),1))
 
 
         # Cache radial integration
@@ -206,14 +222,35 @@ class imageTab(QtGui.QWidget):
 
             # Force cache the detector
             # _ = self.dimg.detector
+            self.resetLUT()
 
             if self.dimg.experiment.iscalibrated:
                 self.replot()
                 self.drawcenter()
 
 
+    def resetLUT(self):
+        print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
+        # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
+        Lmax = np.nanmax(self.dimg.data)
+        if self.toolbar().actionLog_Intensity.isChecked():
+            self.imgview.getHistogramWidget().item.setLevels(0, np.log(Lmax))
+        else:
+            self.imgview.getHistogramWidget().item.setLevels(0, Lmax)
+        print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
+
+
     def send1Dintegration(self):
         self.cache1Dintegration.emit(self.q, self.radialprofile)
+
+    def removeROI(self, evt):
+
+        evt.scene().removeItem(evt)
+        self.viewbox.removeItem(evt)
+        evt.deleteLater()
+
+        #self.viewbox.scene().removeItem(evt)
+
 
 
     def mouseMoved(self, evt):
@@ -244,12 +281,10 @@ class imageTab(QtGui.QWidget):
                     else:
                         q = pixel2q(x, y, self.dimg.experiment)
 
-
-
-                    self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
-                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</span>,  r=%0.1f" % (
+                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,  r=%0.1f</div>" % (
                                          mousePoint.x(),
                                          mousePoint.y(),
                                          self.dimg.data[int(mousePoint.x()),
@@ -264,18 +299,18 @@ class imageTab(QtGui.QWidget):
                                          np.sqrt((mousePoint.x() - self.dimg.experiment.getvalue("Center X")) ** 2 + (
                                          mousePoint.y() - self.dimg.experiment.getvalue("Center Y")) ** 2)))
                 else:
-                    self.coordslabel.setText(u"<span style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
-                                             u"  Calibration Required..." % (
+                                             u"  Calibration Required...</div>" % (
                                                  mousePoint.x(),
                                                  mousePoint.y(),
                                                  self.dimg.data[int(mousePoint.x()),
                                                               int(mousePoint.y())],
                                              ))
 
-                self.coordslabel.setVisible(True)
+                    #self.coordslabel.setVisible(True)
             else:
-                self.coordslabel.setVisible(False)
+                self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'></div>")
 
             self.parentwindow.qLine.setPos(pixel2q(mousePoint.x(), mousePoint.y(), self.dimg.experiment))
 
@@ -285,7 +320,7 @@ class imageTab(QtGui.QWidget):
         """
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
-        self.coordslabel.setVisible(False)
+        #self.coordslabel.setVisible(False)
         self.parentwindow.qLine.setVisible(False)
 
     def enterEvent(self, evt):
@@ -296,15 +331,12 @@ class imageTab(QtGui.QWidget):
         self.vLine.setVisible(True)
         self.parentwindow.qLine.setVisible(True)
 
+
     def redrawimageLowRes(self):
         self.redrawimage(forcelow=True)
 
 
-    def redrawimage(self, forcelow=False):
-        """
-        redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
-        """
-
+    def toolbar(self):
         if self.parentwindow.ui.viewmode.currentIndex() == 1 or not self.istimeline:
             toolbar = self.parentwindow.difftoolbar
         elif self.parentwindow.ui.viewmode.currentIndex() == 2 or self.istimeline:
@@ -313,6 +345,16 @@ class imageTab(QtGui.QWidget):
             print "Redraw somehow activated from wrong tab"
             debug.frustration()
             toolbar = None
+        return toolbar
+
+
+
+    def redrawimage(self, forcelow=False):
+        """
+        redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
+        """
+        toolbar = self.toolbar()
+
 
         islogintensity = toolbar.actionLog_Intensity.isChecked()
         isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
@@ -327,6 +369,8 @@ class imageTab(QtGui.QWidget):
         else:
             img = self.dimg.data
             scale = 1
+
+
 
         if isradialsymmetry:
             centerx = self.dimg.experiment.getvalue('Center X')
@@ -398,6 +442,18 @@ class imageTab(QtGui.QWidget):
             self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
 
         #self.imageitem.setLookupTable(colormap.LUT)
+
+    def arccut(self):
+        import ROI
+
+        arc = ROI.ArcROI(self.dimg.experiment.center, 500)
+        arc.sigRemoveRequested.connect(self.removeROI)
+        arc.sigRegionChangeFinished.connect(self.replot)
+        self.viewbox.addItem(arc)
+
+
+
+
 
     def linecut(self):
         """
@@ -527,7 +583,7 @@ class imageTab(QtGui.QWidget):
         #_=self.dimg.detector
 
         cen = pipeline.center_approx.refinecenter(self.dimg)
-        self.dimg.experiment.setcenter(cen)
+        self.dimg.experiment.center = cen
         self.drawcenter()
 
     def replot(self):
@@ -559,6 +615,21 @@ class imageTab(QtGui.QWidget):
             data = self.dimg.remesh
         else:
             data = self.dimg.data
+
+        for roi in self.viewbox.addedItems:
+            if issubclass(type(roi), pg.ROI):
+                print roi
+                cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+                print 'Cut:', cut.shape
+                dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
+
+                thread = pipeline.integration.IntegrationThread()
+                self.integrators.append(thread)
+                thread.sig_Integration.connect(self.plotcut)
+                thread.run(dimg, cut)
+
+
+
 
         if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
 
@@ -592,18 +663,29 @@ class imageTab(QtGui.QWidget):
                 cut = np.zeros_like(data)
                 cut[regionbounds[0]:regionbounds[1], :] = 1
 
-            dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
+            #dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
 
             # Radial integration
-            self.q, self.radialprofile = pipeline.integration.radialintegrate(dimg, cut=cut)
-            self.cache1Dintegration.emit(self.q, self.radialprofile)
+            #self.q, self.radialprofile = pipeline.integration.radialintegratepyFAI(self.dimg)
 
-            self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
-                                                                self.parentwindow.integration)
+            thread = pipeline.integration.IntegrationThread()
+            self.integrators.append(thread)
+            thread.sig_Integration.connect(self.parentwindow.integration.plot)
+            thread.run(self.dimg)
+
+
+
+            # self.cache1Dintegration.emit(self.q, self.radialprofile)
+
+            #self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
+            #                                                    self.parentwindow.integration)
 
             # Replot
-            self.parentwindow.integration.plot(self.q, self.radialprofile)
+            #self.parentwindow.integration.plot(self.q, self.radialprofile)
 
+
+    def plotcut(self, q, radialprofile):
+        self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=[0, 255, 255]))
 
 
 
@@ -636,7 +718,7 @@ class imageTab(QtGui.QWidget):
             self.activeaction = None
 
             # Get the region of the image that was selected; unforunately the region is trimmed
-            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.data.T), self.imageitem,
+            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.data), self.imageitem,
                                                      returnMappedCoords=True)  # levels=(0, arr.max()
             #print maskedarea.shape
 
@@ -666,9 +748,9 @@ class imageTab(QtGui.QWidget):
     def maskoverlay(self):
         # Draw the mask as a red channel image with an alpha mask
         self.maskimage.setImage(np.dstack((
-            self.dimg.experiment.mask.T, np.zeros_like(self.dimg.experiment.mask).T,
-            np.zeros_like(self.dimg.experiment.mask).T,
-            self.dimg.experiment.mask.T)), opacity=.25)
+            self.dimg.experiment.mask, np.zeros_like(self.dimg.experiment.mask),
+            np.zeros_like(self.dimg.experiment.mask),
+            self.dimg.experiment.mask)), opacity=.25)
 
 
     # def finddetector(self):
@@ -693,6 +775,15 @@ class imageTab(QtGui.QWidget):
         dialog.selectFile(os.path.basename(self.path))
         filename, _ = dialog.getSaveFileName()
         fabimg.write(filename)
+
+
+class ImageView(pg.ImageView):
+    def buildMenu(self):
+        super(ImageView, self).buildMenu()
+        self.menu.removeAction(self.normAction)
+
+
+
 
 
 class previewwidget(pg.GraphicsLayoutWidget):

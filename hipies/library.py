@@ -172,16 +172,23 @@ class thumbwidgetitem(QtGui.QFrame):
             self.image = self.foldericon
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
-            self.thumb *= 255. / np.max(self.thumb)
 
-            if self.thumb is not None:
-                # TODO: use scipy zoom or pull from .nxs for thumbnails
+            try:
+                self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
+                self.thumb *= 255. / np.max(self.thumb)
+
+
+
+                # if self.thumb is not None:
                 self.image = QtGui.QImage(self.thumb.astype(np.uint8), self.thumb.shape[1], self.thumb.shape[0],
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
-            else:
+            except Exception as ex:
+                print ex.message
+
                 self.image = self.fileicon
+
+
         else:
             self.image = self.fileicon
 
