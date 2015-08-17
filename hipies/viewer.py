@@ -10,6 +10,7 @@ import numpy as np
 from pipeline import detectors
 from fabio import edfimage
 import debug
+import ROI
 
 
 import pipeline
@@ -121,7 +122,7 @@ class imageTab(QtGui.QWidget):
         self.parentwindow = parent
 
         # Immediately mask any negative pixels #####MAKE THIS UNIQUE
-        self.dimg.experiment.addtomask(self.dimg.data < 0)
+        # self.dimg.experiment.addtomask(self.dimg.data < 0)
 
         # For storing what action is active (mask/circle fit...)
         self.activeaction = None
@@ -147,8 +148,7 @@ class imageTab(QtGui.QWidget):
         # self.imgview.getHistogramWidget().plot.setLogMode(True,False)
 
 
-        self.integrators = []
-
+        self.threads = dict()
 
 
         # cross hair
@@ -233,10 +233,12 @@ class imageTab(QtGui.QWidget):
         print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
         Lmax = np.nanmax(self.dimg.data)
+
         if self.toolbar().actionLog_Intensity.isChecked():
-            self.imgview.getHistogramWidget().item.setLevels(0, np.log(Lmax))
+            self.imgview.getHistogramWidget().item.setLevels(
+                np.log(max(np.nanmin(self.dimg.data * (self.dimg.data > 0)), 1)), np.log(Lmax))
         else:
-            self.imgview.getHistogramWidget().item.setLevels(0, Lmax)
+            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.data), 0), Lmax)
         print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
 
 
@@ -262,8 +264,8 @@ class imageTab(QtGui.QWidget):
             mousePoint = self.viewbox.mapSceneToView(pos)
             self.vLine.setPos(mousePoint.x())
             self.hLine.setPos(mousePoint.y())
-            if (0 < mousePoint.x() < self.dimg.data.shape[0]) & (
-                            0 < mousePoint.y() < self.dimg.data.shape[1]):  # within bounds
+            if (0 < mousePoint.x() < self.imageitem.image.shape[0]) & (
+                            0 < mousePoint.y() < self.imageitem.image.shape[1]):  # within bounds
                 #angstrom=QChar(0x00B5)
                 if self.dimg.experiment.iscalibrated:
                     x = mousePoint.x()
@@ -272,32 +274,30 @@ class imageTab(QtGui.QWidget):
                     iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
                     isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
 
-                    if iscake:
-                        return
-                        q = pixel2cake(x, y, self.dimg)
-
-                    elif isremesh:
-                        return
-                    else:
-                        q = pixel2q(x, y, self.dimg.experiment)
-
+                    # if iscake:
+                    # q = pixel2cake(x, y, self.dimg)
+                    #
+                    # elif isremesh:
+                    #     return
+                    # else:
+                    #     q = pixel2q(x, y, self.dimg.experiment)
+                    #print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                          u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
-                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,  r=%0.1f</div>" % (
-                                         mousePoint.x(),
-                                         mousePoint.y(),
-                                         self.dimg.data[int(mousePoint.x()),
-                                                      int(mousePoint.y())],
-                                         q,
-                                         pixel2q(None,
-                                                 mousePoint.y(),
-                                                 self.dimg.experiment),
-                                         pixel2q(mousePoint.x(),
-                                                 None,
-                                                 self.dimg.experiment),
-                                         np.sqrt((mousePoint.x() - self.dimg.experiment.getvalue("Center X")) ** 2 + (
-                                         mousePoint.y() - self.dimg.experiment.getvalue("Center Y")) ** 2)))
+                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</div>" % (
+                                                 x,
+                                                 y,
+                                                 self.dimg.data[int(x),
+                                                                int(y)],
+                                                 self.getq(x, y),
+                                                 self.getq(x, y, 'parallel'),
+                                                 self.getq(x, y, 'z')))
+                    # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
+                    #y - self.dimg.experiment.center[1]) ** 2)))
+                    #,  r=%0.1f
+                    self.parentwindow.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
+                    self.parentwindow.qLine.show()
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
@@ -309,10 +309,45 @@ class imageTab(QtGui.QWidget):
                                              ))
 
                     #self.coordslabel.setVisible(True)
+
             else:
                 self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'></div>")
+                self.parentwindow.qLine.hide()
 
-            self.parentwindow.qLine.setPos(pixel2q(mousePoint.x(), mousePoint.y(), self.dimg.experiment))
+
+    def getq(self, x, y, mode=None):
+        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
+        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
+
+        if iscake:
+            cakeq = self.dimg.cakeqx
+            cakechi = self.dimg.cakeqy
+            if mode is not None:
+                if mode == 'parallel':
+
+                    return cakeq[y] * np.sin(np.radians(cakechi[x])) / 10.
+                elif mode == 'z':
+
+                    return cakeq[y] * np.cos(np.radians(cakechi[x])) / 10.
+            else:
+                return cakeq[y] / 10.
+
+        elif isremesh:
+            print self.dimg.remeshqx[x, y], self.dimg.remeshqy[x, y]
+
+        else:
+            center = self.dimg.experiment.center
+            if mode is not None:
+                if mode == 'z':
+                    x = center[0]
+                if mode == 'parallel':
+                    y = center[1]
+
+            r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            theta = np.arctan2(r * self.dimg.experiment.getvalue('Pixel Size X'),
+                               self.dimg.experiment.getvalue('Detector Distance'))
+            wavelength = self.dimg.experiment.getvalue('Wavelength')
+            return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
 
     def leaveEvent(self, evt):
         """
@@ -444,7 +479,7 @@ class imageTab(QtGui.QWidget):
         #self.imageitem.setLookupTable(colormap.LUT)
 
     def arccut(self):
-        import ROI
+
 
         arc = ROI.ArcROI(self.dimg.experiment.center, 500)
         arc.sigRemoveRequested.connect(self.removeROI)
@@ -463,12 +498,12 @@ class imageTab(QtGui.QWidget):
         self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
         self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
         if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
-            self.region = pg.LineSegmentROI(
-                [[self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
-                 [self.dimg.experiment.getvalue('Center X'), self.dimg.data.shape[0]]])
+            self.region = ROI.LineROI(
+                [self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
+                [self.dimg.experiment.getvalue('Center X'), -self.dimg.data.shape[0]], 5)
             self.viewbox.addItem(self.region)
             self.replot()
-            self.region.sigRegionChanged.connect(self.replot)
+            self.region.sigRegionChangeFinished.connect(self.replot)
         else:
             #self.viewbox.removeItem(self.region)
             self.region = None
@@ -616,66 +651,73 @@ class imageTab(QtGui.QWidget):
         else:
             data = self.dimg.data
 
-        for roi in self.viewbox.addedItems:
-            if issubclass(type(roi), pg.ROI):
-                print roi
-                cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
-                print 'Cut:', cut.shape
-                dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
-
-                thread = pipeline.integration.IntegrationThread()
-                self.integrators.append(thread)
-                thread.sig_Integration.connect(self.plotcut)
-                thread.run(dimg, cut)
+        self.backgroundIntegrate()
 
 
 
+        # else:
+        # if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
+        #         regionbounds = self.region.getRegion()
+        #         cut = np.zeros_like(data)
+        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
+        #     if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
+        #         regionbounds = self.region.getRegion()
+        #         cut = np.zeros_like(data)
+        #         cut[regionbounds[0]:regionbounds[1], :] = 1
 
-        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
-
-
-            cut = self.region.getArrayRegion(data, self.imageitem)
-
-            x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
-                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
-                            cut.__len__())
-            y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
-                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
-                            cut.__len__())
-
-            q = pixel2q(x, y, self.dimg.experiment)
-            qmiddle = q.argmin()
-            leftq = -q[0:qmiddle]
-            rightq = q[qmiddle:]
-
-            if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
-            if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
-
-
-
-        else:
-            if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
-                regionbounds = self.region.getRegion()
-                cut = np.zeros_like(data)
-                cut[:, regionbounds[0]:regionbounds[1]] = 1
-            if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
-                regionbounds = self.region.getRegion()
-                cut = np.zeros_like(data)
-                cut[regionbounds[0]:regionbounds[1], :] = 1
-
-            #dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
+        #dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
 
             # Radial integration
             #self.q, self.radialprofile = pipeline.integration.radialintegratepyFAI(self.dimg)
 
-            thread = pipeline.integration.IntegrationThread()
-            self.integrators.append(thread)
-            thread.sig_Integration.connect(self.parentwindow.integration.plot)
-            thread.run(self.dimg)
 
 
 
-            # self.cache1Dintegration.emit(self.q, self.radialprofile)
+
+        # self.integrators.append(thread)
+        #thread.sig_Integration.connect(self.parentwindow.integration.plot)
+        #thread.run(self.dimg)
+
+
+        for roi in self.viewbox.addedItems:
+            if issubclass(type(roi), pg.ROI) and type(roi) is not pg.LineSegmentROI:
+                print roi, type(roi)
+                cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+                print 'Cut:', cut.shape
+                dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
+
+                self.backgroundIntegrate(dimg, cut, [0, 255, 255])
+
+
+
+
+            elif type(roi) is pg.LineSegmentROI:
+                print roi
+
+                cut = self.region.getArrayRegion(data, self.imageitem)
+
+                x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
+                                self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
+                                cut.__len__())
+                y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
+                                self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
+                                cut.__len__())
+
+                q = pixel2q(x, y, self.dimg.experiment)
+                qmiddle = q.argmin()
+                leftq = -q[0:qmiddle]
+                rightq = q[qmiddle:]
+
+                if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
+                if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
+
+                thread = pipeline.integration.IntegrationThread()
+                self.integrators.append(thread)
+                thread.sig_Integration.connect(self.plotcut)
+                thread.run(self.dimg, cut)
+
+
+                # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
             #self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
             #                                                    self.parentwindow.integration)
@@ -683,10 +725,25 @@ class imageTab(QtGui.QWidget):
             # Replot
             #self.parentwindow.integration.plot(self.q, self.radialprofile)
 
+    def purgerunners(self):
+        for t, r in self.threads.iteritems():
 
-    def plotcut(self, q, radialprofile):
-        self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=[0, 255, 255]))
+            if t.isFinished():
+                del self.threads[t]
 
+    def backgroundIntegrate(self, dimg=None, cut=None, color=[255, 255, 255]):
+        if dimg is None:
+            dimg = self.dimg
+        thread = QtCore.QThread()
+        runner = pipeline.integration.IntegrationRunner(start_signal=thread.started, dimg=dimg, cut=cut, color=color)
+        runner.moveToThread(thread)
+        thread.start()
+        runner.result.connect(self.plotintegration)
+        self.threads[thread] = runner
+
+    def plotintegration(self, color, q, radialprofile):
+        # cyan:[0, 255, 255]
+        self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
 
 
     def polymask(self):
@@ -814,10 +871,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 #         cv2.waitKey(0)
 #         cv2.destroyAllWindows()
 
-def pixel2cake(x, y, dimg):
-    cakeqx = dimg.cakeqx
-    cakeqy = dimg.cakeqy
-    return np.sqrt(cakeqx[x] ** 2 + cakeqy[y] ** 2)
+
 
 
 def pixel2q(x, y, experiment):

@@ -1,7 +1,7 @@
 import numpy as np
 import debug
 from PySide import QtCore
-import subprocess
+import multiprocessing
 import time
 
 
@@ -150,8 +150,17 @@ class IntegrationThread(QtCore.QThread):
     sig_Integration = QtCore.Signal(np.ndarray, np.ndarray)
 
     def run(self, dimg, cut=None):
-        q, radialprofile = radialintegratepyFAI(dimg, cut)
-        self.sig_Integration.emit(q, radialprofile)
+        resultQueue = multiprocessing.Queue()
+
+        self.p = multiprocessing.Process(target=radialintegratepyFAI, args=(dimg, cut, resultQueue))
+        self.p.start()
+
+        while self.p.is_alive():
+            time.sleep(.3)
+
+        # q, radialprofile = radialintegratepyFAI(dimg, cut)
+        output = resultQueue.get()
+        self.sig_Integration.emit(*output)
 
 
     def stop(self):
@@ -163,10 +172,47 @@ class IntegrationThread(QtCore.QThread):
         self.wait()
 
 
+class IntegrationRunner(QtCore.QObject):
+    """
+    Runs a job in a separate process and forwards messages from the job to the
+    main thread through a pyqtSignal.
+
+    """
+
+    result = QtCore.Signal(list, np.ndarray, np.ndarray)
+
+    def __init__(self, start_signal, dimg, cut=None, color=[255, 255, 255]):
+        """
+        :param start_signal: the pyqtSignal that starts the job
+
+        """
+        super(IntegrationRunner, self).__init__()
+        self.dimg = dimg
+        self.cut = cut
+        self.color = color
+        start_signal.connect(self._run)
+
+    def _run(self):
+        queue = multiprocessing.Queue()
+        p = multiprocessing.Process(target=radialintegratepyFAI, args=(self.dimg, self.cut, queue))
+        p.start()
+        while p.is_alive():
+            time.sleep(.3)
+        result = queue.get()
+        self.result.emit(self.color, *result)
+
+
+
+
 @debug.timeit
-def radialintegratepyFAI(dimg, cut=None):
+def radialintegratepyFAI(dimg, cut=None, resultQueue=False):
+
+
     # print(self.config.maskingmat)
-    mask = dimg.experiment.mask.copy()
+    mask = dimg.experiment.mask
+
+    if mask is not None:
+        mask = mask.copy()
 
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
@@ -175,6 +221,7 @@ def radialintegratepyFAI(dimg, cut=None):
         print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
         mask = np.zeros_like(dimg.data)
 
+
     # invmask=1-mask
 
     #mask data
@@ -182,24 +229,27 @@ def radialintegratepyFAI(dimg, cut=None):
 
     #print 'invmask:',invmask.shape
 
+
     if cut is not None:
         mask |= 1 - cut
     #        data *= cut
 
-    import debug
 
-    debug.showimage(mask)
 
     AI = dimg.experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
 
-    xres = 1000
+    xres = 2000
     (q, radialprofile) = AI.integrate1d(dimg.data.T, xres, mask=mask.T, method='lut_ocl')
     # Truncate last 3 points, which typically have very high error?
 
     radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
     q = q[:len(radialprofile)] / 10.0
-    return q, radialprofile
+
+    if resultQueue:
+        resultQueue.put((q, radialprofile))
+    else:
+        return q, radialprofile
 
 
 def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):

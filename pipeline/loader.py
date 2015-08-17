@@ -29,7 +29,7 @@ def loadimage(path):
             if os.path.splitext(path)[1] == '.gb':
                 raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
             elif os.path.splitext(path)[1] == '.fits':
-                data = pyfits.open(path)[2].data
+                data = np.fliplr(pyfits.open(path)[2].data)
                 return data
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
@@ -381,7 +381,10 @@ class diffimage():
 
     @property
     def mask(self):
-        return self.experiment.mask.T
+        if self.experiment.mask is not None:
+            return self.experiment.mask.T
+        else:
+            return np.zeros_like(self.data)
 
     @property
     def dataunrot(self):
@@ -480,6 +483,7 @@ class diffimage():
             cake, x, y = integration.cake(self.data, self.experiment)
             cakemask, _, _ = integration.cake(self.mask, self.experiment)
             cakemask = (cakemask > 0) * 255
+            print x, y
 
             self.cache['cake'] = cake
             self.cache['cakemask'] = cakemask

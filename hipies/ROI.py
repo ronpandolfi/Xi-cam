@@ -53,6 +53,43 @@ class QRectF(QtCore.QRectF):
         self.setCoords(*coords)
 
 
+class LineROI(pg.LineROI):
+    def getArrayRegion(self, data, img, axes=(0, 1), returnMappedCoords=False, **kwds):
+        from skimage.draw import polygon
+
+        from pyqtgraph import functions as fn
+
+        ## Determine shape of array along ROI axes
+        dShape = (data.shape[axes[0]], data.shape[axes[1]])
+
+        ## Determine transform that maps ROI bounding box to image coordinates
+        try:
+            tr = self.sceneTransform() * fn.invertQTransform(img.sceneTransform())
+        except np.linalg.linalg.LinAlgError:
+            return None
+
+        ## Modify transform to scale from image coords to data coords
+        # m = QtGui.QTransform()
+        tr.scale(float(dShape[0]) / img.width(), float(dShape[1]) / img.height())
+        #tr = tr * m
+
+        ## Transform ROI bounds into data bounds
+        dataBounds = tr.mapRect(self.boundingRect())
+
+
+        ## vx and vy point in the directions of the slice axes, but must be scaled properly
+        br = list(dataBounds.bottomRight().toTuple())
+        tl = list(dataBounds.topLeft().toTuple())
+        bl = list(dataBounds.bottomLeft().toTuple())
+        tr = list(dataBounds.topRight().toTuple())
+        vecs = np.vstack([bl, br, tr, tl]).T
+        print vecs
+        rr, cc = polygon(vecs[0], vecs[1])
+        mask = np.zeros_like(data)
+        mask[rr, cc] = 1
+
+        return (data * mask).T.copy()
+
 class ArcROI(pg.ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
