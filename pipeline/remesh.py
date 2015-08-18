@@ -91,7 +91,7 @@ def remesh(image, filename, geometry):
     try:
         center /= pixel
         qimg = warp_image(image,qpar,qvrt,pixel,center,alphai,k0,sdd,0)
-        return np.rot90(qimg,3),qpar,qvrt
+        return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
     except:
 
         # find inverse map

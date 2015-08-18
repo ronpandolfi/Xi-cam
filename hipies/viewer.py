@@ -274,6 +274,13 @@ class imageTab(QtGui.QWidget):
                     iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
                     isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
 
+                    if iscake:
+                        data = self.dimg.cake
+                    elif isremesh:
+                        data = self.dimg.remesh
+                    else:
+                        data = self.dimg.data
+
                     # if iscake:
                     # q = pixel2cake(x, y, self.dimg)
                     #
@@ -288,8 +295,8 @@ class imageTab(QtGui.QWidget):
                                              u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</div>" % (
                                                  x,
                                                  y,
-                                                 self.dimg.data[int(x),
-                                                                int(y)],
+                                                 data[int(x),
+                                                      int(y)],
                                                  self.getq(x, y),
                                                  self.getq(x, y, 'parallel'),
                                                  self.getq(x, y, 'z')))
@@ -333,7 +340,15 @@ class imageTab(QtGui.QWidget):
                 return cakeq[y] / 10.
 
         elif isremesh:
-            print self.dimg.remeshqx[x, y], self.dimg.remeshqy[x, y]
+            remeshqpar = self.dimg.remeshqy
+            remeshqz = self.dimg.remeshqx
+            if mode is not None:
+                if mode == 'parallel':
+                    return remeshqpar[x, y] / 10.
+                elif mode == 'z':
+                    return -remeshqz[x, y] / 10.
+            else:
+                return np.sqrt(remeshqz[x, y] ** 2 + remeshqpar[x, y] ** 2) / 10.
 
         else:
             center = self.dimg.experiment.center
@@ -397,6 +412,8 @@ class imageTab(QtGui.QWidget):
         ismaskshown = toolbar.actionShow_Mask.isChecked()
         iscake = toolbar.actionCake.isChecked()
         isremesh = toolbar.actionRemeshing.isChecked()
+        if iscake and isremesh:
+            debug.frustration()
         # img = self.dimg.data.copy()
         if forcelow:
             img = self.dimg.thumbnail.copy()
@@ -463,7 +480,11 @@ class imageTab(QtGui.QWidget):
             self.drawcenter()
 
         if ismaskshown:
-            self.maskimage.setImage(np.dstack((mask, np.zeros_like(mask), np.zeros_like(mask), mask)), opacity=.25)
+            print 'maskmax:', np.max(mask) * 1.0
+            invmask = 1 - mask
+            self.maskimage.setImage(
+                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
+                opacity=.25)
         else:
             self.maskimage.clear()
 
@@ -485,7 +506,7 @@ class imageTab(QtGui.QWidget):
         arc.sigRemoveRequested.connect(self.removeROI)
         arc.sigRegionChangeFinished.connect(self.replot)
         self.viewbox.addItem(arc)
-
+        self.replot()
 
 
 
@@ -494,64 +515,69 @@ class imageTab(QtGui.QWidget):
         """
         toggles the line cut
         """
-        self.viewbox.removeItem(self.region)
-        self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
-        self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
-        if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
-            self.region = ROI.LineROI(
-                [self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
-                [self.dimg.experiment.getvalue('Center X'), -self.dimg.data.shape[0]], 5)
-            self.viewbox.addItem(self.region)
-            self.replot()
-            self.region.sigRegionChangeFinished.connect(self.replot)
-        else:
-            #self.viewbox.removeItem(self.region)
-            self.region = None
-            self.replot()
+        # self.viewbox.removeItem(self.region)
+        # self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
+        # self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
+        # if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
+        region = ROI.LineROI(
+            [self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
+            [self.dimg.experiment.getvalue('Center X'), -self.dimg.data.shape[0]], 5, removable=True)
+        region.sigRemoveRequested.connect(self.replot)
+        self.viewbox.addItem(region)
+        self.replot()
+        region.sigRegionChangeFinished.connect(self.replot)
+        # else:
+        # #self.viewbox.removeItem(self.region)
+        #     self.region = None
+        #     self.replot()
 
     def verticalcut(self):
-        self.viewbox.removeItem(self.region)
-        self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
-        self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
-        if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
-            try:
-                self.viewbox.removeItem(self.region)
-            except AttributeError:
-                print('Attribute error in verticalcut')
-            self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
-                                              bounds=[0, self.dimg.data.shape[1]],
-                                              values=[self.dimg.experiment.getvalue('Center X') - 10,
-                                                      10 + self.dimg.experiment.getvalue('Center X')])
-            for line in self.region.lines:
-                line.setPen(pg.mkPen('#00FFFF'))
-            self.region.sigRegionChangeFinished.connect(self.replot)
-            self.viewbox.addItem(self.region)
-        else:
-            #self.viewbox.removeItem(self.region)
-            self.region = None
+        # self.viewbox.removeItem(self.region)
+        # self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
+        # self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
+        # if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
+        # try:
+        #         self.viewbox.removeItem(self.region)
+        #     except AttributeError:
+        #         print('Attribute error in verticalcut')
+        region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
+                                      bounds=[0, self.dimg.data.shape[1]],
+                                      values=[self.dimg.experiment.getvalue('Center X') - 10,
+                                              10 + self.dimg.experiment.getvalue('Center X')])
+        for line in region.lines:
+            line.setPen(pg.mkPen('#00FFFF'))
+        region.sigRegionChangeFinished.connect(self.replot)
+        region.sigRemoveRequested.connect(self.replot)
+        self.viewbox.addItem(region)
         self.replot()
+        # else:
+        # #self.viewbox.removeItem(self.region)
+        #     self.region = None
+        # self.replot()
 
     def horizontalcut(self):
-        self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
-        self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
-        self.viewbox.removeItem(self.region)
-        if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
-            try:
-                self.viewbox.removeItem(self.region)
-            except AttributeError:
-                print('Attribute error in horizontalcut')
-            self.region = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
-                                              bounds=[0, self.dimg.data.shape[0]],
-                                              values=[self.dimg.experiment.getvalue('Center Y') - 10,
-                                                      10 + self.dimg.experiment.getvalue('Center Y')])
-            for line in self.region.lines:
-                line.setPen(pg.mkPen('#00FFFF'))
-            self.region.sigRegionChangeFinished.connect(self.replot)
-            self.viewbox.addItem(self.region)
-        else:
-            #self.viewbox.removeItem(self.region)
-            self.region = None
+        # self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
+        # self.parentwindow.difftoolbar.actionLine_Cut.setChecked(False)
+        # self.viewbox.removeItem(self.region)
+        # if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
+        # try:
+        #         self.viewbox.removeItem(self.region)
+        #     except AttributeError:
+        #         print('Attribute error in horizontalcut')
+        region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
+                                      bounds=[0, self.dimg.data.shape[0]],
+                                      values=[self.dimg.experiment.getvalue('Center Y') - 10,
+                                              10 + self.dimg.experiment.getvalue('Center Y')])
+        for line in region.lines:
+            line.setPen(pg.mkPen('#00FFFF'))
+        region.sigRegionChangeFinished.connect(self.replot)
+        region.sigRemoveRequested.connect(self.replot)
+        self.viewbox.addItem(region)
         self.replot()
+        # else:
+        # #self.viewbox.removeItem(self.region)
+        #     self.region = None
+        # self.replot()
 
 
     def removecosmics(self):
@@ -678,52 +704,81 @@ class imageTab(QtGui.QWidget):
         #thread.sig_Integration.connect(self.parentwindow.integration.plot)
         #thread.run(self.dimg)
 
-
+        #dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
         for roi in self.viewbox.addedItems:
-            if issubclass(type(roi), pg.ROI) and type(roi) is not pg.LineSegmentROI:
-                print roi, type(roi)
-                cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
-                print 'Cut:', cut.shape
-                dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
+            try:
+                if hasattr(roi, 'isdeleting'):
+                    if not roi.isdeleting:
+                        print type(roi)
+                        cut = None
+                        if issubclass(type(roi), pg.ROI) and type(roi) is not pg.LineSegmentROI:
 
-                self.backgroundIntegrate(dimg, cut, [0, 255, 255])
-
-
-
-
-            elif type(roi) is pg.LineSegmentROI:
-                print roi
-
-                cut = self.region.getArrayRegion(data, self.imageitem)
-
-                x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
-                                self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
-                                cut.__len__())
-                y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
-                                self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
-                                cut.__len__())
-
-                q = pixel2q(x, y, self.dimg.experiment)
-                qmiddle = q.argmin()
-                leftq = -q[0:qmiddle]
-                rightq = q[qmiddle:]
-
-                if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
-                if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
-
-                thread = pipeline.integration.IntegrationThread()
-                self.integrators.append(thread)
-                thread.sig_Integration.connect(self.plotcut)
-                thread.run(self.dimg, cut)
+                            cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+                            print 'Cut:', cut.shape
 
 
-                # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
-            #self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
-            #                                                    self.parentwindow.integration)
 
-            # Replot
-            #self.parentwindow.integration.plot(self.q, self.radialprofile)
+
+
+
+                        elif type(roi) is pg.LineSegmentROI:
+
+
+                            cut = self.region.getArrayRegion(data, self.imageitem)
+
+                            x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
+                                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
+                                            cut.__len__())
+                            y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
+                                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
+                                            cut.__len__())
+
+                            q = pixel2q(x, y, self.dimg.experiment)
+                            qmiddle = q.argmin()
+                            leftq = -q[0:qmiddle]
+                            rightq = q[qmiddle:]
+
+                            if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
+                            if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
+
+                        elif type(roi) is ROI.LinearRegionItem:
+                            if roi.orientation is pg.LinearRegionItem.Horizontal:
+                                regionbounds = roi.getRegion()
+                                cut = np.zeros_like(data)
+                                cut[:, regionbounds[0]:regionbounds[1]] = 1
+                            elif roi.orientation is pg.LinearRegionItem.Vertical:
+                                regionbounds = roi.getRegion()
+                                cut = np.zeros_like(data)
+                                cut[regionbounds[0]:regionbounds[1], :] = 1
+
+                            else:
+                                print debug.frustration()
+
+                        if cut is not None:
+                            if iscake:
+
+                                ma = np.ma.masked_array(data, mask=cut * self.dimg.cakemask)
+                                q = self.dimg.cakeqx / 10.
+                                I = np.ma.average(ma, axis=0)
+                                I = np.trim_zeros(I, 'b')
+                                q = q[:len(I)]
+                                I = np.trim_zeros(I, 'f')
+                                q = q[-len(I):]
+                                self.plotintegration([0, 255, 255], q, I)
+                            else:
+                                self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
+
+                                # self.cache1Dintegration.emit(self.q, self.radialprofile)
+
+                                # self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
+                                #                                                    self.parentwindow.integration)
+
+                                # Replot
+                                #self.parentwindow.integration.plot(self.q, self.radialprofile)
+            except Exception as ex:
+                print 'Warning: error displaying ROI integration.'
+                print ex.message
 
     def purgerunners(self):
         for t, r in self.threads.iteritems():
@@ -731,11 +786,12 @@ class imageTab(QtGui.QWidget):
             if t.isFinished():
                 del self.threads[t]
 
-    def backgroundIntegrate(self, dimg=None, cut=None, color=[255, 255, 255]):
+    def backgroundIntegrate(self, dimg=None, cut=None, remesh=False, color=[255, 255, 255]):
         if dimg is None:
             dimg = self.dimg
         thread = QtCore.QThread()
-        runner = pipeline.integration.IntegrationRunner(start_signal=thread.started, dimg=dimg, cut=cut, color=color)
+        runner = pipeline.integration.IntegrationRunner(start_signal=thread.started, dimg=dimg, cut=cut, remesh=remesh,
+                                                        color=color)
         runner.moveToThread(thread)
         thread.start()
         runner.result.connect(self.plotintegration)
@@ -743,7 +799,8 @@ class imageTab(QtGui.QWidget):
 
     def plotintegration(self, color, q, radialprofile):
         # cyan:[0, 255, 255]
-        self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
+        curve=self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
+        curve.setZValue(3 * 255 - sum(color))
 
 
     def polymask(self):

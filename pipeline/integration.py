@@ -181,7 +181,7 @@ class IntegrationRunner(QtCore.QObject):
 
     result = QtCore.Signal(list, np.ndarray, np.ndarray)
 
-    def __init__(self, start_signal, dimg, cut=None, color=[255, 255, 255]):
+    def __init__(self, start_signal, dimg, cut=None, remesh=False, color=[255, 255, 255]):
         """
         :param start_signal: the pyqtSignal that starts the job
 
@@ -190,11 +190,12 @@ class IntegrationRunner(QtCore.QObject):
         self.dimg = dimg
         self.cut = cut
         self.color = color
+        self.remesh = remesh
         start_signal.connect(self._run)
 
     def _run(self):
         queue = multiprocessing.Queue()
-        p = multiprocessing.Process(target=radialintegratepyFAI, args=(self.dimg, self.cut, queue))
+        p = multiprocessing.Process(target=radialintegratepyFAI, args=(self.dimg, self.cut, queue, self.remesh))
         p.start()
         while p.is_alive():
             time.sleep(.3)
@@ -205,20 +206,23 @@ class IntegrationRunner(QtCore.QObject):
 
 
 @debug.timeit
-def radialintegratepyFAI(dimg, cut=None, resultQueue=False):
+def radialintegratepyFAI(dimg, cut=None, resultQueue=False, remesh=False):
+    # Always do mask with 1-valid, 0's excluded
 
 
     # print(self.config.maskingmat)
-    mask = dimg.experiment.mask
+    if remesh:
+        data = dimg.remesh
+        mask = dimg.remeshmask
+    else:
+        mask = dimg.experiment.mask
+        data = dimg.data
 
     if mask is not None:
         mask = mask.copy()
 
-    if mask is None:
-        print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(dimg.data)
-    elif not mask.shape == dimg.data.shape:
-        print("Mask dimensions do not match image dimensions. Mask will be ignored until this is corrected.")
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
         mask = np.zeros_like(dimg.data)
 
 
@@ -229,9 +233,12 @@ def radialintegratepyFAI(dimg, cut=None, resultQueue=False):
 
     #print 'invmask:',invmask.shape
 
+    print 'mask:', mask.shape
+
 
     if cut is not None:
-        mask |= 1 - cut
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
     #        data *= cut
 
 
@@ -240,7 +247,7 @@ def radialintegratepyFAI(dimg, cut=None, resultQueue=False):
     """:type : pyFAI.AzimuthalIntegrator"""
 
     xres = 2000
-    (q, radialprofile) = AI.integrate1d(dimg.data.T, xres, mask=mask.T, method='lut_ocl')
+    (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method='lut_ocl')  #pyfai uses 0-valid mask
     # Truncate last 3 points, which typically have very high error?
 
     radialprofile = np.trim_zeros(radialprofile[:-3], 'b')

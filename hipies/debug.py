@@ -1,8 +1,8 @@
 # -*- coding: UTF-8 -*-
 import time
-import matplotlib.pylab as plt
 import inspect
-
+import pyqtgraph as pg
+import numpy as np
 
 def timeit(method):
     """
@@ -30,6 +30,6 @@ def frustration():
 
 
 def showimage(img):
-    plt.imshow(img)
-    plt.show()
+    image = pg.image(np.fliplr(img))
+
     print 'Image displayed!'

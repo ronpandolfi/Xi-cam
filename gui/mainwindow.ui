@@ -1152,9 +1152,6 @@
    </property>
   </action>
   <action name="actionVertical_Cut">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="icon">
     <iconset>
      <normaloff>gui/icons_22.png</normaloff>gui/icons_22.png</iconset>
@@ -1164,9 +1161,6 @@
    </property>
   </action>
   <action name="actionHorizontal_Cut">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="icon">
     <iconset>
      <normaloff>gui/icons_23.png</normaloff>gui/icons_23.png</iconset>

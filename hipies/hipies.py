@@ -250,10 +250,6 @@ class MyMainWindow():
                                              self.roi, self.arccut)
         self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
 
-        self.timelinetoolbar.actionHorizontal_Cut.setEnabled(False)
-        self.timelinetoolbar.actionVertical_Cut.setEnabled(False)
-        self.timelinetoolbar.actionLine_Cut.setEnabled(False)
-
         # Viewer toolbar
         self.difftoolbar = toolbar.difftoolbar()
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,

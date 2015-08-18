@@ -53,7 +53,78 @@ class QRectF(QtCore.QRectF):
         self.setCoords(*coords)
 
 
+class LinearRegionItem(pg.LinearRegionItem):
+    sigRemoveRequested = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(LinearRegionItem, self).__init__(*args, **kwargs)
+        self.menu = None
+        self.isdeleting = False
+
+    def hoverEvent(self, ev):
+        hover = False
+        if not ev.isExit():
+            if ev.acceptDrags(QtCore.Qt.LeftButton):
+                hover = True
+
+            for btn in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton, QtCore.Qt.MidButton]:
+                if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                    hover = True
+            ev.acceptClicks(QtCore.Qt.RightButton)
+
+        if hover:
+            self.setMouseHover(True)
+
+            ev.acceptClicks(
+                QtCore.Qt.LeftButton)  ## If the ROI is hilighted, we should accept all clicks to avoid confusion.
+            ev.acceptClicks(QtCore.Qt.RightButton)
+            ev.acceptClicks(QtCore.Qt.MidButton)
+        else:
+            self.setMouseHover(False)
+
+    def raiseContextMenu(self, ev):
+        menu = self.getMenu()
+        menu = self.scene().addParentContextMenus(self, menu, ev)
+        pos = ev.screenPos()
+        menu.popup(QtCore.QPoint(pos.x(), pos.y()))
+
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            self.raiseContextMenu(ev)
+            ev.accept()
+        elif int(ev.button() & self.acceptedMouseButtons()) > 0:
+            ev.accept()
+            self.sigClicked.emit(self, ev)
+        else:
+            ev.ignore()
+
+    def getMenu(self):
+        if self.menu is None:
+            self.menu = QtGui.QMenu()
+            self.menu.setTitle("ROI")
+            remAct = QtGui.QAction("Remove ROI", self.menu)
+            remAct.triggered.connect(self.removeClicked)
+            self.menu.addAction(remAct)
+            self.menu.remAct = remAct
+        return self.menu
+
+    def removeClicked(self):
+        self.isdeleting = True
+        self.deleteLater()
+        ## Send remove event only after we have exited the menu event handler
+        QtCore.QTimer.singleShot(0, lambda: self.sigRemoveRequested.emit(self))
+
+
+
+
 class LineROI(pg.LineROI):
+    def __init__(self, *args, **kwargs):
+        super(LineROI, self).__init__(*args, **kwargs)
+        self.sigRemoveRequested.connect(self.deleteLater)
+        self.isdeleting = False
+        self.sigRemoveRequested.connect(self.delete)
+
     def getArrayRegion(self, data, img, axes=(0, 1), returnMappedCoords=False, **kwds):
         from skimage.draw import polygon
 
@@ -90,6 +161,9 @@ class LineROI(pg.LineROI):
 
         return (data * mask).T.copy()
 
+    def delete(self):
+        self.isdeleting = True
+
 class ArcROI(pg.ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
@@ -125,6 +199,9 @@ class ArcROI(pg.ROI):
         self.cacheouter = self.outerhandle.pos()
         self.startradius = radius
         self.startcenter = center
+
+        self.isdeleting = False
+        self.sigRemoveRequested.connect(self.delete)
 
 
     def getRadius(self):
@@ -235,3 +312,5 @@ class ArcROI(pg.ROI):
         self.path.addEllipse(self.boundingRect())
         return self.path
 
+    def delete(self):
+        self.isdeleting = True

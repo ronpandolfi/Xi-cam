@@ -86,7 +86,7 @@ class experiment(Parameter):
         else:  # Otherwise, bitwise or it with the current mask
             # print(self.experiment.mask,maskedarea)
             if self._mask.shape == maskedarea.shape:
-                self._mask = np.bitwise_or(self._mask, maskedarea.astype(np.int))
+                self._mask = np.bitwise_and(self._mask, maskedarea.astype(np.int))
             else:
                 pass
                 # TODO: Handle masking images with different sizes

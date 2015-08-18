@@ -3,6 +3,8 @@ from PySide import QtCore
 
 
 class difftoolbar(QtGui.QToolBar):
+    sigCake = QtCore.Signal()
+    sigRemesh = QtCore.Signal()
     def __init__(self):
         super(difftoolbar, self).__init__()
 
@@ -121,19 +123,16 @@ class difftoolbar(QtGui.QToolBar):
         self.actionPolygon_Cut.setIcon(icon18)
         self.actionPolygon_Cut.setObjectName("actionPolygon_Cut")
         self.actionVertical_Cut = QtGui.QAction(self)
-        self.actionVertical_Cut.setCheckable(True)
         icon19 = QtGui.QIcon()
         icon19.addPixmap(QtGui.QPixmap("gui/icons_22.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionVertical_Cut.setIcon(icon19)
         self.actionVertical_Cut.setObjectName("actionVertical_Cut")
         self.actionHorizontal_Cut = QtGui.QAction(self)
-        self.actionHorizontal_Cut.setCheckable(True)
         icon20 = QtGui.QIcon()
         icon20.addPixmap(QtGui.QPixmap("gui/icons_23.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionHorizontal_Cut.setIcon(icon20)
         self.actionHorizontal_Cut.setObjectName("actionHorizontal_Cut")
         self.actionLine_Cut = QtGui.QAction(self)
-        self.actionLine_Cut.setCheckable(True)
         icon21 = QtGui.QIcon()
         icon21.addPixmap(QtGui.QPixmap("gui/icons_24.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionLine_Cut.setIcon(icon21)
@@ -209,8 +208,8 @@ class difftoolbar(QtGui.QToolBar):
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
         self.actionShow_Mask.triggered.connect(showmask)
-        self.actionCake.triggered.connect(cake)
-        self.actionRemeshing.triggered.connect(remesh)
+        self.actionCake.triggered.connect(self.caketoggle)  #####################3
+        self.actionRemeshing.triggered.connect(self.remeshtoggle)  ##############
         self.actionLine_Cut.triggered.connect(linecut)
         self.actionVertical_Cut.triggered.connect(vertcut)
         self.actionHorizontal_Cut.triggered.connect(horzcut)
@@ -220,16 +219,18 @@ class difftoolbar(QtGui.QToolBar):
         #self.actionROI.triggered.connect(roi)
         self.actionArc.triggered.connect(arc)
 
-        self.actionCake.triggered.connect(self.caketoggle)
-        self.actionRemeshing.triggered.connect(self.remeshtoggle)
+        self.sigCake.connect(cake)
+        self.sigRemesh.connect(remesh)
 
     def caketoggle(self):
         if self.actionCake.isChecked():
             self.actionRemeshing.setChecked(False)
+        self.sigCake.emit()
 
     def remeshtoggle(self):
         if self.actionRemeshing.isChecked():
             self.actionCake.setChecked(False)
+        self.sigRemesh.emit()
 
 
 

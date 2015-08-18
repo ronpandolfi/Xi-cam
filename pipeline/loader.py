@@ -384,7 +384,7 @@ class diffimage():
         if self.experiment.mask is not None:
             return self.experiment.mask.T
         else:
-            return np.zeros_like(self.data)
+            return np.ones_like(self.data)
 
     @property
     def dataunrot(self):
@@ -422,7 +422,7 @@ class diffimage():
             self._detector = detector
             if detector is not None:
                 if mask is not None:
-                    self.experiment.addtomask(np.rot90(mask, 3))
+                    self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                 self.experiment.setvalue('Pixel Size X', detector.pixel1)
                 self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                 self.experiment.setvalue('Detector', name)
@@ -481,8 +481,9 @@ class diffimage():
         self.cachedetector()
         if not self.iscached('cake'):
             cake, x, y = integration.cake(self.data, self.experiment)
-            cakemask, _, _ = integration.cake(self.mask, self.experiment)
-            cakemask = (cakemask > 0) * 255
+            cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
+            cakemask = cakemask > 0
+
             print x, y
 
             self.cache['cake'] = cake
@@ -497,11 +498,11 @@ class diffimage():
         if not self.iscached('remesh'):
             remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
                                              self.experiment.getGeometry())
-            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask, 1).copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(self.mask.copy(), self.filepath,
                                              self.experiment.getGeometry())
 
             self.cache['remesh'] = remeshdata
-            self.cache['remeshmask'] = remeshmask
+            self.cache['remeshmask'] = remeshmask >0
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
