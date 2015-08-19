@@ -197,8 +197,7 @@ class IntegrationRunner(QtCore.QObject):
         queue = multiprocessing.Queue()
         p = multiprocessing.Process(target=radialintegratepyFAI, args=(self.dimg, self.cut, queue, self.remesh))
         p.start()
-        while p.is_alive():
-            time.sleep(.3)
+        p.join()
         result = queue.get()
         self.result.emit(self.color, *result)
 

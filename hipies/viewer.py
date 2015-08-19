@@ -249,7 +249,8 @@ class imageTab(QtGui.QWidget):
 
         evt.scene().removeItem(evt)
         self.viewbox.removeItem(evt)
-        evt.deleteLater()
+        self.replot()
+        # evt.deleteLater()
 
         #self.viewbox.scene().removeItem(evt)
 
@@ -503,10 +504,10 @@ class imageTab(QtGui.QWidget):
 
 
         arc = ROI.ArcROI(self.dimg.experiment.center, 500)
-        arc.sigRemoveRequested.connect(self.removeROI)
         arc.sigRegionChangeFinished.connect(self.replot)
         self.viewbox.addItem(arc)
         self.replot()
+        arc.sigRemoveRequested.connect(self.removeROI)
 
 
 
@@ -522,7 +523,7 @@ class imageTab(QtGui.QWidget):
         region = ROI.LineROI(
             [self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
             [self.dimg.experiment.getvalue('Center X'), -self.dimg.data.shape[0]], 5, removable=True)
-        region.sigRemoveRequested.connect(self.replot)
+        region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
         region.sigRegionChangeFinished.connect(self.replot)
@@ -547,7 +548,7 @@ class imageTab(QtGui.QWidget):
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
-        region.sigRemoveRequested.connect(self.replot)
+        region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
         # else:
@@ -571,7 +572,7 @@ class imageTab(QtGui.QWidget):
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
-        region.sigRemoveRequested.connect(self.replot)
+        region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
         # else:
@@ -776,6 +777,8 @@ class imageTab(QtGui.QWidget):
 
                                 # Replot
                                 #self.parentwindow.integration.plot(self.q, self.radialprofile)
+                    else:
+                        self.viewbox.removeItem(roi)
             except Exception as ex:
                 print 'Warning: error displaying ROI integration.'
                 print ex.message
@@ -792,9 +795,10 @@ class imageTab(QtGui.QWidget):
         thread = QtCore.QThread()
         runner = pipeline.integration.IntegrationRunner(start_signal=thread.started, dimg=dimg, cut=cut, remesh=remesh,
                                                         color=color)
+        runner.result.connect(self.plotintegration)
         runner.moveToThread(thread)
         thread.start()
-        runner.result.connect(self.plotintegration)
+
         self.threads[thread] = runner
 
     def plotintegration(self, color, q, radialprofile):

@@ -54,7 +54,7 @@ class QRectF(QtCore.QRectF):
 
 
 class LinearRegionItem(pg.LinearRegionItem):
-    sigRemoveRequested = QtCore.Signal()
+    sigRemoveRequested = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
         super(LinearRegionItem, self).__init__(*args, **kwargs)
@@ -111,9 +111,10 @@ class LinearRegionItem(pg.LinearRegionItem):
 
     def removeClicked(self):
         self.isdeleting = True
-        self.deleteLater()
-        ## Send remove event only after we have exited the menu event handler
         QtCore.QTimer.singleShot(0, lambda: self.sigRemoveRequested.emit(self))
+        # self.deleteLater()
+        ## Send remove event only after we have exited the menu event handler
+        #QtCore.QTimer.singleShot(0, lambda: self.sigRemoveRequested.emit(self))
 
 
 
@@ -121,7 +122,7 @@ class LinearRegionItem(pg.LinearRegionItem):
 class LineROI(pg.LineROI):
     def __init__(self, *args, **kwargs):
         super(LineROI, self).__init__(*args, **kwargs)
-        self.sigRemoveRequested.connect(self.deleteLater)
+        #self.sigRemoveRequested.connect(self.deleteLater)
         self.isdeleting = False
         self.sigRemoveRequested.connect(self.delete)
 
@@ -178,6 +179,8 @@ class ArcROI(pg.ROI):
 
     """
 
+    #sigRemoveRequested = QtCore.Signal()
+
     def __init__(self, center, radius, **args):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
         r = QCircRectF(center, radius)
@@ -189,6 +192,9 @@ class ArcROI(pg.ROI):
         self.outerhandle = self.addFreeHandle([0., .5])
         self.lefthandle = self.addFreeHandle([.433, .25])
         self.righthandle = self.addFreeHandle([-.433, .25])
+
+        self.startangle = 30
+        self.arclength = 120
 
         self.aspectLocked = True
         self.translatable = False
@@ -314,3 +320,4 @@ class ArcROI(pg.ROI):
 
     def delete(self):
         self.isdeleting = True
+        #self.deleteLater()
