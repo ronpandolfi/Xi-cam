@@ -9,7 +9,7 @@ import pyqtgraph as pg
 import numpy as np
 from pipeline import detectors
 from fabio import edfimage
-import debug
+import debugtools
 import ROI
 
 
@@ -419,7 +419,7 @@ class imageTab(QtGui.QWidget):
             toolbar = self.parentwindow.timelinetoolbar
         else:
             print "Redraw somehow activated from wrong tab"
-            debug.frustration()
+            debugtools.frustration()
             toolbar = None
         return toolbar
 
@@ -439,7 +439,7 @@ class imageTab(QtGui.QWidget):
         iscake = toolbar.actionCake.isChecked()
         isremesh = toolbar.actionRemeshing.isChecked()
         if iscake and isremesh:
-            debug.frustration()
+            debugtools.frustration()
         # img = self.dimg.data.copy()
         if forcelow:
             img = self.dimg.thumbnail.copy()
@@ -612,7 +612,7 @@ class imageTab(QtGui.QWidget):
         self.dimg.experiment.addtomask(c.mask)
         #self.maskoverlay()
 
-    @debug.timeit
+    @debugtools.timeit
     def findcenter(self):
         # Auto find the beam center
         self.dimg.findcenter()
@@ -664,7 +664,7 @@ class imageTab(QtGui.QWidget):
 
         self.replot()
 
-    @debug.timeit
+    @debugtools.timeit
     def refinecenter(self):
         # Force cache the detector
         #_=self.dimg.detector
@@ -779,7 +779,7 @@ class imageTab(QtGui.QWidget):
                                 cut[regionbounds[0]:regionbounds[1], :] = 1
 
                             else:
-                                print debug.frustration()
+                                print debugtools.frustration()
 
                         if cut is not None:
                             if iscake:

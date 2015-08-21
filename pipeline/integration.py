@@ -1,5 +1,5 @@
 import numpy as np
-import debug
+import debugtools
 from PySide import QtCore
 import multiprocessing
 import time
@@ -202,7 +202,7 @@ class IntegrationRunner(QtCore.QObject):
         self.result.emit(self.color, *result)
 
 
-@debug.timeit
+@debugtools.timeit
 def radialintegratepyFAI(dimg, cut=None, resultQueue=False, remesh=False):
     # Always do mask with 1-valid, 0's excluded
 
