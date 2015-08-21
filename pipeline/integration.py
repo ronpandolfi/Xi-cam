@@ -1,5 +1,5 @@
 import numpy as np
-import debugtools
+from hipies import debugtools
 from PySide import QtCore
 import multiprocessing
 import time
