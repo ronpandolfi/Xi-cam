@@ -342,6 +342,7 @@ class diffimage():
         self._params = None
         self._thumb = None
         self._variation = dict()
+        self._headers = None
         self.experiment = experiment
 
 
@@ -551,6 +552,13 @@ class diffimage():
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
                     return v
         return self._variation[operationindex]
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = loadparas(self.filepath)
+
+        return self._headers
 
     
     def __getattr__(self, name):

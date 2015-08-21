@@ -137,6 +137,10 @@ class MyMainWindow():
         settingsList = self.ui.findChild(QtGui.QVBoxLayout, 'propertiesBox')
         settingsList.addWidget(self.experimentTree)
 
+        # Setup Image Properties
+        self.imagePropModel = models.imagePropModel(self.currentImageTab)
+        self.ui.tableView.setModel(self.imagePropModel)
+
 
 
 
@@ -316,13 +320,15 @@ class MyMainWindow():
         # TESTING
         ##
         self.openimage('../samples/AgB_00016.edf')
-        #self.calibrate()
+
+        self.calibrate()
         # self.updatepreprocessing()
         ##
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
         self.ui.show()
+        self.imagePropModel.widgetchanged()
         print("BLAH!")
         sys.exit(self.app.exec_())
 
@@ -529,11 +535,13 @@ class MyMainWindow():
         """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.imagePropModel.widgetchanged()
         self.ui.filenamelabel.setText('')
 
     def timelinetabCloseRequested(self, index):
         self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.imagePropModel.widgetchanged()
         self.ui.filenamelabel.setText('')
 
     def polymask(self):

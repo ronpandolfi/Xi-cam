@@ -88,9 +88,18 @@
         <property name="text">
          <string>Library</string>
         </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
         <property name="flat">
          <bool>true</bool>
         </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
        </widget>
       </item>
       <item>
@@ -115,9 +124,21 @@
         <property name="text">
          <string>Viewer</string>
         </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="checked">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
         <property name="flat">
          <bool>true</bool>
         </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
        </widget>
       </item>
       <item>
@@ -142,9 +163,18 @@
         <property name="text">
          <string>Timeline</string>
         </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
         <property name="flat">
          <bool>true</bool>
         </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
        </widget>
       </item>
       <item>
@@ -169,9 +199,18 @@
         <property name="text">
          <string>Reverse MC</string>
         </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
         <property name="flat">
          <bool>true</bool>
         </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
        </widget>
       </item>
      </layout>
@@ -347,8 +386,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-                 <width>363</width>
-                 <height>494</height>
+                 <width>98</width>
+                 <height>28</height>
              </rect>
             </property>
            </widget>
@@ -501,6 +540,22 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
+               <spacer name="verticalSpacer_4">
+                   <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                       <size>
+                           <width>1</width>
+                           <height>4</height>
+                       </size>
+                   </property>
+               </spacer>
+           </item>
+              <item>
             <widget class="QCheckBox" name="experimentfold">
              <property name="text">
               <string>Experiment Properties</string>
@@ -517,6 +572,29 @@
             <layout class="QVBoxLayout" name="propertiesBox"/>
            </item>
            <item>
+               <widget class="QCheckBox" name="checkBox">
+                   <property name="text">
+                       <string>Image Properties</string>
+                   </property>
+                   <property name="checked">
+                       <bool>true</bool>
+                   </property>
+                   <property name="isFoldingTab" stdset="0">
+                       <bool>true</bool>
+                   </property>
+               </widget>
+           </item>
+              <item>
+                  <widget class="QTableView" name="tableView">
+                      <attribute name="horizontalHeaderVisible">
+                          <bool>false</bool>
+                      </attribute>
+                      <attribute name="verticalHeaderVisible">
+                          <bool>false</bool>
+                      </attribute>
+                  </widget>
+              </item>
+              <item>
             <widget class="QCheckBox" name="watchfold">
              <property name="text">
               <string>Watch Folder</string>
@@ -668,7 +746,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-                  <width>305</width>
+                  <width>203</width>
                   <height>336</height>
               </rect>
              </property>

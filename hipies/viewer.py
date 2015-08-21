@@ -15,6 +15,9 @@ import ROI
 
 import pipeline
 
+LUT = None
+LUTlevels = None
+LUTstate = None
 
 class imageTabTracker(QtGui.QWidget):
     def __init__(self, paths, experiment, parent, operation=None):
@@ -37,6 +40,7 @@ class imageTabTracker(QtGui.QWidget):
 
 
         parent.listmodel.widgetchanged()
+        parent.imagePropModel.widgetchanged()
 
         #self.load()
         self.isloaded = False
@@ -145,6 +149,7 @@ class imageTab(QtGui.QWidget):
         self.imgview.getHistogramWidget().item.vb.menu.addAction(reset)
         reset.triggered.connect(self.resetLUT)
 
+
         # self.imgview.getHistogramWidget().plot.setLogMode(True,False)
 
 
@@ -222,14 +227,28 @@ class imageTab(QtGui.QWidget):
 
             # Force cache the detector
             # _ = self.dimg.detector
-            self.resetLUT()
+            if not self.loadLUT():
+                self.resetLUT()
+
 
             if self.dimg.experiment.iscalibrated:
                 self.replot()
                 self.drawcenter()
 
+        self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
+        self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
+
+    def loadLUT(self):
+        global LUT, LUTlevels, LUTstate
+        if LUT is not None:
+            hist = self.imgview.getHistogramWidget().item
+            hist.setLevels(*LUTlevels)
+            hist.gradient.restoreState(LUTstate)
+            return True
+        return False
 
     def resetLUT(self):
+
         print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
         Lmax = np.nanmax(self.dimg.data)
@@ -241,6 +260,12 @@ class imageTab(QtGui.QWidget):
             self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.data), 0), Lmax)
         print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
 
+    def cacheLUT(self):
+        hist = self.imgview.getHistogramWidget().item
+        global LUTlevels, LUT, LUTstate
+        LUTlevels = hist.getLevels()
+        LUTstate = hist.gradient.saveState()
+        LUT = hist.getLookupTable(img=self.imageitem.image)
 
     def send1Dintegration(self):
         self.cache1Dintegration.emit(self.q, self.radialprofile)
