@@ -123,7 +123,7 @@ class librarylayout(FlowLayout):
 
         for entry in entries:
             # print fileinfo.fileName()
-            if not (entry == '..' and os.path.normpath(path) == '/Volumes') and not entry == '.':
+            if not (entry == '..' and os.path.normpath(path) == pipeline.pathtools.getRoot()) and not entry == '.':
                 self.addWidget(thumbwidgetitem(os.path.join(path,entry), parentwindow=self.parentwindow))
 
 
@@ -142,6 +142,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
 
     def __init__(self, path, parentwindow):
+        path = os.path.normpath(path)
 
         self.foldericon = QtGui.QImage()
         self.foldericon.load('gui/GenericFolderIcon.png')

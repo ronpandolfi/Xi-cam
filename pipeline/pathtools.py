@@ -1,6 +1,7 @@
 import os
 import string
-
+from PySide import QtGui
+import sys
 
 def similarframe(path, N):
     """
@@ -23,3 +24,14 @@ def path2nexus(path):
     return os.path.splitext(path)[0] + '.nxs'
 
 
+def getRoot():
+    if sys.platform == 'linux2':
+        return '/'
+    elif sys.platform == 'darwin':
+        return '/Volumes'
+    elif sys.platform == 'win32':
+        return QtGui.QFileSystemModel().myComputer()
+    else:
+        print 'WARNING: Unknown platform "' + sys.platform + '"'
+
+    return None

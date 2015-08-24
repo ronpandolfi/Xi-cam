@@ -784,7 +784,7 @@ class imageTab(QtGui.QWidget):
                         if cut is not None:
                             if iscake:
 
-                                ma = np.ma.masked_array(data, mask=cut * self.dimg.cakemask)
+                                ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
                                 q = self.dimg.cakeqx / 10.
                                 I = np.ma.average(ma, axis=0)
                                 I = np.trim_zeros(I, 'b')
