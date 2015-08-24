@@ -102,6 +102,7 @@ class imageTabTracker(QtGui.QWidget):
 
 class imageTab(QtGui.QWidget):
     cache1Dintegration = QtCore.Signal(np.ndarray, np.ndarray)
+    sigPlotIntegration = QtCore.Signal(object)
 
 
     def __init__(self, dimg, parent, paths=None):
@@ -210,6 +211,7 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
+        self.sigPlotIntegration.connect(self.plotintegration)
 
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
@@ -709,7 +711,7 @@ class imageTab(QtGui.QWidget):
         ai=self.dimg.experiment.getAI().getPyFAI()
         self.pool.apply_async(pipeline.integration.radialintegratepyFAI,
                               args=(self.dimg.data, self.dimg.mask, ai, None, isremesh, None),
-                              callback=self.plotintegration)
+                              callback=self.integrationrelay)
 
 
 
@@ -804,7 +806,7 @@ class imageTab(QtGui.QWidget):
                                 ai = self.dimg.experiment.getAI().getPyFAI()
                                 self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
                                 self.dimg.data, self.dimg.mask, ai, cut, isremesh, [0, 255, 255]),
-                                                      callback=self.plotintegration)
+                                                      callback=self.integrationrelay)
 
                                 # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
@@ -819,8 +821,8 @@ class imageTab(QtGui.QWidget):
                 print 'Warning: error displaying ROI integration.'
                 print ex.message
 
-    def integrationrelay(self,dimg,*args,**kwargs):
-        pass
+    def integrationrelay(self, *args, **kwargs):
+        self.sigPlotIntegration.emit(*args, **kwargs)
 
     def plotintegration(self, result):
         (q, radialprofile, color) = result
