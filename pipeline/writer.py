@@ -2,7 +2,7 @@ import nexpy.api.nexus as nx
 import numpy as np
 import scipy.ndimage
 from PySide import QtCore
-from hipies import debug
+from hipies import debugtools
 import multiprocessing
 import time
 import os

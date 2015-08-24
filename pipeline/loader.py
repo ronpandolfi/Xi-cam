@@ -13,7 +13,7 @@ import time
 import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
-from hipies import debug
+from hipies import debugtools
 
 acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
 
@@ -234,7 +234,7 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
-@debug.timeit
+@debugtools.timeit
 # def finddetector(imgdata):
 #     for name, detector in detectors.ALL_DETECTORS.iteritems():
 #         if hasattr(detector, 'MAX_SHAPE'):
@@ -515,7 +515,7 @@ class diffimage():
         #    self.writenexus()
         pass
 
-    @debug.timeit
+    @debugtools.timeit
     def writenexus(self):
         nxpath = pathtools.path2nexus(self.filepath)
         w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,

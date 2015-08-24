@@ -451,8 +451,8 @@ class imageTab(QtGui.QWidget):
 
 
         if isradialsymmetry:
-            centerx = self.dimg.experiment.getvalue('Center X')
-            centery = self.dimg.experiment.getvalue('Center Y')
+            centerx = self.dimg.experiment.center[0]
+            centery = self.dimg.experiment.center[1]
             symimg = np.rot90(img.copy(), 2)
             # imtest(symimg)
             xshift = -(img.shape[0] - 2 * centerx)
@@ -460,7 +460,7 @@ class imageTab(QtGui.QWidget):
             symimg = np.roll(symimg, int(xshift), axis=0)
             symimg = np.roll(symimg, int(yshift), axis=1)
             # imtest(symimg)
-            marginmask = 1 - self.dimg.experiment.mask
+            marginmask = self.dimg.experiment.mask
             #imtest(marginmask)
 
             x, y = np.indices(img.shape)
