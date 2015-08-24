@@ -377,7 +377,7 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    debug.frustration()
+                    debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
     @property
