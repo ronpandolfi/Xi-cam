@@ -320,7 +320,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        self.openimage('samples/AgB_00001.edf')
+        self.openimage('../samples/AgB_00001.edf')
 
         self.calibrate()
         # self.updatepreprocessing()
