@@ -707,8 +707,10 @@ class imageTab(QtGui.QWidget):
         else:
             data = self.dimg.data
         ai=self.dimg.experiment.getAI().getPyFAI()
-        result=self.pool.apply_async(pipeline.integration.radialintegratepyFAI,args=(self.dimg.data.copy(),self.dimg.mask.copy(),ai,None,isremesh,None),callback=self.plotintegration)
-        print result.get()
+        self.pool.apply_async(pipeline.integration.radialintegratepyFAI,
+                              args=(self.dimg.data, self.dimg.mask, ai, None, isremesh, None),
+                              callback=self.plotintegration)
+
 
 
 
@@ -799,7 +801,10 @@ class imageTab(QtGui.QWidget):
                                 self.plotintegration(q, I, [0, 255, 255])
                             else:
                                 #self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
-                                self.pool.apply_async(pipeline.integration.radialintegratepyFAI,args=(self.dimg,cut,isremesh,[0,255,255]),callback=self.plotintegration)
+                                ai = self.dimg.experiment.getAI().getPyFAI()
+                                self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
+                                self.dimg.data, self.dimg.mask, ai, cut, isremesh, [0, 255, 255]),
+                                                      callback=self.plotintegration)
 
                                 # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
@@ -824,6 +829,7 @@ class imageTab(QtGui.QWidget):
         # cyan:[0, 255, 255]
         curve=self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
         curve.setZValue(3 * 255 - sum(color))
+        self.parentwindow.integration.update()
 
 
     def polymask(self):
