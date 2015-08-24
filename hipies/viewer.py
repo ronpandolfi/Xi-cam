@@ -11,7 +11,7 @@ from pipeline import detectors
 from fabio import edfimage
 import debugtools
 import ROI
-
+import multiprocessing
 
 import pipeline
 
@@ -102,6 +102,8 @@ class imageTabTracker(QtGui.QWidget):
 
 class imageTab(QtGui.QWidget):
     cache1Dintegration = QtCore.Signal(np.ndarray, np.ndarray)
+    sigPlotIntegration = QtCore.Signal(object)
+
 
     def __init__(self, dimg, parent, paths=None):
         """
@@ -111,6 +113,7 @@ class imageTab(QtGui.QWidget):
         :return:
         """
         super(imageTab, self).__init__()
+        self.pool = parent.pool
         self.region = None
         self.maskROI = None
         self.istimeline = False
@@ -208,6 +211,7 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
+        self.sigPlotIntegration.connect(self.plotintegration)
 
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
@@ -272,7 +276,7 @@ class imageTab(QtGui.QWidget):
 
     def removeROI(self, evt):
 
-        evt.scene().removeItem(evt)
+        # evt.scene().removeItem(evt)
         self.viewbox.removeItem(evt)
         self.replot()
         # evt.deleteLater()
@@ -629,6 +633,8 @@ class imageTab(QtGui.QWidget):
 
     #@debug.timeit
     def calibrate(self):
+        if self.dimg.data is None:
+            return
         self.dimg.experiment.iscalibrated = False
 
         # Force cache the detector
@@ -702,8 +708,11 @@ class imageTab(QtGui.QWidget):
             data = self.dimg.remesh
         else:
             data = self.dimg.data
+        ai=self.dimg.experiment.getAI().getPyFAI()
+        self.pool.apply_async(pipeline.integration.radialintegratepyFAI,
+                              args=(self.dimg.data, self.dimg.mask, ai, None, isremesh, None),
+                              callback=self.integrationrelay)
 
-        self.backgroundIntegrate()
 
 
 
@@ -791,9 +800,13 @@ class imageTab(QtGui.QWidget):
                                 q = q[:len(I)]
                                 I = np.trim_zeros(I, 'f')
                                 q = q[-len(I):]
-                                self.plotintegration([0, 255, 255], q, I)
+                                self.plotintegration([q, I, [0, 255, 255]])
                             else:
-                                self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
+                                #self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
+                                ai = self.dimg.experiment.getAI().getPyFAI()
+                                self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
+                                self.dimg.data, self.dimg.mask, ai, cut, isremesh, [0, 255, 255]),
+                                                      callback=self.integrationrelay)
 
                                 # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
@@ -808,28 +821,17 @@ class imageTab(QtGui.QWidget):
                 print 'Warning: error displaying ROI integration.'
                 print ex.message
 
-    def purgerunners(self):
-        for t, r in self.threads.iteritems():
+    def integrationrelay(self, *args, **kwargs):
+        self.sigPlotIntegration.emit(*args, **kwargs)
 
-            if t.isFinished():
-                del self.threads[t]
-
-    def backgroundIntegrate(self, dimg=None, cut=None, remesh=False, color=[255, 255, 255]):
-        if dimg is None:
-            dimg = self.dimg
-        thread = QtCore.QThread()
-        runner = pipeline.integration.IntegrationRunner(start_signal=thread.started, dimg=dimg, cut=cut, remesh=remesh,
-                                                        color=color)
-        runner.result.connect(self.plotintegration)
-        runner.moveToThread(thread)
-        thread.start()
-
-        self.threads[thread] = runner
-
-    def plotintegration(self, color, q, radialprofile):
+    def plotintegration(self, result):
+        (q, radialprofile, color) = result
+        if color is None:
+            color=[255,255,255]
         # cyan:[0, 255, 255]
         curve=self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
         curve.setZValue(3 * 255 - sum(color))
+        self.parentwindow.integration.update()
 
 
     def polymask(self):

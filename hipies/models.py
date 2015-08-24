@@ -53,7 +53,7 @@ class imagePropModel(QtCore.QAbstractTableModel):
         self._propdata = None
 
     def rowCount(self, parent=QtCore.QModelIndex()):
-        if self.tabwidget() is not None:
+        if self.tabwidget() is not None and self.propdata is not None:
             count = len(self.propdata)
             # print 'ImageProp count:', count
             return count

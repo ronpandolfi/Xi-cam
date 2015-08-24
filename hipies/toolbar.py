@@ -162,9 +162,9 @@ class difftoolbar(QtGui.QToolBar):
         self.actionCalibrate_AgB.setObjectName("actionCalibrate_AgB")
         self.actionArc = QtGui.QAction(self)
         icon26 = QtGui.QIcon()
-        icon26.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionCalibrate_AgB.setIcon(icon25)
-        self.actionCalibrate_AgB.setObjectName("actionArc")
+        icon26.addPixmap(QtGui.QPixmap("gui/icons_31.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionArc.setIcon(icon26)
+        self.actionArc.setObjectName("actionArc")
 
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()

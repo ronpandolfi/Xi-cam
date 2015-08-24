@@ -377,13 +377,13 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    debug.frustration()
+                    debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
     @property
     def mask(self):
         if self.experiment.mask is not None:
-            return self.experiment.mask.T
+            return self.experiment.mask
         else:
             return np.ones_like(self.data)
 

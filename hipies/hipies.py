@@ -48,13 +48,14 @@ import daemon
 import pipeline
 import toolbar
 import rmc
+import multiprocessing
 
 
 class MyMainWindow():
-    def __init__(self):
-
+    def __init__(self,app):
+        self.pool = multiprocessing.Pool(processes=4)
         # Load the gui from file
-        self.app = QtGui.QApplication(sys.argv)
+        self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
         f = QtCore.QFile("gui/mainwindow.ui")
@@ -330,7 +331,7 @@ class MyMainWindow():
         self.ui.show()
         self.imagePropModel.widgetchanged()
         print("BLAH!")
-        sys.exit(self.app.exec_())
+
 
 
     def treerefresh(self, path=None):
