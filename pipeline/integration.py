@@ -167,9 +167,14 @@ def radialintegratepyFAI(data,mask, AIdict, cut=None, remesh=False, color=[255,2
     if mask is not None:
         mask = mask.copy()
 
+    print 'image:', data.shape
+    print 'mask:', mask.shape
+
     if not mask.shape == data.shape:
         print "No mask match. Mask will be ignored."
         mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
 
 
     # invmask=1-mask
@@ -179,7 +184,7 @@ def radialintegratepyFAI(data,mask, AIdict, cut=None, remesh=False, color=[255,2
 
     #print 'invmask:',invmask.shape
 
-    print 'mask:', mask.shape
+
 
 
     if cut is not None:

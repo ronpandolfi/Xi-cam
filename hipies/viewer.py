@@ -276,7 +276,7 @@ class imageTab(QtGui.QWidget):
 
     def removeROI(self, evt):
 
-        evt.scene().removeItem(evt)
+        # evt.scene().removeItem(evt)
         self.viewbox.removeItem(evt)
         self.replot()
         # evt.deleteLater()
@@ -793,14 +793,14 @@ class imageTab(QtGui.QWidget):
                         if cut is not None:
                             if iscake:
 
-                                ma = np.ma.masked_array(data, mask=cut * self.dimg.cakemask)
+                                ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
                                 q = self.dimg.cakeqx / 10.
                                 I = np.ma.average(ma, axis=0)
                                 I = np.trim_zeros(I, 'b')
                                 q = q[:len(I)]
                                 I = np.trim_zeros(I, 'f')
                                 q = q[-len(I):]
-                                self.plotintegration(q, I, [0, 255, 255])
+                                self.plotintegration([q, I, [0, 255, 255]])
                             else:
                                 #self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
                                 ai = self.dimg.experiment.getAI().getPyFAI()

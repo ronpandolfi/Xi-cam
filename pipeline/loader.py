@@ -383,7 +383,7 @@ class diffimage():
     @property
     def mask(self):
         if self.experiment.mask is not None:
-            return self.experiment.mask.T
+            return self.experiment.mask
         else:
             return np.ones_like(self.data)
 
