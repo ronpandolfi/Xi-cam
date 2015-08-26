@@ -222,6 +222,13 @@ class imageTab(QtGui.QWidget):
 
         #self.viewbox.addItem(pg.SpiralROI((0,0),1))
 
+        try:
+            energy = self.dimg.headers['Beamline Energy']
+            if energy is not None:
+                self.dimg.experiment.setvalue('Energy', energy)
+        except (AttributeError, TypeError):
+            print('Warning: Energy could not be determined from headers')
+
 
         # Cache radial integration
         if self.dimg is not None:

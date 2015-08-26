@@ -166,6 +166,17 @@ class difftoolbar(QtGui.QToolBar):
         self.actionArc.setIcon(icon26)
         self.actionArc.setObjectName("actionArc")
 
+        self.actionProcess = QtGui.QAction(self)
+        icon27 = QtGui.QIcon()
+        icon27.addPixmap(QtGui.QPixmap("gui/icons_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon27.addPixmap(QtGui.QPixmap("gui/icons_33.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionProcess.setIcon(icon27)
+        self.actionProcess.setObjectName("actionProcess")
+        self.actionProcess.setCheckable(True)
+
+
+
+
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()
         #icon25.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -186,6 +197,7 @@ class difftoolbar(QtGui.QToolBar):
 
         self.setIconSize(QtCore.QSize(32, 32))
 
+        self.addAction(self.actionProcess)
         self.addAction(self.actionCalibrate_AgB)
         self.addAction(self.actionCenterFind)
         self.addAction(self.actionRefine_Center)
@@ -202,8 +214,9 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionMirror_Symmetry)
         #self.addAction(self.actionROI)
 
+
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc):
+                        radialsym, mirrorsym, roi, arc, process=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -213,6 +226,7 @@ class difftoolbar(QtGui.QToolBar):
         self.actionLine_Cut.triggered.connect(linecut)
         self.actionVertical_Cut.triggered.connect(vertcut)
         self.actionHorizontal_Cut.triggered.connect(horzcut)
+
         self.actionLog_Intensity.triggered.connect(logint)
         self.actionRadial_Symmetry.triggered.connect(radialsym)
         self.actionMirror_Symmetry.triggered.connect(mirrorsym)
@@ -221,6 +235,9 @@ class difftoolbar(QtGui.QToolBar):
 
         self.sigCake.connect(cake)
         self.sigRemesh.connect(remesh)
+
+        if process is None:
+            self.actionProcess.setVisible(False)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

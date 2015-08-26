@@ -357,10 +357,10 @@ class diffimage():
 
 
 
+
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()
         self.cachecheck = None
-
 
     def updateexperiment(self):
         # Force cache the detector
