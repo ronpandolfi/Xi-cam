@@ -16,6 +16,7 @@ import nexpy.api.nexus.tree as tree
 from hipies import debugtools
 
 acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
+imagecache = dict()
 
 
 def loadsingle(path):
@@ -23,8 +24,14 @@ def loadsingle(path):
 
 
 def loadimage(path):
+
+
     data = None
     try:
+        if ':' in path:
+            print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
+            path='HACK:'+path
+
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.gb':
                 raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
@@ -47,6 +54,8 @@ def loadimage(path):
                 return data
     except IOError:
         print('IO Error loading: ' + path)
+    except TypeError:
+        print 'TypeError: path has type ', str(type(path))
 
     return data
 
@@ -530,12 +539,13 @@ class diffimage():
         self.experiment.setvalue('Center X', x)
         self.experiment.setvalue('Center Y', y)
 
+    @debugtools.timeit  #0.07s on Izanami
     def variation(self, operationindex, roi):
-        if not operationindex in self._variation or roi is not None:
+        if operationindex not in self._variation or roi is not None:
             nxpath = pathtools.path2nexus(self.filepath)
             if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
-                print v
+                #print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
                     print 'successful variation load!'
@@ -547,11 +557,12 @@ class diffimage():
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
                 if roi is None:
+                    #print prv, self.dataunrot,nxt
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
                     return v
-        return self._variation[operationindex]
+        return self._variation[operationindex],self.thumbnail
 
     @property
     def headers(self):
@@ -575,9 +586,14 @@ class imageseries():
         self.appendimages(paths)
         self.experiment = experiment
         self.roi = None
+        self.thumbs = dict()
 
     def __len__(self):
         return len(self.paths)
+
+    @property
+    def xvals(self):
+        return numpy.array(sorted(self.paths.keys()))
 
     def first(self):
         if len(self.paths) > 0:
@@ -588,6 +604,8 @@ class imageseries():
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
     def getDiffImage(self, key):
+        print self.paths.keys()
+
         return diffimage(filepath=self.paths[key], experiment=self.experiment)
 
     def appendimages(self, paths):
@@ -620,13 +638,18 @@ class imageseries():
         keys = self.paths.keys()
         for key in keys:
             variationx = self.path2frame(self.paths[key])
-            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
+            self.variation[variationx],self.thumbs[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
+
 
 
     @staticmethod
     def path2frame(path):
         try:
-            return int(os.path.splitext(os.path.basename(path).split('_')[-1])[0])
+            expr = '(?<=_)[\d]*(?=[_.])'
+
+            return int(re.search(expr, os.path.basename(path)).group(0))
+
         except ValueError:
             print 'Path has no frame number:', path
+
         return None

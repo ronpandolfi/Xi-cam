@@ -46,17 +46,29 @@ class timelinetab(viewer.imageTab):
     def __init__(self, simg, parentwindow):
         self.variation = dict()
         self.simg = simg
-        dimg = simg.first()
+        #dimg = simg.first()
 
+        self.operationindex=0
+        self.simg.scan(0)
 
-        super(timelinetab, self).__init__(dimg, parentwindow)
+        super(timelinetab, self).__init__(None, parentwindow)
+
+        self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         self.parentwindow = parentwindow
-        self.setvariationmode(0)
-        self.gotomax()
+        #self.setvariationmode(0)
+        #self.gotomax()
         self.istimeline = True
+        #self.imgview.timeLine.sigPositionChanged.disconnect(self.imgview.timeLineChanged)
+        self.imgview.timeLine.sigPositionChangeFinished.connect(self.redrawframe)
+        #self.imgview.timeLine.sigDragged.connect(self.showlowres)
+        self.lowresimgitem=pg.ImageItem()
+        self.viewbox.addItem(self.lowresimgitem)
+        self.lowresimgitem.hide()
 
+    def showlowres(self):
+        self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)
 
     def reduce(self):
         pass
@@ -86,7 +98,7 @@ class timelinetab(viewer.imageTab):
         variation = variation[variation[:, 0].argsort()]
         self.parentwindow.timeline.clear()
         self.parentwindow.timeline.enableAutoScale()
-        self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
+        #self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
         self.parentwindow.timeline.addItem(self.timeruler)
         self.timeruler.setBounds([1, max(variation[:, 0])])
         self.timeruler.sigRedrawFrame.connect(self.redrawframe)
@@ -96,27 +108,27 @@ class timelinetab(viewer.imageTab):
         #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
         #self.parentwindow.timearrow.setPos(0,self.variation[0])
 
-    def timerulermoved(self):
-        pos = int(round(self.parentwindow.timeruler.value()))
+    # def timerulermoved(self):
+    #     pos = int(round(self.parentwindow.timeruler.value()))
+    #
+    #
+    #     # snap to int
+    #     self.parentwindow.timeruler.blockSignals(True)
+    #     self.parentwindow.timeruler.setValue(pos)
+    #     self.parentwindow.timeruler.blockSignals(False)
+    #     #self.parentwindow.timearrow.setPos(pos,self.variation[pos])
+    #
+    #     if pos != self.previousPos:
+    #         # print pos
+    #         self.redrawframe()
+    #     self.previousPos = pos
 
+    # def timerulermouserelease(self, event):
+    #     if event.button == QtCore.Qt.LeftButton:
+    #         self.redrawimageFULL()
 
-        # snap to int
-        self.parentwindow.timeruler.blockSignals(True)
-        self.parentwindow.timeruler.setValue(pos)
-        self.parentwindow.timeruler.blockSignals(False)
-        #self.parentwindow.timearrow.setPos(pos,self.variation[pos])
-
-        if pos != self.previousPos:
-            # print pos
-            self.redrawframe()
-        self.previousPos = pos
-
-    def timerulermouserelease(self, event):
-        if event.button == QtCore.Qt.LeftButton:
-            self.redrawimageFULL()
-
-    def redrawframe(self, forcelow=False):
-        key = self.timeruler.value() + 1
+    def redrawframe(self, index, time, forcelow=False):
+        key = round(time)
         self.dimg = self.simg.getDiffImage(key)
         self.redrawimage(forcelow=forcelow)
 
@@ -181,30 +193,32 @@ class timelinetab(viewer.imageTab):
         #         self.rescan()
 
 
-class TimeRuler(pg.InfiniteLine):
-    sigRedrawFrame = QtCore.Signal(bool)
-
-    def __init__(self, pen, movable=True):
-        self.previousPos = None
-        super(TimeRuler, self).__init__(pen=pen, movable=movable)
-        self.previousPos = int(round(self.value()))
-        self.sigPositionChangeFinished.connect(self.endDrag)
-
-
-    def setPos(self, pos):
-        if type(pos) is pg.Point:
-            pos = pos.x()
-
-        pos = int(round(pos))
-
-        if pos != self.previousPos:
-            # snap to int
-            self.blockSignals(True)
-            super(TimeRuler, self).setPos(pos)
-            self.blockSignals(False)
-
-            self.sigRedrawFrame.emit(True)
-            self.previousPos = pos
-
-    def endDrag(self):
-        self.sigRedrawFrame.emit(False)
+# class TimeRuler(pg.InfiniteLine):
+#     sigRedrawFrame = QtCore.Signal(bool)
+#
+#     def __init__(self, pen, movable=True):
+#         self.previousPos = None
+#         super(TimeRuler, self).__init__(pen=pen, movable=movable)
+#         self.previousPos = int(round(self.value()))
+#         self.sigPositionChangeFinished.connect(self.endDrag)
+#
+#
+#     def setPos(self, pos):
+#         if type(pos) is pg.Point:
+#             pos = pos.x()
+#
+#         pos = int(round(pos))
+#
+#         if pos != self.previousPos:
+#             # snap to int
+#             self.blockSignals(True)
+#             super(TimeRuler, self).setPos(pos)
+#             self.blockSignals(False)
+#
+#             self.sigRedrawFrame.emit(True)
+#             self.previousPos = pos
+#
+#     def endDrag(self):
+#         self.sigRedrawFrame.emit(False)
+#
+# class TimelineView

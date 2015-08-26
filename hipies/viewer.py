@@ -224,20 +224,21 @@ class imageTab(QtGui.QWidget):
 
 
         # Cache radial integration
-        if self.dimg.data is not None:
-            self.redrawimage()
+        if self.dimg is not None:
+            if self.dimg.data is not None:
+                self.redrawimage()
 
-            self.q, self.radialprofile = pipeline.integration.radialintegrate(self.dimg)
+                self.q, self.radialprofile = pipeline.integration.radialintegrate(self.dimg)
 
-            # Force cache the detector
-            # _ = self.dimg.detector
-            if not self.loadLUT():
-                self.resetLUT()
+                # Force cache the detector
+                # _ = self.dimg.detector
+                if not self.loadLUT():
+                    self.resetLUT()
 
 
-            if self.dimg.experiment.iscalibrated:
-                self.replot()
-                self.drawcenter()
+                if self.dimg.experiment.iscalibrated:
+                    self.replot()
+                    self.drawcenter()
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)

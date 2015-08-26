@@ -2,16 +2,20 @@ import os
 import string
 from PySide import QtGui
 import sys
+import re
 
 def similarframe(path, N):
     """
     Get the file path N ahead (or behind) the provided path frame.
     """
     try:
-        framenum = os.path.splitext(os.path.basename(path).split('_')[-1])[0]
+        expr='(?<=_)[\d]*(?=[_.])'
+        frame = re.search(expr, os.path.basename(path)).group(0)
+        leadingzeroslen=len(frame)
+        framenum = int(frame)
         prevframenum = int(framenum) + N
-        prevframenum = '{:0>5}'.format(prevframenum)
-        return string.replace(path, framenum, prevframenum)
+        prevframenum = '{:0>{}}'.format(prevframenum,leadingzeroslen)
+        return re.sub(expr, prevframenum, path)
     except ValueError:
         print('No earlier frame found for ' + path)
         return None

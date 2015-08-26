@@ -160,6 +160,7 @@ class MyMainWindow():
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
         self.filetree.expandAll()
+        self.filetree.sortByColumn(0,QtCore.Qt.AscendingOrder)
 
 
 
