@@ -46,12 +46,13 @@ class timelinetab(viewer.imageTab):
     def __init__(self, simg, parentwindow):
         self.variation = dict()
         self.simg = simg
-        #dimg = simg.first()
+        dimg = simg.first()
 
         self.operationindex=0
         self.simg.scan(0)
 
-        super(timelinetab, self).__init__(None, parentwindow)
+
+        super(timelinetab, self).__init__(dimg, parentwindow)
 
         self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)
 
@@ -61,11 +62,34 @@ class timelinetab(viewer.imageTab):
         #self.gotomax()
         self.istimeline = True
         #self.imgview.timeLine.sigPositionChanged.disconnect(self.imgview.timeLineChanged)
-        self.imgview.timeLine.sigPositionChangeFinished.connect(self.redrawframe)
-        #self.imgview.timeLine.sigDragged.connect(self.showlowres)
-        self.lowresimgitem=pg.ImageItem()
-        self.viewbox.addItem(self.lowresimgitem)
-        self.lowresimgitem.hide()
+
+        self.highresimgitem=pg.ImageItem()
+
+        self.viewbox.addItem(self.highresimgitem)
+        self.highresimgitem.hide()
+
+        self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
+        self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
+        self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
+        self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
+
+        #TODO: override updateimage like rmcview to plot fullres
+
+
+    def drawframeoverlay(self):
+        self.highresimgitem.show()
+        self.redrawimage(self.highresimgitem)
+        self.highresimgitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+
+
+    def updatelowresLUT(self):
+
+        self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+
+
+    def hideoverlay(self):
+        self.highresimgitem.hide()
+
 
     def showlowres(self):
         self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)

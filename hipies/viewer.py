@@ -226,7 +226,7 @@ class imageTab(QtGui.QWidget):
             energy = self.dimg.headers['Beamline Energy']
             if energy is not None:
                 self.dimg.experiment.setvalue('Energy', energy)
-        except (AttributeError, TypeError):
+        except (AttributeError, TypeError,KeyError):
             print('Warning: Energy could not be determined from headers')
 
 
@@ -437,11 +437,18 @@ class imageTab(QtGui.QWidget):
 
 
 
-    def redrawimage(self, forcelow=False):
+    def redrawimage(self, imgitem=None):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
         toolbar = self.toolbar()
+
+        img = self.dimg.data
+        scale = 1
+
+        if imgitem is None:
+            imgitem=self.imageitem
+            scale = 10
 
 
         islogintensity = toolbar.actionLog_Intensity.isChecked()
@@ -453,12 +460,11 @@ class imageTab(QtGui.QWidget):
         if iscake and isremesh:
             debugtools.frustration()
         # img = self.dimg.data.copy()
-        if forcelow:
-            img = self.dimg.thumbnail.copy()
-            scale = 10
-        else:
-            img = self.dimg.data
-            scale = 1
+        # if forcelow:
+        #     img = self.dimg.thumbnail.copy()
+        #     scale = 10
+        # else:
+
 
 
 
@@ -530,7 +536,7 @@ class imageTab(QtGui.QWidget):
         if islogintensity:
             img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imageitem.setImage(img, scale=scale)
+        imgitem.setImage(img, scale=scale)
 
         if not iscake and not isremesh:
             self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
