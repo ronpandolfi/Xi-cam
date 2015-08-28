@@ -436,8 +436,7 @@ class imageTab(QtGui.QWidget):
         return toolbar
 
 
-
-    def redrawimage(self, imgitem=None):
+    def redrawimage(self, returnimg=False):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
@@ -446,9 +445,7 @@ class imageTab(QtGui.QWidget):
         img = self.dimg.data
         scale = 1
 
-        if imgitem is None:
-            imgitem=self.imageitem
-            scale = 10
+
 
 
         islogintensity = toolbar.actionLog_Intensity.isChecked()
@@ -536,7 +533,10 @@ class imageTab(QtGui.QWidget):
         if islogintensity:
             img = (np.log(img * (img > 0) + (img < 1)))
 
-        imgitem.setImage(img, scale=scale)
+        if returnimg:
+            return img
+        else:
+            self.imageitem.setImage(img, scale=scale)
 
         if not iscake and not isremesh:
             self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))

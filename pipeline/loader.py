@@ -557,7 +557,7 @@ class diffimage():
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
                 if roi is None:
-                    #print prv, self.dataunrot,nxt
+                    print prv, self.dataunrot, nxt
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
@@ -645,7 +645,7 @@ class imageseries():
     @staticmethod
     def path2frame(path):
         try:
-            expr = '(?<=_)[\d]*(?=[_.])'
+            expr = '(?<=_)[\d]+(?=[_.])'
 
             return int(re.search(expr, os.path.basename(path)).group(0))
 

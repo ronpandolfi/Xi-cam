@@ -9,7 +9,7 @@ def similarframe(path, N):
     Get the file path N ahead (or behind) the provided path frame.
     """
     try:
-        expr='(?<=_)[\d]*(?=[_.])'
+        expr = '(?<=_)[\d]+(?=[_.])'
         frame = re.search(expr, os.path.basename(path)).group(0)
         leadingzeroslen=len(frame)
         framenum = int(frame)
@@ -17,7 +17,7 @@ def similarframe(path, N):
         prevframenum = '{:0>{}}'.format(prevframenum,leadingzeroslen)
         return re.sub(expr, prevframenum, path)
     except ValueError:
-        print('No earlier frame found for ' + path)
+        print 'No earlier frame found for ' + path + ' with ' + N
         return None
 
 

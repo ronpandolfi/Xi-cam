@@ -72,6 +72,8 @@ def remesh(image, filename, geometry):
         alphai = np.deg2rad(float(paras["Sample Alpha Stage"]))
     elif "Alpha" in paras:
         alphai = np.deg2rad(float(paras['Alpha']))
+    elif "Sample Theta" in paras:
+        alphai = np.deg2rad(float(paras['Sample Theta']))
     elif "samtilt" in paras:
         alphai = np.deg2rad(float(paras['samtilt']))
     else:

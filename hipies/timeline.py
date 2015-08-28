@@ -54,7 +54,9 @@ class timelinetab(viewer.imageTab):
 
         super(timelinetab, self).__init__(dimg, parentwindow)
 
-        self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)
+        img = np.array(self.simg.thumbs.values())
+        img = (np.log(img * (img > 0) + (img < 1)))
+        self.imgview.setImage(np.repeat(np.repeat(img, 10, axis=1), 10, axis=2), xvals=self.simg.xvals)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         self.parentwindow = parentwindow
@@ -70,16 +72,15 @@ class timelinetab(viewer.imageTab):
 
         self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
         self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
-        self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
-        self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
+        # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
+        #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
         #TODO: override updateimage like rmcview to plot fullres
 
 
     def drawframeoverlay(self):
-        self.highresimgitem.show()
-        self.redrawimage(self.highresimgitem)
-        self.highresimgitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+        self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
+        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True))
 
 
     def updatelowresLUT(self):
@@ -88,11 +89,11 @@ class timelinetab(viewer.imageTab):
 
 
     def hideoverlay(self):
-        self.highresimgitem.hide()
-
+        pass
 
     def showlowres(self):
-        self.imgview.setImage(np.array(self.simg.thumbs.values()),xvals=self.simg.xvals)
+        self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
+                              xvals=self.simg.xvals)
 
     def reduce(self):
         pass
