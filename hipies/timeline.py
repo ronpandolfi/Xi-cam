@@ -72,11 +72,44 @@ class timelinetab(viewer.imageTab):
 
         self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
         self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
+        self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
+        self.drawframeoverlay()
+
+        timelineplot = self.imgview.getRoiPlot()
+        self.timeline = timelineplot.getPlotItem()
+        self.timeline.showAxis('left', False)
+        self.timeline.showAxis('bottom', False)
+        self.timeline.showAxis('top', True)
+        self.timeline.showGrid(x=True)
+
+        self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
+        # self.timeline.setLabel('bottom', u'Frame #', '')
+
+        # self.timeline.getViewBox().buildMenu()
+        menu = self.timeline.getViewBox().menu
+        operationcombo = QtGui.QComboBox()
+        operationcombo.setObjectName('operationcombo')
+        operationcombo.addItems(
+            ['Chi Squared', 'Abs. difference', 'Norm. Abs. difference', 'Sum intensity', 'Norm. Abs. Diff. derivative'])
+        #operationcombo.currentIndexChanged.connect(self.changetimelineoperation)
+        opwidgetaction = QtGui.QWidgetAction(menu)
+        opwidgetaction.setDefaultWidget(operationcombo)
+        #need to connect it
+        menu.addAction(opwidgetaction)
+
+
         # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
         #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
         #TODO: override updateimage like rmcview to plot fullres
 
+    def processtimeline(self):
+        pass
+
+    def aborttimeline(self):
+        pass
+
+    def plottimeline(self, t, V, color=[255, 255, 255]):
 
     def drawframeoverlay(self):
         self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))

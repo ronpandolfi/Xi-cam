@@ -474,11 +474,8 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QSplitter" name="splitter_4">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <widget class="QWidget" name="verticalLayoutWidget_5">
+
+         <widget class="QWidget" name="verticalLayoutWidget_5">
             <layout class="QVBoxLayout" name="timelinebox">
              <property name="spacing">
               <number>0</number>
@@ -513,10 +510,7 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="verticalLayoutWidget_4">
-            <layout class="QVBoxLayout" name="timeline"/>
-           </widget>
-          </widget>
+
          </item>
         </layout>
        </widget>

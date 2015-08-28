@@ -200,13 +200,10 @@ class MyMainWindow():
         self.timeline.showAxis('bottom', False)
         self.timeline.showAxis('top', True)
         self.timeline.showGrid(x=True)
-        # self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
-        #self.timeline.addItem(self.timeruler)
-        # self.timearrow = pg.ArrowItem(angle=-60, tipAngle=30, baseAngle=20,headLen=10,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
-        #self.timeline.addItem(self.timearrow)
+
         self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
         #self.timeline.setLabel('bottom', u'Frame #', '')
-        self.ui.findChild(QtGui.QVBoxLayout, 'timeline').addWidget(timelineplot)
+
         # self.timeline.getViewBox().buildMenu()
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
@@ -281,7 +278,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QSplitter, 'splitter').setSizes([500, 1])
         self.ui.findChild(QtGui.QSplitter, 'splitter_3').setSizes([200, 1, 200])
         self.ui.findChild(QtGui.QSplitter, 'splitter_2').setSizes([150, 1])
-        self.ui.findChild(QtGui.QSplitter, 'splitter_4').setSizes([500, 1])
+        # self.ui.findChild(QtGui.QSplitter, 'splitter_4').setSizes([500, 1])
 
         # Grab status bar
         #self.statusbar = self.ui.statusbar

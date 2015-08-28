@@ -937,9 +937,16 @@ class imageTab(QtGui.QWidget):
 
 
 class ImageView(pg.ImageView):
+    sigKeyRelease = QtCore.Signal()
     def buildMenu(self):
         super(ImageView, self).buildMenu()
         self.menu.removeAction(self.normAction)
+
+    def keyReleaseEvent(self, ev):
+        super(ImageView, self).keyReleaseEvent(ev)
+        if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
+            ev.accept()
+            self.sigKeyRelease.emit()
 
 
 
