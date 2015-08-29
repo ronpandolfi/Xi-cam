@@ -250,7 +250,7 @@ class MyMainWindow():
         self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                              self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                             self.roi, self.arccut)
+                                             self.roi, self.arccut, self.process)
         self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
 
         # Viewer toolbar
@@ -330,6 +330,9 @@ class MyMainWindow():
         self.imagePropModel.widgetchanged()
         print("BLAH!")
 
+
+    def process(self):
+        self.currentTimelineTab().tab.processtimeline()
 
 
     def treerefresh(self, path=None):

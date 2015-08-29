@@ -562,7 +562,7 @@ class diffimage():
                 else:
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
                     return v
-        return self._variation[operationindex],self.thumbnail
+        return self._variation[operationindex]
 
     @property
     def headers(self):
@@ -603,6 +603,9 @@ class imageseries():
         else:
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
+    def __getitem__(self, item):
+        return self.getDiffImage(self.paths.keys()[item])
+
     def getDiffImage(self, key):
         print self.paths.keys()
 
@@ -638,7 +641,7 @@ class imageseries():
         keys = self.paths.keys()
         for key in keys:
             variationx = self.path2frame(self.paths[key])
-            self.variation[variationx],self.thumbs[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
+            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
 
 
 

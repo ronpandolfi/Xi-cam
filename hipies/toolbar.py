@@ -238,6 +238,8 @@ class difftoolbar(QtGui.QToolBar):
 
         if process is None:
             self.actionProcess.setVisible(False)
+        else:
+            self.actionProcess.triggered.connect(process)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

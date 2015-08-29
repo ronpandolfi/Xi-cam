@@ -49,12 +49,13 @@ class timelinetab(viewer.imageTab):
         dimg = simg.first()
 
         self.operationindex=0
-        self.simg.scan(0)
+
+        self.thumbnails = [dimg.thumbnail for dimg in simg]
 
 
         super(timelinetab, self).__init__(dimg, parentwindow)
 
-        img = np.array(self.simg.thumbs.values())
+        img = np.array(self.thumbnails)
         img = (np.log(img * (img > 0) + (img < 1)))
         self.imgview.setImage(np.repeat(np.repeat(img, 10, axis=1), 10, axis=2), xvals=self.simg.xvals)
 
@@ -101,15 +102,15 @@ class timelinetab(viewer.imageTab):
         # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
         #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
-        #TODO: override updateimage like rmcview to plot fullres
 
     def processtimeline(self):
-        pass
+        self.rescan()
 
     def aborttimeline(self):
         pass
 
     def plottimeline(self, t, V, color=[255, 255, 255]):
+        pass
 
     def drawframeoverlay(self):
         self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
@@ -144,7 +145,11 @@ class timelinetab(viewer.imageTab):
 
     def setvariationmode(self, index):
         self.operationindex = index
-        self.rescan()
+
+    def cleartimeline(self):
+        for item in self.timeline.items:
+            if type(item) is pg.PlotDataItem:
+                self.timeline.removeItem(item)
 
     def plotvariation(self):
         if len(self.simg.variation) == 0:
@@ -152,16 +157,16 @@ class timelinetab(viewer.imageTab):
 
         # TODO: plot variation with indices, and skipped frames; skip None's
 
-        variation = np.array(self.simg.variation.items())
-        variation = variation[variation[:, 0].argsort()]
-        self.parentwindow.timeline.clear()
-        self.parentwindow.timeline.enableAutoScale()
-        #self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
-        self.parentwindow.timeline.addItem(self.timeruler)
-        self.timeruler.setBounds([1, max(variation[:, 0])])
-        self.timeruler.sigRedrawFrame.connect(self.redrawframe)
 
-        self.parentwindow.timeline.plot(variation[:, 0], variation[:, 1])
+
+        variation = np.array(self.simg.variation.items())
+        print variation
+        variation = variation[variation[:, 0].argsort()]
+        self.cleartimeline()
+        self.timeline.enableAutoScale()
+        #self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
+
+        self.timeline.plot(variation[:, 0], variation[:, 1])
         # self.parentwindow.timearrow = pg.ArrowItem(angle=-90, tipAngle=30, baseAngle=20,headLen=15,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
         #self.parentwindow.timearrow.setPos(0,self.variation[0])
