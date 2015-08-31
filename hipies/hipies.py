@@ -53,7 +53,7 @@ import multiprocessing
 
 class MyMainWindow():
     def __init__(self,app):
-        self.pool = multiprocessing.Pool(processes=4)
+        self.pool = multiprocessing.Pool()
         # Load the gui from file
         self.app = app
         guiloader = QUiLoader()
@@ -170,7 +170,10 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout(self, pipeline.pathtools.getRoot())
+        if sys.platform == 'win32':
+            self.libraryview = library.librarylayout(self, 'C://')
+        else:
+            self.libraryview = library.librarylayout(self, pipeline.pathtools.getRoot())
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list

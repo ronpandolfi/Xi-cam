@@ -61,6 +61,20 @@ class LinearRegionItem(pg.LinearRegionItem):
         self.menu = None
         self.isdeleting = False
 
+    def getArrayRegion(self,data,item): #rotate once?
+        cut=np.zeros_like(data)
+        if self.orientation is pg.LinearRegionItem.Horizontal:
+            regionbounds = self.getRegion()
+
+            cut[:, regionbounds[0]:regionbounds[1]] = 1
+        elif self.orientation is pg.LinearRegionItem.Vertical:
+            regionbounds = self.getRegion()
+
+            cut[regionbounds[0]:regionbounds[1], :] = 1
+
+
+        return (cut * data).T
+
     def hoverEvent(self, ev):
         hover = False
         if not ev.isExit():

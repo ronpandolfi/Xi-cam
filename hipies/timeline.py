@@ -4,6 +4,7 @@ import viewer
 import numpy as np
 import pipeline
 import os
+import debugtools
 
 
 class timelinetabtracker(QtGui.QWidget):
@@ -50,14 +51,17 @@ class timelinetab(viewer.imageTab):
 
         self.operationindex=0
 
-        self.thumbnails = [dimg.thumbnail for dimg in simg]
+        self.getthumbnails()
 
 
         super(timelinetab, self).__init__(dimg, parentwindow)
 
         img = np.array(self.thumbnails)
         img = (np.log(img * (img > 0) + (img < 1)))
-        self.imgview.setImage(np.repeat(np.repeat(img, 10, axis=1), 10, axis=2), xvals=self.simg.xvals)
+
+        self.imgview.setImage(img, xvals=self.simg.xvals)
+
+        self.imageitem.sigImageChanged.connect(self.setscale)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         self.parentwindow = parentwindow
@@ -74,7 +78,9 @@ class timelinetab(viewer.imageTab):
         self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
         self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
         self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
+
         self.drawframeoverlay()
+        self.imgview.autoRange()
 
         timelineplot = self.imgview.getRoiPlot()
         self.timeline = timelineplot.getPlotItem()
@@ -102,9 +108,13 @@ class timelinetab(viewer.imageTab):
         # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
         #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
+    @debugtools.timeit
+    def getthumbnails(self,):
+        self.thumbnails = [dimg.thumbnail for dimg in self.simg]
 
     def processtimeline(self):
         self.rescan()
+        self.parentwindow.timelinetoolbar.actionProcess.setChecked(False)
 
     def aborttimeline(self):
         pass
@@ -113,8 +123,9 @@ class timelinetab(viewer.imageTab):
         pass
 
     def drawframeoverlay(self):
+        self.scale=1
         self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
-        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True))
+        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True),noscale=True)
 
 
     def updatelowresLUT(self):
@@ -123,11 +134,17 @@ class timelinetab(viewer.imageTab):
 
 
     def hideoverlay(self):
-        pass
+        self.scale=10
+
+    def setscale(self):
+        self.imageitem.resetTransform()
+        self.imageitem.scale(self.scale,self.scale)
 
     def showlowres(self):
-        self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
-                              xvals=self.simg.xvals)
+        #self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
+                              #xvals=self.simg.xvals)
+        self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
+
 
     def reduce(self):
         pass
@@ -140,8 +157,23 @@ class timelinetab(viewer.imageTab):
         self.plotvariation()
 
     def rescan(self):
-        self.simg.scan(self.operationindex)
-        self.plotvariation()
+        self.cleartimeline()
+        variation=self.simg.scan(self.operationindex)
+        self.plotvariation(variation)
+
+        for roi in self.viewbox.addedItems:
+            #try:
+                if hasattr(roi, 'isdeleting'):
+                    if not roi.isdeleting:
+                        roi=roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image),self.imageitem)
+                        variation=self.simg.scan(self.operationindex,roi)
+                        self.plotvariation(variation,[0,255,255])
+
+                    else:
+                        self.viewbox.removeItem(roi)
+            #except Exception as ex:
+            #    print 'Warning: error displaying ROI variation.'
+            #    print ex.message
 
     def setvariationmode(self, index):
         self.operationindex = index
@@ -151,22 +183,25 @@ class timelinetab(viewer.imageTab):
             if type(item) is pg.PlotDataItem:
                 self.timeline.removeItem(item)
 
-    def plotvariation(self):
-        if len(self.simg.variation) == 0:
+    def plotvariation(self,variation,color=None):
+        if len(variation) == 0:
             return None
+
+        if color is None:
+            color = [255,255,255]
 
         # TODO: plot variation with indices, and skipped frames; skip None's
 
 
 
-        variation = np.array(self.simg.variation.items())
+        variation = np.array(variation.items())
         print variation
         variation = variation[variation[:, 0].argsort()]
-        self.cleartimeline()
+
         self.timeline.enableAutoScale()
         #self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
 
-        self.timeline.plot(variation[:, 0], variation[:, 1])
+        self.timeline.plot(variation[:, 0], variation[:, 1],pen=pg.mkPen(color=color))
         # self.parentwindow.timearrow = pg.ArrowItem(angle=-90, tipAngle=30, baseAngle=20,headLen=15,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
         #self.parentwindow.timeline.addItem(self.parentwindow.timearrow)
         #self.parentwindow.timearrow.setPos(0,self.variation[0])

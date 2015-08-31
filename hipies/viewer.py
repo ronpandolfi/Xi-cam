@@ -727,40 +727,13 @@ class imageTab(QtGui.QWidget):
                               args=(self.dimg.data, self.dimg.mask, ai, None, isremesh, None),
                               callback=self.integrationrelay)
 
-
-
-
-        # else:
-        # if self.parentwindow.difftoolbar.actionHorizontal_Cut.isChecked():
-        #         regionbounds = self.region.getRegion()
-        #         cut = np.zeros_like(data)
-        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
-        #     if self.parentwindow.difftoolbar.actionVertical_Cut.isChecked():
-        #         regionbounds = self.region.getRegion()
-        #         cut = np.zeros_like(data)
-        #         cut[regionbounds[0]:regionbounds[1], :] = 1
-
-        #dimg = pipeline.loader.diffimage(data=data, experiment=self.dimg.experiment)
-
-            # Radial integration
-            #self.q, self.radialprofile = pipeline.integration.radialintegratepyFAI(self.dimg)
-
-
-
-
-
-        # self.integrators.append(thread)
-        #thread.sig_Integration.connect(self.parentwindow.integration.plot)
-        #thread.run(self.dimg)
-
-        #dimg = pipeline.loader.diffimage(data=np.rot90(data), experiment=self.dimg.experiment)
         for roi in self.viewbox.addedItems:
             try:
                 if hasattr(roi, 'isdeleting'):
                     if not roi.isdeleting:
                         print type(roi)
                         cut = None
-                        if issubclass(type(roi), pg.ROI) and type(roi) is not pg.LineSegmentROI:
+                        if issubclass(type(roi), pg.ROI) or issubclass(type(roi),pg.LinearRegionItem):
 
                             cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
                             print 'Cut:', cut.shape
@@ -791,18 +764,18 @@ class imageTab(QtGui.QWidget):
                             if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
                             if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
 
-                        elif type(roi) is ROI.LinearRegionItem:
-                            if roi.orientation is pg.LinearRegionItem.Horizontal:
-                                regionbounds = roi.getRegion()
-                                cut = np.zeros_like(data)
-                                cut[:, regionbounds[0]:regionbounds[1]] = 1
-                            elif roi.orientation is pg.LinearRegionItem.Vertical:
-                                regionbounds = roi.getRegion()
-                                cut = np.zeros_like(data)
-                                cut[regionbounds[0]:regionbounds[1], :] = 1
-
-                            else:
-                                print debugtools.frustration()
+                        # elif type(roi) is ROI.LinearRegionItem:
+                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
+                        #         regionbounds = roi.getRegion()
+                        #         cut = np.zeros_like(data)
+                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
+                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
+                        #         regionbounds = roi.getRegion()
+                        #         cut = np.zeros_like(data)
+                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
+                        #
+                        #     else:
+                        #         print debugtools.frustration()
 
                         if cut is not None:
                             if iscake:
@@ -816,19 +789,13 @@ class imageTab(QtGui.QWidget):
                                 q = q[-len(I):]
                                 self.plotintegration([q, I, [0, 255, 255]])
                             else:
-                                #self.backgroundIntegrate(self.dimg, cut, isremesh, [0, 255, 255])
+
                                 ai = self.dimg.experiment.getAI().getPyFAI()
                                 self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
                                 self.dimg.data, self.dimg.mask, ai, cut, isremesh, [0, 255, 255]),
                                                       callback=self.integrationrelay)
 
-                                # self.cache1Dintegration.emit(self.q, self.radialprofile)
 
-                                # self.peaktooltip = pipeline.peakfinding.peaktooltip(self.q, self.radialprofile,
-                                #                                                    self.parentwindow.integration)
-
-                                # Replot
-                                #self.parentwindow.integration.plot(self.q, self.radialprofile)
                     else:
                         self.viewbox.removeItem(roi)
             except Exception as ex:
@@ -947,6 +914,7 @@ class ImageView(pg.ImageView):
         if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             ev.accept()
             self.sigKeyRelease.emit()
+
 
 
 

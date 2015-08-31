@@ -49,12 +49,12 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
                 c = scipy.ndimage.gaussian_filter(c, 3)
                 n = scipy.ndimage.gaussian_filter(n, 3)
                 if roi is not None:
-                    r = scipy.ndimage.zoom(roi, 0.1, order=1)
-                    r = np.rot90(scipy.ndimage.gaussian_filter(r, 3), 1)
+                    roi = scipy.ndimage.zoom(roi, 0.1, order=1)
+                    #roi = np.rot90(scipy.ndimage.gaussian_filter(r, 3), 1)
                 else:
-                    r = 1
+                    roi = 1
             with np.errstate(divide='ignore'):
-                return operations[operationindex](p, c, n, r)
+                return operations[operationindex](p, c, n, roi)
         except TypeError:
             print('Variation could not be determined for a frame.')
     else:

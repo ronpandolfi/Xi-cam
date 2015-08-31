@@ -150,7 +150,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.fileicon = QtGui.QImage()
         self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
 
-        print 'Library widget generated for ' +  path
+        print 'Library widget generated for ' + path
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')

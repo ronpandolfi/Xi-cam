@@ -6,7 +6,7 @@ from hipies import debugtools
 import multiprocessing
 import time
 import os
-import debugtools
+from hipies import debugtools
 from PIL import Image
 
 
@@ -57,7 +57,7 @@ def thumbnail(img, factor=10):
     Generate a thumbnail from an image
     """
 
-    shape = img.shape
+    shape = img.shape[::-1]
     img = Image.fromarray(img)
     img.thumbnail(np.divide(shape, factor))
     print 'thumb:', shape, np.array(img).shape

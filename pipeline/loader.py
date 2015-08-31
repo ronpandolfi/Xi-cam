@@ -508,7 +508,7 @@ class diffimage():
         if not self.iscached('remesh'):
             remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
                                              self.experiment.getGeometry())
-            remeshmask, _, _ = remesh.remesh(self.mask.copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
                                              self.experiment.getGeometry())
 
             self.cache['remesh'] = remeshdata
@@ -631,17 +631,21 @@ class imageseries():
     # def roi(self,value):
     # self._roi=value
 
-    def scan(self, operationindex):
+    def scan(self, operationindex,roi=None):
         if len(self.paths) < 3:
             return None
 
-        self.variation = dict()
+        variation = dict()
 
         # get the first frame's profile
         keys = self.paths.keys()
+
         for key in keys:
             variationx = self.path2frame(self.paths[key])
-            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
+
+            variation[variationx] = self.getDiffImage(key).variation(operationindex, roi)
+
+        return variation
 
 
 
