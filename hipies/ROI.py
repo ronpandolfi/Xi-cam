@@ -156,9 +156,6 @@ class LineROI(pg.LineROI):
         rrcc = [[r, c] for r, c in zip(rr, cc) if r < mask.shape[0] and c < mask.shape[1]]
         rr, cc = zip(*rrcc)
         mask[rr, cc] = 1
-        import debugtools
-
-        debugtools.showimage(mask)
 
         return (data * mask).T.copy()
 
