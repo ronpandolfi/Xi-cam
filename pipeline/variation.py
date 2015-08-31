@@ -31,7 +31,7 @@ def filevariation(operationindex, filea, c, filec, roi=None):
     p = loader.loadimage(filea)
     # c, _ = loader.loadpath(fileb)
     n = loader.loadimage(filec)
-    print 'previous frame:' + filea
+    # print 'previous frame:' + filea
     # print p
     return variation(operationindex, p, c, n, roi)
 

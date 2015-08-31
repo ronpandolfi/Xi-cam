@@ -269,7 +269,7 @@ def finddetectorbyfilename(path):
     return dimg.detector
 
 def loadthumbnail(path):
-    nxpath = pathtools.path2nexus(path)
+    # nxpath = pathtools.path2nexus(path)
 
     img=diffimage(filepath=path).thumbnail
 
@@ -607,7 +607,7 @@ class imageseries():
         return self.getDiffImage(self.paths.keys()[item])
 
     def getDiffImage(self, key):
-        print self.paths.keys()
+        #print self.paths.keys()
 
         return diffimage(filepath=self.paths[key], experiment=self.experiment)
 

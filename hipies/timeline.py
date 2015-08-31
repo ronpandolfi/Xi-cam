@@ -195,7 +195,7 @@ class timelinetab(viewer.imageTab):
 
 
         variation = np.array(variation.items())
-        print variation
+        # print variation
         variation = variation[variation[:, 0].argsort()]
 
         self.timeline.enableAutoScale()

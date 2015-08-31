@@ -60,7 +60,7 @@ def thumbnail(img, factor=10):
     shape = img.shape[::-1]
     img = Image.fromarray(img)
     img.thumbnail(np.divide(shape, factor))
-    print 'thumb:', shape, np.array(img).shape
+    # print 'thumb:', shape, np.array(img).shape
     return np.array(img)
 
 
