@@ -180,7 +180,9 @@ class timelinetab(viewer.imageTab):
 
     def cleartimeline(self):
         for item in self.timeline.items:
+            print item
             if type(item) is pg.PlotDataItem:
+                item.isdeleting = True
                 self.timeline.removeItem(item)
 
     def plotvariation(self,variation,color=None):

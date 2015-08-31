@@ -5,6 +5,10 @@ import warnings
 
 
 def chisquared(p, c, n, r):
+    # from hipies import debugtools
+    # debugtools.showimage(c)
+    # if type(r) is np.ndarray:
+    #     debugtools.showimage(r)
     return np.sum(r * np.square(c.astype(float) - p))
 
 
@@ -50,7 +54,7 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
                 n = scipy.ndimage.gaussian_filter(n, 3)
                 if roi is not None:
                     roi = scipy.ndimage.zoom(roi, 0.1, order=1)
-                    #roi = np.rot90(scipy.ndimage.gaussian_filter(r, 3), 1)
+                    roi = np.flipud(roi)
                 else:
                     roi = 1
             with np.errstate(divide='ignore'):
