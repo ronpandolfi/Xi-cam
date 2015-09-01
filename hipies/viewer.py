@@ -190,7 +190,8 @@ class imageTab(QtGui.QWidget):
         self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
         self.coordslabel.setMouseTracking(True)
 
-        self.centerplot = None
+        self.centerplot = pg.ScatterPlotItem()
+        self.viewbox.addItem(self.centerplot)
 
         # Make a layout for the tab
         backwidget = QtGui.QWidget()
@@ -514,7 +515,7 @@ class imageTab(QtGui.QWidget):
             # print self.dimg.remeshqx
             #print self.dimg.remeshqy
 
-        if iscake or isremesh:
+        if iscake:
             if self.centerplot is not None:
                 self.centerplot.clear()
         else:
@@ -541,12 +542,51 @@ class imageTab(QtGui.QWidget):
         if not iscake and not isremesh:
             self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
 
-        #self.imageitem.setLookupTable(colormap.LUT)
+
+
+
+
+
+
+    def getcenter(self):
+        if self.isremesh:
+            remeshqpar = self.dimg.remeshqy
+            remeshqz = self.dimg.remeshqx
+            q=remeshqpar**2+remeshqz**2
+            center= np.where(q==q.min())
+            print 'remeshcenter:',center
+            return zip(*center)[0]
+        else:
+            return self.dimg.experiment.center
+
+    @property
+    def islogintensity(self):
+        return self.toolbar().actionLog_Intensity.isChecked()
+
+    @property
+    def isradialsymmetry(self):
+        return self.toolbar().actionRadial_Symmetry.isChecked()
+
+    @property
+    def ismirrorsymmetry(self):
+        return self.toolbar().actionMirror_Symmetry.isChecked()
+
+    @property
+    def ismaskshown(self):
+        return self.toolbar().actionShow_Mask.isChecked()
+
+    @property
+    def iscake(self):
+        return self.toolbar().actionCake.isChecked()
+
+    @property
+    def isremesh(self):
+        return self.toolbar().actionRemeshing.isChecked()
 
     def arccut(self):
 
 
-        arc = ROI.ArcROI(self.dimg.experiment.center, 500)
+        arc = ROI.ArcROI(self.getcenter(), 500)
         arc.sigRegionChangeFinished.connect(self.replot)
         self.viewbox.addItem(arc)
         self.replot()
@@ -638,12 +678,25 @@ class imageTab(QtGui.QWidget):
         self.replot()
 
     def drawcenter(self):
+
+        center = self.getcenter()
         # Mark the center
         if self.centerplot is not None: self.centerplot.clear()
-        self.centerplot = pg.ScatterPlotItem([self.dimg.experiment.getvalue('Center X')],
-                                             [self.dimg.experiment.getvalue('Center Y')], pen=None, symbol='o',
+        self.centerplot.setData([center[0]],[center[1]], pen=None, symbol='o',
                                              brush=pg.mkBrush('#FFA500'))
-        self.viewbox.addItem(self.centerplot)
+        #self.viewbox.addItem(self.centerplot)
+
+        #Move Arc ROIs to center
+
+
+        for item in self.viewbox.addedItems:
+            #print item
+            if issubclass(type(item),ROI.ArcROI):
+                print 'Moving ArcROI:',item
+
+                print 'Current pos:',item.state['pos']
+                print 'New pos:', center
+                item.setPos(center)
 
     #@debug.timeit
     def calibrate(self):
