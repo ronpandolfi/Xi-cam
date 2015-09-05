@@ -104,6 +104,16 @@ def readvariation(path):
     return None
 
 
+def merge_dicts(*dict_args):
+    '''
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    '''
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
 
 def loadparas(path):
     try:
@@ -115,8 +125,9 @@ def loadparas(path):
 
         elif extension == '.edf':
             txtpath = os.path.splitext(path)[0] + '.txt'
+            fimg = fabio.open(path)
             if os.path.isfile(txtpath):
-                return scanparas(txtpath)
+                return merge_dicts(fimg.header, scanparas(txtpath))
             else:
                 basename = os.path.splitext(path)[0]
                 obj = re.search('_\d+$', basename)
@@ -124,9 +135,10 @@ def loadparas(path):
                     iend = obj.start()
                     token = basename[:iend] + '*txt'
                     txtpath = glob.glob(token)[0]
-                    return scanparas(txtpath)
+
+                    return merge_dicts(fimg.header, scanparas(txtpath))
                 else:
-                    return None
+                    return fimg.header
 
         elif extension == '.gb':
             raise NotImplementedError('This format is not yet supported.')

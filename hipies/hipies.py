@@ -140,7 +140,7 @@ class MyMainWindow():
 
         # Setup Image Properties
         self.imagePropModel = models.imagePropModel(self.currentImageTab)
-        self.ui.tableView.setModel(self.imagePropModel)
+        self.ui.propertytable.setModel(self.imagePropModel)
 
 
 
@@ -186,6 +186,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
         self.ui.findChild(QtGui.QCheckBox, 'watchfold').stateChanged.connect(self.watchfoldtoggle)
         self.ui.findChild(QtGui.QCheckBox, 'experimentfold').stateChanged.connect(self.experimentfoldtoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'propertiesfold').stateChanged.connect(self.propertiesfoldtoggle)
 
         # Setup integration plot widget
         integrationwidget = pg.PlotWidget()
@@ -330,8 +331,7 @@ class MyMainWindow():
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
         self.ui.show()
-        self.imagePropModel.widgetchanged()
-        print("BLAH!")
+        self.ui.raise_()
 
 
     def process(self):
@@ -729,6 +729,13 @@ class MyMainWindow():
         toggle this pane as visible/hidden
         """
         pane = self.experimentTree
+        pane.setHidden(not pane.isHidden())
+
+    def propertiesfoldtoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
+        pane = self.ui.propertiesfold
         pane.setHidden(not pane.isHidden())
 
     def showlibrary(self):

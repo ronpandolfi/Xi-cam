@@ -1,5 +1,6 @@
 import hipies
-import sys, os
+import sys
+import os
 from PySide import QtGui
 
 
@@ -10,4 +11,4 @@ if __name__=='__main__':
         print 'path:', path
     app=QtGui.QApplication(sys.argv)
     window = hipies.hipies.MyMainWindow(app)
-    exit(app.exec_())
+    sys.exit(app.exec_())

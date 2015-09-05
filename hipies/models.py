@@ -71,10 +71,13 @@ class imagePropModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            if index.column() == 0:
-                return self.propdata.keys()[index.row()]
-            if index.column() == 1:
-                return self.propdata.values()[index.row()]
+            try:
+                if index.column() == 0:
+                    return self.propdata.keys()[index.row()]
+                if index.column() == 1:
+                    return self.propdata.values()[index.row()]
+            except Exception:
+                return 0
 
                 # The view is asking for the actual data, so, just return the item it's asking for.
                 # return self._items[index.row()]

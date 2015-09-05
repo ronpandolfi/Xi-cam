@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>HiPIES</string>
+      <string>HipIES</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -566,7 +566,7 @@
             <layout class="QVBoxLayout" name="propertiesBox"/>
            </item>
            <item>
-               <widget class="QCheckBox" name="checkBox">
+               <widget class="QCheckBox" name="propertiesfold">
                    <property name="text">
                        <string>Image Properties</string>
                    </property>
@@ -579,7 +579,7 @@
                </widget>
            </item>
               <item>
-                  <widget class="QTableView" name="tableView">
+                  <widget class="QTableView" name="propertytable">
                       <attribute name="horizontalHeaderVisible">
                           <bool>false</bool>
                       </attribute>
