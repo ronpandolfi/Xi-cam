@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>SAXS-ON</string>
+      <string>HipIES</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -29,225 +29,572 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_4">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <property name="leftMargin">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
+   <layout class="QVBoxLayout" name="verticalLayout_12">
+    <property name="margin">
      <number>0</number>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
+     <layout class="QHBoxLayout" name="modemenu">
+      <property name="spacing">
+       <number>-1</number>
+      </property>
+      <property name="margin">
+       <number>4</number>
+      </property>
       <item>
-       <layout class="QHBoxLayout" name="modemenu">
+       <layout class="QVBoxLayout" name="verticalLayout_6">
         <property name="spacing">
-         <number>-1</number>
-        </property>
-        <property name="leftMargin">
-         <number>4</number>
-        </property>
-        <property name="topMargin">
-         <number>4</number>
-        </property>
-        <property name="rightMargin">
-         <number>4</number>
-        </property>
-        <property name="bottomMargin">
-         <number>4</number>
+         <number>0</number>
         </property>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Test Experiment #1</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="filenamelabel">
-            <property name="text">
-             <string>[File Name Here]</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Expanding</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="librarybutton">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
+         <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Library</string>
-          </property>
-          <property name="flat">
-           <bool>true</bool>
+              <string/>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="separator">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
+         <widget class="QLabel" name="filenamelabel">
           <property name="text">
-           <string>|</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="viewerbutton">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Viewer</string>
-          </property>
-          <property name="flat">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="separator_2">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>|</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="timelinebutton">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Timeline</string>
-          </property>
-          <property name="flat">
-           <bool>true</bool>
+           <string/>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QSplitter" name="splitter_3">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Expanding</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="librarybutton">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Library</string>
+        </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="separator">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>|</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="viewerbutton">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Viewer</string>
+        </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="checked">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="separator_2">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>|</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="timelinebutton">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Timeline</string>
+        </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="separator_3">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>|</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="rmcbutton">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Reverse MC</string>
+        </property>
+           <property name="checkable">
+               <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+               <bool>true</bool>
+           </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+           <property name="isMode" stdset="0">
+               <bool>true</bool>
+           </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QSplitter" name="splitter_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QSplitter" name="splitter_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="handleWidth">
+        <number>4</number>
+       </property>
+       <widget class="QFrame" name="frame">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="baseSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Sunken</enum>
+        </property>
+        <property name="midLineWidth">
+         <number>1</number>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="margin">
+          <number>3</number>
+         </property>
+         <item>
+          <layout class="QVBoxLayout" name="smallimageview"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="verticalLayoutWidget_3">
+        <layout class="QVBoxLayout" name="leftpanelayout">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QCheckBox" name="openfilescheck">
+           <property name="text">
+            <string>Open Files</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="isFoldingTab" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QListView" name="openfileslist">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="filebrowsercheck">
+           <property name="text">
+            <string>File Browser</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="isFoldingTab" stdset="0">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTreeView" name="treebrowser">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Preferred</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QStackedWidget" name="viewmode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>6</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="currentIndex">
+           <number>1</number>
+       </property>
+       <widget class="QWidget" name="page_2">
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="margin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QScrollArea" name="scrollArea">
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="thumbbox">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+                 <width>98</width>
+                 <height>28</height>
+             </rect>
+            </property>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="page">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="handleWidth">
-         <number>4</number>
-        </property>
-        <widget class="QSplitter" name="splitter_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <property name="spacing">
+          <number>0</number>
          </property>
-         <property name="handleWidth">
-          <number>4</number>
+         <property name="margin">
+          <number>0</number>
          </property>
-         <widget class="QFrame" name="frame">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="baseSize">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Sunken</enum>
-          </property>
-          <property name="midLineWidth">
-           <number>1</number>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout">
-           <property name="leftMargin">
-            <number>3</number>
+         <item>
+          <widget class="QSplitter" name="splitter">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
-           <property name="topMargin">
-            <number>3</number>
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
-           <property name="rightMargin">
-            <number>3</number>
+           <property name="handleWidth">
+            <number>4</number>
            </property>
-           <property name="bottomMargin">
-            <number>3</number>
-           </property>
+           <widget class="QWidget" name="verticalLayoutWidget_2">
+            <layout class="QVBoxLayout" name="diffbox">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QTabWidget" name="tabWidget">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+                  <property name="tabPosition">
+                      <enum>QTabWidget::South</enum>
+                  </property>
+               <property name="tabShape">
+                <enum>QTabWidget::Rounded</enum>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+               <property name="tabsClosable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="verticalLayoutWidget">
+               <layout class="QVBoxLayout" name="plotholder">
+                   <item>
+                       <widget class="QTabWidget" name="plotTabs">
+                           <property name="tabPosition">
+                               <enum>QTabWidget::West</enum>
+                           </property>
+                           <property name="tabShape">
+                               <enum>QTabWidget::Rounded</enum>
+                           </property>
+                           <property name="currentIndex">
+                               <number>0</number>
+                           </property>
+                           <property name="elideMode">
+                               <enum>Qt::ElideNone</enum>
+                           </property>
+                           <property name="documentMode">
+                               <bool>false</bool>
+                           </property>
+                           <widget class="QWidget" name="qplot">
+                               <attribute name="title">
+                                   <string>q</string>
+                               </attribute>
+                               <layout class="QVBoxLayout" name="verticalLayout_18">
+                                   <property name="margin">
+                                       <number>0</number>
+                                   </property>
+                                   <item>
+                                       <layout class="QVBoxLayout" name="qplotslot"/>
+                                   </item>
+                               </layout>
+                           </widget>
+                           <widget class="QWidget" name="chiplot">
+                               <attribute name="title">
+                                   <string>χ</string>
+                               </attribute>
+                               <layout class="QVBoxLayout" name="verticalLayout_20">
+                                   <property name="margin">
+                                       <number>0</number>
+                                   </property>
+                                   <item>
+                                       <layout class="QVBoxLayout" name="chiplotslot"/>
+                                   </item>
+                               </layout>
+                           </widget>
+                       </widget>
+                   </item>
+               </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="page_3">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="margin">
+          <number>0</number>
+         </property>
+         <item>
+             <layout class="QVBoxLayout" name="timelinebox">
+                 <property name="spacing">
+                     <number>0</number>
+                 </property>
+                 <item>
+                     <widget class="QTabWidget" name="timelinetabwidget">
+                         <property name="sizePolicy">
+                             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                 <horstretch>0</horstretch>
+                                 <verstretch>0</verstretch>
+                             </sizepolicy>
+             </property>
+                         <property name="autoFillBackground">
+                             <bool>false</bool>
+                         </property>
+                         <property name="styleSheet">
+                             <string notr="true"/>
+                         </property>
+                         <property name="tabPosition">
+                             <enum>QTabWidget::South</enum>
+                         </property>
+                         <property name="currentIndex">
+                             <number>-1</number>
+                         </property>
+                         <property name="documentMode">
+                             <bool>true</bool>
+                         </property>
+                         <property name="tabsClosable">
+                             <bool>true</bool>
+                         </property>
+                     </widget>
+                 </item>
+             </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="page_6">
+        <layout class="QVBoxLayout" name="rmclayout">
+         <property name="margin">
+          <number>0</number>
+         </property>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QStackedWidget" name="sidemode">
+       <property name="currentIndex">
+           <number>0</number>
+       </property>
+       <widget class="QWidget" name="page_5">
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <property name="margin">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <layout class="QVBoxLayout" name="smallimageview"/>
+               <spacer name="verticalSpacer_4">
+                   <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                       <size>
+                           <width>1</width>
+                           <height>4</height>
+                       </size>
+                   </property>
+               </spacer>
            </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="verticalLayoutWidget_3">
-          <layout class="QVBoxLayout" name="leftpanelayout">
-           <property name="spacing">
-            <number>5</number>
-           </property>
-           <property name="leftMargin">
-            <number>3</number>
-           </property>
-           <property name="topMargin">
-            <number>10</number>
-           </property>
-           <item>
-            <widget class="QCheckBox" name="openfilescheck">
+              <item>
+            <widget class="QCheckBox" name="experimentfold">
              <property name="text">
-              <string>Open Files</string>
+              <string>Experiment Properties</string>
              </property>
              <property name="checked">
               <bool>true</bool>
@@ -258,25 +605,35 @@
             </widget>
            </item>
            <item>
-            <widget class="QListView" name="openfileslist">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="alternatingRowColors">
-              <bool>true</bool>
-             </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::ExtendedSelection</enum>
-             </property>
-            </widget>
+            <layout class="QVBoxLayout" name="propertiesBox"/>
            </item>
            <item>
-            <widget class="QCheckBox" name="filebrowsercheck">
+               <widget class="QCheckBox" name="propertiesfold">
+                   <property name="text">
+                       <string>Image Properties</string>
+                   </property>
+                   <property name="checked">
+                       <bool>true</bool>
+                   </property>
+                   <property name="isFoldingTab" stdset="0">
+                       <bool>true</bool>
+                   </property>
+               </widget>
+           </item>
+              <item>
+                  <widget class="QTableView" name="propertytable">
+                      <attribute name="horizontalHeaderVisible">
+                          <bool>false</bool>
+                      </attribute>
+                      <attribute name="verticalHeaderVisible">
+                          <bool>false</bool>
+                      </attribute>
+                  </widget>
+              </item>
+              <item>
+            <widget class="QCheckBox" name="watchfold">
              <property name="text">
-              <string>File Browser</string>
+              <string>Watch Folder</string>
              </property>
              <property name="checked">
               <bool>true</bool>
@@ -287,12 +644,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QTreeView" name="treebrowser">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
+            <widget class="QFrame" name="watchframe">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -300,330 +654,370 @@
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::ExtendedSelection</enum>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
              </property>
-                <property name="iconSize">
-              <size>
-               <width>16</width>
-               <height>16</height>
-              </size>
-             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_9">
+              <item>
+               <widget class="QLabel" name="watchfolderpath">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDialogButtonBox" name="watchbuttons">
+                <property name="standardButtons">
+                 <set>QDialogButtonBox::Open|QDialogButtonBox::Reset</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="autoPreprocess">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Preprocess in background</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="autoView">
+                <property name="text">
+                 <string>Open in Viewer</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="autoTimeline">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Open in Timeline</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
-           <item>
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Preferred</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
           </layout>
-         </widget>
-        </widget>
-        <widget class="QStackedWidget" name="viewmode">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>6</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="page_4">
+        <layout class="QVBoxLayout" name="verticalLayout_10">
+         <property name="margin">
+          <number>0</number>
          </property>
-         <property name="currentIndex">
-          <number>1</number>
-         </property>
-         <widget class="QWidget" name="page_2">
-          <layout class="QVBoxLayout" name="verticalLayout_5">
-           <property name="spacing">
-            <number>0</number>
+         <item>
+          <widget class="QSplitter" name="splitter_5">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QScrollArea" name="scrollArea">
-             <property name="focusPolicy">
-              <enum>Qt::NoFocus</enum>
-             </property>
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="thumbbox">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>475</width>
-                <height>500</height>
-               </rect>
-              </property>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="page">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_7">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QSplitter" name="splitter">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="handleWidth">
-              <number>4</number>
-             </property>
-             <widget class="QWidget" name="verticalLayoutWidget_2">
-              <layout class="QVBoxLayout" name="diffbox">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QTabWidget" name="tabWidget">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="autoFillBackground">
-                  <bool>false</bool>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true"/>
-                 </property>
-                 <property name="tabShape">
-                  <enum>QTabWidget::Rounded</enum>
-                 </property>
-                 <property name="currentIndex">
-                  <number>-1</number>
-                 </property>
-                 <property name="tabsClosable">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="verticalLayoutWidget">
-              <layout class="QVBoxLayout" name="plotholder"/>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="page_3">
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QSplitter" name="splitter_4">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <widget class="QWidget" name="verticalLayoutWidget_5">
-              <layout class="QVBoxLayout" name="timelinebox">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QTabWidget" name="timelinetabwidget">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="autoFillBackground">
-                  <bool>false</bool>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true"/>
-                 </property>
-                 <property name="currentIndex">
-                  <number>-1</number>
-                 </property>
-                 <property name="tabsClosable">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="verticalLayoutWidget_4">
-              <layout class="QVBoxLayout" name="timeline"/>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-        <widget class="QWidget" name="layoutWidget">
-         <layout class="QVBoxLayout" name="_2">
-          <property name="leftMargin">
-           <number>3</number>
-          </property>
-          <property name="topMargin">
-           <number>10</number>
-          </property>
-          <property name="rightMargin">
-           <number>3</number>
-          </property>
-          <property name="bottomMargin">
-           <number>5</number>
-          </property>
-          <item>
-           <widget class="QCheckBox" name="experimentfold">
-            <property name="text">
-             <string>Experiment Properties</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <property name="isFoldingTab" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="propertiesBox"/>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="watchfold">
-            <property name="text">
-             <string>Watch Folder</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <property name="isFoldingTab" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QFrame" name="watchframe">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Sunken</enum>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_9">
+           <widget class="QWidget" name="layoutWidget">
+            <layout class="QHBoxLayout" name="horizontalLayout">
              <item>
-              <widget class="QLabel" name="watchfolderpath">
-               <property name="text">
-                <string/>
+              <widget class="QListWidget" name="rmcinputpaths">
+               <property name="selectionMode">
+                <enum>QAbstractItemView::MultiSelection</enum>
                </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QDialogButtonBox" name="watchbuttons">
-               <property name="standardButtons">
-                <set>QDialogButtonBox::Open|QDialogButtonBox::Reset</set>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectRows</enum>
                </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="autoPreprocess">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Preprocess in background</string>
-               </property>
-               <property name="checkable">
+               <property name="sortingEnabled">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="autoView">
-               <property name="text">
-                <string>Open in Viewer</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="autoTimeline">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Open in Timeline</string>
-               </property>
-              </widget>
+              <layout class="QVBoxLayout" name="verticalLayout_8">
+               <item>
+                <widget class="QToolButton" name="rmcaddfiles">
+                 <property name="text">
+                  <string>+</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="rmcremovefiles">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </item>
             </layout>
            </widget>
-          </item>
-         </layout>
-        </widget>
+           <widget class="QScrollArea" name="scrollArea_2">
+            <property name="verticalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOn</enum>
+            </property>
+            <property name="horizontalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOff</enum>
+            </property>
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+                  <width>203</width>
+                  <height>336</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_14">
+              <property name="margin">
+               <number>0</number>
+              </property>
+              <item>
+               <layout class="QVBoxLayout" name="verticalLayout_11">
+                <item>
+                 <widget class="QDialogButtonBox" name="buttonBox">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="standardButtons">
+                   <set>QDialogButtonBox::NoButton</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QFormLayout" name="formLayout">
+                  <property name="fieldGrowthPolicy">
+                   <enum>QFormLayout::FieldsStayAtSizeHint</enum>
+                  </property>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_7">
+                    <property name="text">
+                     <string>Output directory</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLabel" name="rmcoutput">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QPushButton" name="rmcreset">
+                    <property name="text">
+                     <string>Reset</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QPushButton" name="rmcopen">
+                    <property name="text">
+                     <string>Open</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="RunName">
+                    <property name="text">
+                     <string>Run Name</string>
+                    </property>
+                    <property name="textFormat">
+                     <enum>Qt::AutoText</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="rmcRunName"/>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="label_3">
+                    <property name="text">
+                     <string>Steps</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QSpinBox" name="rmcSteps">
+                    <property name="suffix">
+                     <string/>
+                    </property>
+                    <property name="prefix">
+                     <string/>
+                    </property>
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>10000001</number>
+                    </property>
+                    <property name="singleStep">
+                     <number>100</number>
+                    </property>
+                    <property name="value">
+                     <number>99</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="label_4">
+                    <property name="text">
+                     <string>Scale Factor</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QSpinBox" name="rmcScalefactor">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>10000000</number>
+                    </property>
+                    <property name="value">
+                     <number>1</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="label_5">
+                    <property name="text">
+                     <string>Model Start Size</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QSpinBox" name="rmcModlestartsize">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>10000000</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label_6">
+                  <property name="text">
+                   <string>Loading Factors</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QListWidget" name="rmcLoadingfactors"/>
+                  </item>
+                  <item>
+                   <layout class="QVBoxLayout" name="verticalLayout_15">
+                    <item>
+                     <widget class="QToolButton" name="rmcAddloadingfactor">
+                      <property name="text">
+                       <string>+</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QToolButton" name="rmcSubtractloadingfactor">
+                      <property name="text">
+                       <string>-</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="verticalSpacer_3">
+                      <property name="orientation">
+                       <enum>Qt::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="rmcreset_2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Reset</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="rmcExecute">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Execute</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
        </widget>
-      </item>
-     </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -648,10 +1042,8 @@
   </widget>
   <action name="actionBeamProperties">
    <property name="icon">
-       <iconset>
-           <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>
-           ~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png
-       </iconset>
+    <iconset>
+     <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
    </property>
    <property name="text">
     <string>BeamProperties</string>
@@ -659,19 +1051,17 @@
   </action>
   <action name="actionCenterFind">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_01.png</normaloff>../gui/icons_01.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_27.png</normaloff>gui/icons_27.png</iconset>
    </property>
    <property name="text">
-    <string>CenterFind</string>
+    <string>Find Center</string>
    </property>
   </action>
   <action name="actionPolyMask">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_05.png</normaloff>../gui/icons_05.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_05.png</normaloff>gui/icons_05.png</iconset>
    </property>
    <property name="text">
     <string/>
@@ -699,9 +1089,8 @@
   </action>
   <action name="actionMasking">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_03.png</normaloff>../gui/icons_03.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_03.png</normaloff>gui/icons_03.png</iconset>
    </property>
    <property name="text">
     <string>Masking</string>
@@ -712,9 +1101,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_02.png</normaloff>../gui/icons_02.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_02.png</normaloff>gui/icons_02.png</iconset>
    </property>
    <property name="text">
     <string>Log Intensity</string>
@@ -725,9 +1113,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_04.png</normaloff>../gui/icons_04.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_04.png</normaloff>gui/icons_04.png</iconset>
    </property>
    <property name="text">
     <string>Cake</string>
@@ -735,9 +1122,9 @@
   </action>
   <action name="actionRemove_Cosmics">
    <property name="icon">
-       <iconset>
-           <normalon>../gui/icons_06.png</normalon>
-       </iconset>
+    <iconset>
+     <normalon>gui/icons_06.png</normalon>
+    </iconset>
    </property>
    <property name="text">
     <string/>
@@ -745,9 +1132,9 @@
   </action>
   <action name="actionMaskLoad">
    <property name="icon">
-       <iconset>
-           <normalon>../gui/icons_08.png</normalon>
-       </iconset>
+    <iconset>
+     <normalon>gui/icons_08.png</normalon>
+    </iconset>
    </property>
    <property name="text">
     <string/>
@@ -758,9 +1145,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_07.png</normaloff>../gui/icons_07.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_07.png</normaloff>gui/icons_07.png</iconset>
    </property>
    <property name="text">
     <string>Muli plot</string>
@@ -778,9 +1164,8 @@
   </action>
   <action name="actionAdd">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_11.png</normaloff>../gui/icons_11.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_11.png</normaloff>gui/icons_11.png</iconset>
    </property>
    <property name="text">
     <string>Add</string>
@@ -788,9 +1173,8 @@
   </action>
   <action name="actionSubtract">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_13.png</normaloff>../gui/icons_13.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_13.png</normaloff>gui/icons_13.png</iconset>
    </property>
    <property name="text">
     <string>Subtract</string>
@@ -798,9 +1182,8 @@
   </action>
   <action name="actionAdd_with_coefficient">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_14.png</normaloff>../gui/icons_14.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_14.png</normaloff>gui/icons_14.png</iconset>
    </property>
    <property name="text">
     <string>Add with coefficient</string>
@@ -808,9 +1191,8 @@
   </action>
   <action name="actionSubtract_with_coefficient">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_15.png</normaloff>../gui/icons_15.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_15.png</normaloff>gui/icons_15.png</iconset>
    </property>
    <property name="text">
     <string>Subtract with coefficient</string>
@@ -818,9 +1200,8 @@
   </action>
   <action name="actionDivide">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_12.png</normaloff>../gui/icons_12.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_12.png</normaloff>gui/icons_12.png</iconset>
    </property>
    <property name="text">
     <string>Divide</string>
@@ -828,9 +1209,8 @@
   </action>
   <action name="actionAverage">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_16.png</normaloff>../gui/icons_16.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_16.png</normaloff>gui/icons_16.png</iconset>
    </property>
    <property name="text">
     <string>Average</string>
@@ -841,9 +1221,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_18.png</normaloff>../gui/icons_18.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_18.png</normaloff>gui/icons_18.png</iconset>
    </property>
    <property name="text">
     <string>Radial Symmetry</string>
@@ -854,9 +1233,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_17.png</normaloff>../gui/icons_17.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_17.png</normaloff>gui/icons_17.png</iconset>
    </property>
    <property name="text">
     <string>Mirror Symmetry</string>
@@ -867,10 +1245,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_20.png</normaloff>
-           <normalon>../gui/icons_19.png</normalon>../gui/icons_20.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_20.png</normaloff>
+     <normalon>gui/icons_19.png</normalon>gui/icons_20.png</iconset>
    </property>
    <property name="text">
     <string>Show Mask</string>
@@ -881,35 +1258,26 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_21.png</normaloff>../gui/icons_21.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_21.png</normaloff>gui/icons_21.png</iconset>
    </property>
    <property name="text">
     <string>Polygon Cut</string>
    </property>
   </action>
   <action name="actionVertical_Cut">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_22.png</normaloff>../gui/icons_22.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_22.png</normaloff>gui/icons_22.png</iconset>
    </property>
    <property name="text">
     <string>Vertical Cut</string>
    </property>
   </action>
   <action name="actionHorizontal_Cut">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_23.png</normaloff>../gui/icons_23.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_23.png</normaloff>gui/icons_23.png</iconset>
    </property>
    <property name="text">
     <string>Horizontal Cut</string>
@@ -920,9 +1288,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_24.png</normaloff>../gui/icons_24.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_24.png</normaloff>gui/icons_24.png</iconset>
    </property>
    <property name="text">
     <string>Line Cut</string>
@@ -930,9 +1297,8 @@
   </action>
   <action name="actionTimeline">
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_26.png</normaloff>../gui/icons_26.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_26.png</normaloff>gui/icons_26.png</iconset>
    </property>
    <property name="text">
     <string>timeline</string>
@@ -946,9 +1312,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-       <iconset>
-           <normaloff>../gui/icons_25.png</normaloff>../gui/icons_25.png
-       </iconset>
+    <iconset>
+     <normaloff>gui/icons_25.png</normaloff>gui/icons_25.png</iconset>
    </property>
    <property name="text">
     <string>Remeshing</string>
@@ -957,6 +1322,24 @@
   <action name="actionExport_Image">
    <property name="text">
     <string>Export Image...</string>
+   </property>
+  </action>
+  <action name="actionRefine_Center">
+   <property name="icon">
+    <iconset>
+     <normaloff>gui/icons_28.png</normaloff>gui/icons_28.png</iconset>
+   </property>
+   <property name="text">
+    <string>Refine Center</string>
+   </property>
+  </action>
+  <action name="actionCalibrate_AgB">
+   <property name="icon">
+    <iconset>
+     <normaloff>gui/icons_29.png</normaloff>gui/icons_29.png</iconset>
+   </property>
+   <property name="text">
+    <string>Calibrate AgB</string>
    </property>
   </action>
  </widget>

@@ -62,12 +62,17 @@ QPushButton::pressed {
     color:#666666;
 }
 
+QPushButton[isMode="true"]:checked {
+    background-color:#111111;
+    font-weight:bold;
+}
+
 QListView{
     outline:none;
 }
 
 QCheckBox[isFoldingTab="true"]::indicator:checked {
-    image:url(../gui/icons_10.png);
+    image:url(gui/icons_10.png);
 }
 
 QCheckBox::indicator {
@@ -76,7 +81,7 @@ QCheckBox::indicator {
 }
 
 QCheckBox[isFoldingTab="true"]::indicator:unchecked {
-    image:url(../gui/icons_09.png);
+    image:url(gui/icons_09.png);
 }
 
 QToolButton
@@ -96,8 +101,6 @@ QToolButton
 
 QPushButton {
     padding:6px;
-    padding-left:30px;
-    padding-right:30px;
 }
 
 QTabWidget {
