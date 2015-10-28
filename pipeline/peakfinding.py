@@ -1,14 +1,12 @@
 #from pylab import *
 from scipy import signal
 from scipy.ndimage import filters
-from hipies import hipiesdebug
+from hipies import debugtools
 import pyqtgraph as pg
 from PySide import QtCore
 import inspect
 import numpy as np
 
-maxfiltercoef = 5
-cwtrange = np.arange(1, 100)
 
 maxfiltercoef = 5
 cwtrange = np.arange(3, 100)
@@ -16,7 +14,7 @@ gaussiancentersigma = 2
 gaussianwidthsigma = 5
 
 
-@hipiesdebug.timeit
+@debugtools.timeit
 def findpeaks(x, y):
     cwtdata = filters.gaussian_filter1d(
         filters.gaussian_filter1d(signal.cwt(y, signal.ricker, cwtrange), gaussiancentersigma, axis=1),

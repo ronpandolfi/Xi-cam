@@ -3,6 +3,8 @@ from PySide import QtCore
 
 
 class difftoolbar(QtGui.QToolBar):
+    sigCake = QtCore.Signal()
+    sigRemesh = QtCore.Signal()
     def __init__(self):
         super(difftoolbar, self).__init__()
 
@@ -121,19 +123,16 @@ class difftoolbar(QtGui.QToolBar):
         self.actionPolygon_Cut.setIcon(icon18)
         self.actionPolygon_Cut.setObjectName("actionPolygon_Cut")
         self.actionVertical_Cut = QtGui.QAction(self)
-        self.actionVertical_Cut.setCheckable(True)
         icon19 = QtGui.QIcon()
         icon19.addPixmap(QtGui.QPixmap("gui/icons_22.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionVertical_Cut.setIcon(icon19)
         self.actionVertical_Cut.setObjectName("actionVertical_Cut")
         self.actionHorizontal_Cut = QtGui.QAction(self)
-        self.actionHorizontal_Cut.setCheckable(True)
         icon20 = QtGui.QIcon()
         icon20.addPixmap(QtGui.QPixmap("gui/icons_23.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionHorizontal_Cut.setIcon(icon20)
         self.actionHorizontal_Cut.setObjectName("actionHorizontal_Cut")
         self.actionLine_Cut = QtGui.QAction(self)
-        self.actionLine_Cut.setCheckable(True)
         icon21 = QtGui.QIcon()
         icon21.addPixmap(QtGui.QPixmap("gui/icons_24.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionLine_Cut.setIcon(icon21)
@@ -161,6 +160,22 @@ class difftoolbar(QtGui.QToolBar):
         icon25.addPixmap(QtGui.QPixmap("gui/icons_29.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCalibrate_AgB.setIcon(icon25)
         self.actionCalibrate_AgB.setObjectName("actionCalibrate_AgB")
+        self.actionArc = QtGui.QAction(self)
+        icon26 = QtGui.QIcon()
+        icon26.addPixmap(QtGui.QPixmap("gui/icons_31.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionArc.setIcon(icon26)
+        self.actionArc.setObjectName("actionArc")
+
+        self.actionProcess = QtGui.QAction(self)
+        icon27 = QtGui.QIcon()
+        icon27.addPixmap(QtGui.QPixmap("gui/icons_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon27.addPixmap(QtGui.QPixmap("gui/icons_33.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionProcess.setIcon(icon27)
+        self.actionProcess.setObjectName("actionProcess")
+        self.actionProcess.setCheckable(True)
+
+
+
 
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()
@@ -182,6 +197,7 @@ class difftoolbar(QtGui.QToolBar):
 
         self.setIconSize(QtCore.QSize(32, 32))
 
+        self.addAction(self.actionProcess)
         self.addAction(self.actionCalibrate_AgB)
         self.addAction(self.actionCenterFind)
         self.addAction(self.actionRefine_Center)
@@ -189,6 +205,7 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(toolbuttonMaskingAction)
         self.addAction(self.actionCake)
         self.addAction(self.actionRemeshing)
+        self.addAction(self.actionArc)
         self.addAction(self.actionLine_Cut)
         self.addAction(self.actionVertical_Cut)
         self.addAction(self.actionHorizontal_Cut)
@@ -197,21 +214,43 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionMirror_Symmetry)
         #self.addAction(self.actionROI)
 
+
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi):
+                        radialsym, mirrorsym, roi, arc, process=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
         self.actionShow_Mask.triggered.connect(showmask)
-        self.actionCake.triggered.connect(cake)
-        self.actionRemeshing.triggered.connect(remesh)
+        self.actionCake.triggered.connect(self.caketoggle)  #####################3
+        self.actionRemeshing.triggered.connect(self.remeshtoggle)  ##############
         self.actionLine_Cut.triggered.connect(linecut)
         self.actionVertical_Cut.triggered.connect(vertcut)
         self.actionHorizontal_Cut.triggered.connect(horzcut)
+
         self.actionLog_Intensity.triggered.connect(logint)
         self.actionRadial_Symmetry.triggered.connect(radialsym)
         self.actionMirror_Symmetry.triggered.connect(mirrorsym)
         #self.actionROI.triggered.connect(roi)
+        self.actionArc.triggered.connect(arc)
+
+        self.sigCake.connect(cake)
+        self.sigRemesh.connect(remesh)
+
+        if process is None:
+            self.actionProcess.setVisible(False)
+        else:
+            self.actionProcess.triggered.connect(process)
+
+    def caketoggle(self):
+        if self.actionCake.isChecked():
+            self.actionRemeshing.setChecked(False)
+        self.sigCake.emit()
+
+    def remeshtoggle(self):
+        if self.actionRemeshing.isChecked():
+            self.actionCake.setChecked(False)
+        self.sigRemesh.emit()
+
 
 
 

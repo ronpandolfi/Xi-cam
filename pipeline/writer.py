@@ -2,10 +2,12 @@ import nexpy.api.nexus as nx
 import numpy as np
 import scipy.ndimage
 from PySide import QtCore
-from hipies import hipiesdebug
+from hipies import debugtools
 import multiprocessing
 import time
 import os
+from hipies import debugtools
+from PIL import Image
 
 
 class nexusmerger(QtCore.QThread):
@@ -48,30 +50,20 @@ def writenexus(nexroot, path):
     except IOError:
         print('IOError: Check that you have write permissions.')
 
-def thumbnail(img, size=160.):
+
+@debugtools.timeit
+def thumbnail(img, factor=10):
     """
     Generate a thumbnail from an image
     """
-    size = float(size)
 
-    desiredsize = np.array([size, size])
-
-    zoomfactor = np.max(desiredsize / np.array(img.shape))
-
-    # OVERRIDE!
-    zoomfactor = 0.1
-
-    # img = scipy.ndimage.zoom(img, zoomfactor, order=2)
-    img = resample(img)
-
-    return img
+    shape = img.shape[::-1]
+    img = Image.fromarray(img)
+    img.thumbnail(np.divide(shape, factor))
+    # print 'thumb:', shape, np.array(img).shape
+    return np.array(img)
 
 
-avg = np.vectorize(np.average)
-
-
-def resample(img, factor=10):
-    return avg(blockshaped(img, factor))
 
 
 def blockshaped(arr, factor):

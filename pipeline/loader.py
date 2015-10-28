@@ -13,9 +13,10 @@ import time
 import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
-from hipies import hipiesdebug
+from hipies import debugtools
 
 acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
+imagecache = dict()
 
 
 def loadsingle(path):
@@ -23,22 +24,29 @@ def loadsingle(path):
 
 
 def loadimage(path):
+
+
     data = None
     try:
+        if ':' in path:
+            print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
+            #path='HACK:'+path
+
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.gb':
                 raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
             elif os.path.splitext(path)[1] == '.fits':
-                data = pyfits.open(path)[2].data
+                data = np.fliplr(pyfits.open(path)[2].data)
                 return data
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
-                # print nxroot.tree
-                if hasattr(nxroot.data, 'signal'):
-                    data = nxroot.data.signal
-                    return data
-                else:
-                    return loadimage(str(nxroot.data.rawfile))
+                print nxroot.tree
+                if hasattr(nxroot, 'data'):
+                    if hasattr(nxroot.data, 'signal'):
+                        data = nxroot.data.signal
+                        return data
+                    else:
+                        return loadimage(str(nxroot.data.rawfile))
 
             else:
                 # print 'Unhandled data type: ' + path
@@ -46,6 +54,8 @@ def loadimage(path):
                 return data
     except IOError:
         print('IO Error loading: ' + path)
+    except TypeError:
+        print 'TypeError: path has type ', str(type(path))
 
     return data
 
@@ -94,6 +104,16 @@ def readvariation(path):
     return None
 
 
+def merge_dicts(*dict_args):
+    '''
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    '''
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
 
 def loadparas(path):
     try:
@@ -105,8 +125,9 @@ def loadparas(path):
 
         elif extension == '.edf':
             txtpath = os.path.splitext(path)[0] + '.txt'
+            fimg = fabio.open(path)
             if os.path.isfile(txtpath):
-                return scanparas(txtpath)
+                return merge_dicts(fimg.header, scanparas(txtpath))
             else:
                 basename = os.path.splitext(path)[0]
                 obj = re.search('_\d+$', basename)
@@ -114,9 +135,10 @@ def loadparas(path):
                     iend = obj.start()
                     token = basename[:iend] + '*txt'
                     txtpath = glob.glob(token)[0]
-                    return scanparas(txtpath)
+
+                    return merge_dicts(fimg.header, scanparas(txtpath))
                 else:
-                    return None
+                    return fimg.header
 
         elif extension == '.gb':
             raise NotImplementedError('This format is not yet supported.')
@@ -233,7 +255,7 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
-@hipiesdebug.timeit
+@debugtools.timeit
 # def finddetector(imgdata):
 #     for name, detector in detectors.ALL_DETECTORS.iteritems():
 #         if hasattr(detector, 'MAX_SHAPE'):
@@ -259,7 +281,7 @@ def finddetectorbyfilename(path):
     return dimg.detector
 
 def loadthumbnail(path):
-    nxpath = pathtools.path2nexus(path)
+    # nxpath = pathtools.path2nexus(path)
 
     img=diffimage(filepath=path).thumbnail
 
@@ -341,7 +363,9 @@ class diffimage():
         self._params = None
         self._thumb = None
         self._variation = dict()
+        self._headers = None
         self.experiment = experiment
+
 
 
 
@@ -349,7 +373,6 @@ class diffimage():
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()
         self.cachecheck = None
-
 
     def updateexperiment(self):
         # Force cache the detector
@@ -375,12 +398,15 @@ class diffimage():
                 try:
                     self._data = loadimage(self.filepath)
                 except IOError:
-                    hipiesdebug.frustration()
+                    debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
     @property
     def mask(self):
-        return self.experiment.mask
+        if self.experiment.mask is not None:
+            return self.experiment.mask
+        else:
+            return np.ones_like(self.data)
 
     @property
     def dataunrot(self):
@@ -390,7 +416,10 @@ class diffimage():
     @property
     def data(self):
         self.cachedata()
-        return np.rot90(self._data, 3)
+        data = self._data
+        if self._data is not None:
+            data = np.rot90(self._data, 3)
+        return data
 
     @data.setter
     def data(self, data):
@@ -415,7 +444,7 @@ class diffimage():
             self._detector = detector
             if detector is not None:
                 if mask is not None:
-                    self.experiment.addtomask(np.rot90(mask, 3))
+                    self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                 self.experiment.setvalue('Pixel Size X', detector.pixel1)
                 self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                 self.experiment.setvalue('Detector', name)
@@ -474,8 +503,10 @@ class diffimage():
         self.cachedetector()
         if not self.iscached('cake'):
             cake, x, y = integration.cake(self.data, self.experiment)
-            cakemask, _, _ = integration.cake(self.mask, self.experiment)
-            cakemask = (cakemask > 0) * 255
+            cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
+            cakemask = cakemask > 0
+
+            print x, y
 
             self.cache['cake'] = cake
             self.cache['cakemask'] = cakemask
@@ -489,11 +520,11 @@ class diffimage():
         if not self.iscached('remesh'):
             remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
                                              self.experiment.getGeometry())
-            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask, 1).copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
                                              self.experiment.getGeometry())
 
             self.cache['remesh'] = remeshdata
-            self.cache['remeshmask'] = remeshmask
+            self.cache['remeshmask'] = remeshmask >0
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
@@ -505,7 +536,7 @@ class diffimage():
         #    self.writenexus()
         pass
 
-    @hipiesdebug.timeit
+    @debugtools.timeit
     def writenexus(self):
         nxpath = pathtools.path2nexus(self.filepath)
         w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
@@ -520,12 +551,13 @@ class diffimage():
         self.experiment.setvalue('Center X', x)
         self.experiment.setvalue('Center Y', y)
 
+    @debugtools.timeit  #0.07s on Izanami
     def variation(self, operationindex, roi):
-        if not operationindex in self._variation or roi is not None:
+        if operationindex not in self._variation or roi is not None:
             nxpath = pathtools.path2nexus(self.filepath)
             if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
-                print v
+                #print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
                     print 'successful variation load!'
@@ -537,11 +569,19 @@ class diffimage():
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
                 if roi is None:
+                    print prv, self.dataunrot, nxt
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
                     return v
         return self._variation[operationindex]
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = loadparas(self.filepath)
+
+        return self._headers
 
     
     def __getattr__(self, name):
@@ -558,9 +598,14 @@ class imageseries():
         self.appendimages(paths)
         self.experiment = experiment
         self.roi = None
+        self.thumbs = dict()
 
     def __len__(self):
         return len(self.paths)
+
+    @property
+    def xvals(self):
+        return numpy.array(sorted(self.paths.keys()))
 
     def first(self):
         if len(self.paths) > 0:
@@ -570,7 +615,12 @@ class imageseries():
         else:
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
+    def __getitem__(self, item):
+        return self.getDiffImage(self.paths.keys()[item])
+
     def getDiffImage(self, key):
+        #print self.paths.keys()
+
         return diffimage(filepath=self.paths[key], experiment=self.experiment)
 
     def appendimages(self, paths):
@@ -593,23 +643,32 @@ class imageseries():
     # def roi(self,value):
     # self._roi=value
 
-    def scan(self, operationindex):
+    def scan(self, operationindex,roi=None):
         if len(self.paths) < 3:
             return None
 
-        self.variation = dict()
+        variation = dict()
 
         # get the first frame's profile
         keys = self.paths.keys()
+
         for key in keys:
             variationx = self.path2frame(self.paths[key])
-            self.variation[variationx] = self.getDiffImage(key).variation(operationindex, self.roi)
+
+            variation[variationx] = self.getDiffImage(key).variation(operationindex, roi)
+
+        return variation
+
 
 
     @staticmethod
     def path2frame(path):
         try:
-            return int(os.path.splitext(os.path.basename(path).split('_')[-1])[0])
+            expr = '(?<=_)[\d]+(?=[_.])'
+
+            return int(re.search(expr, os.path.basename(path)).group(0))
+
         except ValueError:
             print 'Path has no frame number:', path
+
         return None

@@ -60,7 +60,7 @@ executables = [
 ]
 
 setup(name='HipIES',
-      version='0.6',
+      version='1.0',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',

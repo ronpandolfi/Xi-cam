@@ -123,7 +123,7 @@ class librarylayout(FlowLayout):
 
         for entry in entries:
             # print fileinfo.fileName()
-            if not (entry == '..' and os.path.normpath(path) == '/Volumes') and not entry == '.':
+            if not (entry == '..' and os.path.normpath(path) == pipeline.pathtools.getRoot()) and not entry == '.':
                 self.addWidget(thumbwidgetitem(os.path.join(path,entry), parentwindow=self.parentwindow))
 
 
@@ -142,6 +142,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
 
     def __init__(self, path, parentwindow):
+        path = os.path.normpath(path)
 
         self.foldericon = QtGui.QImage()
         self.foldericon.load('gui/GenericFolderIcon.png')
@@ -149,7 +150,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.fileicon = QtGui.QImage()
         self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
 
-        print 'Library widget generated for ' +  path
+        print 'Library widget generated for ' + path
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -172,16 +173,23 @@ class thumbwidgetitem(QtGui.QFrame):
             self.image = self.foldericon
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
-            self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
-            self.thumb *= 255. / np.max(self.thumb)
 
-            if self.thumb is not None:
-                # TODO: use scipy zoom or pull from .nxs for thumbnails
+            try:
+                self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
+                self.thumb *= 255. / np.max(self.thumb)
+
+
+
+                # if self.thumb is not None:
                 self.image = QtGui.QImage(self.thumb.astype(np.uint8), self.thumb.shape[1], self.thumb.shape[0],
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
-            else:
+            except Exception as ex:
+                print ex.message
+
                 self.image = self.fileicon
+
+
         else:
             self.image = self.fileicon
 

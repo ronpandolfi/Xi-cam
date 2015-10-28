@@ -3,7 +3,7 @@ import time
 import process
 from PySide import QtCore
 import multiprocessing
-from hipies import hipiesdebug
+from hipies import debugtools
 
 
 class daemon(QtCore.QThread):
@@ -44,7 +44,7 @@ class daemon(QtCore.QThread):
         self.exiting = True
         self.wait()
 
-    @hipiesdebug.timeit
+    @debugtools.timeit
     def processfiles(self, path, files):
         """
         distribute new files to cores for processing. Ignores .nxs.

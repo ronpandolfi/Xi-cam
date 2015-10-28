@@ -12,16 +12,6 @@
 ## TODO: Use detector mask in centerfinder
 
 
-# import numpy as rmc
-# import numpy as toolbar
-# import numpy as pipeline
-# import numpy as watcher
-# import numpy as timeline
-import numpy as viewer
-import numpy as config
-import numpy as models
-import numpy as pyqtgraph
-
 import sys
 import os
 
@@ -48,13 +38,14 @@ import daemon
 import pipeline
 import toolbar
 import rmc
+import multiprocessing
 
 
 class MyMainWindow():
-    def __init__(self):
+    def __init__(self,app):
 
         # Load the gui from file
-        self.app = QtGui.QApplication(sys.argv)
+        self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
         f = QtCore.QFile("gui/mainwindow.ui")
@@ -137,6 +128,10 @@ class MyMainWindow():
         settingsList = self.ui.findChild(QtGui.QVBoxLayout, 'propertiesBox')
         settingsList.addWidget(self.experimentTree)
 
+        # Setup Image Properties
+        self.imagePropModel = models.imagePropModel(self.currentImageTab)
+        self.ui.propertytable.setModel(self.imagePropModel)
+
 
 
 
@@ -144,7 +139,7 @@ class MyMainWindow():
         self.filetreemodel = QtGui.QFileSystemModel()
         self.filetree = self.ui.findChild(QtGui.QTreeView, 'treebrowser')
         self.filetree.setModel(self.filetreemodel)
-        self.filetreepath = self.filetreemodel.myComputer()
+        self.filetreepath = pipeline.pathtools.getRoot()
         self.treerefresh(self.filetreepath)
         header = self.filetree.header()
         self.filetree.setHeaderHidden(True)
@@ -155,6 +150,7 @@ class MyMainWindow():
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
         self.filetree.expandAll()
+        self.filetree.sortByColumn(0,QtCore.Qt.AscendingOrder)
 
 
 
@@ -164,7 +160,10 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        self.libraryview = library.librarylayout(self, 'C:\\')
+        if sys.platform == 'win32':
+            self.libraryview = library.librarylayout(self, 'C://')
+        else:
+            self.libraryview = library.librarylayout(self, pipeline.pathtools.getRoot())
         self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list
@@ -177,6 +176,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QCheckBox, 'openfilescheck').stateChanged.connect(self.openfilestoggle)
         self.ui.findChild(QtGui.QCheckBox, 'watchfold').stateChanged.connect(self.watchfoldtoggle)
         self.ui.findChild(QtGui.QCheckBox, 'experimentfold').stateChanged.connect(self.experimentfoldtoggle)
+        self.ui.findChild(QtGui.QCheckBox, 'propertiesfold').stateChanged.connect(self.propertiesfoldtoggle)
 
         # Setup integration plot widget
         integrationwidget = pg.PlotWidget()
@@ -194,13 +194,10 @@ class MyMainWindow():
         self.timeline.showAxis('bottom', False)
         self.timeline.showAxis('top', True)
         self.timeline.showGrid(x=True)
-        # self.timeruler = pg.InfiniteLine(pen=pg.mkPen('#FFA500', width=3), movable=True)
-        #self.timeline.addItem(self.timeruler)
-        # self.timearrow = pg.ArrowItem(angle=-60, tipAngle=30, baseAngle=20,headLen=10,tailLen=None,brush=None,pen=pg.mkPen('#FFA500',width=3))
-        #self.timeline.addItem(self.timearrow)
+
         self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
         #self.timeline.setLabel('bottom', u'Frame #', '')
-        self.ui.findChild(QtGui.QVBoxLayout, 'timeline').addWidget(timelineplot)
+
         # self.timeline.getViewBox().buildMenu()
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
@@ -247,19 +244,15 @@ class MyMainWindow():
         self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                              self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                             self.roi)
+                                             self.roi, self.arccut, self.process)
         self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
-
-        self.timelinetoolbar.actionHorizontal_Cut.setEnabled(False)
-        self.timelinetoolbar.actionVertical_Cut.setEnabled(False)
-        self.timelinetoolbar.actionLine_Cut.setEnabled(False)
 
         # Viewer toolbar
         self.difftoolbar = toolbar.difftoolbar()
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                          self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                          self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                         self.roi)
+                                         self.roi, self.arccut)
         self.ui.diffbox.insertWidget(0, self.difftoolbar)
 
         # Setup file operation toolbox
@@ -279,7 +272,7 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QSplitter, 'splitter').setSizes([500, 1])
         self.ui.findChild(QtGui.QSplitter, 'splitter_3').setSizes([200, 1, 200])
         self.ui.findChild(QtGui.QSplitter, 'splitter_2').setSizes([150, 1])
-        self.ui.findChild(QtGui.QSplitter, 'splitter_4').setSizes([500, 1])
+        # self.ui.findChild(QtGui.QSplitter, 'splitter_4').setSizes([500, 1])
 
         # Grab status bar
         #self.statusbar = self.ui.statusbar
@@ -320,6 +313,7 @@ class MyMainWindow():
         # TESTING
         ##
         # self.openimage('../samples/AgB_00016.edf')
+
         #self.calibrate()
         # self.updatepreprocessing()
         ##
@@ -327,8 +321,11 @@ class MyMainWindow():
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
         self.ui.show()
-        print("BLAH!")
-        sys.exit(self.app.exec_())
+        self.ui.raise_()
+
+
+    def process(self):
+        self.currentTimelineTab().tab.processtimeline()
 
 
     def treerefresh(self, path=None):
@@ -354,6 +351,9 @@ class MyMainWindow():
         Connect linecut to current tab's linecut
         """
         self.currentImageTab().tab.linecut()
+
+    def arccut(self):
+        self.currentImageTab().tab.arccut()
 
     def roi(self):
         self.currentImageTab().tab.roi()
@@ -530,11 +530,13 @@ class MyMainWindow():
         """
         self.ui.findChild(QtGui.QTabWidget, 'tabWidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.imagePropModel.widgetchanged()
         self.ui.filenamelabel.setText('')
 
     def timelinetabCloseRequested(self, index):
         self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget').widget(index).deleteLater()
         self.listmodel.widgetchanged()
+        self.imagePropModel.widgetchanged()
         self.ui.filenamelabel.setText('')
 
     def polymask(self):
@@ -719,6 +721,13 @@ class MyMainWindow():
         pane = self.experimentTree
         pane.setHidden(not pane.isHidden())
 
+    def propertiesfoldtoggle(self):
+        """
+        toggle this pane as visible/hidden
+        """
+        pane = self.ui.propertiesfold
+        pane.setHidden(not pane.isHidden())
+
     def showlibrary(self):
         """
         switch to library view
@@ -788,6 +797,9 @@ class MyMainWindow():
             #
             # def loadplugin(self,module):
 
-
-
+    @property
+    def pool(self):
+        if self._pool is None:
+            self._pool = multiprocessing.Pool()
+        return self._pool
 
