@@ -4,7 +4,7 @@ import scipy.ndimage
 import warnings
 
 
-# operation signature: previous, current, next, ROI-mask
+# Operation signature: previous, current, next, ROI-mask
 
 def chisquared(p, c, n, r):
     # from hipies import debugtools
