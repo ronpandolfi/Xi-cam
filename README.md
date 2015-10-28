@@ -1,8 +1,9 @@
-# HiPIES
+# HipIES
 High Performance Integrated Environment for SAXS
 
-## About HiPIES
+## About HipIES
 
+HipIES is a graphical environment for organizing, viewing, and analyzing SAXS/GISAXS images developed by the Advanced Light Source at Lawrence Berkeley National Laboratory. This is a cross-platform open-source Python project licensed under ?????. 
 
 ## Dependencies
 * QT
@@ -18,6 +19,8 @@ High Performance Integrated Environment for SAXS
 
 * Cython
 * h5py
+
+Suggested:
 * pyopencl
 
 
