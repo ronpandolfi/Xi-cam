@@ -20,6 +20,7 @@ HipIES is a graphical environment for organizing, viewing, and analyzing SAXS/GI
 * h5py
 
 Suggested:
+
 * pyopencl
 
 
