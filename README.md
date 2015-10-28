@@ -1,5 +1,4 @@
-# HipIES
-High Performance Integrated Environment for SAXS
+# HipIES -- High Performance Integrated Environment for SAXS
 
 ## About HipIES
 
