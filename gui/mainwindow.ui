@@ -459,7 +459,53 @@
             </layout>
            </widget>
            <widget class="QWidget" name="verticalLayoutWidget">
-            <layout class="QVBoxLayout" name="plotholder"/>
+               <layout class="QVBoxLayout" name="plotholder">
+                   <item>
+                       <widget class="QTabWidget" name="plotTabs">
+                           <property name="tabPosition">
+                               <enum>QTabWidget::West</enum>
+                           </property>
+                           <property name="tabShape">
+                               <enum>QTabWidget::Rounded</enum>
+                           </property>
+                           <property name="currentIndex">
+                               <number>0</number>
+                           </property>
+                           <property name="elideMode">
+                               <enum>Qt::ElideNone</enum>
+                           </property>
+                           <property name="documentMode">
+                               <bool>false</bool>
+                           </property>
+                           <widget class="QWidget" name="qplot">
+                               <attribute name="title">
+                                   <string>q</string>
+                               </attribute>
+                               <layout class="QVBoxLayout" name="verticalLayout_18">
+                                   <property name="margin">
+                                       <number>0</number>
+                                   </property>
+                                   <item>
+                                       <layout class="QVBoxLayout" name="qplotslot"/>
+                                   </item>
+                               </layout>
+                           </widget>
+                           <widget class="QWidget" name="chiplot">
+                               <attribute name="title">
+                                   <string>χ</string>
+                               </attribute>
+                               <layout class="QVBoxLayout" name="verticalLayout_20">
+                                   <property name="margin">
+                                       <number>0</number>
+                                   </property>
+                                   <item>
+                                       <layout class="QVBoxLayout" name="chiplotslot"/>
+                                   </item>
+                               </layout>
+                           </widget>
+                       </widget>
+                   </item>
+               </layout>
            </widget>
           </widget>
          </item>
@@ -474,43 +520,39 @@
           <number>0</number>
          </property>
          <item>
-
-         <widget class="QWidget" name="verticalLayoutWidget_5">
-            <layout class="QVBoxLayout" name="timelinebox">
-             <property name="spacing">
-              <number>0</number>
+             <layout class="QVBoxLayout" name="timelinebox">
+                 <property name="spacing">
+                     <number>0</number>
+                 </property>
+                 <item>
+                     <widget class="QTabWidget" name="timelinetabwidget">
+                         <property name="sizePolicy">
+                             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                 <horstretch>0</horstretch>
+                                 <verstretch>0</verstretch>
+                             </sizepolicy>
              </property>
-             <item>
-              <widget class="QTabWidget" name="timelinetabwidget">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="styleSheet">
-                <string notr="true"/>
-               </property>
-                  <property name="tabPosition">
-                      <enum>QTabWidget::South</enum>
-               </property>
-               <property name="currentIndex">
-                <number>-1</number>
-               </property>
-               <property name="documentMode">
-                <bool>true</bool>
-               </property>
-               <property name="tabsClosable">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-
+                         <property name="autoFillBackground">
+                             <bool>false</bool>
+                         </property>
+                         <property name="styleSheet">
+                             <string notr="true"/>
+                         </property>
+                         <property name="tabPosition">
+                             <enum>QTabWidget::South</enum>
+                         </property>
+                         <property name="currentIndex">
+                             <number>-1</number>
+                         </property>
+                         <property name="documentMode">
+                             <bool>true</bool>
+                         </property>
+                         <property name="tabsClosable">
+                             <bool>true</bool>
+                         </property>
+                     </widget>
+                 </item>
+             </layout>
          </item>
         </layout>
        </widget>

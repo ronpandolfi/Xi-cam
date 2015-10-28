@@ -5,8 +5,8 @@ import loader
 import numpy as np
 from pyFAI import geometry
 
-import sys
-import os
+from PySide import QtGui
+
 
 try:
     from cWarpImage import warp_image
@@ -46,7 +46,8 @@ def calc_q_range(lims, geometry, alphai, cen):
     q_range = [qp.min(), qp.max(), qz.min(), qz.max()]
     return q_range, k0
 
-def remesh(image, filename, geometry):
+
+def remesh(image, filename, geometry, alphai):
 
     shape = image.shape
     center = np.zeros(2, dtype=np.float)
@@ -60,24 +61,6 @@ def remesh(image, filename, geometry):
     center[0] = geometry.get_poni2() * nanometer
     center[1] = shape[0] * pixel[0] - geometry.get_poni1() * nanometer
     print center
-
-    # read paras
-    paras = loader.loadparas(filename)
-
-    # read incident angle
-    if paras is None:
-        print "Failed to read incident angle"
-        return np.rot90(image, 3), None, None
-    if "Sample Alpha Stage" in paras:
-        alphai = np.deg2rad(float(paras["Sample Alpha Stage"]))
-    elif "Alpha" in paras:
-        alphai = np.deg2rad(float(paras['Alpha']))
-    elif "Sample Theta" in paras:
-        alphai = np.deg2rad(float(paras['Sample Theta']))
-    elif "samtilt" in paras:
-        alphai = np.deg2rad(float(paras['samtilt']))
-    else:
-        return np.rot90(image, 3), None, None
 
     # calculate q values
     qrange, k0 = calc_q_range(image.shape, geometry, alphai, center)

@@ -22,19 +22,19 @@ OPTIONS = {'argv_emulation': True,
            'resources':['gui'],
            'iconfile': 'gui/icon.icns',
            'plist': {
-                'CFBundleName': 'HiPIES',
-                'CFBundleShortVersionString':'0.6', # must be in X.X.X format
-                'CFBundleVersion': '0.6',
-                'CFBundleIdentifier':'com.lbnl.hipies', #optional
-                'NSHumanReadableCopyright': '@ 2015', #optional
-                'CFBundleDevelopmentRegion': 'English', #optional - English is default
-                },
-            'includes' : [
-                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
-                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage'
-                         ],
+               'CFBundleName': 'HipIES',
+               'CFBundleShortVersionString': '1.0',  # must be in X.X.X format
+               'CFBundleVersion': '1.0',
+               'CFBundleIdentifier': 'com.lbnl.hipies',  # optional
+               'NSHumanReadableCopyright': '@ 2015',  #optional
+               'CFBundleDevelopmentRegion': 'English',  #optional - English is default
+           },
+           'includes': [
+               'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
+               'PySide.QtXml', 'PIL', 'pipeline.cWarpImage'
+           ],
            'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
-            }
+}
 
 EXT = Extension(name='pipeline.cWarpImage',
                 sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
