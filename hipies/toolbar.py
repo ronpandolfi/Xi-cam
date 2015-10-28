@@ -216,7 +216,7 @@ class difftoolbar(QtGui.QToolBar):
 
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc, process=None):
+                        radialsym, mirrorsym, roi, arc, polymask, process=None, ):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -226,7 +226,7 @@ class difftoolbar(QtGui.QToolBar):
         self.actionLine_Cut.triggered.connect(linecut)
         self.actionVertical_Cut.triggered.connect(vertcut)
         self.actionHorizontal_Cut.triggered.connect(horzcut)
-
+        self.actionPolyMask.triggered.connect(polymask)
         self.actionLog_Intensity.triggered.connect(logint)
         self.actionRadial_Symmetry.triggered.connect(radialsym)
         self.actionMirror_Symmetry.triggered.connect(mirrorsym)

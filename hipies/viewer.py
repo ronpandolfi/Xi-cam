@@ -102,7 +102,8 @@ class imageTabTracker(QtGui.QWidget):
 
 class imageTab(QtGui.QWidget):
     cache1Dintegration = QtCore.Signal(np.ndarray, np.ndarray)
-    sigPlotIntegration = QtCore.Signal(object)
+    sigPlotQIntegration = QtCore.Signal(object)
+    sigPlotChiIntegration = QtCore.Signal(object)
 
 
     def __init__(self, dimg, parent, paths=None):
@@ -212,7 +213,8 @@ class imageTab(QtGui.QWidget):
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
-        self.sigPlotIntegration.connect(self.plotintegration)
+        self.sigPlotQIntegration.connect(self.plotqintegration)
+        self.sigPlotChiIntegration.connect(self.plotchiintegration)
 
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
@@ -292,7 +294,9 @@ class imageTab(QtGui.QWidget):
 
         #self.viewbox.scene().removeItem(evt)
 
-
+    @property
+    def isChiPlot(self):
+        return self.parentwindow.ui.plotTabs.currentIndex()
 
     def mouseMoved(self, evt):
         """
@@ -503,30 +507,26 @@ class imageTab(QtGui.QWidget):
 
         mask = self.dimg.experiment.mask
 
-        if iscake:
+        if self.iscake:
             img = self.dimg.cake
             mask = self.dimg.cakemask
             # print self.dimg.cakeqx
             #print self.dimg.cakeqy
 
-        elif isremesh:
+        elif self.isremesh:
             img = self.dimg.remesh
             mask = self.dimg.remeshmask
             # print self.dimg.remeshqx
             #print self.dimg.remeshqy
 
-        if iscake:
+        if self.iscake:
             if self.centerplot is not None:
                 self.centerplot.clear()
         else:
             self.drawcenter()
 
-        if ismaskshown:
-            print 'maskmax:', np.max(mask) * 1.0
-            invmask = 1 - mask
-            self.maskimage.setImage(
-                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
-                opacity=.25)
+        if self.ismaskshown:
+            self.maskoverlay()
         else:
             self.maskimage.clear()
 
@@ -747,14 +747,24 @@ class imageTab(QtGui.QWidget):
         self.drawcenter()
 
     def replot(self):
-        self.parentwindow.integration.clear()
 
-        self.replotprimary()
-        self.parentwindow.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-        self.parentwindow.qLine.setVisible(False)
-        self.parentwindow.integration.addItem(self.parentwindow.qLine)
 
-    def replotprimary(self):
+        if self.parentwindow.ui.plotTabs.currentIndex() == 0:
+            self.parentwindow.qintegration.clear()
+
+            # self.replotprimary()
+            self.parentwindow.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+            self.parentwindow.qLine.setVisible(False)
+            self.parentwindow.qintegration.addItem(self.parentwindow.qLine)
+            self.replotq()
+        elif self.parentwindow.ui.plotTabs.currentIndex() == 1:
+            self.parentwindow.chiintegration.clear()
+            self.parentwindow.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+            self.parentwindow.chiLine.setVisible(False)
+            self.parentwindow.chiintegration.addItem(self.parentwindow.chiLine)
+            self.replotchi()
+
+    def replotchi(self):
         if not self.dimg.experiment.iscalibrated:
             return None
 
@@ -766,19 +776,116 @@ class imageTab(QtGui.QWidget):
                 if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
                     tabtracker.replotassecondary()
 
-        iscake = self.parentwindow.difftoolbar.actionCake.isChecked()
-        isremesh = self.parentwindow.difftoolbar.actionRemeshing.isChecked()
-
-        if iscake:
+        if self.iscake:
             data = self.dimg.cake
-        elif isremesh:
+        elif self.isremesh:
             data = self.dimg.remesh
         else:
             data = self.dimg.data
+
         ai=self.dimg.experiment.getAI().getPyFAI()
+        self.pool.apply_async(pipeline.integration.chiintegratepyFAI,
+                              args=(self.dimg.data, self.dimg.mask, ai, self.iscake ),
+                              callback=self.chiintegrationrelay)
+        # pipeline.integration.chiintegratepyFAI(self.dimg.data, self.dimg.mask, ai, precaked=self.iscake)
+
+        for roi in self.viewbox.addedItems:
+            try:
+                if hasattr(roi, 'isdeleting'):
+                    if not roi.isdeleting:
+                        print type(roi)
+                        cut = None
+                        if issubclass(type(roi), pg.ROI) or issubclass(type(roi), pg.LinearRegionItem):
+                            cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+                            print 'Cut:', cut.shape
+
+
+
+
+
+
+
+                        # elif type(roi) is pg.LineSegmentROI:
+                        #
+                        #
+                        # cut = self.region.getArrayRegion(data, self.imageitem)
+                        #
+                        #     x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
+                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
+                        #                     cut.__len__())
+                        #     y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
+                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
+                        #                     cut.__len__())
+                        #
+                        #     q = pixel2q(x, y, self.dimg.experiment)
+                        #     qmiddle = q.argmin()
+                        #     leftq = -q[0:qmiddle]
+                        #     rightq = q[qmiddle:]
+                        #
+                        #     if leftq.__len__() > 1: self.parentwindow.qintegration.plot(leftq, cut[:qmiddle])
+                        #     if rightq.__len__() > 1: self.parentwindow.qintegration.plot(rightq, cut[qmiddle:])
+
+                        # elif type(roi) is ROI.LinearRegionItem:
+                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
+                        #         regionbounds = roi.getRegion()
+                        #         cut = np.zeros_like(data)
+                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
+                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
+                        #         regionbounds = roi.getRegion()
+                        #         cut = np.zeros_like(data)
+                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
+                        #
+                        #     else:
+                        #         print debugtools.frustration()
+
+                        if cut is not None:
+                            if self.iscake:
+
+                                ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
+                                chi = self.dimg.cakeqy
+                                I = np.ma.average(ma, axis=1)
+                                I = np.trim_zeros(I, 'b')
+                                chi = chi[:len(I)]
+                                I = np.trim_zeros(I, 'f')
+                                chi = chi[-len(I):]
+                                self.plotchiintegration([chi, I, [0, 255, 255]])
+                            else:
+
+                                ai = self.dimg.experiment.getAI().getPyFAI()
+                                self.pool.apply_async(pipeline.integration.chiintegratepyFAI,
+                                                      args=(self.dimg.data, self.dimg.mask, ai, self.iscake, cut,
+                                                            [0, 255, 255]),
+                                                      callback=self.chiintegrationrelay)
+
+
+
+                    else:
+                        self.viewbox.removeItem(roi)
+            except Exception as ex:
+                print 'Warning: error displaying ROI integration.'
+                print ex.message
+
+    def replotq(self):
+        if not self.dimg.experiment.iscalibrated:
+            return None
+
+        cut = None
+
+        if self.parentwindow.difftoolbar.actionMultiPlot.isChecked():
+            for tabtracker in self.parentwindow.ui.findChildren(imageTabTracker):
+                if self.parentwindow.ui.findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
+                    tabtracker.replotassecondary()
+
+        if self.iscake:
+            data = self.dimg.cake
+        elif self.isremesh:
+            data = self.dimg.remesh
+        else:
+            data = self.dimg.data
+        ai = self.dimg.experiment.getAI().getPyFAI()
         self.pool.apply_async(pipeline.integration.radialintegratepyFAI,
-                              args=(self.dimg.data, self.dimg.mask, ai, None, isremesh, None),
-                              callback=self.integrationrelay)
+                              args=(self.dimg.data, self.dimg.mask, ai, None, self.isremesh, None),
+                              callback=self.qintegrationrelay)
 
         for roi in self.viewbox.addedItems:
             try:
@@ -814,8 +921,8 @@ class imageTab(QtGui.QWidget):
                             leftq = -q[0:qmiddle]
                             rightq = q[qmiddle:]
 
-                            if leftq.__len__() > 1: self.parentwindow.integration.plot(leftq, cut[:qmiddle])
-                            if rightq.__len__() > 1: self.parentwindow.integration.plot(rightq, cut[qmiddle:])
+                            if leftq.__len__() > 1: self.parentwindow.qintegration.plot(leftq, cut[:qmiddle])
+                            if rightq.__len__() > 1: self.parentwindow.qintegration.plot(rightq, cut[qmiddle:])
 
                         # elif type(roi) is ROI.LinearRegionItem:
                         #     if roi.orientation is pg.LinearRegionItem.Horizontal:
@@ -831,7 +938,7 @@ class imageTab(QtGui.QWidget):
                         #         print debugtools.frustration()
 
                         if cut is not None:
-                            if iscake:
+                            if self.iscake:
 
                                 ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
                                 q = self.dimg.cakeqx / 10.
@@ -845,8 +952,8 @@ class imageTab(QtGui.QWidget):
 
                                 ai = self.dimg.experiment.getAI().getPyFAI()
                                 self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
-                                self.dimg.data, self.dimg.mask, ai, cut, isremesh, [0, 255, 255]),
-                                                      callback=self.integrationrelay)
+                                    self.dimg.data, self.dimg.mask, ai, cut, self.isremesh, [0, 255, 255]),
+                                                      callback=self.qintegrationrelay)
 
 
                     else:
@@ -855,22 +962,41 @@ class imageTab(QtGui.QWidget):
                 print 'Warning: error displaying ROI integration.'
                 print ex.message
 
-    def integrationrelay(self, *args, **kwargs):
-        self.sigPlotIntegration.emit(*args, **kwargs)
+    def qintegrationrelay(self, *args, **kwargs):
+        self.sigPlotQIntegration.emit(*args, **kwargs)
 
-    def plotintegration(self, result):
+
+    def plotqintegration(self, result):
         (q, radialprofile, color) = result
         if color is None:
             color=[255,255,255]
         # cyan:[0, 255, 255]
-        curve=self.parentwindow.integration.plot(q, radialprofile, pen=pg.mkPen(color=color))
+        curve = self.parentwindow.qintegration.plot(q, radialprofile, pen=pg.mkPen(color=color))
         curve.setZValue(3 * 255 - sum(color))
-        self.parentwindow.integration.update()
+        self.parentwindow.qintegration.update()
+
+    def chiintegrationrelay(self, *args, **kwargs):
+        print args
+        self.sigPlotChiIntegration.emit(*args, **kwargs)
+
+    def plotchiintegration(self, result):
+        (chi, chiprofile, color) = result
+        if color is None:
+            color = [255, 255, 255]
+        # cyan:[0, 255, 255]
+        curve = self.parentwindow.chiintegration.plot(chi, chiprofile, pen=pg.mkPen(color=color))
+        curve.setZValue(3 * 255 - sum(color))
+        self.parentwindow.chiintegration.update()
 
 
     def polymask(self):
-        if self.activeaction is None:  # If there is no active action
-            self.activeaction = 'polymask'
+        maskroi = None
+        for roi in self.viewbox.addedItems:
+            print type(roi)
+            if type(roi) is pg.PolyLineROI:
+                maskroi = roi
+
+        if maskroi is None:
 
             # Start with a box around the center
             left = self.dimg.experiment.getvalue('Center X') - 100
@@ -893,7 +1019,7 @@ class imageTab(QtGui.QWidget):
 
             self.maskROI.checkPointMove = checkPointMove
 
-        elif self.activeaction == 'polymask':  # If the mask is completed
+        else:  # If the mask is completed
             self.activeaction = None
 
             # Get the region of the image that was selected; unforunately the region is trimmed
@@ -903,8 +1029,11 @@ class imageTab(QtGui.QWidget):
 
             # Decide how much to left and top pad based on the ROI bounding rectangle
             boundrect = self.viewbox.itemBoundingRect(self.maskROI)
-            leftpad = boundrect.x()
-            toppad = boundrect.y()
+            leftpad = max(boundrect.x(), 0)
+            toppad = max(boundrect.y(), 0)
+
+            print 'Leftpad:', leftpad
+            print 'Rightpad:', toppad
 
             # Pad the mask so it has the same shape as the image
             maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
@@ -913,7 +1042,7 @@ class imageTab(QtGui.QWidget):
                                 mode='constant')
 
             # Add the masked area to the active mask
-            self.dimg.experiment.addtomask(maskedarea)
+            self.dimg.experiment.addtomask(1 - maskedarea)
 
             # Draw the overlay
             #self.maskoverlay()
@@ -921,15 +1050,27 @@ class imageTab(QtGui.QWidget):
             # Remove the ROI
             self.viewbox.removeItem(self.maskROI)
 
+            # Redraw the mask
+            self.maskoverlay()
+
             # Redo the integration
             self.replot()
 
+
     def maskoverlay(self):
+        if self.iscake:
+            mask = self.dimg.cakemask
+        elif self.isremesh:
+            mask = self.dimg.remeshmask
+        else:
+            mask = self.dimg.experiment.mask
+
         # Draw the mask as a red channel image with an alpha mask
-        self.maskimage.setImage(np.dstack((
-            self.dimg.experiment.mask, np.zeros_like(self.dimg.experiment.mask),
-            np.zeros_like(self.dimg.experiment.mask),
-            self.dimg.experiment.mask)), opacity=.25)
+        print 'maskmax:', np.max(mask) * 1.0
+        invmask = 1 - mask
+        self.maskimage.setImage(
+            np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
+            opacity=.25)
 
 
     # def finddetector(self):

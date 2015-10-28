@@ -14,6 +14,7 @@ import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
 from hipies import debugtools
+from PySide import QtGui
 
 acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
 imagecache = dict()
@@ -158,7 +159,7 @@ def loadparas(path):
         print('Unexpected read error in loadparas')
     except IndexError:
         print('No txt file found in loadparas')
-    return None
+    return dict()
 
 
 def scanparas(path, frame=None):
@@ -247,8 +248,10 @@ def loadstichted(filepath2, filepath1):
 
     # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
-    mask2 = numpy.pad(1 - (finddetector(data2.T)[1]), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
-    mask1 = numpy.pad(1 - (finddetector(data1.T)[1]), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2).calc_mask(), ((padtop2, padbottom2), (padleft2, padright2)),
+                      'constant')
+    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1).calc_mask(), ((padtop1, padbottom1), (padleft1, padright1)),
+                      'constant')
 
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
@@ -277,7 +280,7 @@ def loadstichted(filepath2, filepath1):
 #     return None, None, None
 
 def finddetectorbyfilename(path):
-    dimg = diffimage(filepath=path)
+    dimg = diffimage(filepath=path, data=loadimage(path))
     return dimg.detector
 
 def loadthumbnail(path):
@@ -291,19 +294,19 @@ def loadthumbnail(path):
 
 
 def loadpath(path):
-    if '_lo_' in path:
-        # print "input: lo / output: hi"
-        path2 = path.replace('_lo_', '_hi_')
-        return loadstichted(path, path2), None
-
-    elif '_hi_' in path:
-        # print "input: hi / output: lo"
-        path2 = path.replace('_hi_', '_lo_')
-        return loadstichted(path, path2), None
-
-    else:
+    # if '_lo_' in path:
+    # # print "input: lo / output: hi"
+    #     path2 = path.replace('_lo_', '_hi_')
+    #     return loadstichted(path, path2)
+    #
+    # elif '_hi_' in path:
+    #     # print "input: hi / output: lo"
+    #     path2 = path.replace('_hi_', '_lo_')
+    #     return loadstichted(path, path2)
+    #
+    # else:
         # print "file don't contain hi or lo, just 1 file"
-        return loadsingle(path)
+    return loadimage(path)
 
 
     #
@@ -313,6 +316,7 @@ def loadpath(path):
     # print data
     # IM=Image.fromarray(data)
     #     IM.show()
+
 
 
 
@@ -354,7 +358,7 @@ class diffimage():
         :param experiment: hipies.config.experiment
         """
 
-        print 'Loading ' + str(filepath) + '...'
+        print 'Loading ' + unicode(filepath) + '...'
 
         self._data = data
 
@@ -396,7 +400,7 @@ class diffimage():
         if self._data is None:
             if self.filepath is not None:
                 try:
-                    self._data = loadimage(self.filepath)
+                    self._data = loadpath(self.filepath)
                 except IOError:
                     debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
@@ -443,11 +447,12 @@ class diffimage():
             mask = detector.calc_mask()
             self._detector = detector
             if detector is not None:
-                if mask is not None:
-                    self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                self.experiment.setvalue('Detector', name)
+                if self.experiment is not None:
+                    if mask is not None:
+                        self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Detector', name)
         return self._detector
 
     def finddetector(self):
@@ -518,10 +523,25 @@ class diffimage():
     @property
     def remesh(self):
         if not self.iscached('remesh'):
+            print 'headers:', self.headers
+            # read incident angle
+            if "Sample Alpha Stage" in self.headers:
+                alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
+            elif "Alpha" in self.headers:
+                alphai = np.deg2rad(float(self.headers['Alpha']))
+            elif "Sample Theta" in self.headers:
+                alphai = np.deg2rad(float(self.headers['Sample Theta']))
+            elif "samtilt" in self.headers:
+                alphai = np.deg2rad(float(self.headers['samtilt']))
+            else:
+                alphai = self.queryAlphaI()
+            if alphai is None:
+                return self.data
+
             remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
-                                             self.experiment.getGeometry())
+                                             self.experiment.getGeometry(), alphai)
             remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
-                                             self.experiment.getGeometry())
+                                             self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
             self.cache['remeshmask'] = remeshmask >0
@@ -529,6 +549,17 @@ class diffimage():
             self.cache['remeshqy'] = y
 
         return self.cache['remesh']
+
+    def queryAlphaI(self):
+        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):')
+
+        alphai = np.deg2rad(alphai)
+        if ok:
+            self.headers['Alpha'] = alphai
+        else:
+            return None
+
+        return alphai
 
     def __del__(self):
         # TODO: do more here!
@@ -583,12 +614,12 @@ class diffimage():
 
         return self._headers
 
-    
-    def __getattr__(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            raise AttributeError('diffimage has no attribute: ' + name)
+
+        # def __getattr__(self, name):
+        # if name in self.cache:
+        #         return self.cache[name]
+        #     else:
+        #         raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():

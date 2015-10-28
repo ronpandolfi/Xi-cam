@@ -202,6 +202,44 @@ def radialintegratepyFAI(data,mask, AIdict, cut=None, remesh=False, color=[255,2
     return q, radialprofile, color
 
 
+def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], xres=1000, yres=1000):
+    print 'Chi integration...'
+
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    # Always do mask with 1-valid, 0's excluded
+
+
+
+
+    if mask is not None:
+        mask = mask.copy()
+
+    print 'image:', data.shape
+    print 'mask:', mask.shape
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+    # data *= cut
+
+    if not precaked:
+        cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+        mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+
+    maskedcake = np.ma.masked_array(cake, mask=mask)
+
+    chiprofile = np.ma.average(maskedcake, axis=1)
+
+    return chi, chiprofile, color
+
+
+
 def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
     # if mask is None:
     # mask = np.zeros_like(imgdata)

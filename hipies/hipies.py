@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 ### TODO: Add calibrant selection
 # TODO: Add calibration button
 # TODO: Make experiment save/load
@@ -53,7 +55,7 @@ import multiprocessing
 
 class MyMainWindow():
     def __init__(self,app):
-        self.pool = multiprocessing.Pool()
+        self._pool = None
         # Load the gui from file
         self.app = app
         guiloader = QUiLoader()
@@ -77,26 +79,7 @@ class MyMainWindow():
         self.experiment = config.experiment()
         self.folderwatcher = watcher.newfilewatcher()
 
-        # TOOLBARS
-        # self.difftoolbar = toolbar.difftoolbar()
-        # self.difftoolbar.actionCenterFind.triggered.connect(self.centerfind)
-        # self.difftoolbar.actionPolyMask.triggered.connect(self.polymask)
-        # self.difftoolbar.actionLog_Intensity.triggered.connect(self.redrawcurrent)
-        # self.difftoolbar.actionRemove_Cosmics.triggered.connect(self.removecosmics)
-        # self.difftoolbar.actionMultiPlot.triggered.connect(self.multiplottoggle)
-        # self.difftoolbar.actionMaskLoad.triggered.connect(self.maskload)
-        # self.difftoolbar.actionRadial_Symmetry.triggered.connect(self.redrawcurrent)
-        # self.difftoolbar.actionMirror_Symmetry.triggered.connect(self.redrawcurrent)
-        # self.difftoolbar.actionShow_Mask.triggered.connect(self.redrawcurrent)
-        # self.difftoolbar.actionCake.triggered.connect(self.redrawcurrent)
-        # self.difftoolbar.actionLine_Cut.triggered.connect(self.linecut)
-        # self.difftoolbar.actionVertical_Cut.triggered.connect(self.vertcut)
-        # self.difftoolbar.actionHorizontal_Cut.triggered.connect(self.horzcut)
-        # self.difftoolbar.actionRemeshing.triggered.connect(self.remeshmode)
-        # self.difftoolbar.actionCalibrate_AgB.triggered.connect(self.calibrate)
-        # self.difftoolbar.actionRefine_Center.triggered.connect(self.refinecenter)
 
-        #self.ui.diffbox.insertWidget(0,self.difftoolbar)
 
 
         # ACTIONS
@@ -189,13 +172,23 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QCheckBox, 'propertiesfold').stateChanged.connect(self.propertiesfoldtoggle)
 
         # Setup integration plot widget
-        integrationwidget = pg.PlotWidget()
-        self.integration = integrationwidget.getPlotItem()
-        self.integration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
+        qintegrationwidget = pg.PlotWidget()
+        self.qintegration = qintegrationwidget.getPlotItem()
+        self.qintegration.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
         self.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
         self.qLine.setVisible(False)
-        self.integration.addItem(self.qLine)
-        self.ui.findChild(QtGui.QVBoxLayout, 'plotholder').addWidget(integrationwidget)
+        self.qintegration.addItem(self.qLine)
+        self.ui.qplotslot.addWidget(qintegrationwidget)
+        chiintegrationwidget = pg.PlotWidget()
+        self.chiintegration = chiintegrationwidget.getPlotItem()
+        self.chiintegration.setLabel('bottom', u'χ (Degrees)')
+        self.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        self.chiLine.setVisible(False)
+        self.chiintegration.addItem(self.chiLine)
+        self.ui.chiplotslot.addWidget(chiintegrationwidget)
+
+        self.ui.plotTabs.currentChanged.connect(self.replotviewer)
+
 
         # Setup timeline plot widget
         timelineplot = pg.PlotWidget()
@@ -221,32 +214,7 @@ class MyMainWindow():
         menu.addAction(opwidgetaction)
 
 
-        # Setup viewer tool menu
-        # menu = QtGui.QMenu()
-        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionPolyMask'))
-        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionRemove_Cosmics'))
-        # menu.addAction(self.ui.findChild(QtGui.QAction, 'actionMaskLoad'))
-        # toolbuttonMasking = QtGui.QToolButton()
-        # toolbuttonMasking.setDefaultAction(self.ui.findChild(QtGui.QAction, 'actionMasking'))
-        # toolbuttonMasking.setMenu(menu)
-        # toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
-        # self.difftoolbar = QtGui.QToolBar()
-        # self.difftoolbar.addWidget(toolbuttonMasking)
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCenterFind'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRefine_Center'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCalibrate_AgB'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLog_Intensity'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionCake'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRadial_Symmetry'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMirror_Symmetry'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionShow_Mask'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionVertical_Cut'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionHorizontal_Cut'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionLine_Cut'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionMultiPlot'))
-        # self.difftoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionRemeshing'))
-        # self.difftoolbar.setIconSize(QtCore.QSize(32, 32))
-        # self.ui.findChild(QtGui.QVBoxLayout, 'diffbox').addWidget(self.difftoolbar)
+
 
 
         # Timeline toolbar
@@ -254,7 +222,7 @@ class MyMainWindow():
         self.timelinetoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                              self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                              self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                             self.roi, self.arccut, self.process)
+                                             self.roi, self.arccut, self.polymask, self.process)
         self.ui.timelinebox.insertWidget(0, self.timelinetoolbar)
 
         # Viewer toolbar
@@ -262,7 +230,7 @@ class MyMainWindow():
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                          self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
                                          self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                         self.roi, self.arccut)
+                                         self.roi, self.arccut, self.polymask)
         self.ui.diffbox.insertWidget(0, self.difftoolbar)
 
         # Setup file operation toolbox
@@ -332,6 +300,11 @@ class MyMainWindow():
         # Show UI and end app when it closes
         self.ui.show()
         self.ui.raise_()
+
+    def replotviewer(self):
+        if hasattr(self.currentImageTab(), 'tab'):
+            if self.currentImageTab().tab is not None:
+                self.currentImageTab().tab.replot()
 
 
     def process(self):
@@ -807,8 +780,8 @@ class MyMainWindow():
             #
             # def loadplugin(self,module):
 
-
-
-
-if __name__ == '__main__':
-    window = MyMainWindow()
+    @property
+    def pool(self):
+        if self._pool is None:
+            self._pool = multiprocessing.Pool()
+        return self._pool
