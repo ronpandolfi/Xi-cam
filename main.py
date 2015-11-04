@@ -1,8 +1,7 @@
+from PySide import QtGui
 import hipies
 import sys
 import os
-from PySide import QtGui
-
 
 
 if __name__=='__main__':
