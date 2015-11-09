@@ -2,35 +2,12 @@ import numpy as np
 import loader
 import scipy.ndimage
 import warnings
+import variationoperators
 
 
-# Operation signature: previous, current, next, ROI-mask
-
-def chisquared(p, c, n, r):
-    # from hipies import debugtools
-    # debugtools.showimage(c)
-    # if type(r) is np.ndarray:
-    #     debugtools.showimage(r)
-    return np.sum(r * np.square(c.astype(float) - p))
 
 
-def absdiff(p, c, n, r):
-    return np.sum(r * np.abs(c - p))
 
-
-def normabsdiff(p, c, n, r):
-    return np.sum(r * np.abs(c - p) / p)
-
-
-def sumintensity(p, c, n, r):
-    return np.sum(r * c)
-
-
-def normabsdiffderiv(p, c, n, r):
-    return -np.sum(r * (np.abs(n - c) / c) + np.sum(np.abs(c - p) / c))
-
-
-operations = [chisquared, absdiff, normabsdiff, sumintensity, normabsdiffderiv]
 
 
 def filevariation(operationindex, filea, c, filec, roi=None):
@@ -42,6 +19,7 @@ def filevariation(operationindex, filea, c, filec, roi=None):
     return variation(operationindex, p, c, n, roi)
 
 
+# Deprecating...
 def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
     if imga is not None and imgb is not None and imgc is not None:
         try:
@@ -60,7 +38,7 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
                 else:
                     roi = 1
             with np.errstate(divide='ignore'):
-                return operations[operationindex](p, c, n, roi)
+                return variationoperators.operations.values()[operationindex](p, c, n, roi, None, None)
         except TypeError:
             print('Variation could not be determined for a frame.')
     else:

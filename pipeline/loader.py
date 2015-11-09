@@ -615,11 +615,11 @@ class diffimage():
         return self._headers
 
 
-        # def __getattr__(self, name):
-        # if name in self.cache:
-        #         return self.cache[name]
-        #     else:
-        #         raise AttributeError('diffimage has no attribute: ' + name)
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():
@@ -629,7 +629,15 @@ class imageseries():
         self.appendimages(paths)
         self.experiment = experiment
         self.roi = None
-        self.thumbs = dict()
+        self._thumbs = None
+        self._dimgs = None
+
+
+    @property
+    def dimgs(self):
+        if self._dimgs is None:
+            self._dimgs = [self.__getitem__(i) for i in range(self.__len__())]
+        return self._dimgs
 
     def __len__(self):
         return len(self.paths)
@@ -683,12 +691,38 @@ class imageseries():
         # get the first frame's profile
         keys = self.paths.keys()
 
-        for key in keys:
+        for key, index in zip(keys, range(self.__len__())):
             variationx = self.path2frame(self.paths[key])
+            variationy = self.calcVariation(index, operationindex, roi)
 
-            variation[variationx] = self.getDiffImage(key).variation(operationindex, roi)
+            if variationy is not None:
+                variation[variationx] = variationy
 
         return variation
+
+    def calcVariation(self, i, operationindex, roi):
+        if roi is None:
+            roi = 1
+        if i == 0:
+            return None  # Prevent wrap-around with first variation
+
+        thumbs = self.thumbs
+        try:
+            frames = [thumbs[i - 1], thumbs[i], thumbs[i + 1], roi, thumbs[0], thumbs[-1]]
+            return variation.variationoperators.operations.values()[operationindex](*frames)
+        except IndexError as ex:
+            print 'Skipping index:', i
+        return None
+
+    @property
+    @debugtools.timeit
+    def thumbs(self):
+        if self._thumbs is None:
+            self._thumbs = [dimg.thumbnail for dimg in self.dimgs]
+        return self._thumbs
+
+
+
 
 
 
@@ -696,7 +730,6 @@ class imageseries():
     def path2frame(path):
         try:
             expr = '(?<=_)[\d]+(?=[_.])'
-
             return int(re.search(expr, os.path.basename(path)).group(0))
 
         except ValueError:

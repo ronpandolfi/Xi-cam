@@ -509,13 +509,11 @@ class imageTab(QtGui.QWidget):
 
         if self.iscake:
             img = self.dimg.cake
-            mask = self.dimg.cakemask
             # print self.dimg.cakeqx
             #print self.dimg.cakeqy
 
         elif self.isremesh:
             img = self.dimg.remesh
-            mask = self.dimg.remeshmask
             # print self.dimg.remeshqx
             #print self.dimg.remeshqy
 
@@ -604,8 +602,8 @@ class imageTab(QtGui.QWidget):
         # self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
         # if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
         region = ROI.LineROI(
-            [self.dimg.experiment.getvalue('Center X'), self.dimg.experiment.getvalue('Center Y')],
-            [self.dimg.experiment.getvalue('Center X'), -self.dimg.data.shape[0]], 5, removable=True)
+            self.getcenter(),
+            [self.getcenter()[0], -self.dimg.data.shape[0]], 5, removable=True)
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
@@ -626,8 +624,8 @@ class imageTab(QtGui.QWidget):
         #         print('Attribute error in verticalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
                                       bounds=[0, self.dimg.data.shape[1]],
-                                      values=[self.dimg.experiment.getvalue('Center X') - 10,
-                                              10 + self.dimg.experiment.getvalue('Center X')])
+                                      values=[self.getcenter()[0] - 10,
+                                              10 + self.getcenter()[0]])
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
@@ -650,13 +648,17 @@ class imageTab(QtGui.QWidget):
         #         print('Attribute error in horizontalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
                                       bounds=[0, self.dimg.data.shape[0]],
-                                      values=[self.dimg.experiment.getvalue('Center Y') - 10,
-                                              10 + self.dimg.experiment.getvalue('Center Y')])
+                                      values=[10 - self.getcenter()[1],
+                                              10 + self.getcenter()[1]])
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
+
+        if self.iscake:
+            self.parentwindow.ui.plotTabs.setCurrentIndex(1)
+
         self.replot()
         # else:
         # #self.viewbox.removeItem(self.region)
@@ -884,7 +886,10 @@ class imageTab(QtGui.QWidget):
             data = self.dimg.data
         ai = self.dimg.experiment.getAI().getPyFAI()
         self.pool.apply_async(pipeline.integration.radialintegratepyFAI,
-                              args=(self.dimg.data, self.dimg.mask, ai, None, self.isremesh, None),
+                              args=((self.dimg.data if not self.isremesh else data),
+                                    (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
+                                    [c * self.dimg.experiment.getvalue('Pixel Size X') for c in
+                                     self.getcenter()[::-1]]),
                               callback=self.qintegrationrelay)
 
         for roi in self.viewbox.addedItems:
@@ -947,12 +952,15 @@ class imageTab(QtGui.QWidget):
                                 q = q[:len(I)]
                                 I = np.trim_zeros(I, 'f')
                                 q = q[-len(I):]
-                                self.plotintegration([q, I, [0, 255, 255]])
+                                self.plotqintegration([q, I, [0, 255, 255]])
                             else:
 
                                 ai = self.dimg.experiment.getAI().getPyFAI()
                                 self.pool.apply_async(pipeline.integration.radialintegratepyFAI, args=(
-                                    self.dimg.data, self.dimg.mask, ai, cut, self.isremesh, [0, 255, 255]),
+                                    (self.dimg.data if not self.isremesh else data),
+                                    (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, cut,
+                                    [0, 255, 255], [c * self.dimg.experiment.getvalue('Pixel Size X') for c in
+                                                    self.getcenter()[::-1]]),
                                                       callback=self.qintegrationrelay)
 
 

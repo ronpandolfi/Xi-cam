@@ -51,12 +51,10 @@ class timelinetab(viewer.imageTab):
 
         self.operationindex=0
 
-        self.getthumbnails()
-
 
         super(timelinetab, self).__init__(dimg, parentwindow)
 
-        img = np.array(self.thumbnails)
+        img = np.array(self.simg.thumbs)
         img = (np.log(img * (img > 0) + (img < 1)))
 
         self.imgview.setImage(img, xvals=self.simg.xvals)
@@ -96,9 +94,8 @@ class timelinetab(viewer.imageTab):
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
         operationcombo.setObjectName('operationcombo')
-        operationcombo.addItems(
-            ['Chi Squared', 'Abs. difference', 'Norm. Abs. difference', 'Sum intensity', 'Norm. Abs. Diff. derivative'])
-        #operationcombo.currentIndexChanged.connect(self.changetimelineoperation)
+        operationcombo.addItems(pipeline.variationoperators.operations.keys())
+        operationcombo.currentIndexChanged.connect(self.setvariationmode)
         opwidgetaction = QtGui.QWidgetAction(menu)
         opwidgetaction.setDefaultWidget(operationcombo)
         #need to connect it
@@ -108,9 +105,7 @@ class timelinetab(viewer.imageTab):
         # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
         #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
-    @debugtools.timeit
-    def getthumbnails(self,):
-        self.thumbnails = [dimg.thumbnail for dimg in self.simg]
+
 
     def processtimeline(self):
         self.rescan()
@@ -176,6 +171,7 @@ class timelinetab(viewer.imageTab):
             #    print ex.message
 
     def setvariationmode(self, index):
+        print 'operationset:', index
         self.operationindex = index
 
     def cleartimeline(self):

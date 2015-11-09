@@ -218,7 +218,7 @@ class MyMainWindow():
         # Viewer toolbar
         self.difftoolbar = toolbar.difftoolbar()
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
-                                         self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
+                                         self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                          self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                          self.roi, self.arccut, self.polymask)
         self.ui.diffbox.insertWidget(0, self.difftoolbar)
@@ -424,7 +424,9 @@ class MyMainWindow():
         """
         Connect remesh mode to current tab
         """
-        self.currentImageTab().tab.redrawimage()
+        self.redrawcurrent()
+        if self.currentImageTab() is not None:
+            self.currentImageTab().tab.replot()
 
     def currentchanged(self, index):
         """
