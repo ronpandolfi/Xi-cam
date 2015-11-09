@@ -3,8 +3,10 @@ import numpy as np
 
 # README!
 #
-# To add a variation operation, define the function using the below signature, then add it the 'operations'
-# dictionary at the end of this module. The key is the display name.
+# To add a variation operation,
+# 1. Your function must adhere to the signature below:
+#      (previous frame, current, next, ROI-mask, first, last)
+#   2. Add it the 'operations' dictionary at the end of this module. The key is the display name.
 
 
 # Operation signature: previous, current, next, ROI-mask, first, last
