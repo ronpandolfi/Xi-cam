@@ -6,7 +6,7 @@ import numpy as np
 # To add a variation operation,
 # 1. Your function must adhere to the signature below:
 #      (previous frame, current, next, ROI-mask, first, last)
-#   2. Add it the 'operations' dictionary at the end of this module. The key is the display name.
+# 2. Add it the 'operations' dictionary at the end of this module. The key is the display name.
 
 
 # Operation signature: previous, current, next, ROI-mask, first, last
