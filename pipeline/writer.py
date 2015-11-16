@@ -52,7 +52,7 @@ def writenexus(nexroot, path):
 
 
 @debugtools.timeit
-def thumbnail(img, factor=10):
+def thumbnail(img, factor=5):
     """
     Generate a thumbnail from an image
     """
@@ -64,6 +64,16 @@ def thumbnail(img, factor=10):
     return np.array(img)
 
 
+import StringIO
+
+
+@debugtools.timeit
+def jpeg(img):
+    buffer = StringIO.StringIO()
+    pilImage = Image.fromarray(img)
+    pilImage.save(buffer, "JPEG", quality=85)
+    print 'JPEG buffer size (bytes):', buffer.len
+    return buffer
 
 
 def blockshaped(arr, factor):

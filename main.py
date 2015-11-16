@@ -1,12 +1,13 @@
+from PySide import QtGui
 import hipies
 import sys
 import os
-from PySide import QtGui
 import multiprocessing
 
 outfile = open(os.path.join(os.path.expanduser('~'),'error.log'), 'w')
 sys.stdout = outfile
 sys.stderr = outfile
+
 
 if __name__=='__main__':
     multiprocessing.freeze_support()
