@@ -14,16 +14,6 @@
 ## TODO: Use detector mask in centerfinder
 
 
-# import numpy as rmc
-# import numpy as toolbar
-# import numpy as pipeline
-# import numpy as watcher
-# import numpy as timeline
-import numpy as viewer
-import numpy as config
-import numpy as models
-import numpy as pyqtgraph
-
 import sys
 import os
 
