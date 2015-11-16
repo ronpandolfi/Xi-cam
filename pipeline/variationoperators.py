@@ -5,36 +5,50 @@ import numpy as np
 #
 # To add a variation operation,
 # 1. Your function must adhere to the signature below:
-#      (previous frame, current, next, ROI-mask, first, last)
-# 2. Add it the 'operations' dictionary at the end of this module. The key is the display name.
+# (data, t, roi)
+#    Where data is a list of ndarray thumbnails (5x), one for each frame,
+#    t is the frame index to evaluate at, and roi is the region of interest mask.
+# 2. Add your function to the 'operations' dictionary at the end of this module. The key is the display name.
 
 
-# Operation signature: previous, current, next, ROI-mask, first, last
+# Operation signature:
 # If calculating variation between only two consecutive frames, use current and previous
 # ROI-mask is accept=1
 
-def chisquared(p, c, n, r, f, l):
-    return np.sum(r * np.square(c.astype(float) - p))
+def chisquared(data, t, roi):
+    current = data[t]
+    previous = data[t - 1]
+    return np.sum(roi * np.square(current.astype(float) - previous))
 
 
-def absdiff(p, c, n, r, f, l):
-    return np.sum(r * np.abs(c - p))
+def absdiff(data, t, roi):
+    current = data[t]
+    previous = data[t - 1]
+    return np.sum(roi * np.abs(current - previous))
 
 
-def normabsdiff(p, c, n, r, f, l):
-    return np.sum(r * np.abs(c - p) / p)
+def normabsdiff(data, t, roi):
+    current = data[t]
+    previous = data[t - 1]
+    return np.sum(roi * np.abs(current - previous) / previous)
 
 
-def sumintensity(p, c, n, r, f, l):
-    return np.sum(r * c)
+def sumintensity(data, t, roi):
+    current = data[t]
+    return np.sum(roi * current)
 
 
-def normabsdiffderiv(p, c, n, r, f, l):
-    return -np.sum(r * (np.abs(n - c) / c) + np.sum(np.abs(c - p) / c))
+def normabsdiffderiv(data, t, roi):
+    current = data[t]
+    previous = data[t - 1]
+    next = data[t + 1]
+    return -np.sum(roi * (np.abs(next - current) / current) + np.sum(np.abs(current - previous) / current))
 
 
-def chisquaredwithfirst(p, c, n, r, f, l):
-    return chisquared(f, c, n, r, f, l)
+def chisquaredwithfirst(data, t, roi):
+    current = data[t]
+    first = data[0]
+    return np.sum(roi * np.square(current.astype(float) - first))
 
 
 operations = collections.OrderedDict([('Chi Squared', chisquared),

@@ -41,7 +41,7 @@ def loadimage(path):
                 return data
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
-                print nxroot.tree
+                # print nxroot.tree
                 if hasattr(nxroot, 'data'):
                     if hasattr(nxroot.data, 'signal'):
                         data = nxroot.data.signal
@@ -258,6 +258,23 @@ def loadstichted(filepath2, filepath1):
     return data
 
 
+def loadthumbnail(path):
+    try:
+        if os.path.splitext(path)[1] in ['.nxs', '.hdf']:
+            nxroot = nx.load(pathtools.path2nexus(path))
+            # print nxroot.tree
+            if hasattr(nxroot, 'data'):
+                if hasattr(nxroot.data, 'thumbnail'):
+                    thumb = np.array(nxroot.data.thumbnail)
+                    return thumb
+    except IOError:
+        print('IO Error loading: ' + path)
+    except TypeError:
+        print 'TypeError: path has type ', str(type(path))
+
+    return None
+
+
 @debugtools.timeit
 # def finddetector(imgdata):
 #     for name, detector in detectors.ALL_DETECTORS.iteritems():
@@ -283,14 +300,13 @@ def finddetectorbyfilename(path):
     dimg = diffimage(filepath=path, data=loadimage(path))
     return dimg.detector
 
-def loadthumbnail(path):
-    # nxpath = pathtools.path2nexus(path)
 
-    img=diffimage(filepath=path).thumbnail
-
-    if img is not None:
-        img = writer.thumbnail(img)
-    return img
+# def loadthumbnail(path):
+# # nxpath = pathtools.path2nexus(path)
+#
+#     img=diffimage(filepath=path).thumbnail
+#
+#     return img
 
 
 def loadpath(path):
@@ -309,44 +325,11 @@ def loadpath(path):
     return loadimage(path)
 
 
-    #
-    # if __name__=='__main__':
-    # from PIL import Image
-    # data,paras=loadpath('/home/remi/PycharmProjects/saxs-on/samples/AgB_5s_hi_2m.edf')
-    # print data
-    # IM=Image.fromarray(data)
-    #     IM.show()
 
 
-
-
-
-
-
-
-
-
-    ##################################################################"
-    #
-    # tailleIM=(taille[0]-2*deltaY,taille[1])
-    # IM=zeros((tailleIM))
-    #
-    # for i in range(0,np.size(IM,0)):
-    #     for j in range(0,np.size(IM,1)):
-    #         if data1[i,j]==0:
-    #             IM[i,j]=data2[i+deltaY,j]
-    #         elif data2[i+deltaY,j]==0:
-    #             IM[i,j]=data1[i,j]
-    #         else:
-    #             IM[i,j]=(data1[i,j]+data2[i+deltaY,j])/2
-    # Ima=Image.fromarray(IM)
-
-# Ima.show()
 
 
 import integration, remesh, center_approx, variation, pathtools
-from fabio import file_series
-
 
 class diffimage():
     def __init__(self, filepath=None, data=None, detector=None, experiment=None):
@@ -368,6 +351,7 @@ class diffimage():
         self._thumb = None
         self._variation = dict()
         self._headers = None
+        self._jpeg = None
         self.experiment = experiment
 
 
@@ -494,8 +478,16 @@ class diffimage():
     @property
     def thumbnail(self):
         if self._thumb is None:
-            self._thumb = writer.thumbnail(self.data)
+            self._thumb = loadthumbnail(self.filepath)
+            if self._thumb is None:
+                self._thumb = writer.thumbnail(self.data)
         return self._thumb
+
+    @property
+    def jpeg(self):
+        if self._jpeg is None:
+            self._jpeg = writer.jpeg(self.data.astype(np.uint8))
+        return self._jpeg
 
     def iscached(self, key):
         return key in self.cache
@@ -631,6 +623,7 @@ class imageseries():
         self.roi = None
         self._thumbs = None
         self._dimgs = None
+        self._jpegs = None
 
 
     @property
@@ -691,6 +684,9 @@ class imageseries():
         # get the first frame's profile
         keys = self.paths.keys()
 
+        if roi is not None:
+            roi = writer.thumbnail(roi.T)
+
         for key, index in zip(keys, range(self.__len__())):
             variationx = self.path2frame(self.paths[key])
             variationy = self.calcVariation(index, operationindex, roi)
@@ -708,8 +704,8 @@ class imageseries():
 
         thumbs = self.thumbs
         try:
-            frames = [thumbs[i - 1], thumbs[i], thumbs[i + 1], roi, thumbs[0], thumbs[-1]]
-            return variation.variationoperators.operations.values()[operationindex](*frames)
+
+            return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
         except IndexError as ex:
             print 'Skipping index:', i
         return None
@@ -721,9 +717,12 @@ class imageseries():
             self._thumbs = [dimg.thumbnail for dimg in self.dimgs]
         return self._thumbs
 
+    @property
+    def jpegs(self):
+        if self._jpegs is None:
+            self._jpegs = jpegimageset([dimg.jpeg for dimg in self.dimgs])
 
-
-
+        return self._jpegs
 
 
     @staticmethod
@@ -736,3 +735,41 @@ class imageseries():
             print 'Path has no frame number:', path
 
         return None
+
+from PIL import Image
+
+
+class jpegimageset():
+    def __init__(self, jpegs):
+        self.jpegs = jpegs
+
+    @property
+    def dtype(self):
+        return np.uint8
+
+    @property
+    def max(self):
+        return np.max(Image.open(self.jpegs[0]))
+
+    @property
+    def min(self):
+        return np.min(Image.open(self.jpegs[0]))
+
+    @property
+    def ndim(self):
+        return 3
+
+    @property
+    def shape(self):
+        return (len(self.jpegs), np.shape(Image.open(self.jpegs[0]))[0], np.shape(Image.open(self.jpegs[0]))[1])
+
+    @property
+    def size(self):
+        return len(self.jpegs) * np.product(np.size(Image.open(self.jpegs[0])))
+
+    def __getitem__(self, item):
+        print 'item:', item
+        if type(item) in (int, np.int64):
+            return self.jpegs[item]
+        else:
+            return np.array([self.jpegs[i] for i in item])

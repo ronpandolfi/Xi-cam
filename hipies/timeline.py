@@ -106,6 +106,7 @@ class timelinetab(viewer.imageTab):
         #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
 
+        self.rescan()
 
     def processtimeline(self):
         self.rescan()
@@ -129,7 +130,7 @@ class timelinetab(viewer.imageTab):
 
 
     def hideoverlay(self):
-        self.scale=10
+        self.scale = 5
 
     def setscale(self):
         self.imageitem.resetTransform()
@@ -189,7 +190,6 @@ class timelinetab(viewer.imageTab):
             color = [255,255,255]
 
         # TODO: plot variation with indices, and skipped frames; skip None's
-
 
 
         variation = np.array(variation.items())

@@ -334,15 +334,20 @@ class imageTab(QtGui.QWidget):
                     #print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
-                                         u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
-                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9</div>" % (
+                                             u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
+                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,"
+                                             u"  d=%0.3f nm,"
+                                             u"  \u03B8=%.2f</div>" % (
                                                  x,
                                                  y,
                                                  data[int(x),
                                                       int(y)],
                                                  self.getq(x, y),
+                                                 self.getq(x, y, 'z'),
                                                  self.getq(x, y, 'parallel'),
-                                                 self.getq(x, y, 'z')))
+                                                 2 * np.pi / self.getq(x, y) / 10,
+                                                 360. / (2 * np.pi) * np.arctan2(self.getq(x, y, 'z'),
+                                                                                 self.getq(x, y, 'parallel'))))
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     #y - self.dimg.experiment.center[1]) ** 2)))
                     #,  r=%0.1f
@@ -383,8 +388,8 @@ class imageTab(QtGui.QWidget):
                 return cakeq[y] / 10.
 
         elif isremesh:
-            remeshqpar = self.dimg.remeshqy
-            remeshqz = self.dimg.remeshqx
+            remeshqpar = self.dimg.remeshqx
+            remeshqz = self.dimg.remeshqy
             if mode is not None:
                 if mode == 'parallel':
                     return remeshqpar[x, y] / 10.
@@ -1105,6 +1110,8 @@ class imageTab(QtGui.QWidget):
         fabimg.write(filename)
 
 
+from PIL import Image
+
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
     def buildMenu(self):
@@ -1116,6 +1123,27 @@ class ImageView(pg.ImageView):
         if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             ev.accept()
             self.sigKeyRelease.emit()
+
+            # def updateImage(self, autoHistogramRange=True):
+            # ## Redraw image on screen
+            #     if self.image is None:
+            #         return
+            #
+            #     image = self.getProcessedImage()
+            #
+            #     if autoHistogramRange:
+            #         self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+            #     if self.axes['t'] is None:
+            #         self.imageItem.updateImage(image)
+            #     else:
+            #         self.ui.roiPlot.show()
+            #         img=np.array(Image.open(image[self.currentIndex]),dtype=np.uint8)
+            #         img=(np.log(img * (img > 0) + (img < 1)))
+            #         self.imageItem.updateImage(img)
+            #
+            # def quickMinMax(self, data):
+            #
+            #     return 0, 255
 
 
 

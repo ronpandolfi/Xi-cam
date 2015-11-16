@@ -50,7 +50,7 @@ class MyMainWindow():
         self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
-        f = QtCore.QFile("gui/mainwindow.ui")
+        f = QtCore.QFile("../gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
@@ -58,7 +58,7 @@ class MyMainWindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('../gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -700,7 +700,7 @@ class MyMainWindow():
         """
         toggle this pane as visible/hidden
         """
-        pane = self.ui.propertiesfold
+        pane = self.ui.propertytable
         pane.setHidden(not pane.isHidden())
 
     def showlibrary(self):
