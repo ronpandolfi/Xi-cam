@@ -1,5 +1,6 @@
 import collections
 import numpy as np
+import loader
 
 # README!
 #
@@ -49,6 +50,13 @@ def chisquaredwithfirst(data, t, roi):
     current = data[t]
     first = data[0]
     return np.sum(roi * np.square(current.astype(float) - first))
+
+# def angularcorrelationwithfirst(data, t, roi):
+# currentchi = np.sum(loader.diffimage(data[t]).cake*roi,axis=0)
+#     firstchi = np.sum(loader.diffimage(data[0]).cake*roi,axis=0)
+#
+#
+#
 
 
 operations = collections.OrderedDict([('Chi Squared', chisquared),
