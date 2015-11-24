@@ -1,10 +1,9 @@
-from pylab import *
+import numpy as np
 from scipy import signal
 from scipy.ndimage import filters
 from hipies import debugtools
 import pyqtgraph as pg
 from PySide import QtCore
-import inspect
 
 maxfiltercoef = 5
 cwtrange = np.arange(1, 100)

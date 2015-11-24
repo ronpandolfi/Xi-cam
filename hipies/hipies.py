@@ -16,6 +16,7 @@
 
 import sys
 import os
+import plugins
 
 # print os.getcwd()
 
@@ -43,6 +44,7 @@ import rmc
 import multiprocessing
 
 
+
 class MyMainWindow():
     def __init__(self,app):
         self._pool = None
@@ -50,7 +52,7 @@ class MyMainWindow():
         self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
-        f = QtCore.QFile("../gui/mainwindow.ui")
+        f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
@@ -58,7 +60,7 @@ class MyMainWindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('../gui/style.stylesheet', 'r') as f:
+        with open('gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -68,6 +70,7 @@ class MyMainWindow():
         self.timelineprevioustab = -1
         self.experiment = config.experiment()
         self.folderwatcher = watcher.newfilewatcher()
+        self.plugins = []
 
 
 
@@ -112,8 +115,10 @@ class MyMainWindow():
         settingsList.addWidget(self.experimentTree)
 
         # Setup Image Properties
-        self.imagePropModel = models.imagePropModel(self.currentImageTab)
-        self.ui.propertytable.setModel(self.imagePropModel)
+        # self.imagePropModel = models.imagePropModel(self.currentImageTab)
+        #self.ui.propertytable.setModel(self.imagePropModel)
+        self.ui.openfileslist.hide()
+        self.ui.openfilescheck.hide()
 
 
 
@@ -143,11 +148,11 @@ class MyMainWindow():
         self.ui.findChild(QtGui.QVBoxLayout, 'smallimageview').addWidget(self.preview)
 
         # Setup library view
-        if sys.platform == 'win32':
-            self.libraryview = library.librarylayout(self, 'C://')
-        else:
-            self.libraryview = library.librarylayout(self, pipeline.pathtools.getRoot())
-        self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
+        # if sys.platform == 'win32':
+        # self.libraryview = library.librarylayout(self, 'C://')
+        # else:
+        #     self.libraryview = library.librarylayout(self, pipeline.pathtools.getRoot())
+        # self.ui.findChild(QtGui.QWidget, 'thumbbox').setLayout(self.libraryview)
 
         # Setup open files list
         self.openfileslistview = self.ui.findChild(QtGui.QListView, 'openfileslist')
@@ -265,13 +270,24 @@ class MyMainWindow():
         #self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
 
         # Connect top menu
-        self.ui.librarybutton.clicked.connect(self.showlibrary)
-        self.ui.viewerbutton.clicked.connect(self.showviewer)
-        self.ui.timelinebutton.clicked.connect(self.showtimeline)
+        # self.ui.librarybutton.clicked.connect(self.showlibrary)
+        #self.ui.viewerbutton.clicked.connect(self.showviewer)
+        #self.ui.timelinebutton.clicked.connect(self.showtimeline)
 
 
         # PLUG-INS
         self.rmcpugin = rmc.gui(self.ui)
+        self.ui.leftmode = None
+        print 'Test'
+        placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
+
+        for plugin in plugins.pluginclasses:
+            plugins.plugins[plugin.name] = plugin(placeholders)
+
+        print plugins.plugins
+
+        self.ui.modemenu.addWidget(plugins.widgets.pluginModeWidget(plugins.plugins))
+
 
 
         # CONFIG
@@ -337,11 +353,13 @@ class MyMainWindow():
         """
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
-        newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
-        filenames = [path.split('/')[-1] for path in paths]
 
-        timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
-        timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Timeline: ' + ', '.join(filenames)))
+        self.plugins[1].openfiles(files=paths)
+        # newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
+        # filenames = [path.split('/')[-1] for path in paths]
+        #
+        # timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
+        # timelinetabwidget.setCurrentIndex(timelinetabwidget.addTab(newtimelinetab, 'Timeline: ' + ', '.join(filenames)))
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)
@@ -548,7 +566,7 @@ class MyMainWindow():
         """
         print(filename)
         if filename is not u'':
-            if self.experiment.iscalibrated:
+            if config.activeExperiment.iscalibrated:
                 self.openimage(filename)
             else:
                 msgBox = QtGui.QMessageBox()
@@ -576,7 +594,7 @@ class MyMainWindow():
         Calibrate using the currently active tab
         """
         #self.currentImageTab().load()
-        self.currentImageTab().tab.calibrate()
+        self.plugins[0].calibrate()
 
     def openimage(self, path):
         """
@@ -585,10 +603,10 @@ class MyMainWindow():
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()
         # Make an image tab for that file and add it to the tab view
-        newimagetab = viewer.imageTabTracker([path], self.experiment, self)
-        tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
-        tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
-        self.ui.findChild(QtGui.QStackedWidget, 'viewmode').setCurrentIndex(1)
+        # newimagetab = viewer.imageTabTracker([path], self.experiment, self)
+        #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
+        #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
+        plugins.plugins['Viewer'].openfiles(path)
 
         self.ui.statusbar.showMessage('Ready...')
 
@@ -771,9 +789,3 @@ class MyMainWindow():
             #     self.loadplugin(hiprmc)
             #
             # def loadplugin(self,module):
-
-    @property
-    def pool(self):
-        if self._pool is None:
-            self._pool = multiprocessing.Pool()
-        return self._pool

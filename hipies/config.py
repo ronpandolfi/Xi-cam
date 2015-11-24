@@ -181,9 +181,7 @@ class experiment(Parameter):
         #    json.dump(config, f)
 
 
-
-
-
+activeExperiment = experiment()
 
 
 

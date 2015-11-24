@@ -33,6 +33,9 @@ OPTIONS = {'argv_emulation': True,
                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage'
            ],
+           'excludes': [
+               'matplotlib', 'sympy'
+           ],
            'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
 }
 
