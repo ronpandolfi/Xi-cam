@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>969</width>
-    <height>600</height>
+       <width>932</width>
+       <height>588</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -85,6 +85,12 @@
     </item>
     <item>
         <widget class="QSplitter" name="splitter_4">
+            <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                </sizepolicy>
+            </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
@@ -267,6 +273,12 @@
                                     <verstretch>5</verstretch>
                                 </sizepolicy>
                             </property>
+                            <property name="minimumSize">
+                                <size>
+                                    <width>300</width>
+                                    <height>0</height>
+                                </size>
+                            </property>
                             <property name="orientation">
                                 <enum>Qt::Vertical</enum>
                             </property>
@@ -301,8 +313,8 @@
                              <rect>
                                  <x>0</x>
                                  <y>0</y>
-                                 <width>195</width>
-                                 <height>497</height>
+                                 <width>298</width>
+                                 <height>485</height>
                              </rect>
                          </property>
                      </widget>
@@ -716,7 +728,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-                  <width>203</width>
+                  <width>446</width>
                   <height>336</height>
               </rect>
              </property>
@@ -961,7 +973,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>969</width>
+        <width>932</width>
      <height>22</height>
     </rect>
    </property>

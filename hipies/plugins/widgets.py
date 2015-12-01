@@ -8,7 +8,7 @@ from pipeline import loader, cosmics, integration, peakfinding, center_approx, v
 from hipies import config, ROI, globals, debugtools, toolbar
 from fabio import edfimage
 import os
-import plugins
+
 
 
 class OOMTabItem(QtGui.QWidget):
@@ -39,6 +39,15 @@ class OOMTabItem(QtGui.QWidget):
         load this tab; rebuild the viewer
         """
         if not self.isloaded:
+            if 'operation' in self.kwargs:
+                if self.kwargs['operation'] is not None:
+                    print self.kwargs['paths']
+                    imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
+                    print imgdata
+                    imgdata = self.kwargs['operation'](imgdata)
+                    dimg = loader.diffimage(filepath=self.kwargs['paths'][0], data=imgdata)
+                    self.kwargs['dimg'] = dimg
+
             self.widget = self.itemclass(*self.args, **self.kwargs)
 
             self.layout().addWidget(self.widget)
@@ -65,7 +74,7 @@ class dimgViewer(QtGui.QWidget):
     sigPlotChiIntegration = QtCore.Signal(object)
 
 
-    def __init__(self, dimg=None, paths=None, plotwidget=None, toolbar=None):
+    def __init__(self, dimg=None, paths=None, plotwidget=None, toolbar=None, **kwargs):
         """
         A tab containing an imageview. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
@@ -89,7 +98,7 @@ class dimgViewer(QtGui.QWidget):
         self.dimg = dimg
 
         if len(paths) == 1:
-            self.dimg = loader.diffimage(filepath=paths[0], experiment=config.activeExperiment)
+            self.dimg = loader.diffimage(filepath=paths[0])
 
 
 
@@ -328,7 +337,8 @@ class dimgViewer(QtGui.QWidget):
 
             else:
                 self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'></div>")
-                self.plotwidget.qintegration.qLine.hide()
+                if hasattr(self.plotwidget, 'qintegration'):
+                    self.plotwidget.qintegration.qLine.hide()
 
 
     def getq(self, x, y, mode=None):
@@ -380,7 +390,8 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
         # self.coordslabel.setVisible(False)
-        self.plotwidget.qintegration.qLine.setVisible(False)
+        if hasattr(self.plotwidget, 'qintegration'):
+            self.plotwidget.qintegration.qLine.setVisible(False)
 
     def enterEvent(self, evt):
         """
@@ -388,7 +399,8 @@ class dimgViewer(QtGui.QWidget):
         """
         self.hLine.setVisible(True)
         self.vLine.setVisible(True)
-        self.plotwidget.qintegration.qLine.setVisible(True)
+        if hasattr(self.plotwidget, 'qintegration'):
+            self.plotwidget.qintegration.qLine.setVisible(True)
 
 
     def redrawimageLowRes(self):
@@ -1279,7 +1291,6 @@ class pluginModeWidget(QtGui.QWidget):
         font = QtGui.QFont()
         font.setPointSize(16)
 
-        print plugins
         for key, plugin in plugins.items():
             button = QtGui.QPushButton(plugin.name)
             button.setFlat(True)

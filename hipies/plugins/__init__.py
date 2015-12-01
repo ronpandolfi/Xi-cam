@@ -1,11 +1,10 @@
-__all__ = ['viewer', 'widgets', 'timeline', 'library']
+__all__ = ['viewer', 'widgets', 'timeline', 'library', 'base']
 
 import viewer, timeline, library
 from collections import OrderedDict
 
 pluginclasses = [viewer.plugin, timeline.plugin, library.plugin]
 plugins = OrderedDict()
-
 
 def loadplugins(placeholders):
     global plugins

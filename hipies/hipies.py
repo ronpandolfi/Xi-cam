@@ -42,6 +42,7 @@ import pipeline
 import toolbar
 import rmc
 import multiprocessing
+import qdarkstyle
 
 
 
@@ -59,9 +60,10 @@ class MyMainWindow():
 
 
         # STYLE
-        self.app.setStyle('Plastique')
+        # self.app.setStyle('Plastique')
         with open('gui/style.stylesheet', 'r') as f:
-            self.app.setStyleSheet(f.read())
+            style = f.read()
+        app.setStyleSheet(qdarkstyle.load_stylesheet() + style)
 
 
 
@@ -139,8 +141,6 @@ class MyMainWindow():
         self.filetreemodel.setResolveSymlinks(True)
         self.filetree.expandAll()
         self.filetree.sortByColumn(0,QtCore.Qt.AscendingOrder)
-
-
 
 
         # Setup preview
@@ -354,7 +354,7 @@ class MyMainWindow():
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
 
-        self.plugins[1].openfiles(files=paths)
+        plugins.plugins['Timeline'].openfiles(files=paths)
         # newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
         # filenames = [path.split('/')[-1] for path in paths]
         #
@@ -420,11 +420,7 @@ class MyMainWindow():
         """
         indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
         paths = [self.filetreemodel.filePath(index) for index in indices]
-        newimagetab = viewer.imageTabTracker(paths, self.experiment, self, operation=operation)
-        filenames = [path.split('/')[-1] for path in paths]
-        tabwidget = self.ui.tabWidget
-        tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, operationname + ': ' + ', '.join(filenames)))
-        self.showviewer()
+        plugins.plugins['Viewer'].openfiles(paths=paths, operation=operation, operationname=operationname)
 
     def vertcut(self):
         """
@@ -594,7 +590,7 @@ class MyMainWindow():
         Calibrate using the currently active tab
         """
         #self.currentImageTab().load()
-        self.plugins[0].calibrate()
+        plugins.base.activeplugin.calibrate()
 
     def openimage(self, path):
         """

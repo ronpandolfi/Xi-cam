@@ -2,9 +2,6 @@ QSplitter::handle {
     background-color: #222222;
 }
 
-QSplitter::handle:horizontal {
-    height: 2px;
-}
 
 
 QWidget {
@@ -16,14 +13,9 @@ QWidget {
     outline: 0;
 }
 
-
-QAbstractItemView
-{
-    alternate-background-color: #3A3939;
-    color: silver;
-    border: 1px solid 3A3939;
-    border-radius: 3px;
-    padding: 1px;
+QWidget {
+    background-color:#111111;
+    border: 0px;
 }
 
 QHeaderView::section

@@ -1,5 +1,6 @@
 from PySide import QtGui
 
+activeplugin = None
 
 class plugin(object):
     name = 'Unnamed Plugin'
@@ -48,3 +49,9 @@ class plugin(object):
                 self.placeholders):
             if widget is not None and placeholder is not None:
                 placeholder.setCurrentWidget(widget)
+                placeholder.show()
+            if widget is None and placeholder is not None:
+                placeholder.hide()
+
+        global activeplugin
+        activeplugin = self

@@ -74,14 +74,14 @@ class plugin(base.plugin):
         self.centerwidget.currentWidget().load()
 
 
-    def openfiles(self, files, operation=None):
+    def openfiles(self, paths=None, operation=None, operationname=None):
         self.activate()
-        if type(files) is not list:
-            files = [files]
+        if type(paths) is not list:
+            paths = [paths]
 
-        if len(files) == 1:
-            widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, paths=files[0], plotwidget=self.bottomwidget,
-                                        toolbar=self.toolbar)
-            self.centerwidget.addTab(widget, os.path.basename(files[0]))
-            self.centerwidget.setCurrentWidget(widget)
+        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, paths=paths, operation=operation,
+                                    operationname=operationname, plotwidget=self.bottomwidget,
+                                    toolbar=self.toolbar)
+        self.centerwidget.addTab(widget, os.path.basename(paths[0]))
+        self.centerwidget.setCurrentWidget(widget)
 
