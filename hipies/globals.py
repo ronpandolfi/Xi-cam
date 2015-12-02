@@ -5,5 +5,9 @@ LUT = None
 LUTlevels = None
 LUTstate = None
 plugins = OrderedDict()
+pool = None
 
-pool = multiprocessing.Pool()
+def load():
+    global pool
+    multiprocessing.freeze_support()
+    pool = multiprocessing.Pool()
