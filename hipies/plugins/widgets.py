@@ -4,7 +4,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators
+from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
 from hipies import config, ROI, globals, debugtools, toolbar
 from fabio import edfimage
 import os
@@ -302,7 +302,7 @@ class dimgViewer(QtGui.QWidget):
                     # else:
                     #     q = pixel2q(x, y, self.dimg.experiment)
                     #print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
-                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                              u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                              u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,"
@@ -324,7 +324,7 @@ class dimgViewer(QtGui.QWidget):
                     self.plotwidget.qintegration.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
                     self.plotwidget.qintegration.qLine.show()
                 else:
-                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'>x=%0.1f,"
+                    self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                              u"  Calibration Required...</div>" % (
                                                  mousePoint.x(),
@@ -336,7 +336,7 @@ class dimgViewer(QtGui.QWidget):
                     #self.coordslabel.setVisible(True)
 
             else:
-                self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:black;'></div>")
+                self.coordslabel.setText(u"<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
                 if hasattr(self.plotwidget, 'qintegration'):
                     self.plotwidget.qintegration.qLine.hide()
 
@@ -1308,6 +1308,88 @@ class pluginModeWidget(QtGui.QWidget):
                 label.setFont(font)
                 label.setStyleSheet('background-color:#111111;')
                 self.layout().addWidget(label)
+
+
+class previewwidget(pg.GraphicsLayoutWidget):
+    """
+    top-left preview
+    """
+
+    def __init__(self, tree):
+        super(previewwidget, self).__init__()
+        self.tree = tree
+        self.model = tree.model()
+        self.view = self.addViewBox(lockAspect=True)
+
+        self.imageitem = pg.ImageItem()
+        self.view.addItem(self.imageitem)
+        self.imgdata = None
+        self.setMinimumHeight(250)
+
+        self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+
+
+    def loaditem(self, current, previous):
+
+        try:
+            path = self.model.filePath(current)
+            if os.path.isfile(path):
+                self.imgdata = loader.loadimage(path)
+                self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                        autoLevels=True)
+        except TypeError:
+            self.imageitem.clear()
+
+
+class fileTreeWidget(QtGui.QTreeView):
+    sigOpenFile = QtCore.Signal(str)
+    sigOpenDir = QtCore.Signal(str)
+
+    def __init__(self):
+        super(fileTreeWidget, self).__init__()
+        self.filetreemodel = QtGui.QFileSystemModel()
+        self.setModel(self.filetreemodel)
+        self.filetreepath = pathtools.getRoot()
+        self.treerefresh(self.filetreepath)
+        header = self.header()
+        self.setHeaderHidden(True)
+        for i in range(1, 4):
+            header.hideSection(i)
+        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf", "*.cbf"]
+        self.filetreemodel.setNameFilters(filefilter)
+        self.filetreemodel.setNameFilterDisables(False)
+        self.filetreemodel.setResolveSymlinks(True)
+        self.expandAll()
+        self.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.setSelectionMode(self.ExtendedSelection)
+
+        self.doubleClicked.connect(self.doubleclickevent)
+
+    def doubleclickevent(self, index):
+        path = self.filetreemodel.filePath(index)
+
+        if os.path.isfile(path):
+            self.sigOpenFile.emit(path)
+        elif os.path.isdir(path):
+            self.sigOpenDir.emit(path)
+        else:
+            print('Error on index (what is that?):', index)
+
+
+    def treerefresh(self, path=None):
+        """
+        Refresh the file tree, or switch directories and refresh
+        """
+        if path is None:
+            path = self.filetreepath
+
+        root = QtCore.QDir(path)
+        self.filetreemodel.setRootPath(root.absolutePath())
+        self.setRootIndex(self.filetreemodel.index(root.absolutePath()))
+        self.show()
+
+
 
 
 def pixel2q(x, y, experiment):

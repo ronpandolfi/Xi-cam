@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-       <width>932</width>
-       <height>588</height>
+       <width>982</width>
+       <height>686</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -29,59 +29,50 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-      <layout class="QVBoxLayout" name="verticalLayout_16">
-          <property name="spacing">
-              <number>0</number>
-          </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
     <property name="margin">
      <number>0</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="modemenu">
-      <property name="spacing">
-       <number>-1</number>
+        <widget class="QWidget" name="widget_2" native="true">
+            <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                </sizepolicy>
       </property>
-      <property name="margin">
-       <number>4</number>
+            <property name="styleSheet">
+                <string notr="true">background-color:#111111;</string>
       </property>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <property name="spacing">
-         <number>0</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-              <string/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="filenamelabel">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
+            <layout class="QHBoxLayout" name="modemenu">
+                <property name="margin">
+                    <number>0</number>
+                </property>
+                <item>
+                    <widget class="QLabel" name="filenamelabel_3">
+                        <property name="text">
+                            <string/>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <spacer name="horizontalSpacer_4">
+                        <property name="orientation">
+                            <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                            <enum>QSizePolicy::Expanding</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                            <size>
+                                <width>42</width>
+                                <height>20</height>
+                            </size>
+                        </property>
+                    </spacer>
+                </item>
+            </layout>
+        </widget>
     </item>
     <item>
         <widget class="QSplitter" name="splitter_4">
@@ -94,149 +85,19 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QSplitter" name="splitter_2">
-          <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                  <horstretch>1</horstretch>
-                  <verstretch>0</verstretch>
-              </sizepolicy>
-          </property>
-          <property name="minimumSize">
-              <size>
-                  <width>250</width>
-                  <height>0</height>
-              </size>
-          </property>
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
+            <widget class="QStackedWidget" name="leftmode">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>1</horstretch>
+                        <verstretch>0</verstretch>
+                    </sizepolicy>
        </property>
-       <widget class="QFrame" name="frame">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="baseSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Sunken</enum>
-        </property>
-        <property name="midLineWidth">
-         <number>1</number>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <property name="margin">
-          <number>3</number>
-         </property>
-         <item>
-          <layout class="QVBoxLayout" name="smallimageview"/>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="verticalLayoutWidget_3">
-        <layout class="QVBoxLayout" name="leftpanelayout">
-         <property name="spacing">
-          <number>5</number>
-         </property>
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>10</number>
-         </property>
-         <item>
-          <widget class="QCheckBox" name="openfilescheck">
-           <property name="text">
-            <string>Open Files</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <property name="isFoldingTab" stdset="0">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QListView" name="openfileslist">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::ExtendedSelection</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="filebrowsercheck">
-           <property name="text">
-            <string>File Browser</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-           <property name="isFoldingTab" stdset="0">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTreeView" name="treebrowser">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::ExtendedSelection</enum>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>16</width>
-             <height>16</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Preferred</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
+                <property name="minimumSize">
+                    <size>
+                        <width>250</width>
+                        <height>0</height>
+                    </size>
+                </property>
       </widget>
             <widget class="QWidget" name="widget" native="true">
        <property name="sizePolicy">
@@ -286,12 +147,15 @@
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>6</horstretch>
-             <verstretch>0</verstretch>
+                <verstretch>5</verstretch>
             </sizepolicy>
+           </property>
+                                <property name="styleSheet">
+                                    <string notr="true">background-color:#111111;</string>
            </property>
                                 <property name="currentIndex">
                                     <number>0</number>
-           </property>
+                                </property>
                                 <widget class="QWidget" name="page_2">
                                     <layout class="QVBoxLayout" name="verticalLayout_5">
              <property name="spacing">
@@ -313,8 +177,8 @@
                              <rect>
                                  <x>0</x>
                                  <y>0</y>
-                                 <width>298</width>
-                                 <height>485</height>
+                                 <width>466</width>
+                                 <height>512</height>
                              </rect>
                          </property>
                      </widget>
@@ -497,6 +361,12 @@
                                 </widget>
                             </widget>
                             <widget class="QStackedWidget" name="bottommode">
+                                <property name="sizePolicy">
+                                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                                        <horstretch>0</horstretch>
+                                        <verstretch>1</verstretch>
+                                    </sizepolicy>
+                                </property>
                                 <widget class="QWidget" name="page_7"/>
                                 <widget class="QWidget" name="page_8"/>
                             </widget>
@@ -511,8 +381,14 @@
                   <verstretch>0</verstretch>
               </sizepolicy>
           </property>
+          <property name="minimumSize">
+              <size>
+                  <width>250</width>
+                  <height>0</height>
+              </size>
+          </property>
        <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
        </property>
        <widget class="QWidget" name="page_5">
         <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -521,6 +397,9 @@
          </property>
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_3">
+              <property name="topMargin">
+                  <number>4</number>
+              </property>
            <item>
                <spacer name="verticalSpacer_4">
                    <property name="orientation">
@@ -728,8 +607,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-                  <width>446</width>
-                  <height>336</height>
+                  <width>233</width>
+                  <height>346</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_14">
@@ -973,7 +852,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-        <width>932</width>
+        <width>982</width>
      <height>22</height>
     </rect>
    </property>

@@ -7,14 +7,13 @@ QSplitter::handle {
 QWidget {
     color: silver;
     background-color: #302F2F;
-    selection-background-color:orange;
+    selection-background-color:darkorange;
     selection-color: black;
     background-clip: padding;
     outline: 0;
 }
 
 QWidget {
-    background-color:#111111;
     border: 0px;
 }
 
@@ -102,4 +101,37 @@ QTabWidget {
 QMenu {
     icon-size:32px 32px;
 
+}
+
+QLayout {
+    padding:0px;
+    margin:0px;
+    }
+
+
+/* OVERRIDE QDARKSTYLE with ORANGE! */
+QPushButton:focus {
+    background-color: darkorange;
+}
+
+QComboBox
+{
+    selection-background-color: darkorange;
+}
+
+QComboBox QAbstractItemView
+{
+    selection-background-color: darkorange;
+}
+
+QListView::item:selected:hover, QListView::item:selected:hover, QTreeView::item:selected:hover  {
+    background: darkorange;
+}
+
+QTableView::item:selected:active, QTreeView::item:selected:active, QListView::item:selected:active  {
+    background: darkorange;
+}
+
+QToolBox::tab:selected { /* italicize selected tabs */
+    border-color: darkorange;
 }

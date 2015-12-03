@@ -16,7 +16,7 @@ import nexpy.api.nexus.tree as tree
 from hipies import debugtools, config
 from PySide import QtGui
 
-acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
+acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf']
 imagecache = dict()
 
 

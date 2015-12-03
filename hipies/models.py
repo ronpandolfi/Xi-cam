@@ -42,10 +42,10 @@ class imagePropModel(QtCore.QAbstractTableModel):
     This model creates modelitems for each open tab for navigation
     """
 
-    def __init__(self, tabwidgets):
+    def __init__(self, tabwidget):
         super(imagePropModel, self).__init__()
 
-        self.tabwidgets = tabwidgets
+        self.tabwidget = tabwidget
         self._propdata = None
 
     def widgetchanged(self):
@@ -66,8 +66,7 @@ class imagePropModel(QtCore.QAbstractTableModel):
     @property
     def propdata(self):
         if self._propdata is None:
-            if self.tabwidget().tab is not None:
-                self._propdata = self.tabwidget().tab.dimg.headers
+            self._propdata = self.tabwidget().dimg.headers
         return self._propdata
 
     def data(self, index, role=Qt.DisplayRole):

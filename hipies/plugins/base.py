@@ -1,11 +1,18 @@
-from PySide import QtGui
+from PySide import QtCore, QtGui
+from pyqtgraph.parametertree import ParameterTree
+from hipies import config
+from hipies import models
+import widgets
 
 activeplugin = None
 
-class plugin(object):
+
+class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
+    sigUpdateExperiment = QtCore.Signal()
 
     def __init__(self, placeholders):
+        super(plugin, self).__init__()
 
         self.placeholders = placeholders
 
@@ -13,13 +20,43 @@ class plugin(object):
             self.centerwidget = None
 
         if not hasattr(self, 'rightwidget'):
-            self.rightwidget = None
+            w = QtGui.QWidget()
+            l = QtGui.QVBoxLayout()
+            l.setContentsMargins(0, 0, 0, 0)
+
+            configtree = ParameterTree()
+            configtree.setParameters(config.activeExperiment, showTop=False)
+            config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
+            l.addWidget(configtree)
+
+            self.imagePropModel = models.imagePropModel(self.currentImage)
+            propertytable = QtGui.QTableView()
+            propertytable.setModel(self.imagePropModel)
+            l.addWidget(propertytable)
+
+            w.setLayout(l)
+            self.rightwidget = w
+
 
         if not hasattr(self, 'bottomwidget'):
             self.bottomwidget = None
 
         if not hasattr(self, 'leftwidget'):
-            self.leftwidget = None
+            w = QtGui.QSplitter()
+            w.setOrientation(QtCore.Qt.Vertical)
+            w.setContentsMargins(0, 0, 0, 0)
+
+            self.filetree = widgets.fileTreeWidget()
+            w.addWidget(self.filetree)
+
+            preview = widgets.previewwidget(self.filetree)
+            w.insertWidget(0, preview)
+
+            self.filetree.currentChanged = preview.loaditem
+
+            w.setSizes([250, w.height() - 250])
+
+            self.leftwidget = w
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
@@ -55,3 +92,6 @@ class plugin(object):
 
         global activeplugin
         activeplugin = self
+
+    def currentImage(self):
+        pass

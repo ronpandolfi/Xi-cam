@@ -26,11 +26,19 @@ class plugin(base.plugin):
 
         super(plugin, self).__init__(*args, **kwargs)
 
+        self.sigUpdateExperiment.connect(self.redrawcurrent)
+        self.sigUpdateExperiment.connect(self.replotcurrent)
+        self.filetree.sigOpenFile.connect(self.openfiles)
+
+
+
 
     def tabCloseRequested(self, index):
         self.centerwidget.widget(index).deleteLater()
 
     def getCurrentTab(self):
+        if self.centerwidget.currentWidget() is None:
+            return None
         return self.centerwidget.currentWidget().widget
 
     def calibrate(self):
@@ -72,6 +80,7 @@ class plugin(base.plugin):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
+        self.imagePropModel.widgetchanged()
 
 
     def openfiles(self, paths=None, operation=None, operationname=None):
@@ -85,3 +94,8 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
 
+    def currentImage(self):
+        return self.getCurrentTab()
+
+    def replotcurrent(self):
+        self.getCurrentTab().replot()
