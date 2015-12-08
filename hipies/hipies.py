@@ -50,7 +50,7 @@ class MyMainWindow():
         self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
-        f = QtCore.QFile("../gui/mainwindow.ui")
+        f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
@@ -58,7 +58,7 @@ class MyMainWindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('../gui/style.stylesheet', 'r') as f:
+        with open('gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
