@@ -131,6 +131,8 @@ class dimgViewer(QtGui.QWidget):
 
         # self.threads = dict()
 
+        self.plotwidget.sigReplot.connect(self.replot)
+
 
         # cross hair
         linepen = pg.mkPen('#FFA500')
@@ -839,6 +841,10 @@ class dimgViewer(QtGui.QWidget):
         else:
             data = self.dimg.data
         ai = config.activeExperiment.getAI().getPyFAI()
+        print 'centeroverride:', [c * config.activeExperiment.getvalue('Pixel Size X') for c in
+                                  self.getcenter()[::-1]]
+        print self.getcenter()
+
         globals.pool.apply_async(integration.radialintegratepyFAI,
                                  args=((self.dimg.data if not self.isremesh else data),
                                        (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
@@ -933,11 +939,8 @@ class dimgViewer(QtGui.QWidget):
         if color is None:
             color = [255, 255, 255]
         # cyan:[0, 255, 255]
-        print 'plottingq:', q, radialprofile, color
         curve = self.plotwidget.qintegration.plot(q, radialprofile, pen=pg.mkPen(color=color))
         curve.setZValue(3 * 255 - sum(color))
-        print 'curve', curve
-        print self.plotwidget.qintegration
         self.plotwidget.qintegration.update()
 
     def chiintegrationrelay(self, *args, **kwargs):
@@ -1241,6 +1244,7 @@ class timelineViewer(dimgViewer):
 
 
 class integrationwidget(QtGui.QTabWidget):
+    sigReplot = QtCore.Signal()
     def __init__(self):
         super(integrationwidget, self).__init__()
         self.setTabPosition(self.West)
@@ -1248,6 +1252,7 @@ class integrationwidget(QtGui.QTabWidget):
         self.chiintegration = chiintegrationwidget()
         self.addTab(self.qintegration, u'q')
         self.addTab(self.chiintegration, u'χ')
+        self.currentChanged.connect(self.sigReplot)
 
 
 class qintegrationwidget(pg.PlotWidget):
@@ -1281,6 +1286,16 @@ class ImageView(pg.ImageView):
         if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             ev.accept()
             self.sigKeyRelease.emit()
+
+
+class fxsviewer(ImageView):
+    def __init__(self, paths=None):
+        super(fxsviewer, self).__init__()
+        if paths is None:
+            paths = []
+        for path in paths:
+            dimg = loader.diffimage(filepath=path)
+            print dimg.cake
 
 
 class pluginModeWidget(QtGui.QWidget):
@@ -1364,7 +1379,20 @@ class fileTreeWidget(QtGui.QTreeView):
         self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         self.setSelectionMode(self.ExtendedSelection)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.contextMenu)
+
         self.doubleClicked.connect(self.doubleclickevent)
+
+    def contextMenu(self, position):
+        menu = QtGui.QMenu()
+
+        actionOpen = QtGui.QAction('Open', self)
+        actionOpen.triggered = self.sigOpenFile
+        menu.addAction(actionOpen)
+
+        menu.exec_(self.viewport().mapToGlobal(position))
+
 
     def doubleclickevent(self, index):
         path = self.filetreemodel.filePath(index)

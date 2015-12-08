@@ -28,6 +28,7 @@ class plugin(base.plugin):
 
         self.sigUpdateExperiment.connect(self.redrawcurrent)
         self.sigUpdateExperiment.connect(self.replotcurrent)
+        self.sigUpdateExperiment.connect(self.invalidatecache)
         self.filetree.sigOpenFile.connect(self.openfiles)
 
 
@@ -99,3 +100,6 @@ class plugin(base.plugin):
 
     def replotcurrent(self):
         self.getCurrentTab().replot()
+
+    def invalidatecache(self):
+        self.getCurrentTab().dimg.invalidatecache()

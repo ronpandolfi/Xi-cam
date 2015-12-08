@@ -48,7 +48,6 @@ def calc_q_range(lims, geometry, alphai, cen):
 
 
 def remesh(image, filename, geometry, alphai):
-
     shape = image.shape
     center = np.zeros(2, dtype=np.float)
     pixel = np.zeros(2, dtype=np.float)

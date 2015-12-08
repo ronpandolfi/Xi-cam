@@ -1,9 +1,9 @@
-__all__ = ['viewer', 'widgets', 'timeline', 'library', 'base']
+__all__ = ['viewer', 'widgets', 'timeline', 'library', 'base', 'fluctuationscattering']
 
-import viewer, timeline, library
+import viewer, timeline, library, fluctuationscattering
 from collections import OrderedDict
 
-pluginclasses = [viewer.plugin, timeline.plugin, library.plugin]
+pluginclasses = [viewer.plugin, timeline.plugin, library.plugin, fluctuationscattering.plugin]
 plugins = OrderedDict()
 
 def loadplugins(placeholders):

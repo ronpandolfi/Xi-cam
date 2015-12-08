@@ -31,7 +31,10 @@ class plugin(QtCore.QObject):
 
             self.imagePropModel = models.imagePropModel(self.currentImage)
             propertytable = QtGui.QTableView()
+            propertytable.verticalHeader().hide()
+            propertytable.horizontalHeader().hide()
             propertytable.setModel(self.imagePropModel)
+            propertytable.horizontalHeader().setStretchLastSection(True)
             l.addWidget(propertytable)
 
             w.setLayout(l)
@@ -45,12 +48,31 @@ class plugin(QtCore.QObject):
             w = QtGui.QSplitter()
             w.setOrientation(QtCore.Qt.Vertical)
             w.setContentsMargins(0, 0, 0, 0)
+            l = QtGui.QVBoxLayout()
+            l.setContentsMargins(0, 0, 0, 0)
+            l.setSpacing(0)
 
             self.filetree = widgets.fileTreeWidget()
-            w.addWidget(self.filetree)
+            l.addWidget(self.filetree)
 
             preview = widgets.previewwidget(self.filetree)
-            w.insertWidget(0, preview)
+            w.addWidget(preview)
+
+            booltoolbar = QtGui.QToolBar()
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_26.png'), 'Timeline', self))
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_11.png'), 'actionAdd', self))
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_13.png'), 'actionSubtract', self))
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_14.png'), 'actionAdd_with_coefficient', self))
+            booltoolbar.addAction(
+                QtGui.QAction(QtGui.QIcon('gui/icons_15.png'), 'actionSubtract_with_coefficient', self))
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_12.png'), 'actionDivide', self))
+            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_16.png'), 'actionAverage', self))
+            booltoolbar.setIconSize(QtCore.QSize(32, 32))
+            l.addWidget(booltoolbar)
+
+            panelwidget = QtGui.QWidget()
+            panelwidget.setLayout(l)
+            w.addWidget(panelwidget)
 
             self.filetree.currentChanged = preview.loaditem
 

@@ -15,6 +15,7 @@ import writer
 import nexpy.api.nexus.tree as tree
 from hipies import debugtools, config
 from PySide import QtGui
+from collections import OrderedDict
 
 acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf']
 imagecache = dict()
@@ -159,7 +160,7 @@ def loadparas(path):
         print('Unexpected read error in loadparas')
     except IndexError:
         print('No txt file found in loadparas')
-    return dict()
+    return OrderedDict()
 
 
 def scanparas(path, frame=None):
@@ -174,7 +175,7 @@ def scanparas(path, frame=None):
     return paras
 
 def scanparaslines(lines):
-    paras = dict()
+    paras = OrderedDict()
     for line in lines:
         cells = filter(None, re.split('[=:]+', line))
 
@@ -184,13 +185,12 @@ def scanparaslines(lines):
             cells[1] = cells[1].split('/')[0]
             paras[key] = cells[1]
         elif cells.__len__() == 1:
-            paras[key] = cells[0]
+            paras[key] = ''
 
     return paras
 
 
 def scanalesandroparaslines(lines, frame):
-    paras = dict()
     keys = []
     values = []
     correctframe = False
@@ -206,7 +206,7 @@ def scanalesandroparaslines(lines, frame):
         elif token == '#P' and correctframe:
             values.extend(line.split()[1:])
 
-    return dict(zip(keys, values))
+    return OrderedDict(zip(keys, values))
 
 
 def loadstichted(filepath2, filepath1):
@@ -381,6 +381,7 @@ class diffimage():
 
     def invalidatecache(self):
         self.cache = dict()
+        print 'cache cleared'
 
     def cachedata(self):
         if self._data is None:
