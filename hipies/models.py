@@ -42,15 +42,18 @@ class imagePropModel(QtCore.QAbstractTableModel):
     This model creates modelitems for each open tab for navigation
     """
 
-    def __init__(self, tabwidget):
+    def __init__(self, tabwidget, table):
         super(imagePropModel, self).__init__()
 
         self.tabwidget = tabwidget
         self._propdata = None
+        self.table = table
+        self.table.setHidden(self.rowCount() == 0)
 
     def widgetchanged(self):
         self.modelReset.emit()
         self._propdata = None
+        self.table.setHidden(self.rowCount() == 0)
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         if self.tabwidget() is not None and self.propdata is not None:

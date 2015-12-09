@@ -1,6 +1,8 @@
 import base
 from PySide import QtGui
 import os
+from moviepy.editor import VideoClip
+import numpy as np
 
 import widgets
 
@@ -19,8 +21,10 @@ class plugin(base.plugin):
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                     self.roi, self.arccut, self.polymask, process=self.process)
+                                     self.roi, self.arccut, self.polymask, process=self.process, video=self.makeVideo)
         super(plugin, self).__init__(*args, **kwargs)
+
+        self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
 
 
     def tabCloseRequested(self, index):
@@ -66,16 +70,49 @@ class plugin(base.plugin):
     def process(self):
         self.getCurrentTab().processtimeline()
 
+    def makeVideo(self):
+
+        fps, ok = QtGui.QInputDialog.getDouble(self.centerwidget, u'Enter frames per second:', u'Enter fps', value=24)
+
+        def make_frame(t):
+            """ returns an image of the frame at time t """
+            # ... create the frame with any library
+            img = self.getCurrentTab().simg[int(t * fps)].data
+            img = np.rot90((np.log(img * (img > 0) + (img < 1))), 1)
+            img = convertto8bit(img)
+            return np.asarray(np.dstack((img, img, img)), dtype=np.uint8)
+
+        if fps and ok:
+            animation = VideoClip(make_frame, duration=len(self.getCurrentTab().simg) / fps)
+
+            # For the export, many options/formats/optimizations are supported
+
+            dialog = QtGui.QFileDialog(self.centerwidget, 'Save Video',
+                                       os.path.splitext(self.getCurrentTab().simg[0].filepath)[0] + '.mp4')
+            dialog.setDefaultSuffix('.mp4')
+            path, _ = dialog.getSaveFileName()
+
+            if os.path.splitext(path)[-1] == '.mp4':
+                animation.write_videofile(path, fps=fps)  # export as video
+            elif os.path.splitext(path)[-1] == '.gif':
+                animation.write_gif(path, fps=fps)  # export as GIF (slow)
+            else:
+                animation.write_videofile(path, fps=fps)  # export as video
+                print 'Error: Unrecognized extension...'
+
 
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
 
-
-    def openfiles(self, files, operation=None):
+    def openfiles(self, files, operation=None, operationname=None):
         self.activate()
         widget = widgets.OOMTabItem(itemclass=widgets.timelineViewer, files=files, toolbar=self.toolbar)
         self.centerwidget.addTab(widget, 'Timeline: ' + os.path.basename(files[0]) + ', ...')
         self.centerwidget.setCurrentWidget(widget)
 
+
+def convertto8bit(image):
+    image *= (np.iinfo(np.uint8).max - 1) / float(np.max(image))
+    return image.astype(np.uint8).copy()

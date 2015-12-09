@@ -22,8 +22,6 @@ class plugin(base.plugin):
 
         # self.sigUpdateExperiment.connect()
 
-        self.filetree.sigOpenFile.connect(self.openfiles)
-
 
     def tabCloseRequested(self, index):
         self.centerwidget.widget(index).deleteLater()

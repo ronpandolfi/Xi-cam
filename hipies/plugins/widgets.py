@@ -131,7 +131,8 @@ class dimgViewer(QtGui.QWidget):
 
         # self.threads = dict()
 
-        self.plotwidget.sigReplot.connect(self.replot)
+        if self.plotwidget is not None:
+            self.plotwidget.sigReplot.connect(self.replot)
 
 
         # cross hair

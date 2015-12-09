@@ -6,6 +6,51 @@ import widgets
 
 activeplugin = None
 
+# DEFAULTS
+w = QtGui.QSplitter()
+w.setOrientation(QtCore.Qt.Vertical)
+w.setContentsMargins(0, 0, 0, 0)
+l = QtGui.QVBoxLayout()
+l.setContentsMargins(0, 0, 0, 0)
+l.setSpacing(0)
+
+filetree = widgets.fileTreeWidget()
+l.addWidget(filetree)
+
+preview = widgets.previewwidget(filetree)
+w.addWidget(preview)
+
+booltoolbar = QtGui.QToolBar()
+
+booltoolbar.actionTimeline = QtGui.QAction(QtGui.QIcon('gui/icons_26.png'), 'Timeline', w)
+booltoolbar.actionAdd = QtGui.QAction(QtGui.QIcon('gui/icons_11.png'), 'actionAdd', w)
+booltoolbar.actionSubtract = QtGui.QAction(QtGui.QIcon('gui/icons_13.png'), 'actionSubtract', w)
+booltoolbar.actionAdd_with_coefficient = QtGui.QAction(QtGui.QIcon('gui/icons_14.png'), 'actionAdd_with_coefficient', w)
+booltoolbar.actionSubtract_with_coefficient = QtGui.QAction(QtGui.QIcon('gui/icons_15.png'),
+                                                            'actionSubtract_with_coefficient', w)
+booltoolbar.actionDivide = QtGui.QAction(QtGui.QIcon('gui/icons_12.png'), 'actionDivide', w)
+booltoolbar.actionAverage = QtGui.QAction(QtGui.QIcon('gui/icons_16.png'), 'actionAverage', w)
+
+booltoolbar.addAction(booltoolbar.actionTimeline)
+booltoolbar.addAction(booltoolbar.actionAdd)
+booltoolbar.addAction(booltoolbar.actionSubtract)
+booltoolbar.addAction(booltoolbar.actionAdd_with_coefficient)
+booltoolbar.addAction(booltoolbar.actionSubtract_with_coefficient)
+booltoolbar.addAction(booltoolbar.actionDivide)
+booltoolbar.addAction(booltoolbar.actionAverage)
+booltoolbar.setIconSize(QtCore.QSize(32, 32))
+l.addWidget(booltoolbar)
+
+panelwidget = QtGui.QWidget()
+panelwidget.setLayout(l)
+w.addWidget(panelwidget)
+
+filetree.currentChanged = preview.loaditem
+
+w.setSizes([250, w.height() - 250])
+
+leftwidget = w
+
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
@@ -29,14 +74,13 @@ class plugin(QtCore.QObject):
             config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
             l.addWidget(configtree)
 
-            self.imagePropModel = models.imagePropModel(self.currentImage)
             propertytable = QtGui.QTableView()
+            self.imagePropModel = models.imagePropModel(self.currentImage, propertytable)
             propertytable.verticalHeader().hide()
             propertytable.horizontalHeader().hide()
             propertytable.setModel(self.imagePropModel)
             propertytable.horizontalHeader().setStretchLastSection(True)
             l.addWidget(propertytable)
-
             w.setLayout(l)
             self.rightwidget = w
 
@@ -45,40 +89,9 @@ class plugin(QtCore.QObject):
             self.bottomwidget = None
 
         if not hasattr(self, 'leftwidget'):
-            w = QtGui.QSplitter()
-            w.setOrientation(QtCore.Qt.Vertical)
-            w.setContentsMargins(0, 0, 0, 0)
-            l = QtGui.QVBoxLayout()
-            l.setContentsMargins(0, 0, 0, 0)
-            l.setSpacing(0)
-
-            self.filetree = widgets.fileTreeWidget()
-            l.addWidget(self.filetree)
-
-            preview = widgets.previewwidget(self.filetree)
-            w.addWidget(preview)
-
-            booltoolbar = QtGui.QToolBar()
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_26.png'), 'Timeline', self))
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_11.png'), 'actionAdd', self))
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_13.png'), 'actionSubtract', self))
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_14.png'), 'actionAdd_with_coefficient', self))
-            booltoolbar.addAction(
-                QtGui.QAction(QtGui.QIcon('gui/icons_15.png'), 'actionSubtract_with_coefficient', self))
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_12.png'), 'actionDivide', self))
-            booltoolbar.addAction(QtGui.QAction(QtGui.QIcon('gui/icons_16.png'), 'actionAverage', self))
-            booltoolbar.setIconSize(QtCore.QSize(32, 32))
-            l.addWidget(booltoolbar)
-
-            panelwidget = QtGui.QWidget()
-            panelwidget.setLayout(l)
-            w.addWidget(panelwidget)
-
-            self.filetree.currentChanged = preview.loaditem
-
-            w.setSizes([250, w.height() - 250])
-
-            self.leftwidget = w
+            self.leftwidget = leftwidget
+            self.filetree = filetree
+            self.booltoolbar = booltoolbar
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
@@ -89,8 +102,18 @@ class plugin(QtCore.QObject):
             if widget is not None and placeholder is not None:
                 placeholder.addWidget(widget)
 
-    def openfiles(files, operation=None):
+    def openSelected(self, operation=None, operationname=None):
+        indices = self.filetree.selectedIndexes()
+        paths = [self.filetree.filetreemodel.filePath(index) for index in indices]
+
+        self.openfiles(paths, operation, operationname)
+
+    def openfiles(self, files, operation=None, operationname=None):
         pass
+
+    @property
+    def isActive(self):
+        return activeplugin == self
 
     def opendirectory(files, operation=None):
         pass

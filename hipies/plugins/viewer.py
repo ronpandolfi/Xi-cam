@@ -3,6 +3,7 @@ from PySide import QtGui
 import os
 
 import widgets
+import numpy as np
 
 
 class plugin(base.plugin):
@@ -29,10 +30,68 @@ class plugin(base.plugin):
         self.sigUpdateExperiment.connect(self.redrawcurrent)
         self.sigUpdateExperiment.connect(self.replotcurrent)
         self.sigUpdateExperiment.connect(self.invalidatecache)
-        self.filetree.sigOpenFile.connect(self.openfiles)
+
+        self.booltoolbar.actionAdd.triggered.connect(self.addmode)
+        self.booltoolbar.actionSubtract.triggered.connect(self.subtractmode)
+        self.booltoolbar.actionAdd_with_coefficient.triggered.connect(self.addwithcoefmode)
+        self.booltoolbar.actionSubtract_with_coefficient.triggered.connect(self.subtractwithcoefmode)
+        self.booltoolbar.actionDivide.triggered.connect(self.dividemode)
+        self.booltoolbar.actionAverage.triggered.connect(self.averagemode)
 
 
+    def addmode(self):
+        """
+        Launch a tab as an add operation
+        """
+        operation = lambda m: np.sum(m, 0)
+        self.launchmultimode(operation, 'Addition')
 
+    def subtractmode(self):
+        """
+        Launch a tab as an sub operation
+        """
+        operation = lambda m: m[0] - np.sum(m[1:], 0)
+        self.launchmultimode(operation, 'Subtraction')
+
+    def addwithcoefmode(self):
+        """
+        Launch a tab as an add with coef operation
+        """
+        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
+
+        if coef and ok:
+            operation = lambda m: m[0] + coef * np.sum(m[1:], 0)
+            self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
+
+    def subtractwithcoefmode(self):
+        """
+        Launch a tab as a sub with coef operation
+        """
+        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
+
+        if coef and ok:
+            operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
+            self.launchmultimode(operation, 'Subtraction with coef (x=' + str(coef))
+
+    def dividemode(self):
+        """
+        Launch a tab as a div operation
+        """
+        operation = lambda m: m[0] / m[1]
+        self.launchmultimode(operation, 'Division')
+
+    def averagemode(self):
+        """
+        Launch a tab as an avg operation
+        """
+        operation = lambda m: np.mean(m, 0)
+        self.launchmultimode(operation, 'Average')
+
+    def launchmultimode(self, operation, operationname):
+        """
+        Launch a tab in multi-image operation mode
+        """
+        self.openSelected(operation, operationname)
 
     def tabCloseRequested(self, index):
         self.centerwidget.widget(index).deleteLater()

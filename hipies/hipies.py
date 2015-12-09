@@ -16,7 +16,7 @@
 
 import sys
 import os
-import plugins
+
 
 # print os.getcwd()
 
@@ -48,6 +48,10 @@ import qdarkstyle
 
 class MyMainWindow():
     def __init__(self,app):
+
+        import plugins
+
+
         self._pool = None
         # Load the gui from file
         self.app = app
@@ -79,7 +83,7 @@ class MyMainWindow():
 
         # ACTIONS
         # Wire up action buttons
-        # self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
         # self.ui.findChild(QtGui.QAction, 'actionCenterFind').triggered.connect(self.centerfind)
         # self.ui.findChild(QtGui.QAction, 'actionPolyMask').triggered.connect(self.polymask)
         # self.ui.findChild(QtGui.QAction, 'actionLog_Intensity').triggered.connect(self.redrawcurrent)
@@ -229,15 +233,15 @@ class MyMainWindow():
         # self.ui.diffbox.insertWidget(0, self.difftoolbar)
 
         # Setup file operation toolbox
-        self.booltoolbar = QtGui.QToolBar()
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionTimeline'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd_with_coefficient'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionDivide'))
-        self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAverage'))
-        self.booltoolbar.setIconSize(QtCore.QSize(32, 32))
+        # self.booltoolbar = QtGui.QToolBar()
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionTimeline'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAdd_with_coefficient'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionSubtract_with_coefficient'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionDivide'))
+        # self.booltoolbar.addAction(self.ui.findChild(QtGui.QAction, 'actionAverage'))
+        # self.booltoolbar.setIconSize(QtCore.QSize(32, 32))
         # self.ui.findChild(QtGui.QVBoxLayout, 'leftpanelayout').addWidget(self.booltoolbar)
 
 
@@ -277,13 +281,11 @@ class MyMainWindow():
 
         # PLUG-INS
         self.rmcpugin = rmc.gui(self.ui)
-        print 'Test'
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
-        for plugin in plugins.pluginclasses:
-            plugins.plugins[plugin.name] = plugin(placeholders)
+        plugins.loadplugins(placeholders)
 
-        print plugins.plugins
+        plugins.base.filetree.sigOpenFile.connect(self.openfile)
 
         self.ui.modemenu.addWidget(plugins.widgets.pluginModeWidget(plugins.plugins))
 
@@ -295,7 +297,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        self.openimage('../samples/AgB_00016.edf')
+        # self.openimage('../samples/AgB_00016.edf')
 
         #self.calibrate()
         # self.updatepreprocessing()
@@ -305,6 +307,7 @@ class MyMainWindow():
         # Show UI and end app when it closes
         self.ui.show()
         self.ui.raise_()
+        self.ui.activateWindow()
 
     def replotviewer(self):
         if hasattr(self.currentImageTab(), 'tab'):
@@ -312,49 +315,50 @@ class MyMainWindow():
                 self.currentImageTab().tab.replot()
 
 
-    def process(self):
-        self.currentTimelineTab().tab.processtimeline()
+                # def process(self):
+                # self.currentTimelineTab().tab.processtimeline()
+                #
+                #
+                # def treerefresh(self, path=None):
+                #     """
+                #     Refresh the file tree, or switch directories and refresh
+                #     """
+                #     if path is None:
+                #         path = self.filetreepath
+                #
+                #     root = QtCore.QDir(path)
+                #     self.filetreemodel.setRootPath(root.absolutePath())
+                #     self.filetree.setRootIndex(self.filetreemodel.index(root.absolutePath()))
+                #     self.filetree.show()
 
+                # def switchtotab(self, index):
+                # """
+                #     Set the current viewer tab
+                #     """
+                #     self.ui.findChild(QtGui.QTabWidget, 'tabWidget').setCurrentIndex(index.row())
 
-    def treerefresh(self, path=None):
-        """
-        Refresh the file tree, or switch directories and refresh
-        """
-        if path is None:
-            path = self.filetreepath
+                # def linecut(self):
+                # """
+                #     Connect linecut to current tab's linecut
+                #     """
+                #     self.currentImageTab().tab.linecut()
+                #
+                # def arccut(self):
+                #     self.currentImageTab().tab.arccut()
+                #
+                # def roi(self):
+                #     self.currentImageTab().tab.roi()
 
-        root = QtCore.QDir(path)
-        self.filetreemodel.setRootPath(root.absolutePath())
-        self.filetree.setRootIndex(self.filetreemodel.index(root.absolutePath()))
-        self.filetree.show()
-
-    def switchtotab(self, index):
-        """
-        Set the current viewer tab
-        """
-        self.ui.findChild(QtGui.QTabWidget, 'tabWidget').setCurrentIndex(index.row())
-
-    def linecut(self):
-        """
-        Connect linecut to current tab's linecut
-        """
-        self.currentImageTab().tab.linecut()
-
-    def arccut(self):
-        self.currentImageTab().tab.arccut()
-
-    def roi(self):
-        self.currentImageTab().tab.roi()
-
-    def opentimeline(self):
-        """
-        Open a tab in Timeline mode
-        """
-        indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
-        paths = [self.filetreemodel.filePath(index) for index in indices]
-
-        plugins.plugins['Timeline'].openfiles(files=paths)
-        # newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
+                # def opentimeline(self):
+                # """
+                #     Open a tab in Timeline mode
+                #     """
+                #     import plugins
+                #     indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
+                #     paths = [self.filetreemodel.filePath(index) for index in indices]
+                #
+                #     plugins.plugins['Timeline'].openfiles(files=paths)
+                # newtimelinetab = timeline.timelinetabtracker(paths, self.experiment, self)
         # filenames = [path.split('/')[-1] for path in paths]
         #
         # timelinetabwidget = self.ui.findChild(QtGui.QTabWidget, 'timelinetabwidget')
@@ -363,63 +367,64 @@ class MyMainWindow():
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)
 
-    def addmode(self):
-        """
-        Launch a tab as an add operation
-        """
-        operation = lambda m: np.sum(m, 0)
-        self.launchmultimode(operation, 'Addition')
-
-    def subtractmode(self):
-        """
-        Launch a tab as an sub operation
-        """
-        operation = lambda m: m[0] - np.sum(m[1:], 0)
-        self.launchmultimode(operation, 'Subtraction')
-
-    def addwithcoefmode(self):
-        """
-        Launch a tab as an add with coef operation
-        """
-        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
-
-        if coef and ok:
-            operation = lambda m: m[0] + coef * np.sum(m[1:], 0)
-            self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
-
-    def subtractwithcoefmode(self):
-        """
-        Launch a tab as a sub with coef operation
-        """
-        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
-
-        if coef and ok:
-            operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
-            self.launchmultimode(operation, 'Subtraction with coef (x=' + str(coef))
-
-    def dividemode(self):
-        """
-        Launch a tab as a div operation
-        """
-        operation = lambda m: m[0] / m[1]
-        self.launchmultimode(operation, 'Division')
-
-    def averagemode(self):
-        """
-        Launch a tab as an avg operation
-        """
-        operation = lambda m: np.mean(m, 0)
-        self.launchmultimode(operation, 'Average')
-
-
-
-    def launchmultimode(self, operation, operationname):
-        """
-        Launch a tab in multi-image operation mode
-        """
-        indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
-        paths = [self.filetreemodel.filePath(index) for index in indices]
-        plugins.plugins['Viewer'].openfiles(paths=paths, operation=operation, operationname=operationname)
+    # def addmode(self):
+    # """
+    #     Launch a tab as an add operation
+    #     """
+    #     operation = lambda m: np.sum(m, 0)
+    #     self.launchmultimode(operation, 'Addition')
+    #
+    # def subtractmode(self):
+    #     """
+    #     Launch a tab as an sub operation
+    #     """
+    #     operation = lambda m: m[0] - np.sum(m[1:], 0)
+    #     self.launchmultimode(operation, 'Subtraction')
+    #
+    # def addwithcoefmode(self):
+    #     """
+    #     Launch a tab as an add with coef operation
+    #     """
+    #     coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A+xB):', u'Enter coefficient')
+    #
+    #     if coef and ok:
+    #         operation = lambda m: m[0] + coef * np.sum(m[1:], 0)
+    #         self.launchmultimode(operation, 'Addition with coef (x=' + coef + ')')
+    #
+    # def subtractwithcoefmode(self):
+    #     """
+    #     Launch a tab as a sub with coef operation
+    #     """
+    #     coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
+    #
+    #     if coef and ok:
+    #         operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
+    #         self.launchmultimode(operation, 'Subtraction with coef (x=' + str(coef))
+    #
+    # def dividemode(self):
+    #     """
+    #     Launch a tab as a div operation
+    #     """
+    #     operation = lambda m: m[0] / m[1]
+    #     self.launchmultimode(operation, 'Division')
+    #
+    # def averagemode(self):
+    #     """
+    #     Launch a tab as an avg operation
+    #     """
+    #     operation = lambda m: np.mean(m, 0)
+    #     self.launchmultimode(operation, 'Average')
+    #
+    #
+    #
+    # def launchmultimode(self, operation, operationname):
+    #     """
+    #     Launch a tab in multi-image operation mode
+    #     """
+    #     import plugins
+    #     indices = self.ui.findChild(QtGui.QTreeView, 'treebrowser').selectedIndexes()
+    #     paths = [self.filetreemodel.filePath(index) for index in indices]
+    #     plugins.plugins['Viewer'].openfiles(paths=paths, operation=operation, operationname=operationname)
 
     def vertcut(self):
         """
@@ -585,6 +590,8 @@ class MyMainWindow():
         self.currentImageTab().tab.exportimage()
 
     def calibrate(self):
+        import plugins
+
         """
         Calibrate using the currently active tab
         """
@@ -595,6 +602,9 @@ class MyMainWindow():
         """
         build a new tab, add it to the tab view, and display it
         """
+
+        import plugins
+
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()
         # Make an image tab for that file and add it to the tab view

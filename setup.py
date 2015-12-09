@@ -23,8 +23,8 @@ OPTIONS = {'argv_emulation': True,
            'iconfile': 'gui/icon.icns',
            'plist': {
                'CFBundleName': 'HipIES',
-               'CFBundleShortVersionString': '1.0',  # must be in X.X.X format
-               'CFBundleVersion': '1.0',
+               'CFBundleShortVersionString': '1.1',  # must be in X.X.X format
+               'CFBundleVersion': '1.1',
                'CFBundleIdentifier': 'com.lbnl.hipies',  # optional
                'NSHumanReadableCopyright': '@ 2015',  #optional
                'CFBundleDevelopmentRegion': 'English',  #optional - English is default
@@ -34,7 +34,7 @@ OPTIONS = {'argv_emulation': True,
                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage'
            ],
            'excludes': [
-               'matplotlib', 'sympy'
+               'matplotlib', 'sympy', 'PyQt4', 'PyQt5'
            ],
            'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
 }

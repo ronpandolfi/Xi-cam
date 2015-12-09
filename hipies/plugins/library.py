@@ -1,6 +1,7 @@
 from PySide import QtGui
 import sys
 import base
+import viewer
 
 
 class plugin(base.plugin):
@@ -26,6 +27,9 @@ class plugin(base.plugin):
 
         super(plugin, self).__init__(*args, **kwargs)
 
+        self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
+
+
 
 from PySide import QtGui
 from PySide import QtCore
@@ -35,10 +39,19 @@ import pipeline
 import numpy as np
 
 
-class LibraryWidget(QtGui.QWidget):
+class LibraryWidget(QtGui.QScrollArea):
+    sigOpenFile = QtCore.Signal(str)
+
     def __init__(self, *args, **kwargs):
         super(LibraryWidget, self).__init__()
-        self.setLayout(librarylayout(*args, **kwargs))
+        self.setWidgetResizable(True)
+        self.setFocusPolicy(Qt.NoFocus)
+        l = librarylayout(*args, **kwargs)
+        w = QtGui.QWidget()
+        w.setLayout(l)
+        w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.setWidget(w)
+        l.sigOpenFile.connect(self.sigOpenFile)
 
 
 class FlowLayout(QtGui.QLayout):
@@ -138,6 +151,8 @@ class librarylayout(FlowLayout):
     Extend the flow layout to fill it with thumbwidgetitems representing files/folders
     """
 
+    sigOpenFile = QtCore.Signal(str)
+
     def __init__(self, parentwindow, path='/Volumes'):
         super(librarylayout, self).__init__()
         self.parent = None
@@ -158,7 +173,13 @@ class librarylayout(FlowLayout):
         for entry in entries:
             # print fileinfo.fileName()
             if not (entry == '..' and os.path.normpath(path) == pipeline.pathtools.getRoot()) and not entry == '.':
-                self.addWidget(thumbwidgetitem(os.path.join(path, entry), parentwindow=self.parentwindow))
+                nameoverride = entry if entry == '..' else None
+                w = thumbwidgetitem(os.path.join(path, entry), parentwindow=self.parentwindow,
+                                    nameoverride=nameoverride)
+                self.addWidget(w)
+                w.sigOpenFile.connect(self.sigOpenFile)
+                w.sigChangeRoot.connect(self.chdir)
+
 
 
     def clear(self):
@@ -177,7 +198,7 @@ class thumbwidgetitem(QtGui.QFrame):
     sigOpenFile = QtCore.Signal(str)
 
 
-    def __init__(self, path, parentwindow):
+    def __init__(self, path, parentwindow, nameoverride=None):
         path = os.path.normpath(path)
 
         self.foldericon = QtGui.QImage()
@@ -200,7 +221,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
         self.path = path
         # print path
-        self.dimg = pipeline.loader.diffimage(filepath=self.path)
+        dimg = pipeline.loader.diffimage(filepath=self.path)
         self.image = QtGui.QImage()
         # print os.path.splitext(path)[1]
         if os.path.isdir(path):
@@ -209,7 +230,8 @@ class thumbwidgetitem(QtGui.QFrame):
 
 
             try:
-                self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
+                self.thumb = np.rot90(np.log(dimg.thumbnail * (dimg.thumbnail > 0) + (dimg.thumbnail < 1))).copy()
+                print 'thumbmax:', np.max(self.thumb)
                 self.thumb *= 255. / np.max(self.thumb)
 
 
@@ -231,7 +253,7 @@ class thumbwidgetitem(QtGui.QFrame):
         image_label.setAlignment(Qt.AlignHCenter)
         self.layout.addWidget(image_label)
 
-        self.namelabel = QtGui.QLabel(os.path.basename(path))
+        self.namelabel = QtGui.QLabel(os.path.basename(path) if nameoverride is None else nameoverride)
         self.namelabel.setAlignment(Qt.AlignHCenter)
         self.namelabel.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Maximum)
 

@@ -174,6 +174,12 @@ class difftoolbar(QtGui.QToolBar):
         self.actionProcess.setObjectName("actionProcess")
         self.actionProcess.setCheckable(True)
 
+        self.actionVideo = QtGui.QAction(self)
+        icon28 = QtGui.QIcon()
+        icon28.addPixmap(QtGui.QPixmap("gui/icons_31.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionVideo.setIcon(icon28)
+        self.actionVideo.setObjectName("actionVideo")
+
 
 
 
@@ -198,6 +204,7 @@ class difftoolbar(QtGui.QToolBar):
         self.setIconSize(QtCore.QSize(32, 32))
 
         self.addAction(self.actionProcess)
+        self.addAction(self.actionVideo)
         self.addAction(self.actionCalibrate_AgB)
         self.addAction(self.actionCenterFind)
         self.addAction(self.actionRefine_Center)
@@ -216,7 +223,7 @@ class difftoolbar(QtGui.QToolBar):
 
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc, polymask, process=None, ):
+                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -240,6 +247,11 @@ class difftoolbar(QtGui.QToolBar):
             self.actionProcess.setVisible(False)
         else:
             self.actionProcess.triggered.connect(process)
+
+        if video is None:
+            self.actionVideo.setVisible(False)
+        else:
+            self.actionVideo.triggered.connect(video)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

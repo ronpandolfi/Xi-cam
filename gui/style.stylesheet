@@ -54,8 +54,9 @@ QPushButton::pressed {
 }
 
 QPushButton[isMode="true"]:checked {
-    background-color:#111111;
     font-weight:bold;
+    background-color:#333333;
+    border-width:1px;
 }
 
 QListView{
