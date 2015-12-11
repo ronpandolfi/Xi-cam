@@ -1,6 +1,9 @@
 import collections
 import numpy as np
 import loader
+from scipy import signal
+import integration
+import writer
 
 # README!
 #
@@ -51,12 +54,23 @@ def chisquaredwithfirst(data, t, roi):
     first = data[0]
     return np.sum(roi * np.square(current.astype(float) - first))
 
-# def angularcorrelationwithfirst(data, t, roi):
-# currentchi = np.sum(loader.diffimage(data[t]).cake*roi,axis=0)
-#     firstchi = np.sum(loader.diffimage(data[0]).cake*roi,axis=0)
-#
-#
-#
+
+def angularcorrelationwithfirst(data, t, roi):
+    # ROI is assumed to be in cake mode
+
+    print experiment.center
+    experiment.center = (experiment.center[0] / 5, experiment.center[1] / 5)
+
+    currentcake, _, _ = integration.cake(data[t], experiment)
+    firstcake, _, _ = integration.cake(data[0], experiment)
+    # cakeroi, _, _ = integration.cake(np.ones_like(data), experiment)
+
+    currentchi = np.sum(currentcake * roi, axis=0)
+    firstchi = np.sum(firstcake * roi, axis=0)
+
+    return signal.convolve(currentchi, firstchi)
+
+
 
 
 operations = collections.OrderedDict([('Chi Squared', chisquared),
@@ -64,4 +78,7 @@ operations = collections.OrderedDict([('Chi Squared', chisquared),
                                       ('Norm. Abs. Diff.', normabsdiff),
                                       ('Sum Intensity', sumintensity),
                                       ('Norm. Abs. Derivative', normabsdiffderiv),
-                                      ('Chi Squared w/First Frame', chisquaredwithfirst)])
+                                      ('Chi Squared w/First Frame', chisquaredwithfirst),
+                                      ('Angular autocorrelation w/First Frame', angularcorrelationwithfirst)])
+
+experiment = None

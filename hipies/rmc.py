@@ -9,7 +9,7 @@ class gui():
     def __init__(self, ui):
         self.ui = ui
 
-        self.ui.rmcbutton.clicked.connect(self.showrmc)
+        # self.ui.rmcbutton.clicked.connect(self.showrmc)
 
         self.ui.rmcaddfiles.clicked.connect(self.addfiles)
         self.ui.rmcremovefiles.clicked.connect(self.removefiles)
