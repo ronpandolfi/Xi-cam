@@ -266,11 +266,11 @@ class MyMainWindow():
         # self.filetree.clicked.connect(self.preview.loaditem)
         # self.filetree.doubleClicked.connect(self.itemopen)
         # self.openfileslistview.doubleClicked.connect(self.switchtotab)
-        self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Open).clicked.connect(
-            self.openwatchfolder)
-        self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Reset).clicked.connect(
-            self.resetwatchfolder)
-        self.folderwatcher.newFilesDetected.connect(self.newfilesdetected)
+        # self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Open).clicked.connect(
+        # self.openwatchfolder)
+        # self.ui.findChild(QtGui.QDialogButtonBox, 'watchbuttons').button(QtGui.QDialogButtonBox.Reset).clicked.connect(
+        #     self.resetwatchfolder)
+        # self.folderwatcher.newFilesDetected.connect(self.newfilesdetected)
         #self.ui.findChild(QtGui.QCheckBox, 'autoPreprocess').stateChanged.connect(self.updatepreprocessing)
 
         # Connect top menu
@@ -284,6 +284,7 @@ class MyMainWindow():
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
         plugins.loadplugins(placeholders)
+        plugins.plugins['Viewer'].activate()
 
         plugins.base.filetree.sigOpenFile.connect(self.openfile)
 

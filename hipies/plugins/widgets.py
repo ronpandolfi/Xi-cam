@@ -1379,6 +1379,7 @@ class fileTreeWidget(QtGui.QTreeView):
         self.sortByColumn(0, QtCore.Qt.AscendingOrder)
         self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         self.setSelectionMode(self.ExtendedSelection)
+        self.setIconSize(QtCore.QSize(16, 16))
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenu)
