@@ -13,10 +13,11 @@ import time
 import scipy.ndimage
 import writer
 import nexpy.api.nexus.tree as tree
-from hipies import debugtools
+from hipies import debugtools, config
 from PySide import QtGui
+from collections import OrderedDict
 
-acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.tif', '.hdf', '.cbf']
+acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf']
 imagecache = dict()
 
 
@@ -159,7 +160,7 @@ def loadparas(path):
         print('Unexpected read error in loadparas')
     except IndexError:
         print('No txt file found in loadparas')
-    return dict()
+    return OrderedDict()
 
 
 def scanparas(path, frame=None):
@@ -174,7 +175,7 @@ def scanparas(path, frame=None):
     return paras
 
 def scanparaslines(lines):
-    paras = dict()
+    paras = OrderedDict()
     for line in lines:
         cells = filter(None, re.split('[=:]+', line))
 
@@ -184,13 +185,12 @@ def scanparaslines(lines):
             cells[1] = cells[1].split('/')[0]
             paras[key] = cells[1]
         elif cells.__len__() == 1:
-            paras[key] = cells[0]
+            paras[key] = ''
 
     return paras
 
 
 def scanalesandroparaslines(lines, frame):
-    paras = dict()
     keys = []
     values = []
     correctframe = False
@@ -206,7 +206,7 @@ def scanalesandroparaslines(lines, frame):
         elif token == '#P' and correctframe:
             values.extend(line.split()[1:])
 
-    return dict(zip(keys, values))
+    return OrderedDict(zip(keys, values))
 
 
 def loadstichted(filepath2, filepath1):
@@ -353,6 +353,8 @@ class diffimage():
         self._headers = None
         self._jpeg = None
         self.experiment = experiment
+        if self.experiment is None:
+            self.experiment = config.activeExperiment
 
 
 
@@ -379,6 +381,7 @@ class diffimage():
 
     def invalidatecache(self):
         self.cache = dict()
+        print 'cache cleared'
 
     def cachedata(self):
         if self._data is None:
@@ -497,20 +500,23 @@ class diffimage():
 
     @property
     def cake(self):
-        self.cachedetector()
-        if not self.iscached('cake'):
-            cake, x, y = integration.cake(self.data, self.experiment)
-            cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
-            cakemask = cakemask > 0
+        try:
+            self.cachedetector()
+            if not self.iscached('cake'):
+                cake, x, y = integration.cake(self.data, self.experiment)
+                cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
+                cakemask = cakemask > 0
 
-            print x, y
+                print x, y
 
-            self.cache['cake'] = cake
-            self.cache['cakemask'] = cakemask
-            self.cache['cakeqx'] = x
-            self.cache['cakeqy'] = y
+                self.cache['cake'] = cake
+                self.cache['cakemask'] = cakemask
+                self.cache['cakeqx'] = x
+                self.cache['cakeqy'] = y
 
-        return self.cache['cake']
+            return self.cache['cake']
+        except AttributeError as ex:
+            print ex.message
 
     @property
     def remesh(self):
@@ -571,8 +577,7 @@ class diffimage():
         [x, y] = center_approx.center_approx(self.data)
 
         # Set the center in the experiment
-        self.experiment.setvalue('Center X', x)
-        self.experiment.setvalue('Center Y', y)
+        self.experiment.center = (x, y)
 
     @debugtools.timeit  #0.07s on Izanami
     def variation(self, operationindex, roi):
@@ -606,6 +611,13 @@ class diffimage():
 
         return self._headers
 
+    @property
+    def radialintegration(self):
+        if 'radialintegration' in self.cache.keys():
+            self.cache['radialintegration'] = integration.radialintegrate(self)
+
+        return self.cache['radialintegration']
+
 
     def __getattr__(self, name):
         if name in self.cache:
@@ -615,7 +627,7 @@ class diffimage():
 
 
 class imageseries():
-    def __init__(self, paths, experiment):
+    def __init__(self, paths, experiment=None):
         self.paths = dict()
         self.variation = dict()
         self.appendimages(paths)
@@ -624,6 +636,11 @@ class imageseries():
         self._thumbs = None
         self._dimgs = None
         self._jpegs = None
+
+        if self.experiment is None:
+            self.experiment = config.activeExperiment
+
+
 
 
     @property

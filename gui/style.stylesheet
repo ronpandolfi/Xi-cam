@@ -2,28 +2,19 @@ QSplitter::handle {
     background-color: #222222;
 }
 
-QSplitter::handle:horizontal {
-    height: 2px;
-}
 
 
 QWidget {
     color: silver;
     background-color: #302F2F;
-    selection-background-color:orange;
+    selection-background-color:darkorange;
     selection-color: black;
     background-clip: padding;
     outline: 0;
 }
 
-
-QAbstractItemView
-{
-    alternate-background-color: #3A3939;
-    color: silver;
-    border: 1px solid 3A3939;
-    border-radius: 3px;
-    padding: 1px;
+QWidget {
+    border: 0px;
 }
 
 QHeaderView::section
@@ -63,8 +54,9 @@ QPushButton::pressed {
 }
 
 QPushButton[isMode="true"]:checked {
-    background-color:#111111;
     font-weight:bold;
+    background-color:#333333;
+    border-width:1px;
 }
 
 QListView{
@@ -110,4 +102,37 @@ QTabWidget {
 QMenu {
     icon-size:32px 32px;
 
+}
+
+QLayout {
+    padding:0px;
+    margin:0px;
+    }
+
+
+/* OVERRIDE QDARKSTYLE with ORANGE! */
+QPushButton:focus {
+    background-color: darkorange;
+}
+
+QComboBox
+{
+    selection-background-color: darkorange;
+}
+
+QComboBox QAbstractItemView
+{
+    selection-background-color: darkorange;
+}
+
+QListView::item:selected:hover, QListView::item:selected:hover, QTreeView::item:selected:hover  {
+    background: darkorange;
+}
+
+QTableView::item:selected:active, QTreeView::item:selected:active, QListView::item:selected:active  {
+    background: darkorange;
+}
+
+QToolBox::tab:selected { /* italicize selected tabs */
+    border-color: darkorange;
 }
