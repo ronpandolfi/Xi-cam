@@ -50,7 +50,7 @@ class MyMainWindow():
         self.app = app
         guiloader = QUiLoader()
         #print os.getcwd()
-        f = QtCore.QFile("gui/mainwindow.ui")
+        f = QtCore.QFile("../gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
@@ -58,7 +58,7 @@ class MyMainWindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('../gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -218,7 +218,7 @@ class MyMainWindow():
         # Viewer toolbar
         self.difftoolbar = toolbar.difftoolbar()
         self.difftoolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
-                                         self.redrawcurrent, self.redrawcurrent, self.linecut, self.vertcut,
+                                         self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                          self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                          self.roi, self.arccut, self.polymask)
         self.ui.diffbox.insertWidget(0, self.difftoolbar)
@@ -424,7 +424,9 @@ class MyMainWindow():
         """
         Connect remesh mode to current tab
         """
-        self.currentImageTab().tab.redrawimage()
+        self.redrawcurrent()
+        if self.currentImageTab() is not None:
+            self.currentImageTab().tab.replot()
 
     def currentchanged(self, index):
         """
@@ -698,7 +700,7 @@ class MyMainWindow():
         """
         toggle this pane as visible/hidden
         """
-        pane = self.ui.propertiesfold
+        pane = self.ui.propertytable
         pane.setHidden(not pane.isHidden())
 
     def showlibrary(self):

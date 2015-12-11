@@ -13,7 +13,7 @@ class openfilesmodel(QtCore.QAbstractListModel):
         self.tabwidget = tabwidget
 
     def widgetchanged(self):
-        self.dataChanged.emit(0, 0)
+        self.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return self.tabwidget.count()

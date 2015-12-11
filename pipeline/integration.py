@@ -150,9 +150,12 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data,mask, AIdict, cut=None, remesh=False, color=[255,255,255]):
+def radialintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], centeroverride=None):
     AI=pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
+    if centeroverride is not None:
+        AI.set_poni1(centeroverride[0])
+        AI.set_poni2(centeroverride[1])
     # Always do mask with 1-valid, 0's excluded
     dimg = None
 
