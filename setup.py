@@ -23,7 +23,7 @@ OPTIONS = {'argv_emulation': True,
            'iconfile': 'gui/icon.icns',
            'plist': {
                'CFBundleName': 'HipIES',
-               'CFBundleShortVersionString': '1.1',  # must be in X.X.X format
+               'CFBundleShortVersionString': '1.1.1',  # must be in X.X.X format
                'CFBundleVersion': '1.1',
                'CFBundleIdentifier': 'com.lbnl.hipies',  # optional
                'NSHumanReadableCopyright': '@ 2015',  #optional
