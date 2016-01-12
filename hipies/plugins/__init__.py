@@ -1,15 +1,16 @@
-__all__ = ['viewer', 'widgets', 'timeline', 'library', 'base', 'fluctuationscattering', 'ipythonnb']
-
-import viewer, timeline, library, fluctuationscattering
 from collections import OrderedDict
-import ipythonnb
 
-modules = [viewer, timeline, library, ipythonnb]
+
+modules = []
 plugins = OrderedDict()
 
 
 def loadplugins(placeholders):
-    global plugins
+    import viewer, timeline, library, fluctuationscattering, ipythonnb
+
+    global plugins, modules
+    modules = [viewer, timeline, library, ipythonnb, fluctuationscattering]
+
     for module in modules:
         plugin = module.plugin(placeholders)
         module.plugininstance = plugin

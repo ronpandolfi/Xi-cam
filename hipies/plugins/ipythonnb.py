@@ -1,7 +1,7 @@
 from PySide import QtGui
 import sys
 import base
-import viewer
+import viewer, timeline
 from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 from IPython.qt.inprocess import QtInProcessKernelManager
 from IPython.lib import guisupport
@@ -25,7 +25,7 @@ class plugin(base.plugin):
         kernel_manager.start_kernel()
         kernel = kernel_manager.kernel
         kernel.gui = 'qt4'
-        kernel.shell.push({'viewer': viewer.plugininstance, 'print_process_id': print_process_id})
+        kernel.shell.push({'viewer': viewer.plugininstance, 'timeline': timeline.plugininstance})
 
         kernel_client = kernel_manager.client()
         kernel_client.start_channels()

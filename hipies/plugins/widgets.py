@@ -149,6 +149,7 @@ class dimgViewer(QtGui.QWidget):
         self.imageitem.border = pg.mkPen('w')
 
         self.coordslabel = QtGui.QLabel(' ')
+        self.coordslabel.setMinimumHeight(16)
         self.imgview.layout().addWidget(self.coordslabel)
         self.imgview.setStyleSheet("background-color: rgba(0,0,0,0%)")
         self.coordslabel.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
@@ -323,8 +324,9 @@ class dimgViewer(QtGui.QWidget):
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     #y - self.dimg.experiment.center[1]) ** 2)))
                     #,  r=%0.1f
-                    self.plotwidget.qintegration.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
-                    self.plotwidget.qintegration.qLine.show()
+                    if hasattr(self.plotwidget, 'qintegration'):
+                        self.plotwidget.qintegration.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
+                        self.plotwidget.qintegration.qLine.show()
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
@@ -1289,14 +1291,31 @@ class ImageView(pg.ImageView):
             self.sigKeyRelease.emit()
 
 
+from scipy.signal import fftconvolve
+
 class fxsviewer(ImageView):
-    def __init__(self, paths=None):
+    def __init__(self, paths=None, **kwargs):
         super(fxsviewer, self).__init__()
         if paths is None:
             paths = []
+
+        conv = None
+        avg = None
         for path in paths:
             dimg = loader.diffimage(filepath=path)
-            print dimg.cake
+            if avg is None: avg = np.zeros((100, 100))
+
+            def autocorrelate(A):
+                return fftconvolve(A, A[::-1])
+
+            conv = np.apply_along_axis(autocorrelate, axis=0, arr=dimg.cake)
+            avg += conv[99:, :] + conv[:100, :]
+
+        self.setImage(avg)
+
+
+from astropy.convolution import convolve
+
 
 
 class pluginModeWidget(QtGui.QWidget):
@@ -1358,7 +1377,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
 
 class fileTreeWidget(QtGui.QTreeView):
-    sigOpenFile = QtCore.Signal(str)
+    sigOpenFiles = QtCore.Signal(list)
     sigOpenDir = QtCore.Signal(str)
 
     def __init__(self):
@@ -1371,7 +1390,8 @@ class fileTreeWidget(QtGui.QTreeView):
         self.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf", "*.cbf"]
+        filefilter = ['*' + ext for ext in
+                      loader.acceptableexts]  # ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf", "*.cbf"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
@@ -1390,17 +1410,22 @@ class fileTreeWidget(QtGui.QTreeView):
         menu = QtGui.QMenu()
 
         actionOpen = QtGui.QAction('Open', self)
-        actionOpen.triggered = self.sigOpenFile
+        actionOpen.triggered.connect(self.openActionTriggered)
         menu.addAction(actionOpen)
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
+    def openActionTriggered(self):
+        indices = self.selectedIndexes()
+        paths = [self.filetreemodel.filePath(index) for index in indices]
+
+        self.sigOpenFiles.emit(paths)
 
     def doubleclickevent(self, index):
         path = self.filetreemodel.filePath(index)
 
         if os.path.isfile(path):
-            self.sigOpenFile.emit(path)
+            self.sigOpenFiles.emit([path])
         elif os.path.isdir(path):
             self.sigOpenDir.emit(path)
         else:

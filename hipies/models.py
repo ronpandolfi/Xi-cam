@@ -69,7 +69,10 @@ class imagePropModel(QtCore.QAbstractTableModel):
     @property
     def propdata(self):
         if self._propdata is None:
-            self._propdata = self.tabwidget().dimg.headers
+            try:
+                self._propdata = self.tabwidget().dimg.headers
+            except AttributeError:
+                return [[]]
         return self._propdata
 
     def data(self, index, role=Qt.DisplayRole):

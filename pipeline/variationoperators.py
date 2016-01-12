@@ -55,6 +55,11 @@ def chisquaredwithfirst(data, t, roi):
     return np.sum(roi * np.square(current.astype(float) - first))
 
 
+def radialintegration(data, t, roi):
+    current = data[t]
+    return integration.radialintegratepyFAI(current)
+
+
 def angularcorrelationwithfirst(data, t, roi):
     # ROI is assumed to be in cake mode
 

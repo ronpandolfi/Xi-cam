@@ -17,7 +17,7 @@ from hipies import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
 
-acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf']
+acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf', '.img']
 imagecache = dict()
 
 
@@ -746,7 +746,7 @@ class imageseries():
     def path2frame(path):
         try:
             expr = '(?<=_)[\d]+(?=[_.])'
-            return int(re.search(expr, os.path.basename(path)).group(0))
+            return int(re.findall(expr, os.path.basename(path))[-1])
 
         except ValueError:
             print 'Path has no frame number:', path
