@@ -1314,7 +1314,6 @@ class fxsviewer(ImageView):
         self.setImage(avg)
 
 
-from astropy.convolution import convolve
 
 
 
