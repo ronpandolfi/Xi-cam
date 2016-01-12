@@ -9,7 +9,7 @@ def loadplugins(placeholders):
     import viewer, timeline, library, fluctuationscattering, ipythonnb
 
     global plugins, modules
-    modules = [viewer, timeline, library, ipythonnb, fluctuationscattering]
+    modules = [viewer, timeline, library, ipythonnb]
 
     for module in modules:
         plugin = module.plugin(placeholders)
