@@ -35,7 +35,7 @@ def normabsdiff(data, t, roi):
     current = data[t]
     previous = data[t - 1]
     return np.sum(roi * np.abs(current - previous) / previous)
-
+ 
 
 def sumintensity(data, t, roi):
     current = data[t]
