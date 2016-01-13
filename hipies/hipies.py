@@ -91,6 +91,7 @@ class MyMainWindow():
         # TESTING
         ##
         # self.openimage('../samples/AgB_00016.edf')
+        self.openimages(['/Users/rp/Data/b_mehta_LaB6_tth28_t1_scan2_0001.raw'])
 
         #self.calibrate()
         # self.updatepreprocessing()

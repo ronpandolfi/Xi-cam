@@ -16,8 +16,10 @@ import nexpy.api.nexus.tree as tree
 from hipies import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
+import formats  # injects fabio with custom formats
 
-acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf', '.img']
+
+acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf', '.img', '.raw']
 imagecache = dict()
 
 
@@ -56,8 +58,6 @@ def loadimage(path):
                 return data
     except IOError:
         print('IO Error loading: ' + path)
-    except TypeError:
-        print 'TypeError: path has type ', str(type(path))
 
     return data
 
