@@ -442,6 +442,8 @@ class diffimage():
                     self.experiment.setvalue('Detector', name)
         return self._detector
 
+    from fabio import brukerimage
+
     def finddetector(self):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
             if hasattr(detector, 'MAX_SHAPE'):
