@@ -31,7 +31,7 @@ class rawimage(fabioimage):
 
 
 fabioutils.FILETYPES['raw'] = ['raw']
-
+from fabio import mar345image
 
 # OVERRIDE FABIO LOADER! fabio's loader doesn't support exterior image classes, so this will inject support for now :(
 def _openimage(filename):

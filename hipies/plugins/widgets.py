@@ -1221,18 +1221,23 @@ class timelineViewer(dimgViewer):
         # TODO: plot variation with indices, and skipped frames; skip None's
 
 
-        variation = np.array(variation.items())
+
+        t = np.array(variation.keys())
+        d = np.array(variation.values())
+
         # print variation
-        variation = variation[variation[:, 0].argsort()]
+        d = d[t.argsort()]
+        t = sorted(t)
 
         self.timeline.enableAutoScale()
         # self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
 
-        print 'plottype:', type(variation[0, 1])
-        if type(variation[0, 1]) is float or int:
-            self.timeline.plot(variation[:, 0], variation[:, 1], pen=pg.mkPen(color=color))
-        elif type(variation[0, 1]) is np.ndarray:
-            self.timeline.addItem(pg.ImageItem(np.array(variation[:, 1])))
+        print 'plottype:', type(d[0])
+        if type(d[0]) in [float, int, np.float64]:
+            self.timeline.plot(t, d, pen=pg.mkPen(color=color))
+        elif type(d[0]) is np.ndarray:
+            for dt in d:
+                self.timeline.plot(dt[0], dt[1])
 
 
     def redrawframe(self, index, time, forcelow=False):

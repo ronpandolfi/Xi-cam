@@ -35,7 +35,7 @@ def normabsdiff(data, t, roi):
     current = data[t]
     previous = data[t - 1]
     return np.sum(roi * np.abs(current - previous) / previous)
- 
+
 
 def sumintensity(data, t, roi):
     current = data[t]
@@ -84,6 +84,9 @@ operations = collections.OrderedDict([('Chi Squared', chisquared),
                                       ('Sum Intensity', sumintensity),
                                       ('Norm. Abs. Derivative', normabsdiffderiv),
                                       ('Chi Squared w/First Frame', chisquaredwithfirst),
-                                      ('Angular autocorrelation w/First Frame', angularcorrelationwithfirst)])
+                                      ('Angular autocorrelation w/First Frame', angularcorrelationwithfirst),
+                                      ('Radial Integration', radialintegration)
+])
+
 
 experiment = None

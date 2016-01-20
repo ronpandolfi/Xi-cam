@@ -1,5 +1,5 @@
 import numpy as np
-#from hipies import debugtools
+from hipies import config
 from PySide import QtCore
 import multiprocessing
 import time
@@ -150,9 +150,14 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], centeroverride=None):
-    AI=pyFAI.AzimuthalIntegrator()
-    AI.setPyFAI(**AIdict)
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], centeroverride=None):
+    if mask is None: mask = config.activeExperiment.mask
+    if AIdict is None:
+        AI = config.activeExperiment.getAI()
+    else:
+        AI = pyFAI.AzimuthalIntegrator()
+        AI.setPyFAI(**AIdict)
+
     if centeroverride is not None:
         AI.set_poni1(centeroverride[0])
         AI.set_poni2(centeroverride[1])
