@@ -14,6 +14,7 @@
 ## TODO: Use detector mask in centerfinder
 
 
+import sys
 import os
 
 from PySide.QtUiTools import QUiLoader

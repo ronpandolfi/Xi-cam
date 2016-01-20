@@ -26,13 +26,13 @@ bool remap(int nrow, int ncol, double *img, int nqp, int nqz,
 		double cost = t1 / t2;
 		double tant = sgn(qp[i]) * sincos(cost) / cost;
 		
-		double row = tana * sdd / pixel[1] + cen[1];
+		double row = tana * sdd / cost / pixel[1] + cen[1];
 		double col = tant * sdd / pixel[0] + cen[0];
 		switch(method){
 			case NEAREST_NEIGHBOR:
 				ir = (int) (row + 0.5);
 				ic = (int) (col + 0.5);
-				if (ic >= 0 && ic < ncol)
+				if (ic >= 0 && ic < ncol && ir >= 0 && ir < nrow )
 					out[i] = img[ir * ncol + ic];
 				else
 					out[i] = 0.;
