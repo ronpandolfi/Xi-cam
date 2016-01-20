@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # from image_load import *
-#import loader
+# import loader
 import numpy as np
 from pyFAI import geometry
 
@@ -32,7 +32,7 @@ def calc_q_range(lims, geometry, alphai, cen):
     tmp = np.sqrt(y ** 2 + sdd ** 2)
     cos2theta = sdd / tmp
     sin2theta = y / tmp
-    tmp = np.sqrt(z ** 2 + y **2 + sdd ** 2)
+    tmp = np.sqrt(z ** 2 + y ** 2 + sdd ** 2)
     cosalpha = sdd / tmp
     sinalpha = z / tmp
     k0 = 2. * np.pi / wavelen
@@ -98,15 +98,15 @@ def remesh(image, filename, geometry, alphai):
         cost[cost < 0] = 1
         with np.errstate(divide='ignore'):
             map_y = (tana * sdd / cost + center[1]) / pixel[1]
-    
-        
+
+
         # compute null space
-        nrow,ncol = image.shape
+        nrow, ncol = image.shape
         m1 = t1 > t2
-        m2 = np.logical_or(map_x < 0, map_x > ncol-1)
-        m3 = np.logical_or(map_y < 0, map_y > nrow-1)
-        
-        mask = np.logical_or(np.logical_or(m1, m2),m3)
+        m2 = np.logical_or(map_x < 0, map_x > ncol - 1)
+        m3 = np.logical_or(map_y < 0, map_y > nrow - 1)
+
+        mask = np.logical_or(np.logical_or(m1, m2), m3)
         map_x[mask] = -1
         map_y[mask] = -1
 
@@ -115,15 +115,16 @@ def remesh(image, filename, geometry, alphai):
         qimg = np.fromiter((image[i,j] for i,j in np.nditer([map_y.astype(int),
             map_x.astype(int)])),dtype=np.float, count=qsize).reshape(qshape)
         qimg[mask] = 0.
-        return np.rot90(qimg,3),np.rot90(qpar,3),np.rot90(qvrt,3)
+        return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
 
 if __name__ == "__main__":
 # create a test case with known geometry
     import fabio
     import pylab as plt
     import time
-    import pdb
-    filename = '/Users/dkumar/Data/examples/Burst/calibration/AGB_5S_USE_2_2m.edf'
+import pdb
+
+filename = '/Users/dkumar/Data/examples/Burst/calibration/AGB_5S_USE_2_2m.edf'
     image = fabio.open(filename).data
     sdd = 0.283351
     cen_y = 0.005363
@@ -134,14 +135,14 @@ if __name__ == "__main__":
     geo.set_pixel1(0.172E-03)
     geo.set_pixel2(0.172E-03)
     t0 = time.clock()
-    alphai = np.deg2rad(0.14)
-    qimg,qpar,qvrt = remesh(image, filename, geo, alphai)
-    qimg.tofile("img.bin")
-    qpar.tofile("qpar.bin")
-    qvrt.tofile("qvrt.bin")
+alphai = np.deg2rad(0.14)
+qimg, qpar, qvrt = remesh(image, filename, geo, alphai)
+qimg.tofile("img.bin")
+qpar.tofile("qpar.bin")
+qvrt.tofile("qvrt.bin")
     t1 = time.clock() - t0
     print "remesh clock time = %f" % t1
-    plt.imshow(np.log(qimg+5),cmap=plt.cm.autumn_r, interpolation='Nearest', 
-        extent=[qpar.min(), qpar.max(), -1 * qvrt.max(), -1 * qvrt.min()])
+plt.imshow(np.log(qimg + 5), cmap=plt.cm.autumn_r, interpolation='Nearest',
+           extent=[qpar.min(), qpar.max(), -1 * qvrt.max(), -1 * qvrt.min()])
     plt.show()
     
