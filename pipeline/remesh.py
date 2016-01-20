@@ -13,8 +13,8 @@ try:
 except ImportError:
     print "Remeshing C extension is NOT LOADED!"
 
-def calc_q_range(lims, geometry, alphai, cen):
 
+def calc_q_range(lims, geometry, alphai, cen):
     nanometer = 1.0E+09
     sdd = geometry.get_dist() * nanometer
     wavelen = geometry.get_wavelength() * nanometer
@@ -22,9 +22,9 @@ def calc_q_range(lims, geometry, alphai, cen):
     pixel2 = geometry.get_pixel2() * nanometer
 
     # calculate q-range for the image
-    y = np.array([0, lims[1]-1], dtype=np.float) * pixel1 
-    z = np.array([0, lims[0]-1], dtype=np.float) * pixel2
-    y,z = np.meshgrid(y,z)
+    y = np.array([0, lims[1] - 1], dtype=np.float) * pixel1
+    z = np.array([0, lims[0] - 1], dtype=np.float) * pixel2
+    y, z = np.meshgrid(y, z)
     y -= cen[0]
     z -= cen[1]
 
@@ -61,18 +61,18 @@ def remesh(image, filename, geometry, alphai):
 
     # calculate q values
     qrange, k0 = calc_q_range(image.shape, geometry, alphai, center)
-    
+
     # uniformly spaced q-values for remeshed image
     nqz = image.shape[0]
-    dqz = (qrange[3] - qrange[2])/(nqz-1)
-    nqp = np.int((qrange[1]-qrange[0]) / dqz)
+    dqz = (qrange[3] - qrange[2]) / (nqz - 1)
+    nqp = np.int((qrange[1] - qrange[0]) / dqz)
     qvrt = np.linspace(qrange[2], qrange[3], nqz)
     qpar = qrange[0] + np.arange(nqp) * dqz
-    qpar,qvrt = np.meshgrid(qpar, qvrt)
+    qpar, qvrt = np.meshgrid(qpar, qvrt)
 
     try:
         center /= pixel
-        qimg = warp_image(image,qpar,qvrt,pixel,center,alphai,k0,sdd,0)
+        qimg = warp_image(image, qpar, qvrt, pixel, center, alphai, k0, sdd, 0)
         return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
     except:
 
@@ -80,19 +80,19 @@ def remesh(image, filename, geometry, alphai):
         cosi = np.cos(alphai)
         sini = np.sin(alphai)
 
-        sina = (qvrt/k0) - sini
-        cosa2= 1 - sina**2
+        sina = (qvrt / k0) - sini
+        cosa2 = 1 - sina ** 2
         cosa = np.sqrt(cosa2)
         tana = sina / cosa
 
-        t1 = cosa2 + cosi**2 - (qpar/k0)**2
+        t1 = cosa2 + cosi ** 2 - (qpar / k0) ** 2
         t2 = 2. * cosa * cosi
         cost = t1 / t2
         cost[t1 > t2] = 0
         with np.errstate(divide='ignore'):
-            tant = np.sign(qpar) * np.sqrt(1. - cost**2) / cost
-            tant [cost == 0 ] = 0
-    
+            tant = np.sign(qpar) * np.sqrt(1. - cost ** 2) / cost
+            tant[cost == 0] = 0
+
         # F : (qp,qz) --> (x,y)
         map_x = (tant * sdd + center[0]) / pixel[0]
         cost[cost < 0] = 1
@@ -112,19 +112,21 @@ def remesh(image, filename, geometry, alphai):
 
         qsize = map_x.size
         qshape = map_x.shape
-        qimg = np.fromiter((image[i,j] for i,j in np.nditer([map_y.astype(int),
-            map_x.astype(int)])),dtype=np.float, count=qsize).reshape(qshape)
+        qimg = np.fromiter((image[i, j] for i, j in np.nditer([map_y.astype(int),
+                                                               map_x.astype(int)])), dtype=np.float,
+                           count=qsize).reshape(qshape)
         qimg[mask] = 0.
         return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
 
+
 if __name__ == "__main__":
-# create a test case with known geometry
+    # create a test case with known geometry
     import fabio
     import pylab as plt
     import time
-import pdb
+    import pdb
 
-filename = '/Users/dkumar/Data/examples/Burst/calibration/AGB_5S_USE_2_2m.edf'
+    filename = '/Users/dkumar/Data/examples/Burst/calibration/AGB_5S_USE_2_2m.edf'
     image = fabio.open(filename).data
     sdd = 0.283351
     cen_y = 0.005363
@@ -135,14 +137,14 @@ filename = '/Users/dkumar/Data/examples/Burst/calibration/AGB_5S_USE_2_2m.edf'
     geo.set_pixel1(0.172E-03)
     geo.set_pixel2(0.172E-03)
     t0 = time.clock()
-alphai = np.deg2rad(0.14)
-qimg, qpar, qvrt = remesh(image, filename, geo, alphai)
-qimg.tofile("img.bin")
-qpar.tofile("qpar.bin")
-qvrt.tofile("qvrt.bin")
+    alphai = np.deg2rad(0.14)
+    qimg, qpar, qvrt = remesh(image, filename, geo, alphai)
+    qimg.tofile("img.bin")
+    qpar.tofile("qpar.bin")
+    qvrt.tofile("qvrt.bin")
     t1 = time.clock() - t0
     print "remesh clock time = %f" % t1
-plt.imshow(np.log(qimg + 5), cmap=plt.cm.autumn_r, interpolation='Nearest',
-           extent=[qpar.min(), qpar.max(), -1 * qvrt.max(), -1 * qvrt.min()])
+    plt.imshow(np.log(qimg + 5), cmap=plt.cm.autumn_r, interpolation='Nearest',
+               extent=[qpar.min(), qpar.max(), -1 * qvrt.max(), -1 * qvrt.min()])
     plt.show()
-    
+
