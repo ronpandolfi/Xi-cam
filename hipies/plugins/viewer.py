@@ -4,6 +4,7 @@ import os
 
 import widgets
 import numpy as np
+from pipeline.spacegroups import spacegroupwidget
 
 
 class plugin(base.plugin):
@@ -23,7 +24,7 @@ class plugin(base.plugin):
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                     self.roi, self.arccut, self.polymask)
+                                     self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup)
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -38,6 +39,13 @@ class plugin(base.plugin):
         self.booltoolbar.actionDivide.triggered.connect(self.dividemode)
         self.booltoolbar.actionAverage.triggered.connect(self.averagemode)
 
+        self.spacegroupwidget = spacegroupwidget()
+        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
+        self.placeholders[1].addWidget(self.spacegroupwidget)
+
+
+    def drawsgoverlay(self, peakoverlay):
+        self.getCurrentTab().drawsgoverlay(peakoverlay)
 
     def addmode(self):
         """
@@ -67,7 +75,7 @@ class plugin(base.plugin):
         """
         Launch a tab as a sub with coef operation
         """
-        coef, ok = QtGui.QInputDialog.getDouble(self.ui, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
+        coef, ok = QtGui.QInputDialog.getDouble(None, u'Enter scaling coefficient x (A-xB):', u'Enter coefficient')
 
         if coef and ok:
             operation = lambda m: m[0] - coef * np.sum(m[1:], 0)
@@ -162,3 +170,9 @@ class plugin(base.plugin):
 
     def invalidatecache(self):
         self.getCurrentTab().dimg.invalidatecache()
+
+    def togglespacegroup(self):
+        if self.toolbar.actionSpaceGroup.isChecked():
+            self.placeholders[1].setCurrentWidget(self.spacegroupwidget)
+        else:
+            self.placeholders[1].setCurrentWidget(self.rightwidget)

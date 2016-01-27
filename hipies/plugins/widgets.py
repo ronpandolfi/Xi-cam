@@ -8,7 +8,8 @@ from pipeline import loader, cosmics, integration, peakfinding, center_approx, v
 from hipies import config, ROI, globals, debugtools, toolbar
 from fabio import edfimage
 import os
-
+import pyqtgraph.parametertree.parameterTypes as pTypes
+from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -168,6 +169,12 @@ class dimgViewer(QtGui.QWidget):
 
         self.centerplot = pg.ScatterPlotItem()
         self.viewbox.addItem(self.centerplot)
+
+        self.sgToverlay = pg.ScatterPlotItem()
+        self.viewbox.addItem(self.sgToverlay)
+
+        self.sgRoverlay = pg.ScatterPlotItem()
+        self.viewbox.addItem(self.sgRoverlay)
 
         # Make a layout for the tab
         backwidget = QtGui.QWidget()
@@ -1068,6 +1075,10 @@ class dimgViewer(QtGui.QWidget):
         filename, _ = dialog.getSaveFileName()
         fabimg.write(filename)
 
+    def drawsgoverlay(self, peakoverlay):
+        self.viewbox.addItem(peakoverlay)
+        peakoverlay.enable(self.viewbox)
+
 
 class timelineViewer(dimgViewer):
     def __init__(self, simg=None, files=None, toolbar=None):
@@ -1447,6 +1458,33 @@ class fileTreeWidget(QtGui.QTreeView):
         self.filetreemodel.setRootPath(root.absolutePath())
         self.setRootIndex(self.filetreemodel.index(root.absolutePath()))
         self.show()
+
+
+class spacegroupeditor(ParameterTree):
+    def __init__(self):
+        super(spacegroupeditor, self).__init__()
+        self.LatticeChoice = pTypes.ListParameter(name='Type', type='list', value=0,
+                                                  values=['Triclinic', 'Monoclinic', 'Orthorhombic'])
+        self.Repetition = VectorParameter(name='Repetition', value=(2, 2, 2))
+        self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
+        self.Basis = ScalableGroup(name='Basis', children=[VectorParameter(name='Point 1')])
+        self.Position = VectorParameter(name='Position')
+
+        params = [{'name': 'Lattice', 'type': 'group', 'children': [self.LatticeChoice,
+                                                                    self.LatticeA,
+                                                                    self.LatticeB,
+                                                                    self.LatticeC]},
+                  self.Repetition,
+                  self.Scaling,
+                  self.Basis,
+                  self.Position
+        ]
+
+        self.parameter = Parameter.create(name='params', type='group', children=params)
+
+        self.parameterTree = ParameterTree()
+        self.parameterTree.setParameters(self.parameter, showTop=False)
+        self._form = self.parameterTree
 
 
 def pixel2q(x, y, experiment):

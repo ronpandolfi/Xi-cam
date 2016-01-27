@@ -197,7 +197,7 @@ class timelinetab(viewer.imageTab):
         # print variation
         variation = variation[variation[:, 0].argsort()]
 
-        self.timeline.enableAutoScale()
+        self.timeline.enableAutoRange()
         #self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
 
         print 'plottype:', type(variation[0, 1])

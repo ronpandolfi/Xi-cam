@@ -173,12 +173,22 @@ class difftoolbar(QtGui.QToolBar):
         self.actionProcess.setIcon(icon27)
         self.actionProcess.setObjectName("actionProcess")
         self.actionProcess.setCheckable(True)
+        self.actionProcess.setVisible(False)
 
         self.actionVideo = QtGui.QAction(self)
         icon28 = QtGui.QIcon()
         icon28.addPixmap(QtGui.QPixmap("gui/icons_31.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionVideo.setIcon(icon28)
         self.actionVideo.setObjectName("actionVideo")
+        self.actionVideo.setVisible(False)
+
+        self.actionSpaceGroup = QtGui.QAction(self)
+        icon29 = QtGui.QIcon()
+        icon29.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionSpaceGroup.setIcon(icon29)
+        self.actionSpaceGroup.setObjectName("actionSpaceGroup")
+        self.actionSpaceGroup.setCheckable(True)
+        self.actionSpaceGroup.setVisible(False)
 
 
 
@@ -219,11 +229,12 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionLog_Intensity)
         self.addAction(self.actionRadial_Symmetry)
         self.addAction(self.actionMirror_Symmetry)
+        self.addAction(self.actionSpaceGroup)
         #self.addAction(self.actionROI)
 
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None):
+                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None, spacegroup=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -243,15 +254,17 @@ class difftoolbar(QtGui.QToolBar):
         self.sigCake.connect(cake)
         self.sigRemesh.connect(remesh)
 
-        if process is None:
-            self.actionProcess.setVisible(False)
-        else:
+        if process is not None:
+            self.actionProcess.setVisible(True)
             self.actionProcess.triggered.connect(process)
 
-        if video is None:
-            self.actionVideo.setVisible(False)
-        else:
+        if video is not None:
+            self.actionVideo.setVisible(True)
             self.actionVideo.triggered.connect(video)
+
+        if spacegroup is not None:
+            self.actionSpaceGroup.setVisible(True)
+            self.actionSpaceGroup.triggered.connect(spacegroup)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

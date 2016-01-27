@@ -91,7 +91,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        # self.openimage('../samples/AgB_00016.edf')
+        self.openimages(['../samples/AgB_00016.edf'])
         # self.openimages(['/Users/rp/Data/LaB6_Ant1_dc002p.mar3450'])
 
         #self.calibrate()
