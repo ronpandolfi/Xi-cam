@@ -2,12 +2,29 @@ from PySide import QtGui
 import sys
 import base
 import viewer, timeline
+
+# Overload for Py2App
+def new_load_qt(api_options):
+    from PySide import QtCore, QtGui, QtSvg
+
+    return QtCore, QtGui, QtSvg, 'pyside'
+
+
+from IPython.external import qt_loaders
+
+qt_loaders.load_qt = new_load_qt
+
+# Necessary import for py2app build
+import pygments.styles.default
+
+
 from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 from IPython.qt.inprocess import QtInProcessKernelManager
 from IPython.lib import guisupport
 import qdarkstyle
 import os
 
+from pygments import lexers
 
 def print_process_id():
     print('Process ID is:', os.getpid())
