@@ -56,7 +56,7 @@ def chisquaredwithfirst(data, t, roi):
 
 
 def radialintegration(data, t, roi):
-    current = data[t]
+    current = data  # pixel size is the issue
     return integration.radialintegratepyFAI(current)
 
 

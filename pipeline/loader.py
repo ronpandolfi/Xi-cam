@@ -723,7 +723,8 @@ class imageseries():
 
         thumbs = self.thumbs
         try:
-
+            if operationindex == 7:
+                return variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
             return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
         except IndexError as ex:
             print 'Skipping index:', i

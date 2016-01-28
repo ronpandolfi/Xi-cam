@@ -24,7 +24,6 @@ from IPython.lib import guisupport
 import qdarkstyle
 import os
 
-from pygments import lexers
 
 def print_process_id():
     print('Process ID is:', os.getpid())

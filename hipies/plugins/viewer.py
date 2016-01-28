@@ -5,6 +5,7 @@ import os
 import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
+from pipeline import loader
 
 
 class plugin(base.plugin):
@@ -160,6 +161,15 @@ class plugin(base.plugin):
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
+        self.centerwidget.setCurrentWidget(widget)
+
+    def opendata(self, data=None, operation=None, operationname=None):
+        self.activate()
+        dimg = loader.diffimage(data=data)
+        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, dimg=dimg, operation=operation,
+                                    operationname=operationname, plotwidget=self.bottomwidget,
+                                    toolbar=self.toolbar)
+        self.centerwidget.addTab(widget, 'Imported data')
         self.centerwidget.setCurrentWidget(widget)
 
     def currentImage(self):

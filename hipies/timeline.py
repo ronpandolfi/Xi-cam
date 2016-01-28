@@ -203,8 +203,10 @@ class timelinetab(viewer.imageTab):
         print 'plottype:', type(variation[0, 1])
         if type(variation[0, 1]) is float or int:
             self.timeline.plot(variation[:, 0], variation[:, 1], pen=pg.mkPen(color=color))
+            self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
         elif type(variation[0, 1]) is np.ndarray:
             self.timeline.addItem(pg.ImageItem(np.array(variation[:, 1])))
+            self.timeline.getViewBox().setMouseEnabled(x=True, y=True)
 
 
     def redrawframe(self, index, time, forcelow=False):

@@ -43,7 +43,6 @@ class OOMTabItem(QtGui.QWidget):
                 if self.kwargs['operation'] is not None:
                     print self.kwargs['paths']
                     imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
-                    print imgdata
                     imgdata = self.kwargs['operation'](imgdata)
                     dimg = loader.diffimage(filepath=self.kwargs['paths'][0], data=imgdata)
                     self.kwargs['dimg'] = dimg
@@ -97,7 +96,7 @@ class dimgViewer(QtGui.QWidget):
         # Save image data and the experiment
         self.dimg = dimg
 
-        if len(paths) == 1:
+        if len(paths) == 1 and paths[0] is not None:
             self.dimg = loader.diffimage(filepath=paths[0])
 
 
@@ -1459,32 +1458,6 @@ class fileTreeWidget(QtGui.QTreeView):
         self.setRootIndex(self.filetreemodel.index(root.absolutePath()))
         self.show()
 
-
-class spacegroupeditor(ParameterTree):
-    def __init__(self):
-        super(spacegroupeditor, self).__init__()
-        self.LatticeChoice = pTypes.ListParameter(name='Type', type='list', value=0,
-                                                  values=['Triclinic', 'Monoclinic', 'Orthorhombic'])
-        self.Repetition = VectorParameter(name='Repetition', value=(2, 2, 2))
-        self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
-        self.Basis = ScalableGroup(name='Basis', children=[VectorParameter(name='Point 1')])
-        self.Position = VectorParameter(name='Position')
-
-        params = [{'name': 'Lattice', 'type': 'group', 'children': [self.LatticeChoice,
-                                                                    self.LatticeA,
-                                                                    self.LatticeB,
-                                                                    self.LatticeC]},
-                  self.Repetition,
-                  self.Scaling,
-                  self.Basis,
-                  self.Position
-        ]
-
-        self.parameter = Parameter.create(name='params', type='group', children=params)
-
-        self.parameterTree = ParameterTree()
-        self.parameterTree.setParameters(self.parameter, showTop=False)
-        self._form = self.parameterTree
 
 
 def pixel2q(x, y, experiment):
