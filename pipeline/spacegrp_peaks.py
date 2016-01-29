@@ -222,10 +222,10 @@ def angles_to_pixles(angles, center, sdd, pixel_size=[172, 172]):
 	return np.vstack([px, py]).astype(int)
 	
 if __name__ == '__main__':
-	ang1 = np.deg2rad(80.)
-	ang2 = np.deg2rad(125.)
-	ang3 = np.deg2rad(100.)
-	n = np.array([3,3,4],dtype=float)
-	peaks = find_peaks(10., 15., 21., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984, order=4) 
+	ang1 = np.deg2rad(90.)
+	ang2 = np.deg2rad(90.)
+	ang3 = np.deg2rad(90.)
+	n = np.array([0,0,1],dtype=float)
+	peaks = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984, order=4) 
 	for key in peaks:
 		print key+" -> "+str(peaks[key])
