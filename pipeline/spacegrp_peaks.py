@@ -238,5 +238,10 @@ if __name__ == '__main__':
     n = np.array([0, 0, 1], dtype=float)
     peaks = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984,
                        order=4)
+    peaks2 = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984,
+                        order=4)
     for key in peaks:
         print key + " -> " + str(peaks[key])
+
+    if np.sum(peaks) != np.sum(peaks2):
+        print "results are different given the same input?"

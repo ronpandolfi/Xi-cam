@@ -1078,9 +1078,9 @@ class dimgViewer(QtGui.QWidget):
         for item in self.viewbox.addedItems:
             from pipeline import spacegroups
 
-            print type(item), type(item) is spacegroups.peakoverlay
+            # print type(item), type(item) is spacegroups.peakoverlay
             if type(item) is spacegroups.peakoverlay:
-                self.viewbox.removeItem(item)
+                self.viewbox.removeItem(item)  # item is marked for removal, but must be hidden removal takes effect
                 item.hide()
 
     def drawsgoverlay(self, peakoverlay):

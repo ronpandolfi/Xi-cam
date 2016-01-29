@@ -6,8 +6,12 @@ import pyqtgraph as pg
 
 
 # TODO: Add index of refraction to interface and backend
-#TODO: Add q,twotheta, alphaf to tooltip
-#TODO: fix scaling
+# TODO: Add q,twotheta, alphaf to tooltip
+# TODO: check scaling
+# TODO: Actively determine number of orders to display
+# TODO: Connect orientation interface with backend
+# TODO: Align overlay with center, mirror:
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -260,7 +264,7 @@ class spacegroupwidget(ParameterTree):
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=np.array([0, 0, 1]), norm_type='uvw', order=3)
+                                          normal=np.array([0, 0, 1]), norm_type='uvw', order=2)
         for key in peaks:
             print key + " -> " + str(peaks[key])
 
@@ -309,9 +313,9 @@ class spacegroup(hideableGroup):
         self.alpha = pTypes.SimpleParameter(type='float', name=u'α', value=90, step=.01)
         self.beta = pTypes.SimpleParameter(type='float', name=u'β', value=90, step=.01)
         self.gamma = pTypes.SimpleParameter(type='float', name=u'γ', value=90, step=.01)
-        self.a = pTypes.SimpleParameter(type='float', name='a', value=1, step=.01, suffix=' nm')
-        self.b = pTypes.SimpleParameter(type='float', name='b', value=1, step=.01, suffix=' nm')
-        self.c = pTypes.SimpleParameter(type='float', name='c', value=1, step=.01, suffix=' nm')
+        self.a = pTypes.SimpleParameter(type='float', name='a', value=1, step=.01, suffix='m', siPrefix='n')
+        self.b = pTypes.SimpleParameter(type='float', name='b', value=1, step=.01, suffix='m', siPrefix='n')
+        self.c = pTypes.SimpleParameter(type='float', name='c', value=1, step=.01, suffix='m', siPrefix='n')
         self.addChildren([self.alpha, self.beta, self.gamma, self.a, self.b, self.c])
 
     def _setb(self, _, value):
