@@ -216,9 +216,10 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 def angles_to_pixles(angles, center, sdd, pixel_size=[172, 172]):
 	tan_2t = np.tan(angles[:,0])
 	tan_al = np.tan(angles[:,1])
+	x = tan_2t * sdd
 	px = (tan_2t * sdd)/pixel_size[0] + center[0]
-	py = np.sqrt(sdd**2 * tan_al**2 - px**2) / pixel_size[1] + center[1]
-	return np.vstack([px, py])
+	py = np.sqrt(sdd**2 * tan_al**2 - x**2) / pixel_size[1] + center[1]
+	return np.vstack([px, py]).astype(int)
 	
 if __name__ == '__main__':
 	ang1 = np.deg2rad(80.)
