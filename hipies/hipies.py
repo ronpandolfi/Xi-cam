@@ -1,16 +1,11 @@
 # -*- coding: UTF-8 -*-
 
 ### TODO: Add calibrant selection
-# TODO: Add calibration button
 # TODO: Make experiment save/load
 ### TODO: Add peak marking
 ### TODO: Add q trace
 # TODO: Confirm q calibration
-### TODO: Add caking
-# TODO: Synchronize tabs
 ## TODO: Add mask clear
-### TODO: Clean tab names
-### TODO: Add arc ROI
 ## TODO: Use detector mask in centerfinder
 
 
@@ -91,7 +86,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        # self.openimages(['../samples/AgB_00016.edf'])
+        self.openimages(['../samples/AgB_00016.edf'])
         # self.openimages(['/Users/rp/Data/LaB6_Ant1_dc002p.mar3450'])
 
         #self.calibrate()

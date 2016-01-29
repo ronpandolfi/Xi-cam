@@ -1074,7 +1074,17 @@ class dimgViewer(QtGui.QWidget):
         filename, _ = dialog.getSaveFileName()
         fabimg.write(filename)
 
+    def clearsgoverlays(self):
+        for item in self.viewbox.addedItems:
+            from pipeline import spacegroups
+
+            print type(item), type(item) is spacegroups.peakoverlay
+            if type(item) is spacegroups.peakoverlay:
+                self.viewbox.removeItem(item)
+                item.hide()
+
     def drawsgoverlay(self, peakoverlay):
+        self.clearsgoverlays()
         self.viewbox.addItem(peakoverlay)
         peakoverlay.enable(self.viewbox)
 

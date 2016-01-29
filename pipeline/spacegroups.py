@@ -4,6 +4,11 @@ from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, reg
 from PySide import QtCore, QtGui
 import pyqtgraph as pg
 
+
+# TODO: Add index of refraction to interface and backend
+#TODO: Add q,twotheta, alphaf to tooltip
+#TODO: fix scaling
+
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -115,11 +120,9 @@ class VectorParameter(Parameter):
 
 
 class peak(object):
-    def __init__(self, mode, h, k, l, x, y, twotheta=None, alphaf=None, q=None):
+    def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
         self.mode = mode
-        self.h = h
-        self.k = k
-        self.l = l
+        self.hkl = hkl
         self.x = x
         self.y = y
         self.twotheta = twotheta
@@ -134,7 +137,7 @@ class peak(object):
 
     def __str__(self):
         s = u"Peak type: {}\n".format(self.mode)
-        s += u"Lattice vector (h,k,l): {}, {}, {}\n".format(self.h, self.k, self.l)
+        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
         if self.q is not None: s += u"q: {}".format(self.q)
@@ -174,7 +177,14 @@ class peakoverlay(pg.ScatterPlotItem):
     def onMove(self, pos):
         pos = self.mapFromScene(pos)
         points = self.pointsAt(pos)
-        if len(points) != 0:
+
+        if len(points) > 6:
+            self.display_text.setText('Too many points under cursor.\n'
+                                      'Zoom in for more info.')
+            self.display_text.setPos(pos)
+            self.display_text.show()
+
+        elif len(points) != 0:
             s = u''
             #print points
             for point in points:
@@ -221,11 +231,15 @@ class spacegroupwidget(ParameterTree):
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]
         self.rotations = [self.rotationvectorsample, self.rotationvectorcrystal, self.rotationplane]
 
+        self.alpha = pTypes.SimpleParameter(name=u'α', type='float', value=1.)
+        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=1.)
+        self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.alpha, self.beta])
+
         self.redrawsg = pTypes.ActionParameter(name='Overlay space group')
         self.redrawsg.sigActivated.connect(self.drawoverlay)
 
         self.parameter.addChildren([self.crystalsystem, self.spacegroupparameter] + self.spacegroupeditors + [
-            self.rotationstyle] + self.rotations + [self.redrawsg])
+            self.rotationstyle] + self.rotations + [self.refractiveindex, self.redrawsg])
 
         self.hidechildren()
         self.hiderotations()
@@ -233,9 +247,29 @@ class spacegroupwidget(ParameterTree):
         self.rotations[0].show()
         self.crystalsystem.sigValueChanged.connect(self.crystalsystemchanged)
 
+    def activelatticetype(self):
+        print self.crystalsystem.reverse[0].index(self.crystalsystem.value())
+        return self.spacegroupeditors[self.crystalsystem.reverse[0].index(self.crystalsystem.value())]
+
+
     def drawoverlay(self):
-        self.sigDrawSGOverlay.emit(peakoverlay(
-            [peak('Reflection', 1, 1, 1, 100, 100, 1, 1, 1), peak('Transmission', 1, 1, 1, 200, 200, 1, 1, 1)]))
+        import spacegrp_peaks
+        import numpy as np
+
+        activelatticetype = self.activelatticetype()
+        peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
+                                          float(activelatticetype.c.value()), activelatticetype.alpha.value(),
+                                          activelatticetype.beta.value(), activelatticetype.gamma.value(),
+                                          normal=np.array([0, 0, 1]), norm_type='uvw', order=3)
+        for key in peaks:
+            print key + " -> " + str(peaks[key])
+
+        peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks] + \
+                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks]
+
+        self.sigDrawSGOverlay.emit(peakoverlay(peaks))
+        # self.sigDrawSGOverlay.emit(peakoverlay(
+        #    [peak('Reflection', 1, 1, 1, 100, 100, 1, 1, 1), peak('Transmission', 1, 1, 1, 200, 200, 1, 1, 1)]))
 
     def hidechildren(self):
         for child in self.spacegroupeditors:
@@ -275,9 +309,9 @@ class spacegroup(hideableGroup):
         self.alpha = pTypes.SimpleParameter(type='float', name=u'α', value=90, step=.01)
         self.beta = pTypes.SimpleParameter(type='float', name=u'β', value=90, step=.01)
         self.gamma = pTypes.SimpleParameter(type='float', name=u'γ', value=90, step=.01)
-        self.a = pTypes.SimpleParameter(type='float', name='a', value=1, step=.01)
-        self.b = pTypes.SimpleParameter(type='float', name='b', value=1, step=.01)
-        self.c = pTypes.SimpleParameter(type='float', name='c', value=1, step=.01)
+        self.a = pTypes.SimpleParameter(type='float', name='a', value=1, step=.01, suffix=' nm')
+        self.b = pTypes.SimpleParameter(type='float', name='b', value=1, step=.01, suffix=' nm')
+        self.c = pTypes.SimpleParameter(type='float', name='c', value=1, step=.01, suffix=' nm')
         self.addChildren([self.alpha, self.beta, self.gamma, self.a, self.b, self.c])
 
     def _setb(self, _, value):
