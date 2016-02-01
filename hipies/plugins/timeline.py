@@ -1,3 +1,11 @@
+import platform
+
+# Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
+op_sys = platform.system()
+if op_sys == 'Darwin':
+    from Foundation import NSURL
+
+
 import base
 from PySide import QtGui
 import os
@@ -25,6 +33,32 @@ class plugin(base.plugin):
         super(plugin, self).__init__(*args, **kwargs)
 
         self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
+
+        # DRAG-DROP
+        self.centerwidget.setAcceptDrops(True)
+        self.centerwidget.dragEnterEvent = self.dragEnterEvent
+        self.centerwidget.dropEvent = self.dropEvent
+
+
+    def dragEnterEvent(self, e):
+        print(e)
+        e.accept()
+        # if e.mimeData().hasFormat('text/plain'):
+        # e.accept()
+        # else:
+        # e.accept()
+
+    def dropEvent(self, e):
+        fnames = [str(NSURL.URLWithString_(str(url.toString())).filePathURL().path()) for url in e.mimeData().urls()]
+
+        if op_sys == 'Darwin':
+            fnames = [str(NSURL.URLWithString_(str(url.toString())).filePathURL().path()) for url in
+                      e.mimeData().urls()]
+        else:
+            fnames = e.mimeData().urls()
+        e.accept()
+        self.openfiles(fnames)
+
 
 
     def tabCloseRequested(self, index):

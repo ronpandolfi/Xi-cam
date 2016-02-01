@@ -1,4 +1,3 @@
-# from __future__ import division, unicode_literals, print_function, absolute_import
 import platform
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
