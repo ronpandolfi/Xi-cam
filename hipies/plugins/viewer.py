@@ -1,3 +1,11 @@
+# from __future__ import division, unicode_literals, print_function, absolute_import
+import platform
+
+# Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
+op_sys = platform.system()
+if op_sys == 'Darwin':
+    from Foundation import NSURL
+
 import base
 from PySide import QtGui
 import os
@@ -43,6 +51,33 @@ class plugin(base.plugin):
         self.spacegroupwidget = spacegroupwidget()
         self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
         self.placeholders[1].addWidget(self.spacegroupwidget)
+
+        # DRAG-DROP
+        self.centerwidget.setAcceptDrops(True)
+        self.centerwidget.dragEnterEvent = self.dragEnterEvent
+        self.centerwidget.dropEvent = self.dropEvent
+
+
+    def dragEnterEvent(self, e):
+        print(e)
+        e.accept()
+        # if e.mimeData().hasFormat('text/plain'):
+        # e.accept()
+        # else:
+        #     e.accept()
+
+    def dropEvent(self, e):
+        for url in e.mimeData().urls():
+            if op_sys == 'Darwin':
+                fname = str(NSURL.URLWithString_(str(url.toString())).filePathURL().path())
+            else:
+                fname = str(url.toLocalFile())
+            if os.path.isfile(fname):
+                print(fname)
+                self.openfiles([fname])
+            e.accept()
+
+
 
 
     def drawsgoverlay(self, peakoverlay):
