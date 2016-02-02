@@ -43,14 +43,9 @@ class plugin(base.plugin):
     def dragEnterEvent(self, e):
         print(e)
         e.accept()
-        # if e.mimeData().hasFormat('text/plain'):
-        # e.accept()
-        # else:
-        # e.accept()
+        # TODO: We should do something a bit less aggressive here!
 
     def dropEvent(self, e):
-        fnames = [str(NSURL.URLWithString_(str(url.toString())).filePathURL().path()) for url in e.mimeData().urls()]
-
         if op_sys == 'Darwin':
             fnames = [str(NSURL.URLWithString_(str(url.toString())).filePathURL().path()) for url in
                       e.mimeData().urls()]
