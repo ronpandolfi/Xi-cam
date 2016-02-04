@@ -120,7 +120,7 @@ class MyMainWindow():
         filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir,
                                                          "*.tif *.edf *.fits *.tif *.cdf *.tiff *.raw")
         if filename and ok:
-            self.openfile(filename)
+            self.openfiles([filename])
 
     def openfiles(self, filenames):
         """
