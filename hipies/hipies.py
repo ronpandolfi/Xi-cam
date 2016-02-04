@@ -118,7 +118,7 @@ class MyMainWindow():
         Open a file dialog then open that image
         """
         filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir,
-                                                         "*.tif *.edf *.fits *.tif *.cdf")
+                                                         "*.tif *.edf *.fits *.tif *.cdf *.tiff *.raw")
         if filename and ok:
             self.openfile(filename)
 
