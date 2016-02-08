@@ -265,8 +265,6 @@ class spacegroupwidget(ParameterTree):
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=np.array([0, 0, 1]), norm_type='uvw', order=2)
-        for key in peaks:
-            print key + " -> " + str(peaks[key])
 
         peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks] + \
                 [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks]
