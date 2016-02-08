@@ -33,7 +33,6 @@ class OOMTabItem(QtGui.QWidget):
         self.setLayout(QtGui.QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
-
     def load(self):
         """
         load this tab; rebuild the viewer

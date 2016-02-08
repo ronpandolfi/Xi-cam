@@ -86,7 +86,7 @@ class MyMainWindow():
 
         # TESTING
         ##
-        self.openimages(['../samples/AgB_00016.edf'])
+        # self.openimages(['../samples/AgB_00016.edf'])
         # self.openimages(['/Users/rp/Data/LaB6_Ant1_dc002p.mar3450'])
 
         #self.calibrate()
@@ -118,9 +118,9 @@ class MyMainWindow():
         Open a file dialog then open that image
         """
         filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir,
-                                                         "*.tif *.edf *.fits *.tif *.cdf")
+                                                         "*.tif *.edf *.fits *.cdf *.tiff *.raw *.img")
         if filename and ok:
-            self.openfile(filename)
+            self.openfiles([filename])
 
     def openfiles(self, filenames):
         """

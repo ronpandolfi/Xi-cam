@@ -265,9 +265,17 @@ class spacegroupwidget(ParameterTree):
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=np.array([0, 0, 1]), norm_type='uvw', order=2)
+        for key in peaks:
+            from hipies import config
+            print key + " -> " + str(peaks[key])
+            center = config.activeExperiment.center
+            sdd = config.activeExperiment.getvalue('Detector Distance')
+            pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
+            peaks[key] = pixels
 
-        peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks] + \
-                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks]
+        peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
+                 not np.NaN in peaks[p]] + \
+                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if not np.NAN in peaks[p]]
 
         self.sigDrawSGOverlay.emit(peakoverlay(peaks))
         # self.sigDrawSGOverlay.emit(peakoverlay(
@@ -311,9 +319,9 @@ class spacegroup(hideableGroup):
         self.alpha = pTypes.SimpleParameter(type='float', name=u'α', value=90, step=.01)
         self.beta = pTypes.SimpleParameter(type='float', name=u'β', value=90, step=.01)
         self.gamma = pTypes.SimpleParameter(type='float', name=u'γ', value=90, step=.01)
-        self.a = pTypes.SimpleParameter(type='float', name='a', value=1, step=.01, suffix='m', siPrefix='n')
-        self.b = pTypes.SimpleParameter(type='float', name='b', value=1, step=.01, suffix='m', siPrefix='n')
-        self.c = pTypes.SimpleParameter(type='float', name='c', value=1, step=.01, suffix='m', siPrefix='n')
+        self.a = pTypes.SimpleParameter(type='float', name='a', value=10.e-9, step=1.e-9, suffix='m', siPrefix=True)
+        self.b = pTypes.SimpleParameter(type='float', name='b', value=10.e-9, step=1.e-9, suffix='m', siPrefix=True)
+        self.c = pTypes.SimpleParameter(type='float', name='c', value=10.e-9, step=1.e-9, suffix='m', siPrefix=True)
         self.addChildren([self.alpha, self.beta, self.gamma, self.a, self.b, self.c])
 
     def _setb(self, _, value):

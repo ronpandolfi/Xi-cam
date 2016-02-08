@@ -19,7 +19,7 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff' '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
 imagecache = dict()
 
 
@@ -150,7 +150,7 @@ def loadparas(path):
             # print nxroot.tree
             return nxroot
 
-        elif extension == '.tif':
+        elif extension in ['.tif', '.img']:
             frame = int(re.search('\d+(?=.tif)', path).group(0))
             paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
 

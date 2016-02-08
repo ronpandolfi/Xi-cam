@@ -159,8 +159,13 @@ def theta_exit(q, alphai, alphaf, k):
 
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
-               norm_type="uvw", wavelen=0.123984, order=4, unitcell=None, space_grp=None):
+               norm_type="uvw", wavelen=0.123984e-9, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
+
+    if alpha is not None: alpha = np.deg2rad(alpha)
+    if beta is not None: beta = np.deg2rad(beta)
+    if gamma is not None: gamma = np.deg2rad(gamma)
+
     A = crystal2sample(a, b, c, alpha, beta, gamma)
     # unit vector normal to sample plane
     if norm_type == "xyz":
@@ -228,7 +233,11 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     return peaks
 
 
-def angles_to_pixels(angles, center, sdd, pixel_size=[172E-6, 172E-06]):
+def angles_to_pixels(angles, center, sdd, pixel_size=None):
+    if pixel_size is None:
+        pixel_size = [172e-6, 172e-6]
+    if np.NaN in angles:
+        return np.NAN, np.NAN
     tan_2t = np.tan(angles[:, 0])
     tan_al = np.tan(angles[:, 1])
     x = tan_2t * sdd
@@ -246,4 +255,3 @@ if __name__ == '__main__':
                        order=1)
     for key in peaks:
         print key + " -> " + str(peaks[key])
-
