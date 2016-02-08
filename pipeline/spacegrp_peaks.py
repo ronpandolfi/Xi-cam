@@ -162,7 +162,6 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984, order=4, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
     A = crystal2sample(a, b, c, alpha, beta, gamma)
-
     # unit vector normal to sample plane
     if norm_type == "xyz":
         if isinstance(normal, np.ndarray):
@@ -209,8 +208,15 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     for hkl in HKL:
         if (reflection_condtion(hkl, space_grp, unitcell)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
-            x = np.random.rand(4)
-            y = fsolve(equations, x, args=(G, alphai, k))
+            skip = True
+            for it in range(10):
+                x = np.random.rand(4)
+                y,info,ier,msg = fsolve(equations, x, args=(G, alphai, k), full_output=True)
+                if ier == 1:
+                    skip = False
+                    break
+            if skip:
+                continue
             q = [y[0], y[2], G[2]]
             al_t, al_r = alpha_exit(q, alphai, nu, k)
             th_t = theta_exit(q, alphai, al_t, k)
@@ -222,7 +228,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     return peaks
 
 
-def angles_to_pixles(angles, center, sdd, pixel_size=[172, 172]):
+def angles_to_pixels(angles, center, sdd, pixel_size=[172E-6, 172E-06]):
     tan_2t = np.tan(angles[:, 0])
     tan_al = np.tan(angles[:, 1])
     x = tan_2t * sdd
@@ -237,11 +243,7 @@ if __name__ == '__main__':
     ang3 = np.deg2rad(90.)
     n = np.array([0, 0, 1], dtype=float)
     peaks = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984,
-                       order=4)
-    peaks2 = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984,
-                        order=4)
+                       order=1)
     for key in peaks:
         print key + " -> " + str(peaks[key])
 
-    if np.sum(peaks) != np.sum(peaks2):
-        print "results are different given the same input?"
