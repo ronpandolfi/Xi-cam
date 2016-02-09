@@ -155,7 +155,7 @@ def alpha_exit(q, alphai, nu, k):
 def theta_exit(q, alphai, alphaf, k):
 	t1 = np.cos(alphaf) ** 2 + np.cos(alphai) ** 2 - (q[0] ** 2 + q[1] ** 2) / k ** 2
 	t2 = 2 * np.cos(alphaf) * np.cos(alphai)
-	return np.arccos(t1 / t2)
+	return np.sign(q[1]) * np.arccos(t1 / t2)
 
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
@@ -243,7 +243,10 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
 	x = tan_2t * sdd
 	px = sdd * tan_2t / pixel_size[0] + center[0]
 	py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] + center[1]
-	return np.vstack([px, py]).astype(int)
+        pixels = np.zeros((px.size, 2))
+        pixels[:,0] = px
+        pixels[:,1] = py
+	return pixels.astype(int)
 
 
 if __name__ == '__main__':
@@ -259,7 +262,10 @@ if __name__ == '__main__':
 		trans_peaks.append(peaks[key][0])
 		refle_peaks.append(peaks[key][1])
 
+	center = np.array([672,224], dtype=int)
 	tr = np.array(trans_peaks, dtype=float)
-		center = np.array([672,224], dtype=int)
-	pix = angles_to_pixels(tr,center, sdd=1.84)
-		print str(pix)
+	p1 = angles_to_pixels(tr,center, sdd=1.84)
+	rf = np.array(refle_peaks, dtype=float)
+	p2 = angles_to_pixels(rf,center, sdd=1.84)
+        print str(np.hstack((p1,p2)))
+        
