@@ -10,24 +10,19 @@ def new_load_qt(api_options):
     return QtCore, QtGui, QtSvg, 'pyside'
 
 
-from IPython.external import qt_loaders
+from qtconsole import qt_loaders
 
 qt_loaders.load_qt = new_load_qt
 
-# Necessary import for py2app build
-import pygments.styles.default
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from qtconsole.inprocess import QtInProcessKernelManager
 
-
-from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
-from IPython.qt.inprocess import QtInProcessKernelManager
-from IPython.lib import guisupport
 import qdarkstyle
 import os
 
 
 def print_process_id():
     print('Process ID is:', os.getpid())
-
 
 class plugin(base.plugin):
     name = 'IPython'
@@ -51,11 +46,13 @@ class plugin(base.plugin):
             kernel_manager.shutdown_kernel()
 
 
-        control = RichIPythonWidget()
+        control = RichJupyterWidget()
         control.kernel_manager = kernel_manager
         control.kernel_client = kernel_client
         control.exit_requested.connect(stop)
         control.style_sheet = style
+        control.syntax_style = u'monokai'
+        control.set_default_style(colors='Linux')
 
         self.centerwidget = control
 
