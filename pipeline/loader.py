@@ -150,7 +150,7 @@ def loadparas(path):
             # print nxroot.tree
             return nxroot
 
-        elif extension in ['.tif', '.img']:
+        elif extension in ['.tif', '.img', '.tiff']:
             frame = int(re.search('\d+(?=.tif)', path).group(0))
             paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
 
