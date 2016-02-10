@@ -19,7 +19,7 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff' '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
 imagecache = dict()
 
 
