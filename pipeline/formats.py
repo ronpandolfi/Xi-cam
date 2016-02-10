@@ -10,7 +10,8 @@ logger = logging.getLogger("openimage")
 
 class rawimage(fabioimage):
     def read(self, f, frame=None):
-        data = np.fromfile(f, dtype=np.int32)
+        with open(f, 'r') as f:
+            data = np.fromfile(f, dtype=np.int32)
         for name, detector in detectors.ALL_DETECTORS.iteritems():
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
