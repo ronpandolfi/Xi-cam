@@ -19,7 +19,7 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff' '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
 imagecache = dict()
 
 
@@ -150,7 +150,7 @@ def loadparas(path):
             # print nxroot.tree
             return nxroot
 
-        elif extension in ['.tif', '.img']:
+        elif extension in ['.tif', '.img', '.tiff']:
             frame = int(re.search('\d+(?=.tif)', path).group(0))
             paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
 
@@ -310,18 +310,17 @@ def finddetectorbyfilename(path):
 
 
 def loadpath(path):
-    # if '_lo_' in path:
-    # # print "input: lo / output: hi"
-    #     path2 = path.replace('_lo_', '_hi_')
-    #     return loadstichted(path, path2)
-    #
-    # elif '_hi_' in path:
-    #     # print "input: hi / output: lo"
-    #     path2 = path.replace('_hi_', '_lo_')
-    #     return loadstichted(path, path2)
-    #
-    # else:
-        # print "file don't contain hi or lo, just 1 file"
+    if '_lo_' in path:
+        # print "input: lo / output: hi"
+        path2 = path.replace('_lo_', '_hi_')
+        return loadstichted(path, path2)
+
+    elif '_hi_' in path:
+        # print "input: hi / output: lo"
+        path2 = path.replace('_hi_', '_lo_')
+        return loadstichted(path, path2)
+
+
     return loadimage(path)
 
 
@@ -430,6 +429,9 @@ class diffimage():
             else:
                 return None
 
+            if detector is None:  # If none are found, use the last working one
+                return self._detector
+
             self.detectorname = name
             mask = detector.calc_mask()
             self._detector = detector
@@ -459,6 +461,7 @@ class diffimage():
                     detector = detector()
                     print 'Detector found with binning: ' + name
                     return name, detector
+        return None, None
         raise ValueError('Detector could not be identified!')
 
     @detector.setter

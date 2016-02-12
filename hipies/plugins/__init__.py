@@ -6,10 +6,10 @@ plugins = OrderedDict()
 
 
 def loadplugins(placeholders):
-    import viewer, timeline, library, fluctuationscattering, ipythonnb
+    import viewer, timeline, library, fluctuationscattering, ipythonconsole
 
     global plugins, modules
-    modules = [viewer, timeline, library, ipythonnb, fluctuationscattering]
+    modules = [viewer, timeline, library, ipythonconsole, fluctuationscattering]
 
     for module in modules:
         plugin = module.plugin(placeholders)
