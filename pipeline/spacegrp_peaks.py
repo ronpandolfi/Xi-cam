@@ -3,7 +3,7 @@
 import itertools
 import numpy as np
 from numpy.linalg import norm
-from scipy.optimize import fsolve
+from scipy.optimize import root
 
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
@@ -172,6 +172,20 @@ def theta_exit(q, alphai, alphaf, k):
     t2 = 2 * np.cos(alphaf) * np.cos(alphai)
     return np.sign(q[1]) * np.arccos(t1 / t2)
 
+def angles_to_pixels(angles, center, sdd, pixel_size=None):
+    if pixel_size is None:
+        pixel_size = [172e-6, 172e-6]
+    if np.NaN in angles:
+        return np.NAN, np.NAN
+    tan_2t = np.tan(angles[:, 0])
+    tan_al = np.tan(angles[:, 1])
+    x = tan_2t * sdd
+    px = sdd * tan_2t / pixel_size[0] + center[0]
+    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] + center[1]
+    pixels = np.zeros((px.size, 2))
+    pixels[:,0] = px
+    pixels[:,1] = py
+    return pixels.astype(int)
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984e-9, order=3, unitcell=None, space_grp=None):
@@ -231,9 +245,10 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
             skip = True
             for it in range(100):
                 x = np.random.rand(4) * 1.E-09
-                y,info,ier,msg = fsolve(equations, x, args=(G, alphai, k), fprime=jacobian, full_output=True)
-                if ier == 1:
+                res = root(equations, x, args=(G, alphai, k), method='lm', jac=jacobian, tol=1.E-10)
+                if res.success:
                     skip = False
+                    y = res.x
                     break
             if skip:
                 continue
@@ -248,29 +263,13 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     return peaks
 
 
-def angles_to_pixels(angles, center, sdd, pixel_size=None):
-    if pixel_size is None:
-        pixel_size = [172e-6, 172e-6]
-    if np.NaN in angles:
-        return np.NAN, np.NAN
-    tan_2t = np.tan(angles[:, 0])
-    tan_al = np.tan(angles[:, 1])
-    x = tan_2t * sdd
-    px = sdd * tan_2t / pixel_size[0] + center[0]
-    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] + center[1]
-    pixels = np.zeros((px.size, 2))
-    pixels[:,0] = px
-    pixels[:,1] = py
-    return pixels.astype(int)
-
-
 if __name__ == '__main__':
     ang1 = np.deg2rad(90.)
     ang2 = np.deg2rad(90.)
     ang3 = np.deg2rad(90.)
     n = np.array([0, 0, 1], dtype=float)
-    peaks = find_peaks(10., 10., 10., alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984,
-                       order=1)
+    peaks = find_peaks(10.E-09, 10.E-09, 10.E-09, alpha=ang1, beta=ang2, gamma=ang3, normal=n, norm_type='uvw', wavelen=0.123984E-09,
+                       order=2)
     trans_peaks = []
     refle_peaks = []
     for key in peaks:
@@ -282,5 +281,5 @@ if __name__ == '__main__':
     p1 = angles_to_pixels(tr,center, sdd=1.84)
     rf = np.array(refle_peaks, dtype=float)
     p2 = angles_to_pixels(rf,center, sdd=1.84)
-    print str(np.hstack((p1,p2)))
-        
+    print str(p1)
+    print str(p2)
