@@ -274,8 +274,9 @@ class spacegroupwidget(ParameterTree):
             peaks[key] = pixels
 
         peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
-                 not np.NaN in peaks[p]] + \
-                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if not np.NAN in peaks[p]]
+                 not np.any(peaks[p] < -100000)] + \
+                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if
+                 not np.any(peaks[p] < -100000)]
 
         self.sigDrawSGOverlay.emit(peakoverlay(peaks))
         # self.sigDrawSGOverlay.emit(peakoverlay(

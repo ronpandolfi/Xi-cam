@@ -19,7 +19,7 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb']
 imagecache = dict()
 
 
@@ -38,7 +38,16 @@ def loadimage(path):
 
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.gb':
-                raise NotImplementedError('Format not yet implemented.')  # data = numpy.loadtxt()
+                data = np.fromfile(path, np.float32)
+                if len(data) == 1475 * 1679:
+                    data.shape = (1679, 1475)
+                elif len(data) == 981 * 1043:
+                    data.shape = (1043, 981)
+                elif len(data) == 1475 * 195:
+                    data.shape = (195, 1475)
+                return data
+
+
             elif os.path.splitext(path)[1] == '.fits':
                 data = np.fliplr(pyfits.open(path)[2].data)
                 return data
@@ -143,7 +152,7 @@ def loadparas(path):
                     return fimg.header
 
         elif extension == '.gb':
-            raise NotImplementedError('This format is not yet supported.')
+            return {}
 
         elif extension in ['.nxs', '.hdf']:
             nxroot = nx.load(path)
