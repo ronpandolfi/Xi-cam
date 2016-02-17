@@ -27,7 +27,7 @@ class plugin(base.plugin):
 
         super(plugin, self).__init__(*args, **kwargs)
 
-        self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
+        # self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
 
 
 from PySide import QtGui

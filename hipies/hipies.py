@@ -19,7 +19,6 @@ from PySide import QtCore
 
 
 import config
-import timeline
 import watcher
 import daemon
 import pipeline
@@ -76,7 +75,7 @@ class MyMainWindow():
         self.rmcpugin = rmc.gui(self.ui)
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
-        plugins.loadplugins(placeholders)
+        plugins.initplugins(placeholders)
         plugins.plugins['Viewer'].activate()
 
         plugins.base.filetree.sigOpenFiles.connect(self.openfiles)

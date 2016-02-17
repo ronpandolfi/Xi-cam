@@ -139,7 +139,7 @@ def jacobian(x, G, alphai, k):
         jac[1,1] = -ci
         jac[1,2] = si
         jac[1,3] = 2 * (x[1] - k)
-        jac[2,0] = 2 * x[2] 
+        jac[2, 0] = 2 * x[2]
         jac[2,3] = 2 * x[2]
         jac[3,1] = -si
         jac[3,2] = -ci
@@ -245,7 +245,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
             skip = True
             for it in range(100):
                 x = np.random.rand(4) * 1.E-09
-                res = root(equations, x, args=(G, alphai, k), method='lm', jac=jacobian, tol=1.E-10)
+                res = root(equations, x, args=(G, alphai, k), jac=jacobian, tol=1.E-10)  # method='lm'
                 if res.success:
                     skip = False
                     y = res.x

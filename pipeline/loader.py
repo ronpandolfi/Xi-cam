@@ -34,6 +34,7 @@ def loadimage(path):
     try:
         if ':' in path:
             print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
+            print 'Note: fabio 0.3.0 may have fixed this; check back later'
             path='HACK:'+path
 
         if os.path.splitext(path)[1] in acceptableexts:
