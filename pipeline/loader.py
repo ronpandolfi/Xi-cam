@@ -19,7 +19,7 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5']
 imagecache = dict()
 
 
@@ -218,9 +218,11 @@ def scanalesandroparaslines(lines, frame):
     return OrderedDict(zip(keys, values))
 
 
-def loadstichted(filepath2, filepath1):
-    (data1, paras1) = loadsingle(filepath1)
-    (data2, paras2) = loadsingle(filepath2)
+def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
+
+    if data1 is None or data2 is None or paras1 is None or paras2 is None:
+        (data1, paras1) = loadsingle(filepath1)
+        (data2, paras2) = loadsingle(filepath2)
 
     positionY1 = float(paras1['Detector Vertical'])
     positionY2 = float(paras2['Detector Vertical'])
@@ -257,9 +259,9 @@ def loadstichted(filepath2, filepath1):
 
     # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
-    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2).calc_mask(), ((padtop2, padbottom2), (padleft2, padright2)),
+    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2, data2).calc_mask(), ((padtop2, padbottom2), (padleft2, padright2)),
                       'constant')
-    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1).calc_mask(), ((padtop1, padbottom1), (padleft1, padright1)),
+    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1, data1).calc_mask(), ((padtop1, padbottom1), (padleft1, padright1)),
                       'constant')
 
     with numpy.errstate(divide='ignore'):
@@ -305,8 +307,11 @@ def loadthumbnail(path):
 #     raise ValueError('Detector could not be identified!')
 #     return None, None, None
 
-def finddetectorbyfilename(path):
-    dimg = diffimage(filepath=path, data=loadimage(path))
+def finddetectorbyfilename(path, data=None):
+    if data is None:
+        data=loadimage(path)
+
+    dimg = diffimage(filepath=path, data=data)
     return dimg.detector
 
 
