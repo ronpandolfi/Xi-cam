@@ -139,7 +139,7 @@ def jacobian(x, G, alphai, k):
         jac[1,1] = -ci
         jac[1,2] = si
         jac[1,3] = 2 * (x[1] - k)
-        jac[2, 0] = 2 * x[2]
+        jac[2,0] = 2 * x[2] 
         jac[2,3] = 2 * x[2]
         jac[3,1] = -si
         jac[3,2] = -ci
@@ -240,24 +240,18 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     k = 2 * np.pi / wavelen
     peaks = dict()
     for hkl in HKL:
+        if hkl[2] < 0: continue
         if (reflection_condtion(hkl, space_grp, unitcell)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
-            skip = True
-            for it in range(100):
-                x = np.random.rand(4) * 1.E-09
-                res = root(equations, x, args=(G, alphai, k), jac=jacobian, tol=1.E-10)  # method='lm'
-                if res.success:
-                    skip = False
-                    y = res.x
-                    break
-            if skip:
-                continue
-            q = [y[0], y[2], G[2]]
-            al_t, al_r = alpha_exit(q, alphai, nu, k)
-            th_t = theta_exit(q, alphai, al_t, k)
-            th_r = theta_exit(q, alphai, al_r, k)
-            transmission = [th_t, al_t]
-            reflection = [th_r, al_r]
+            transmission = [np.NaN, np.NaN]
+            reflection = [np.NaN, np.NaN]
+            al_t, al_r = alpha_exit(G, alphai, nu, k)
+            if al_t > 0:
+                th = theta_exit(G, alphai, al_t, k)
+                transmission = [th, al_t]
+            if al_r > 0:
+                th = theta_exit(G, alphai, al_r, k)
+                reflection = [th, al_r]
             key = '{0}{1}{2}'.format(hkl[0], hkl[1], hkl[2])
             peaks[key] = (transmission, reflection)
     return peaks
