@@ -1,7 +1,7 @@
 from PySide import QtGui
 import sys
 import base
-import viewer, timeline
+from hipies import plugins
 
 # Overload for Py2App
 def new_load_qt(api_options):
@@ -36,7 +36,7 @@ class plugin(base.plugin):
         kernel_manager.start_kernel()
         kernel = kernel_manager.kernel
         kernel.gui = 'qt4'
-        kernel.shell.push({'viewer': viewer.plugininstance, 'timeline': timeline.plugininstance})
+        kernel.shell.push(dict(plugins.plugins))
 
         kernel_client = kernel_manager.client()
         kernel_client.start_channels()

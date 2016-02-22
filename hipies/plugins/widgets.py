@@ -668,10 +668,11 @@ class dimgViewer(QtGui.QWidget):
     def calibrate(self):
         if self.dimg.data is None:
             return
-        config.activeExperiment.iscalibrated = False
 
         # Force cache the detector
         _ = self.dimg.detector
+
+        self.sigPlotQIntegration.disconnect(self.plotqintegration)
 
         self.findcenter(skipdraw=True)
         print 'center?:', config.activeExperiment.center
@@ -698,9 +699,8 @@ class dimgViewer(QtGui.QWidget):
         config.activeExperiment.setvalue('Detector Distance', sdd)
 
         self.refinecenter()
-
-        config.activeExperiment.iscalibrated = True
-
+        globals.hardresetpool()
+        self.sigPlotQIntegration.connect(self.plotqintegration)
         self.replot()
 
     @debugtools.timeit
@@ -1258,7 +1258,6 @@ class timelineViewer(dimgViewer):
             for dt in d:
                 self.timeline.plot(dt[0], dt[1])
 
-
     def redrawframe(self, index, time, forcelow=False):
         key = round(time)
         self.dimg = self.simg.getDiffImage(key)
@@ -1267,6 +1266,9 @@ class timelineViewer(dimgViewer):
     def gotomax(self):
         pass
         # self.parentwindow.timeruler.setValue(np.argmax(self.variationy))
+
+    def replot(self):
+        pass
 
 
 class integrationwidget(QtGui.QTabWidget):
@@ -1346,26 +1348,31 @@ class pluginModeWidget(QtGui.QWidget):
         super(pluginModeWidget, self).__init__()
         self.setLayout(QtGui.QHBoxLayout())
 
-        font = QtGui.QFont()
-        font.setPointSize(16)
+        self.font = QtGui.QFont()
+        self.font.setPointSize(16)
+        self.plugins = plugins
 
-        for key, plugin in plugins.items():
-            button = QtGui.QPushButton(plugin.name)
-            button.setFlat(True)
-            button.setFont(font)
-            button.isMode = True
-            button.setAutoFillBackground(False)
-            button.setCheckable(True)
-            button.setAutoExclusive(True)
-            button.clicked.connect(plugin.activate)
-            if plugin is plugins.values()[0]:
-                button.setChecked(True)
-            self.layout().addWidget(button)
-            if not plugin is plugins.values()[-1]:
-                label = QtGui.QLabel('|')
-                label.setFont(font)
-                label.setStyleSheet('background-color:#111111;')
-                self.layout().addWidget(label)
+        self.reload()
+
+    def reload(self):
+        for key, plugin in self.plugins.items():
+            if plugin.enabled:
+                button = QtGui.QPushButton(plugin.name)
+                button.setFlat(True)
+                button.setFont(self.font)
+                button.isMode = True
+                button.setAutoFillBackground(False)
+                button.setCheckable(True)
+                button.setAutoExclusive(True)
+                button.clicked.connect(plugin.instance.activate)
+                if plugin is self.plugins.values()[0]:
+                    button.setChecked(True)
+                self.layout().addWidget(button)
+                if not plugin is self.plugins.values()[-1]:
+                    label = QtGui.QLabel('|')
+                    label.setFont(self.font)
+                    label.setStyleSheet('background-color:#111111;')
+                    self.layout().addWidget(label)
 
 
 class previewwidget(pg.GraphicsLayoutWidget):

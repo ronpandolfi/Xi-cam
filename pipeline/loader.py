@@ -19,7 +19,8 @@ from collections import OrderedDict
 import formats  # injects fabio with custom formats
 
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5']
+acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
+                  '.out']
 imagecache = dict()
 
 
@@ -61,7 +62,9 @@ def loadimage(path):
                         return data
                     else:
                         return loadimage(str(nxroot.data.rawfile))
-
+            elif os.path.splitext(path)[1] == '.out':
+                data = (np.loadtxt(path) * 2 ** 32).astype(np.uint32).copy()
+                return data
             else:
                 # print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
@@ -220,15 +223,23 @@ def scanalesandroparaslines(lines, frame):
 
 
 def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
-
     if data1 is None or data2 is None or paras1 is None or paras2 is None:
         (data1, paras1) = loadsingle(filepath1)
         (data2, paras2) = loadsingle(filepath2)
 
-    positionY1 = float(paras1['Detector Vertical'])
-    positionY2 = float(paras2['Detector Vertical'])
-    positionX1 = float(paras1['Detector Horizontal'])
-    positionX2 = float(paras2['Detector Horizontal'])
+    # DEFAULT TILING AT 733
+    positionY1 = 0 if '_lo_' in filepath1 else 40 * .172
+    positionY2 = 40 * .172 if '_hi_' in filepath2 else 0
+    positionX1 = 0
+    positionX2 = 0
+
+    if 'Detector Vertical' in paras1 and 'Detector Vertical' in paras2 and \
+                    'Detector Horizontal' in paras1 and 'Detector Horizontal' in paras2:
+        positionY1 = float(paras1['Detector Vertical'])
+        positionY2 = float(paras2['Detector Vertical'])
+        positionX1 = float(paras1['Detector Horizontal'])
+        positionX2 = float(paras2['Detector Horizontal'])
+
     deltaX = round((positionX2 - positionX1) / 0.172)
     deltaY = round((positionY2 - positionY1) / 0.172)
     padtop2 = 0
@@ -260,13 +271,16 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 
     # mask2 = numpy.pad((data2 > 0), ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     #mask1 = numpy.pad((data1 > 0), ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
-    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2, data2).calc_mask(), ((padtop2, padbottom2), (padleft2, padright2)),
+    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2, data2).calc_mask(),
+                      ((padtop2, padbottom2), (padleft2, padright2)),
                       'constant')
-    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1, data1).calc_mask(), ((padtop1, padbottom1), (padleft1, padright1)),
+    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1, data1).calc_mask(),
+                      ((padtop1, padbottom1), (padleft1, padright1)),
                       'constant')
 
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
+        data[np.isnan(data)] = 0
     return data
 
 
@@ -310,7 +324,7 @@ def loadthumbnail(path):
 
 def finddetectorbyfilename(path, data=None):
     if data is None:
-        data=loadimage(path)
+        data = loadimage(path)
 
     dimg = diffimage(filepath=path, data=data)
     return dimg.detector
@@ -325,16 +339,15 @@ def finddetectorbyfilename(path, data=None):
 
 
 def loadpath(path):
-    if '_lo_' in path:
-        # print "input: lo / output: hi"
-        path2 = path.replace('_lo_', '_hi_')
-        return loadstichted(path, path2)
-
-    elif '_hi_' in path:
-        # print "input: hi / output: lo"
-        path2 = path.replace('_hi_', '_lo_')
-        return loadstichted(path, path2)
-
+    if '_lo_' in path or '_hi_' in path:
+        try:
+            if '_lo_' in path:
+                path2 = path.replace('_lo_', '_hi_')
+            elif '_hi_' in path:
+                path2 = path.replace('_hi_', '_lo_')
+            return loadstichted(path, path2)
+        except Exception as ex:
+            print 'Stitching failed: ', ex.message
 
     return loadimage(path)
 

@@ -6,6 +6,9 @@ import numpy as np
 import pipeline
 import viewer
 from pipeline import loader
+from PySide import QtCore, QtGui
+from hipies import globals
+
 
 class SPOT_H5DSet:
     def __init__(self, dat, txt):
@@ -15,11 +18,11 @@ class SPOT_H5DSet:
         self.dim2 = tmp['dim3']
         self.date = tmp['date']
         self.header = tmp['edfHeaderInBytes']
-        self.text = txt 
-        
+        self.text = txt
+
     @classmethod
     def calibration(cls, grp):
-        if not isinstance(grp,h5py._hl.group.Group):
+        if not isinstance(grp, h5py._hl.group.Group):
             raise TypeError('argument must of a h5py Group')
 
         keys = grp.keys()
@@ -35,9 +38,10 @@ class SPOT_H5DSet:
                 txt = grp[key]
             return cls(edf, txt)
 
+
 class SPOT_H5Node:
-    def __init__ (self, grp):
-        if not isinstance(grp,h5py._hl.group.Group):
+    def __init__(self, grp):
+        if not isinstance(grp, h5py._hl.group.Group):
             raise TypeError('argument must of a h5py Group')
         keys = grp.keys()
         if not len(keys) == 3:
@@ -55,7 +59,8 @@ class SPOT_H5Node:
         if edf == None or txt == None:
             raise IOError('file not found')
         self.data = SPOT_H5DSet(edf, txt)
-        
+
+
 class SPOT_H5:
     def __init__(self, filename):
         if not os.path.splitext(filename)[1] == '.h5':
@@ -70,7 +75,7 @@ class SPOT_H5:
         if len(keys) == 2 and unicode('high') in keys:
             self.isTiled = True
             self.high = SPOT_H5Node(node['high'])
-            self.node  = SPOT_H5Node(node['low'])
+            self.node = SPOT_H5Node(node['low'])
         elif len(keys) == 3 and unicode('calibration') in keys:
             self.node = SPOT_H5Node(node)
 
@@ -107,27 +112,30 @@ class SPOT_H5:
 
 class plugin(viewer.plugin):
     name = "SPOTH5"
+
     def openfiles(self, filenames):
         h5 = SPOT_H5(filenames[0])
         data = h5.getCalibrationImg()
         self.opendata(data=data)
         self.calibrate()
 
-        #stich high and low
+
+
+        # stich high and low
         if h5.isTiled:
-            low_header = { 'Detector Vertical' : 0, 'Detector Horizontal' : 0 }
-            high_header = { 'Detector Vertical' : 6.88, 'Detector Horizontal' : 0 }
+            low_header = {'Detector Vertical': 0, 'Detector Horizontal': 0}
+            high_header = {'Detector Vertical': 6.88, 'Detector Horizontal': 0}
             low_data = h5.getImage()
             high_data = h5.getHighImage()
             data = loader.loadstichted(None, None, low_data, high_data, low_header, high_header)
             self.opendata(data)
-     
-    
+
+
 if __name__ == '__main__':
     foo = SPOT_H5('/Users/dkumar/Downloads/20151004_234826_PorRun5_283.h5')
 
     txt = foo.getText()
     print txt
     dat = foo.getCalibrationImg()
-    #saveedf("AgB_000.edf", dat, hdr)
+    # saveedf("AgB_000.edf", dat, hdr)
     

@@ -154,7 +154,10 @@ class plugin(base.plugin):
         self.getCurrentTab().refinecenter()
 
     def redrawcurrent(self):
-        self.getCurrentTab().redrawimage()
+        try:
+            self.getCurrentTab().redrawimage()
+        except AttributeError:
+            print "Using hack to bypass strange qsignal behavior. Fix this!"
 
     def remeshmode(self):
         self.getCurrentTab().redrawimage()

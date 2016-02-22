@@ -202,7 +202,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
 
     if cut is not None:
         print 'cut:', cut.shape
-        mask &= cut.astype(bool)
+        mask = mask.astype(bool) & cut.astype(bool)
     #        data *= cut
 
     xres = 2000

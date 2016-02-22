@@ -139,7 +139,7 @@ def jacobian(x, G, alphai, k):
         jac[1,1] = -ci
         jac[1,2] = si
         jac[1,3] = 2 * (x[1] - k)
-        jac[2,0] = 2 * x[2] 
+        jac[2, 0] = 2 * x[2]
         jac[2,3] = 2 * x[2]
         jac[3,1] = -si
         jac[3,2] = -ci

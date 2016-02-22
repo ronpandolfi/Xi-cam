@@ -68,7 +68,6 @@ class MyMainWindow():
 
         # Grab status bar
         self.ui.statusbar.showMessage('Ready...')
-        self.app.processEvents()
 
 
         # PLUG-INS
@@ -76,11 +75,15 @@ class MyMainWindow():
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
         plugins.initplugins(placeholders)
-        plugins.plugins['Viewer'].activate()
+
+        plugins.plugins['Viewer'].instance.activate()
 
         plugins.base.filetree.sigOpenFiles.connect(self.openfiles)
 
-        self.ui.modemenu.addWidget(plugins.widgets.pluginModeWidget(plugins.plugins))
+        pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
+        self.ui.modemenu.addWidget(pluginmode)
+
+        self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
 
         # TESTING
@@ -94,10 +97,6 @@ class MyMainWindow():
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
-        self.ui.show()
-        self.ui.raise_()
-        self.ui.activateWindow()
-
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

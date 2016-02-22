@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-      <string>HipIES</string>
+      <string>Xi-cam</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -707,7 +707,7 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QMenuBar" name="menuBar">
+     <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>

@@ -31,7 +31,6 @@ class PyFAIGeometry(pyFAI.geometry.Geometry):
 
 class experiment(Parameter):
     def __init__(self, path=None):
-        self.iscalibrated = False
 
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
@@ -180,6 +179,10 @@ class experiment(Parameter):
         #write it back to the file
         #with open('config.json', 'w') as f:
         #    json.dump(config, f)
+
+    def iscalibrated(self):
+        return (self.getvalue('Pixel Size X') > 0) and (self.getvalue('Pixel Size Y') > 0) and (
+            self.getvalue('Detector Distance') > 0)
 
 
 activeExperiment = experiment()

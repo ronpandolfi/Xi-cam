@@ -32,22 +32,21 @@ sys.setrecursionlimit(1500)
 from setuptools import setup
 from numpy.distutils.core import Extension
 import numpy as np
-import os
-import pygments.styles
+
 
 #os.environ["CC"] = "gcc"
 #os.environ["CXX"] = "g++"
 
 APP = ['main.py']
 DATA_FILES = []
-OPTIONS = {'argv_emulation': True,
+OPTIONS = {'argv_emulation': False,
            'resources':['gui'],
            'iconfile': 'gui/icon.icns',
            'plist': {
-               'CFBundleName': 'HipIES',
+               'CFBundleName': 'Xi-cam',
                'CFBundleShortVersionString': '1.2.2',  # must be in X.X.X format
                'CFBundleVersion': '1.2.2',
-               'CFBundleIdentifier': 'com.lbnl.hipies',  # optional
+               'CFBundleIdentifier': 'com.lbnl.xicam',  # optional
                'NSHumanReadableCopyright': '@ 2016',  # optional
                'CFBundleDevelopmentRegion': 'English',  #optional - English is default
            },
@@ -57,7 +56,7 @@ OPTIONS = {'argv_emulation': True,
                'pygments.styles.monokai', 'pygments.styles.default'
            ],
            'excludes': [
-               'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet'
+               'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet', 'matplotlib.tests', 'matplotlib.testing'
            ],
            'packages': ['pipeline', 'daemon', 'hipies', 'PIL', 'nexpy', 'h5py']
 }
