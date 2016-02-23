@@ -63,7 +63,8 @@ def loadimage(path):
                     else:
                         return loadimage(str(nxroot.data.rawfile))
             elif os.path.splitext(path)[1] == '.out':
-                data = (np.loadtxt(path) * 2 ** 32).astype(np.uint32).copy()
+                data = np.loadtxt(path)
+                data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
                 return data
             else:
                 # print 'Unhandled data type: ' + path
@@ -582,7 +583,8 @@ class diffimage():
         return self.cache['remesh']
 
     def queryAlphaI(self):
-        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):')
+        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
+                                                  decimals=3)
 
         alphai = np.deg2rad(alphai)
         if ok:

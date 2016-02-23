@@ -65,6 +65,7 @@ class MyMainWindow():
         # ACTIONS
         # Wire up action buttons
         self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.actionExport_Image.triggered.connect(self.exportimage)
 
         # Grab status bar
         self.ui.statusbar.showMessage('Ready...')

@@ -1,4 +1,5 @@
 import platform
+from fabio import edfimage
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -223,3 +224,13 @@ class plugin(base.plugin):
             self.placeholders[1].setCurrentWidget(self.spacegroupwidget)
         else:
             self.placeholders[1].setCurrentWidget(self.rightwidget)
+
+    def exportimage(self):
+        fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
+        dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
+                                   directory=unicode(os.path.dirname(self.getCurrentTab().paths[0])),
+                                   filter=u"EDF (*.edf)")
+        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
+        filename, ok = dialog.getSaveFileName()
+        if ok and filename:
+            fabimg.write(filename)
