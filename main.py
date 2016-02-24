@@ -7,6 +7,7 @@ from splash import SplashScreen
 
 
 
+
 if __name__ == '__main__':
     globals.load()
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))

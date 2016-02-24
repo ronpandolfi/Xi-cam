@@ -30,6 +30,8 @@ import plugins
 class MyMainWindow():
     def __init__(self,app):
 
+        QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
+
         import plugins
 
 

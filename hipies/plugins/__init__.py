@@ -6,14 +6,14 @@ from hipies import globals
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS']
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file
+    import MOTD, viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file, hipgisaxs
 
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file]
+    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file, hipgisaxs]
 
     for module in modules:
         link = pluginlink(module, placeholders)

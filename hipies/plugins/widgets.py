@@ -17,7 +17,7 @@ class OOMTabItem(QtGui.QWidget):
 
     def __init__(self, itemclass=None, *args, **kwargs):
         """
-        A collection of references that can be used to reconstruct an ojbect dynamically and dispose of it when unneeded
+        A collection of references that can be used to reconstruct an object dynamically and dispose of it when unneeded
         :type paths: list[str]
         :type experiment: config.experiment
         :type parent: main.MyMainWindow
@@ -1410,7 +1410,7 @@ class pluginModeWidget(QtGui.QWidget):
                 button = QtGui.QPushButton(plugin.name)
                 button.setFlat(True)
                 button.setFont(self.font)
-                button.isMode = True
+                button.setProperty('isMode', True)
                 button.setAutoFillBackground(False)
                 button.setCheckable(True)
                 button.setAutoExclusive(True)

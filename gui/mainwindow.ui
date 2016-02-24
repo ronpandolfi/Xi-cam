@@ -725,15 +725,6 @@
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <action name="actionBeamProperties">
-   <property name="icon">
-    <iconset>
-     <normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</normaloff>~/Downloads/tango-icon-theme-0.8.90/32x32/categories/applications-system.png</iconset>
-   </property>
-   <property name="text">
-    <string>BeamProperties</string>
-   </property>
-  </action>
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>

@@ -235,9 +235,9 @@ class spacegroupwidget(ParameterTree):
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]
         self.rotations = [self.rotationvectorsample, self.rotationvectorcrystal, self.rotationplane]
 
-        self.alpha = pTypes.SimpleParameter(name=u'α', type='float', value=1.)
         self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=1.)
-        self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.alpha, self.beta])
+        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=1.)
+        self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.beta, self.gamma])
 
         self.redrawsg = pTypes.ActionParameter(name='Overlay space group')
         self.redrawsg.sigActivated.connect(self.drawoverlay)

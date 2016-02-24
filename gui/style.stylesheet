@@ -59,6 +59,11 @@ QPushButton[isMode="true"]:checked {
     border-width:1px;
 }
 
+QPushButton[isMode="true"] {
+    font-family:Zero Threes;
+    font-size:20px;
+}
+
 QListView{
     outline:none;
 }
