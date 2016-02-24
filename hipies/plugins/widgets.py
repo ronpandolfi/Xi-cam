@@ -10,6 +10,7 @@ from fabio import edfimage
 import os
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+import dialogs
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -346,7 +347,7 @@ class dimgViewer(QtGui.QWidget):
                     self.plotwidget.qintegration.qLine.hide()
 
 
-    def getq(self, x, y, mode=None):
+    def getq(self, x, y, mode=None):  # This is a mess...rewrite it sometime
         iscake = self.toolbar.actionCake.isChecked()
         isremesh = self.toolbar.actionRemeshing.isChecked()
 
@@ -355,10 +356,8 @@ class dimgViewer(QtGui.QWidget):
             cakechi = self.dimg.cakeqy
             if mode is not None:
                 if mode == 'parallel':
-
                     return cakeq[y] * np.sin(np.radians(cakechi[x])) / 10.
                 elif mode == 'z':
-
                     return cakeq[y] * np.cos(np.radians(cakechi[x])) / 10.
             else:
                 return cakeq[y] / 10.
@@ -386,7 +385,12 @@ class dimgViewer(QtGui.QWidget):
             theta = np.arctan2(r * config.activeExperiment.getvalue('Pixel Size X'),
                                config.activeExperiment.getvalue('Detector Distance'))
             wavelength = config.activeExperiment.getvalue('Wavelength')
-            return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+            q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+            if mode == 'parallel' and x < center[0]:
+                return -q
+            if mode == 'z' and y < center[1]:
+                return -q
+            return q
 
     def leaveEvent(self, evt):
         """
@@ -1061,12 +1065,9 @@ class dimgViewer(QtGui.QWidget):
 
 
     def exportimage(self):
-        fabimg = edfimage.edfimage(np.rot90(self.imageitem.image))
-        dialog = QtGui.QFileDialog(parent=self, caption="blah", directory=os.path.dirname(self.path),
-                                   filter=u"EDF (*.edf)")
-        dialog.selectFile(os.path.basename(self.path))
-        filename, _ = dialog.getSaveFileName()
-        fabimg.write(filename)
+        data = self.imageitem.image
+        guesspath = self.paths[0]
+        dialogs.savedatadialog(data=data, guesspath=guesspath)
 
     def capture(self):
         captureroi = None
@@ -1094,12 +1095,20 @@ class dimgViewer(QtGui.QWidget):
         else:  # If the mask is completed
 
             # Get the shape
-            pos = [max(int(c), 0) for c in self.captureROI.pos()]
-            size = [max(int(c), 0) for c in self.captureROI.size()]
+            lowerleft = [max(int(c), 0) for c in self.captureROI.pos()]
+            topright = [max(int(s + p), 0) for s, p in zip(self.captureROI.size(), self.captureROI.pos())]
 
-            dataregion = self.dimg.data[pos[0]:(pos[0] + size[0]), pos[1]:(pos[1] + size[1])]
-            out = edfimage.edfimage(np.rot90(dataregion))
-            out.write('region.edf')
+            dataregion = self.dimg.data[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
+            maskregion = self.dimg.mask[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
+            guesspath = self.paths[0]
+
+            qpar_min = self.getq(*lowerleft, mode='parallel')
+            qvrt_min = self.getq(*lowerleft, mode='z')
+            qpar_max = self.getq(*topright, mode='parallel')
+            qvrt_max = self.getq(*topright, mode='z')
+
+            headers = {'qpar_min': qpar_min, 'qpar_max': qpar_max, 'qvrt_min': qvrt_min, 'qvrt_max': qvrt_max}
+            dialogs.savedatadialog(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath)
 
             # Remove the ROI
             self.viewbox.removeItem(self.captureROI)

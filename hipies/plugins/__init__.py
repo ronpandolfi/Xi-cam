@@ -6,6 +6,7 @@ from hipies import globals
 modules = []
 plugins = OrderedDict()
 
+disabledatstart = ['FXS', 'SPOTH5', 'Library']
 
 
 def initplugins(placeholders):
@@ -16,19 +17,19 @@ def initplugins(placeholders):
 
     for module in modules:
         link = pluginlink(module, placeholders)
-        link.enable()
-        plugins[link.instance.name] = link
+        if link.name not in disabledatstart: link.enable()
+        plugins[link.name] = link
     globals.plugins = plugins
 
 
 def buildactivatemenu(modewidget):
     menu = QtGui.QMenu('Plugins')
     for pluginlink in plugins.values():
-        if pluginlink.instance.hidden:
+        if pluginlink.plugin.hidden:
             continue
         action = QtGui.QAction(pluginlink.name, menu)
         action.setCheckable(True)
-        action.setChecked(True)
+        action.setChecked(pluginlink.enabled)
         action.toggled.connect(pluginlink.setEnabled)
         action.toggled.connect(modewidget.reload)
         menu.addAction(action)
@@ -48,16 +49,15 @@ class pluginlink():
         del self.instance
         self.instance = None
 
-
     def enable(self):
         self.module = reload(sys.modules[self.modulename])
         self.plugin = self.module.plugin
         self.instance = self.plugin(self.placeholders)
 
-    def setEnabled(self, enabled):
-        if enabled:
+    def setEnabled(self, enable):
+        if enable and not self.enabled:
             self.enable()
-        else:
+        elif self.enabled and not enable:
             self.disable()
 
 
@@ -73,4 +73,5 @@ class pluginlink():
             self.disable()
 
     def activate(self):
+        self.setEnabled(True)
         self.instance.activate()
