@@ -10,7 +10,7 @@ from fabio import edfimage
 import os
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-import dialogs
+from hipies import dialogs
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
