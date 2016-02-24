@@ -1067,7 +1067,7 @@ class dimgViewer(QtGui.QWidget):
     def exportimage(self):
         data = self.imageitem.image
         guesspath = self.paths[0]
-        dialogs.savedatadialog(data=data, guesspath=guesspath)
+        dialogs.savedatadialog(data=data, guesspath=guesspath, headers=self.dimg.headers)
 
     def capture(self):
         captureroi = None
