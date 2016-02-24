@@ -81,15 +81,19 @@ class experiment(Parameter):
 
     def addtomask(self, maskedarea):
         # If the mask is empty, set the mask to the new masked area
-        if self._mask is None:
+        if self._mask is None or self._mask.shape != maskedarea.shape:
             self._mask = maskedarea.astype(np.int)
         else:  # Otherwise, bitwise or it with the current mask
             # print(self.experiment.mask,maskedarea)
-            if self._mask.shape == maskedarea.shape:
-                self._mask = np.bitwise_and(self._mask, maskedarea.astype(np.int))
-            else:
-                pass
-                # TODO: Handle masking images with different sizes
+            self._mask = np.bitwise_and(self._mask, maskedarea.astype(np.int))
+
+        try:  # hack for mask export
+            from fabio import edfimage
+
+            edf = edfimage.edfimage(np.rot90(self.mask))
+            edf.write('mask.edf')
+        except Exception:
+            pass
 
 
     def EnergyChanged(self):

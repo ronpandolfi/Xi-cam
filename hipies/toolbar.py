@@ -190,8 +190,11 @@ class difftoolbar(QtGui.QToolBar):
         self.actionSpaceGroup.setCheckable(True)
         self.actionSpaceGroup.setVisible(False)
 
-
-
+        self.actionCapture = QtGui.QAction(self)
+        icon30 = QtGui.QIcon()
+        icon30.addPixmap(QtGui.QPixmap("gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionCapture.setIcon(icon30)
+        self.actionCapture.setObjectName("actionCapture")
 
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()
@@ -216,8 +219,8 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionProcess)
         self.addAction(self.actionVideo)
         self.addAction(self.actionCalibrate_AgB)
-        self.addAction(self.actionCenterFind)
-        self.addAction(self.actionRefine_Center)
+        # self.addAction(self.actionCenterFind)        # Hide old buttons
+        #self.addAction(self.actionRefine_Center)
         self.addAction(self.actionShow_Mask)
         self.addAction(toolbuttonMaskingAction)
         self.addAction(self.actionCake)
@@ -230,11 +233,12 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionRadial_Symmetry)
         self.addAction(self.actionMirror_Symmetry)
         self.addAction(self.actionSpaceGroup)
-        #self.addAction(self.actionROI)
+        self.addAction(self.actionCapture)
 
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None, spacegroup=None):
+                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None, spacegroup=None,
+                        capture=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -265,6 +269,10 @@ class difftoolbar(QtGui.QToolBar):
         if spacegroup is not None:
             self.actionSpaceGroup.setVisible(True)
             self.actionSpaceGroup.triggered.connect(spacegroup)
+
+        if capture is not None:
+            self.actionCapture.setVisible(True)
+            self.actionCapture.triggered.connect(capture)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

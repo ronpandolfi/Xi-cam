@@ -1,31 +1,36 @@
 from collections import OrderedDict
 from PySide import QtGui
 import sys
+from hipies import globals
 
 modules = []
 plugins = OrderedDict()
 
 
+
 def initplugins(placeholders):
-    import viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file
+    import MOTD, viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file
 
     global plugins, modules
-    modules = [viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file]
+    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file]
 
     for module in modules:
         link = pluginlink(module, placeholders)
         link.enable()
         plugins[link.instance.name] = link
+    globals.plugins = plugins
 
 
 def buildactivatemenu(modewidget):
     menu = QtGui.QMenu('Plugins')
     for pluginlink in plugins.values():
+        if pluginlink.instance.hidden:
+            continue
         action = QtGui.QAction(pluginlink.name, menu)
         action.setCheckable(True)
         action.setChecked(True)
         action.toggled.connect(pluginlink.setEnabled)
-        action.changed.connect(modewidget.reload)
+        action.toggled.connect(modewidget.reload)
         menu.addAction(action)
     return menu
 
@@ -40,6 +45,7 @@ class pluginlink():
         self.name = self.plugin.name
 
     def disable(self):
+        del self.instance
         self.instance = None
 
 
@@ -49,7 +55,10 @@ class pluginlink():
         self.instance = self.plugin(self.placeholders)
 
     def setEnabled(self, enabled):
-        self.enabled = enabled
+        if enabled:
+            self.enable()
+        else:
+            self.disable()
 
 
     @property
@@ -62,3 +71,6 @@ class pluginlink():
             self.enable()
         else:
             self.disable()
+
+    def activate(self):
+        self.instance.activate()

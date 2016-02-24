@@ -99,12 +99,6 @@ class dimgViewer(QtGui.QWidget):
             self.dimg = loader.diffimage(filepath=paths[0])
 
 
-
-
-
-        # For storing what action is active (mask/circle fit...)
-        self.activeaction = None
-
         # Make an imageview for the image
         self.imgview = ImageView(self)
         self.imageitem = self.imgview.getImageItem()
@@ -212,6 +206,8 @@ class dimgViewer(QtGui.QWidget):
         except (AttributeError, TypeError, KeyError):
             print('Warning: Energy could not be determined from headers')
 
+        # Force cache the detector
+        _ = self.dimg.detector
 
         # Cache radial integration
         if self.dimg is not None:
@@ -669,9 +665,6 @@ class dimgViewer(QtGui.QWidget):
         if self.dimg.data is None:
             return
 
-        # Force cache the detector
-        _ = self.dimg.detector
-
         self.sigPlotQIntegration.disconnect(self.plotqintegration)
 
         self.findcenter(skipdraw=True)
@@ -987,7 +980,7 @@ class dimgViewer(QtGui.QWidget):
             # Override the ROI's function to check if any points will be moved outside the boundary; False prevents move
             def checkPointMove(handle, pos, modifiers):
                 p = self.viewbox.mapToView(pos)
-                if 0 < p.y() < self.dimg.data.shape[0] and 0 < p.x() < self.dimg.data.shape[1]:
+                if 0 < p.y() < self.dimg.data.shape[1] and 0 < p.x() < self.dimg.data.shape[0]:
                     return True
                 else:
                     return False
@@ -995,7 +988,6 @@ class dimgViewer(QtGui.QWidget):
             self.maskROI.checkPointMove = checkPointMove
 
         else:  # If the mask is completed
-            self.activeaction = None
 
             # Get the region of the image that was selected; unforunately the region is trimmed
             maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.data), self.imageitem,
@@ -1041,12 +1033,15 @@ class dimgViewer(QtGui.QWidget):
         else:
             mask = config.activeExperiment.mask
 
-        # Draw the mask as a red channel image with an alpha mask
-        print 'maskmax:', np.max(mask) * 1.0
-        invmask = 1 - mask
-        self.maskimage.setImage(
-            np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
-            opacity=.25)
+        if mask is None:
+            self.maskimage.clear()
+        else:
+            # Draw the mask as a red channel image with an alpha mask
+            print 'maskmax:', np.max(mask)
+            invmask = 1 - mask
+            self.maskimage.setImage(
+                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
+                opacity=.25)
 
 
     # def finddetector(self):
@@ -1072,6 +1067,43 @@ class dimgViewer(QtGui.QWidget):
         dialog.selectFile(os.path.basename(self.path))
         filename, _ = dialog.getSaveFileName()
         fabimg.write(filename)
+
+    def capture(self):
+        captureroi = None
+        for roi in self.viewbox.addedItems:
+            print type(roi)
+            if type(roi) is pg.RectROI:
+                captureroi = roi
+
+        if captureroi is None:
+
+            # Add ROI item to the image
+            self.captureROI = pg.RectROI(config.activeExperiment.center, (100, 100))
+            self.viewbox.addItem(self.captureROI)
+
+            # Override the ROI's function to check if any points will be moved outside the boundary; False prevents move
+            def checkPointMove(handle, pos, modifiers):
+                p = self.viewbox.mapToView(pos)
+                if 0 < p.y() < self.dimg.data.shape[0] and 0 < p.x() < self.dimg.data.shape[1]:
+                    return True
+                else:
+                    return False
+
+            self.captureROI.checkPointMove = checkPointMove
+
+        else:  # If the mask is completed
+
+            # Get the shape
+            pos = [max(int(c), 0) for c in self.captureROI.pos()]
+            size = [max(int(c), 0) for c in self.captureROI.size()]
+
+            dataregion = self.dimg.data[pos[0]:(pos[0] + size[0]), pos[1]:(pos[1] + size[1])]
+            out = edfimage.edfimage(np.rot90(dataregion))
+            out.write('region.edf')
+
+            # Remove the ROI
+            self.viewbox.removeItem(self.captureROI)
+
 
     def clearsgoverlays(self):
         for item in self.viewbox.addedItems:
@@ -1355,8 +1387,17 @@ class pluginModeWidget(QtGui.QWidget):
         self.reload()
 
     def reload(self):
+        w = self.layout().takeAt(0)
+        while w:
+            w.widget().deleteLater()
+            del w
+            w = self.layout().takeAt(0)
+
         for key, plugin in self.plugins.items():
             if plugin.enabled:
+                if plugin.instance.hidden:
+                    continue
+
                 button = QtGui.QPushButton(plugin.name)
                 button.setFlat(True)
                 button.setFont(self.font)
@@ -1364,15 +1405,16 @@ class pluginModeWidget(QtGui.QWidget):
                 button.setAutoFillBackground(False)
                 button.setCheckable(True)
                 button.setAutoExclusive(True)
-                button.clicked.connect(plugin.instance.activate)
+                button.clicked.connect(plugin.activate)
                 if plugin is self.plugins.values()[0]:
                     button.setChecked(True)
                 self.layout().addWidget(button)
-                if not plugin is self.plugins.values()[-1]:
-                    label = QtGui.QLabel('|')
-                    label.setFont(self.font)
-                    label.setStyleSheet('background-color:#111111;')
-                    self.layout().addWidget(label)
+                label = QtGui.QLabel('|')
+                label.setFont(self.font)
+                label.setStyleSheet('background-color:#111111;')
+                self.layout().addWidget(label)
+
+        self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
 
 
 class previewwidget(pg.GraphicsLayoutWidget):

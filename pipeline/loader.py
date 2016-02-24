@@ -229,8 +229,8 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
         (data2, paras2) = loadsingle(filepath2)
 
     # DEFAULT TILING AT 733
-    positionY1 = 0 if '_lo_' in filepath1 else 40 * .172
-    positionY2 = 40 * .172 if '_hi_' in filepath2 else 0
+    positionY1 = 0 if '_lo_' in filepath1 else 30 * .172
+    positionY2 = 30 * .172 if '_hi_' in filepath2 else 0
     positionX1 = 0
     positionX2 = 0
 
@@ -302,7 +302,7 @@ def loadthumbnail(path):
     return None
 
 
-@debugtools.timeit
+# @debugtools.timeit
 # def finddetector(imgdata):
 #     for name, detector in detectors.ALL_DETECTORS.iteritems():
 #         if hasattr(detector, 'MAX_SHAPE'):
@@ -674,9 +674,6 @@ class imageseries():
 
         if self.experiment is None:
             self.experiment = config.activeExperiment
-
-
-
 
     @property
     def dimgs(self):

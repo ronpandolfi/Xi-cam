@@ -55,6 +55,7 @@ leftwidget = w
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
     sigUpdateExperiment = QtCore.Signal()
+    hidden = False
 
     def __init__(self, placeholders):
         super(plugin, self).__init__()

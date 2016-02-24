@@ -40,6 +40,7 @@ import numpy as np
 APP = ['main.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
+           'qt_plugins': 'imageformats',
            'resources':['gui'],
            'iconfile': 'gui/icon.icns',
            'plist': {

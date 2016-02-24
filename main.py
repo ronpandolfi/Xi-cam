@@ -14,8 +14,8 @@ if __name__ == '__main__':
         print 'path:', path
     app=QtGui.QApplication(sys.argv)
     globals.app = app
-    pixmap = QtGui.QPixmap("gui/splash.gif")
-    print 'test:', pixmap.size()
+    pixmap = QtGui.QPixmap(os.path.join(os.getcwd(), "gui/splash.gif"))
+    print 'CWD:', os.getcwd()
     splash = SplashScreen(pixmap, f=QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.SplashScreen)
     splash.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     splash.setMask(pixmap.mask())

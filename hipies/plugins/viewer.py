@@ -33,7 +33,8 @@ class plugin(base.plugin):
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                     self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup)
+                                     self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
+                                     capture=self.capture)
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -234,3 +235,6 @@ class plugin(base.plugin):
         filename, ok = dialog.getSaveFileName()
         if ok and filename:
             fabimg.write(filename)
+
+    def capture(self):
+        self.getCurrentTab().capture()

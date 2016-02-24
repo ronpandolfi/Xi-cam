@@ -77,7 +77,7 @@ class MyMainWindow():
 
         plugins.initplugins(placeholders)
 
-        plugins.plugins['Viewer'].instance.activate()
+        plugins.plugins['MOTD'].instance.activate()
 
         plugins.base.filetree.sigOpenFiles.connect(self.openfiles)
 

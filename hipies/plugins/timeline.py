@@ -15,7 +15,7 @@ import numpy as np
 import widgets
 
 
-class plugin(base.plugin):
+class plugin(base.plugin):  ##### Inherit viewer instead!!!
     name = 'Timeline'
 
     def __init__(self, *args, **kwargs):
