@@ -6,8 +6,8 @@ from hipies import debugtools
 import multiprocessing
 import time
 import os
-from hipies import debugtools
 from PIL import Image
+from fabio import edfimage, tifimage
 
 
 class nexusmerger(QtCore.QThread):
@@ -80,3 +80,41 @@ def blockshaped(arr, factor):
     firstslice = np.array_split(arr, arr.shape[0] // factor)
     secondslice = map(lambda x: np.array_split(x, arr.shape[1] // factor, axis=1), firstslice)
     return np.array(secondslice)
+
+
+def writeimage(image, path, headers=None, suffix=''):
+    if headers is None:
+        headers = dict()
+    ext = os.path.splitext(path)[-1]
+    path = ''.join(os.path.splitext(path)[:-1]) + suffix + ext
+    if notexitsoroverwrite(path):
+        if ext.lower() == '.edf':
+            fabimg = edfimage.edfimage(np.rot90(image), header=headers)
+            fabimg.write(path)
+        elif ext.lower() == '.tif':
+            fabimg = tifimage.tifimage(np.rot90(image), header=headers)
+            fabimg.write(path)
+        elif ext.lower() == '.png':
+            raise NotImplementedError
+    else:
+        return False
+    return True
+
+
+def writearray(data, path, headers=None, suffix=''):
+    if headers is None: headers = dict()
+    ext = '.csv'
+    path = ''.join(os.path.splitext(path)[:-1]) + suffix + ext
+
+    if notexitsoroverwrite(path):
+        np.savetxt(path, np.array(data), header=headers)
+        return True
+    else:
+        return False
+
+
+def notexitsoroverwrite(path):
+    if os.path.isfile(path):
+        # if not dialogs.checkoverwrite(): return False
+        return True
+    return True

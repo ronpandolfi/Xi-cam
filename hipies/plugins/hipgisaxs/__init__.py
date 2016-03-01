@@ -1,7 +1,7 @@
 from hipies.plugins import base
 from PySide import QtGui
 import os
-from hipies import globals
+from hipies import xglobals
 
 import json
 from PySide.QtUiTools import QUiLoader

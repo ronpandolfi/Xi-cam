@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from PySide import QtGui
 import sys
-from hipies import globals
+from hipies import xglobals
 
 modules = []
 plugins = OrderedDict()
@@ -10,16 +10,16 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS']
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file, hipgisaxs
+    import MOTD, viewer, timeline, library, fluctuationscattering, ipythonconsole, spoth5file, hipgisaxs, batch
 
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file, hipgisaxs]
+    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, spoth5file, hipgisaxs, batch]
 
     for module in modules:
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
-    globals.plugins = plugins
+    xglobals.plugins = plugins
 
 
 def buildactivatemenu(modewidget):

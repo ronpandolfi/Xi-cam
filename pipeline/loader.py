@@ -614,6 +614,14 @@ class diffimage():
         # Set the center in the experiment
         self.experiment.center = (x, y)
 
+    def integrate(self, mode='', cut=None):
+        if cut is not None:
+            cut = (cut.getArrayRegion(np.ones_like(self.data), self.imageitem)).T
+
+        ai = config.activeExperiment.getAI().getPyFAI()
+        iscake = False
+        return integration.chiintegratepyFAI(self.data, self.mask, ai, iscake, cut)
+
     @debugtools.timeit  #0.07s on Izanami
     def variation(self, operationindex, roi):
         if operationindex not in self._variation or roi is not None:

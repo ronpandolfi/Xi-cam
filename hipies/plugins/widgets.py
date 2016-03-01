@@ -5,12 +5,13 @@ from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
 from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
-from hipies import config, ROI, globals, debugtools, toolbar
+from hipies import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 from hipies import dialogs
+from hipies import xglobals
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -231,10 +232,10 @@ class dimgViewer(QtGui.QWidget):
 
     def loadLUT(self):
 
-        if globals.LUT is not None:
+        if xglobals.LUT is not None:
             hist = self.imgview.getHistogramWidget().item
-            hist.setLevels(*globals.LUTlevels)
-            hist.gradient.restoreState(globals.LUTstate)
+            hist.setLevels(*xglobals.LUTlevels)
+            hist.gradient.restoreState(xglobals.LUTstate)
             return True
         return False
 
@@ -253,9 +254,9 @@ class dimgViewer(QtGui.QWidget):
 
     def cacheLUT(self):
         hist = self.imgview.getHistogramWidget().item
-        globals.LUTlevels = hist.getLevels()
-        globals.LUTstate = hist.gradient.saveState()
-        globals.LUT = hist.getLookupTable(img=self.imageitem.image)
+        xglobals.LUTlevels = hist.getLevels()
+        xglobals.LUTstate = hist.gradient.saveState()
+        xglobals.LUT = hist.getLookupTable(img=self.imageitem.image)
 
     # def send1Dintegration(self):
     # self.cache1Dintegration.emit(self.q, self.radialprofile)
@@ -554,6 +555,7 @@ class dimgViewer(QtGui.QWidget):
         self.viewbox.addItem(arc)
         self.replot()
         arc.sigRemoveRequested.connect(self.removeROI)
+        xglobals.lastroi = arc
 
 
     def linecut(self):
@@ -571,6 +573,7 @@ class dimgViewer(QtGui.QWidget):
         self.viewbox.addItem(region)
         self.replot()
         region.sigRegionChangeFinished.connect(self.replot)
+        xglobals.lastroi = region
         # else:
         # #self.viewbox.removeItem(self.region)
         # self.region = None
@@ -595,6 +598,7 @@ class dimgViewer(QtGui.QWidget):
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
+        xglobals.lastroi = region
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
@@ -623,6 +627,7 @@ class dimgViewer(QtGui.QWidget):
             self.plotwidget.plotTabs.setCurrentIndex(1)
 
         self.replot()
+        xglobals.lastroi = region
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
@@ -696,7 +701,7 @@ class dimgViewer(QtGui.QWidget):
         config.activeExperiment.setvalue('Detector Distance', sdd)
 
         self.refinecenter()
-        globals.hardresetpool()
+        xglobals.hardresetpool()
         self.sigPlotQIntegration.connect(self.plotqintegration)
         self.replot()
 
@@ -746,7 +751,7 @@ class dimgViewer(QtGui.QWidget):
             data = self.dimg.data
 
         ai = config.activeExperiment.getAI().getPyFAI()
-        globals.pool.apply_async(integration.chiintegratepyFAI,
+        xglobals.pool.apply_async(integration.chiintegratepyFAI,
                                  args=(self.dimg.data, self.dimg.mask, ai, self.iscake ),
                                  callback=self.chiintegrationrelay)
         # pipeline.integration.chiintegratepyFAI(self.dimg.data, self.dimg.mask, ai, precaked=self.iscake)
@@ -849,7 +854,7 @@ class dimgViewer(QtGui.QWidget):
                                   self.getcenter()[::-1]]
         print self.getcenter()
 
-        globals.pool.apply_async(integration.radialintegratepyFAI,
+        xglobals.pool.apply_async(integration.radialintegratepyFAI,
                                  args=((self.dimg.data if not self.isremesh else data),
                                        (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
                                        [c * config.activeExperiment.getvalue('Pixel Size X') for c in
@@ -920,7 +925,7 @@ class dimgViewer(QtGui.QWidget):
                             else:
 
                                 ai = config.activeExperiment.getAI().getPyFAI()
-                                globals.pool.apply_async(integration.radialintegratepyFAI, args=(
+                                xglobals.pool.apply_async(integration.radialintegratepyFAI, args=(
                                     (self.dimg.data if not self.isremesh else data),
                                     (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, cut,
                                     [0, 255, 255], [c * config.activeExperiment.getvalue('Pixel Size X') for c in
@@ -1102,10 +1107,10 @@ class dimgViewer(QtGui.QWidget):
             maskregion = self.dimg.mask[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             guesspath = self.paths[0]
 
-            qpar_min = self.getq(*lowerleft, mode='parallel')
-            qvrt_min = self.getq(*lowerleft, mode='z')
-            qpar_max = self.getq(*topright, mode='parallel')
-            qvrt_max = self.getq(*topright, mode='z')
+            qpar_min = self.getq(*lowerleft, mode='parallel') * 10
+            qvrt_min = self.getq(*lowerleft, mode='z') * 10
+            qpar_max = self.getq(*topright, mode='parallel') * 10
+            qvrt_max = self.getq(*topright, mode='z') * 10
 
             headers = {'qpar_min': qpar_min, 'qpar_max': qpar_max, 'qvrt_min': qvrt_min, 'qvrt_max': qvrt_max}
             dialogs.savedatadialog(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath)
@@ -1540,3 +1545,39 @@ def pixel2q(x, y, experiment):
                        experiment.getvalue('Detector Distance'))
     wavelength = experiment.getvalue('Wavelength')
     return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+
+
+class filesListWidget(QtGui.QWidget):
+    def __init__(self, *args, **kwargs):
+        super(filesListWidget, self).__init__()
+        self.horizontalLayout = QtGui.QHBoxLayout(self)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.paths = QtGui.QListWidget(self)
+        self.paths.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
+        self.paths.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.paths.setObjectName("paths")
+        self.horizontalLayout.addWidget(self.paths)
+        self.verticalLayout_8 = QtGui.QVBoxLayout()
+        self.verticalLayout_8.setObjectName("verticalLayout_8")
+        self.addfilesbutton = QtGui.QToolButton(self)
+        self.addfilesbutton.setObjectName("addfiles")
+        self.verticalLayout_8.addWidget(self.addfilesbutton)
+        self.removefilesbutton = QtGui.QToolButton(self)
+        self.removefilesbutton.setObjectName("removefiles")
+        self.verticalLayout_8.addWidget(self.removefilesbutton)
+        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.verticalLayout_8.addItem(spacerItem)
+        self.horizontalLayout.addLayout(self.verticalLayout_8)
+        self.addfilesbutton.clicked.connect(self.addfiles)
+        self.removefilesbutton.clicked.connect(self.removefiles)
+
+    def addfiles(self):
+        paths, ok = QtGui.QFileDialog.getOpenFileNames(None, 'Add files to Batch', os.curdir,
+                                                       '*' + ' *'.join(loader.acceptableexts))
+        self.paths.addItems(paths)
+
+    def removefiles(self):
+        for index in self.paths.selectedIndexes():
+            item = self.paths.takeItem(index.row())
+            item = None

@@ -9,7 +9,7 @@ rightwidget = None
 
 
 def load():
-    global leftwidget, centerwidget, rightwidget
+    global leftwidget, centerwidget, rightwidget, blankform
     # Load the gui from file
     guiloader = QUiLoader()
     f = QtCore.QFile("gui/hipgisaxsleftwidget.ui")
@@ -29,5 +29,6 @@ def load():
 
 
 def showForm(form):
+    print 'form:', form
     rightwidget.addWidget(form)
     rightwidget.setCurrentWidget(form)

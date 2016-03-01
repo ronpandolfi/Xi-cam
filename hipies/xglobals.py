@@ -7,7 +7,7 @@ LUTstate = None
 plugins = OrderedDict()
 pool = None
 window = None
-
+lastroi = None
 
 def load():
     global pool

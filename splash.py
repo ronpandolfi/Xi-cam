@@ -19,15 +19,15 @@ class SplashScreen(QtGui.QSplashScreen):
         if not self._launching:
             self._launching = True
             import hipies
-            from hipies import globals
+            from hipies import xglobals
 
-            globals.window = hipies.hipies.MyMainWindow(globals.app)
+            xglobals.window = hipies.hipies.MyMainWindow(xglobals.app)
             self.timer.stop()
 
-            globals.window.ui.show()
-            globals.window.ui.raise_()
-            globals.window.ui.activateWindow()
-            globals.app.setActiveWindow(globals.window.ui)
+            xglobals.window.ui.show()
+            xglobals.window.ui.raise_()
+            xglobals.window.ui.activateWindow()
+            xglobals.app.setActiveWindow(xglobals.window.ui)
             self.hide()
             # self.finish(window.ui)
 

@@ -231,10 +231,10 @@ class featureWidget(QtGui.QWidget):
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
 
-        self.form
+
 
     def delete(self):
-        value = QtGui.QMessageBox.question(ui.mainwindow, 'Delete this feature?',
+        value = QtGui.QMessageBox.question(None, 'Delete this feature?',
                                            'Are you sure you want to delete this feature?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:

@@ -7,7 +7,7 @@ import pipeline
 import viewer
 from pipeline import loader
 from PySide import QtCore, QtGui
-from hipies import globals
+from hipies import xglobals
 
 
 class SPOT_H5DSet:
