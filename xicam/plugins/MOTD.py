@@ -1,7 +1,7 @@
 import base
 from PySide import QtGui
 import os
-from hipies import xglobals
+from xicam import xglobals
 
 import widgets
 

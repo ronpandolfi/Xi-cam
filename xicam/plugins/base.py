@@ -1,7 +1,7 @@
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import ParameterTree
-from hipies import config
-from hipies import models
+from xicam import config
+from xicam import models
 import widgets
 
 activeplugin = None

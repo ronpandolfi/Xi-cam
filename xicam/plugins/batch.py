@@ -7,9 +7,9 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import os
 from pipeline import loader, writer
-import config
+from xicam import config
 import numpy as np
-from hipies import xglobals
+from xicam import xglobals
 
 import widgets
 

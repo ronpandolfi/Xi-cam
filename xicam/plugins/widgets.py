@@ -5,13 +5,13 @@ from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
 from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
-from hipies import config, ROI, debugtools, toolbar
+from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-from hipies import dialogs
-from hipies import xglobals
+from xicam import dialogs
+from xicam import xglobals
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()

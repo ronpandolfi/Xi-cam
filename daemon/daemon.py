@@ -3,7 +3,7 @@ import time
 import process
 from PySide import QtCore
 import multiprocessing
-from hipies import debugtools
+from xicam import debugtools
 
 
 class daemon(QtCore.QThread):

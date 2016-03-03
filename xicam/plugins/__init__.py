@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from PySide import QtGui
 import sys
-from hipies import xglobals
+from xicam import xglobals
 
 modules = []
 plugins = OrderedDict()

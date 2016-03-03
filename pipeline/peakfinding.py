@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 from scipy.ndimage import filters
-from hipies import debugtools
+from xicam import debugtools
 import pyqtgraph as pg
 from PySide import QtCore
 
@@ -64,7 +64,7 @@ def findpeaks(x, y):
 #     return list(np.array(np.vstack([x[peakxs], y[peakxs], [peakxs, peaksigmas]])))
 
 
-# TODO: Refactor this class into hipies module so I can get rid of pyside dependency
+# TODO: Refactor this class into xicam module so I can get rid of pyside dependency
 class peaktooltip:
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)

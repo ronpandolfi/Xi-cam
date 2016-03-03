@@ -5,17 +5,20 @@ import numpy
 import pyfits
 import os
 import numpy as np
-from nexpy.api import nexus as nx
+#from nexpy.api import nexus as nx
 import detectors
 import glob
 import re
 import time
 import scipy.ndimage
 import writer
-import nexpy.api.nexus.tree as tree
-from hipies import debugtools, config
+#import nexpy.api.nexus.tree as tree
+from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
+
+import numpy as nx
+
 import formats  # injects fabio with custom formats
 
 
@@ -366,7 +369,7 @@ class diffimage():
         :param filepath: str
         :param data: numpy.multiarray.ndarray
         :param detector: pyFAI.detectors.Detector
-        :param experiment: hipies.config.experiment
+        :param experiment: xicam.config.experiment
         """
 
         print 'Loading ' + unicode(filepath) + '...'

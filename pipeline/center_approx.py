@@ -213,7 +213,7 @@ def fitpointstocircle(cnt):
 #         print "The center was unable to be found for an image."
 #         return None
 
-from hipies import debugtools
+from xicam import debugtools
 
 
 @debugtools.timeit

@@ -266,7 +266,7 @@ class spacegroupwidget(ParameterTree):
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=np.array([0, 0, 1]), norm_type='uvw', order=2)
         for key in peaks:
-            from hipies import config
+            from xicam import config
             print key + " -> " + str(peaks[key])
             center = config.activeExperiment.center
             sdd = config.activeExperiment.getvalue('Detector Distance')

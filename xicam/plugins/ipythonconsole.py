@@ -1,7 +1,7 @@
 from PySide import QtGui
 import sys
 import base
-from hipies import plugins
+from xicam import plugins
 
 # Overload for Py2App
 def new_load_qt(api_options):

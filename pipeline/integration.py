@@ -1,5 +1,5 @@
 import numpy as np
-from hipies import config
+from xicam import config
 from PySide import QtCore
 import multiprocessing
 import time
@@ -74,10 +74,10 @@ def radialintegrate(dimg, cut=None):
         #                      [Ivalue for qvalue, Ivalue in zip(q, radialprofile) if Ivalue > 0])
         radialprofile = radialprofile * (radialprofile > 0) + 0.0001 * (radialprofile <= 0)
 
-        # import hipies.debug
-        # hipies.debug.showimage(data)
-        # hipies.debug.showimage(invmask)
-        # hipies.debug.showimage(r)
+        # import xicam.debug
+        # xicam.debug.showimage(data)
+        # xicam.debug.showimage(invmask)
+        # xicam.debug.showimage(r)
 
 
     return (q, radialprofile)

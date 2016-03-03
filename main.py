@@ -1,14 +1,13 @@
-from PySide import QtGui, QtCore
-import hipies
-import sys
 import os
-from hipies import xglobals
-from splash import SplashScreen
+import sys
+
+from PySide import QtGui, QtCore
+
+from xicam import xglobals
+from xicam.splash import SplashScreen
 
 
-
-
-if __name__ == '__main__':
+def main():
     xglobals.load()
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
     for path in sys.path:
@@ -27,3 +26,8 @@ if __name__ == '__main__':
     app.processEvents()
 
     sys.exit(app.exec_())
+
+
+
+if __name__ == '__main__':
+    main()

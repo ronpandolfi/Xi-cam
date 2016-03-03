@@ -1,7 +1,7 @@
 from cx_Freeze import setup, Executable
 import sys
 # import scipy.sparse.csgraph._validation
-sys.path.append('hipies/')
+sys.path.append('xicam/')
 
 
 # Notes:
@@ -37,7 +37,7 @@ shortcut_table = [
      "DesktopFolder",  # Directory_
      "HipIES",  # Name
      "TARGETDIR",  # Component_
-     "[TARGETDIR]hipies.exe",  # Target
+     "[TARGETDIR]xicam.exe",  # Target
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
@@ -50,7 +50,7 @@ shortcut_table = [
      "StartMenuFolder",  # Directory_
      "HipIES",  # Name
      "TARGETDIR",  # Component_
-     "[TARGETDIR]hipies.exe",  # Target
+     "[TARGETDIR]xicam.exe",  # Target
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
@@ -64,7 +64,7 @@ shortcut_table = [
 
 msi_data = {'Shortcut': shortcut_table}
 
-buildOptions = {'packages': ['hipies', 'scipy', 'pipeline', 'daemon'],
+buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon'],
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
@@ -75,12 +75,12 @@ msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_nam
 bdistmsiOptions = {"data": msi_data}
 
 
-# ,'resources':['hipies/gui/'],'iconfile':'hipies/gui/icon.icns','includes':['PIL']
+# ,'resources':['xicam/gui/'],'iconfile':'xicam/gui/icon.icns','includes':['PIL']
 
 base = 'Win32GUI' if sys.platform == 'win32' else None
 
 executables = [
-    Executable('main.py', base=base, targetName='hipies.exe', icon='icon.ico', shortcutName="HipIES",
+    Executable('main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="HipIES",
                shortcutDir="StartMenuFolder", )
 ]
 

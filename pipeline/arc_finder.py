@@ -532,9 +532,9 @@ def findgisaxsarcs2(img, experiment):
 
 
 if __name__ == "__main__":
-    import hipies.config
+    import xicam.config
 
-    experiment = hipies.config.experiment()
+    experiment = xicam.config.experiment()
     experiment.setvalue('Detector', 'pilatus2m')
     experiment.setvalue('Pixel Size X',172e-6)
     experiment.setvalue('Pixel Size Y', 172e-6)
