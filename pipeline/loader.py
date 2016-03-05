@@ -168,10 +168,15 @@ def loadparas(path):
             return nxroot
 
         elif extension in ['.tif', '.img', '.tiff']:
-            frame = int(re.search('\d+(?=.tif)', path).group(0))
-            paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
+            fimg = fabio.open(path)
+            try:
+                frame = int(re.search('\d+(?=.tif)', path).group(0))
+                paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
+                textheader=scanparas(paraspath, frame)
+            except AttributeError:
+                textheader=dict()
 
-            return scanparas(paraspath, frame)
+            return merge_dicts(fimg.header,textheader)
 
     except IOError:
         print('Unexpected read error in loadparas')
@@ -181,6 +186,9 @@ def loadparas(path):
 
 
 def scanparas(path, frame=None):
+    if not os.path.isfile(path):
+        return dict()
+
     with open(path, 'r') as f:
         lines = f.readlines()
 
@@ -588,14 +596,13 @@ class diffimage():
     def queryAlphaI(self):
         alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
                                                   decimals=3)
-
-        alphai = np.deg2rad(alphai)
-        if ok:
+        if alphai and ok:
+            alphai = np.deg2rad(alphai)
             self.headers['Alpha'] = alphai
-        else:
-            return None
+            return alphai
 
-        return alphai
+        return None
+
 
     def __del__(self):
         # TODO: do more here!
@@ -618,12 +625,9 @@ class diffimage():
         self.experiment.center = (x, y)
 
     def integrate(self, mode='', cut=None):
-        if cut is not None:
-            cut = (cut.getArrayRegion(np.ones_like(self.data), self.imageitem)).T
-
         ai = config.activeExperiment.getAI().getPyFAI()
         iscake = False
-        return integration.chiintegratepyFAI(self.data, self.mask, ai, iscake, cut)
+        return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
 
     @debugtools.timeit  #0.07s on Izanami
     def variation(self, operationindex, roi):
@@ -666,10 +670,10 @@ class diffimage():
 
 
     def __getattr__(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            raise AttributeError('diffimage has no attribute: ' + name)
+       if name in self.cache:
+           return self.cache[name]
+       else:
+           raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():

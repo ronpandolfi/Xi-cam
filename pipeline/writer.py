@@ -85,10 +85,10 @@ def blockshaped(arr, factor):
     return np.array(secondslice)
 
 
-def writeimage(image, path, headers=None, suffix=''):
-    if headers is None:
-        headers = dict()
-    ext = os.path.splitext(path)[-1]
+def writeimage(image, path, headers=None, suffix='',ext=None):
+    if headers is None: headers = dict()
+    if ext is None: ext = os.path.splitext(path)[-1]
+
     path = ''.join(os.path.splitext(path)[:-1]) + suffix + ext
     if notexitsoroverwrite(path):
         if ext.lower() == '.edf':

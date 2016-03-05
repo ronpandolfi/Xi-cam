@@ -12,6 +12,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 from xicam import dialogs
 from xicam import xglobals
+import scipy
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -555,7 +556,7 @@ class dimgViewer(QtGui.QWidget):
         self.viewbox.addItem(arc)
         self.replot()
         arc.sigRemoveRequested.connect(self.removeROI)
-        xglobals.lastroi = arc
+        xglobals.lastroi = (arc,self.imageitem)
 
 
     def linecut(self):
@@ -573,7 +574,7 @@ class dimgViewer(QtGui.QWidget):
         self.viewbox.addItem(region)
         self.replot()
         region.sigRegionChangeFinished.connect(self.replot)
-        xglobals.lastroi = region
+        xglobals.lastroi = (region,self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         # self.region = None
@@ -598,7 +599,7 @@ class dimgViewer(QtGui.QWidget):
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
-        xglobals.lastroi = region
+        xglobals.lastroi = (region,self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
@@ -627,7 +628,7 @@ class dimgViewer(QtGui.QWidget):
             self.plotwidget.plotTabs.setCurrentIndex(1)
 
         self.replot()
-        xglobals.lastroi = region
+        xglobals.lastroi = (region,self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
@@ -1562,9 +1563,15 @@ class filesListWidget(QtGui.QWidget):
         self.verticalLayout_8.setObjectName("verticalLayout_8")
         self.addfilesbutton = QtGui.QToolButton(self)
         self.addfilesbutton.setObjectName("addfiles")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/add.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.addfilesbutton.setIcon(icon)
         self.verticalLayout_8.addWidget(self.addfilesbutton)
         self.removefilesbutton = QtGui.QToolButton(self)
         self.removefilesbutton.setObjectName("removefiles")
+        icon2 = QtGui.QIcon()
+        icon2.addPixmap(QtGui.QPixmap("gui/remove.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.removefilesbutton.setIcon(icon2)
         self.verticalLayout_8.addWidget(self.removefilesbutton)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_8.addItem(spacerItem)

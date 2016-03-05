@@ -8,6 +8,7 @@ plugins = OrderedDict()
 pool = None
 window = None
 lastroi = None
+statusbar = None
 
 def load():
     global pool

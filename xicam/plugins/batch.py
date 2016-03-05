@@ -10,6 +10,7 @@ from pipeline import loader, writer
 from xicam import config
 import numpy as np
 from xicam import xglobals
+import re
 
 import widgets
 
@@ -28,9 +29,10 @@ class plugin(base.plugin):
         self.remeshOption = pTypes.SimpleParameter(type='bool', name='GIXS remeshing', value=False)
         self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
         self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
+        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)'])
         self.processButton = pTypes.ActionParameter(name='Process')
         # self.abortButton = pTypes.ActionParameter(name='Abort')
-        params = [self.remeshOption, self.integrateOption, self.roiOption, self.processButton]
+        params = [self.remeshOption, self.integrateOption, self.roiOption, self.exportformat, self.processButton]
         paramgroup = Parameter.create(name='params', type='group', children=params)
         self.rightwidget.setParameters(paramgroup, showTop=False)
 
@@ -41,27 +43,37 @@ class plugin(base.plugin):
     def processfiles(self):
         pathlist = self.fileslistwidget.paths
         paths = [pathlist.item(index).text() for index in xrange(pathlist.count())]
+
+        imageext=re.findall(r'(?<=\()\..{3}(?=\))',self.exportformat.value())[0]
+
         for path in paths:
+
+            xglobals.statusbar.showMessage('Processing item ' + str(paths.index(path)+1) + ' of ' + str(len(paths))+ '...')
+            xglobals.app.processEvents()
 
             dimg = loader.diffimage(path)
 
             if self.remeshOption.value():
                 data = dimg.remesh
-                if not writer.writeimage(data, path, suffix='remeshed'):
+                if not writer.writeimage(data, path, suffix='_remeshed', ext=imageext):
                     break
 
             if self.integrateOption.value():
                 x, y, _ = dimg.integrate()
-                data = np.array([x, y.data])
+                data = np.array([x, y])
                 if not writer.writearray(data, path, suffix=''):
                     break
 
             if self.roiOption.value():
-                print xglobals.lastroi
+                print 'lastroi:',xglobals.lastroi
                 if xglobals.lastroi is not None:
-                    x, y, _ = dimg.integrate(cut=xglobals.lastroi)
-                    data = np.array([x, y.data])
-                    if not writer.writearray(data, path, suffix='roi'):
+                    # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
+                    cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T
+                    x, y, _ = dimg.integrate(cut=cut)
+                    data = np.array([x, y])
+                    if not writer.writearray(data, path, suffix='_roi'):
                         break
                 else:
                     pass  # No ROI was defined, hm...
+
+        xglobals.statusbar.showMessage('Ready...')
