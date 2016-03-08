@@ -3,6 +3,7 @@ from pyqtgraph.parametertree import ParameterTree
 from xicam import config
 from xicam import models
 import widgets
+from xicam.plugins.spew.spew.plugins.widgets import explorer
 
 activeplugin = None
 
@@ -14,11 +15,12 @@ l = QtGui.QVBoxLayout()
 l.setContentsMargins(0, 0, 0, 0)
 l.setSpacing(0)
 
-filetree = widgets.fileTreeWidget()
+#filetree = widgets.fileTreeWidget()
+filetree = explorer.MultipleFileExplorer(w)
 l.addWidget(filetree)
 
-preview = widgets.previewwidget(filetree)
-w.addWidget(preview)
+#preview = widgets.previewwidget(filetree)
+#w.addWidget(preview)
 
 booltoolbar = QtGui.QToolBar()
 
@@ -45,7 +47,7 @@ panelwidget = QtGui.QWidget()
 panelwidget.setLayout(l)
 w.addWidget(panelwidget)
 
-filetree.currentChanged = preview.loaditem
+#filetree.currentChanged = preview.loaditem
 
 w.setSizes([250, w.height() - 250])
 
