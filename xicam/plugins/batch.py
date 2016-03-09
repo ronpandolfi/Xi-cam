@@ -28,7 +28,7 @@ class plugin(base.plugin):
         self.rightwidget = ParameterTree()
         self.remeshOption = pTypes.SimpleParameter(type='bool', name='GIXS remeshing', value=False)
         self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
-        self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
+        self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=False)
         self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)'])
         self.processButton = pTypes.ActionParameter(name='Process')
         # self.abortButton = pTypes.ActionParameter(name='Abort')
