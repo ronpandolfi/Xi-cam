@@ -48,7 +48,7 @@ panelwidget = QtGui.QWidget()
 panelwidget.setLayout(l)
 w.addWidget(panelwidget)
 
-#filetree.currentChanged = preview.loaditem
+filetree.currentChanged = preview.loaditem
 
 w.setSizes([250, w.height() - 250])
 
