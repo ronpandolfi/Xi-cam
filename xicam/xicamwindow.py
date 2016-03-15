@@ -83,7 +83,7 @@ class MyMainWindow():
 
         plugins.plugins['MOTD'].instance.activate()
 
-        plugins.base.filetree.sigOpenDataset.connect(self.openfiles)
+        #plugins.base.filetree.sigOpenDataset.connect(self.openfiles)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
         self.ui.modemenu.addWidget(pluginmode)
