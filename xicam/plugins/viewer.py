@@ -233,6 +233,7 @@ class plugin(base.plugin):
                                    filter=u"EDF (*.edf)")
         dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
         filename, ok = dialog.getSaveFileName()
+        print filename
         if ok and filename:
             fabimg.write(filename)
 
