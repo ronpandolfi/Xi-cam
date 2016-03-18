@@ -29,10 +29,11 @@ class plugin(base.plugin):
         self.remeshOption = pTypes.SimpleParameter(type='bool', name='GIXS remeshing', value=False)
         self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
         self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
-        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)'])
+        self.logOption = pTypes.SimpleParameter(type='bool', name='Log scale image', value=False)
+        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
         self.processButton = pTypes.ActionParameter(name='Process')
         # self.abortButton = pTypes.ActionParameter(name='Abort')
-        params = [self.remeshOption, self.integrateOption, self.roiOption, self.exportformat, self.processButton]
+        params = [self.remeshOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
         paramgroup = Parameter.create(name='params', type='group', children=params)
         self.rightwidget.setParameters(paramgroup, showTop=False)
 
@@ -55,7 +56,7 @@ class plugin(base.plugin):
 
             if self.remeshOption.value():
                 data = dimg.remesh
-                if not writer.writeimage(data, path, suffix='_remeshed', ext=imageext):
+                if not writer.writeimage(data if not self.logOption.value() else (np.log(data * (data > 0) + (data < 1))), path, suffix='_remeshed', ext=imageext):
                     break
 
             if self.integrateOption.value():
