@@ -11,6 +11,7 @@ import time
 import os
 from PIL import Image
 from fabio import edfimage, tifimage
+import scipy.misc
 
 
 class nexusmerger(QtCore.QThread):
@@ -99,6 +100,9 @@ def writeimage(image, path, headers=None, suffix='',ext=None):
             fabimg.write(path)
         elif ext.lower() == '.png':
             raise NotImplementedError
+        elif ext.lower() == '.jpg':
+            scipy.misc.imsave(path,np.rot90(image))
+
     else:
         return False
     return True

@@ -264,19 +264,19 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
     padright2 = 0
 
     if deltaY < 0:
-        padtop2 = abs(deltaY)
-        padbottom1 = abs(deltaY)
+        padtop2 = int(abs(deltaY))
+        padbottom1 = int(abs(deltaY))
     else:
-        padtop1 = abs(deltaY)
-        padbottom2 = abs(deltaY)
+        padtop1 = int(abs(deltaY))
+        padbottom2 = int(abs(deltaY))
 
     if deltaX < 0:
-        padleft2 = abs(deltaX)
-        padright1 = abs(deltaX)
+        padleft2 = int(abs(deltaX))
+        padright1 = int(abs(deltaX))
 
     else:
-        padleft1 = abs(deltaX)
-        padright2 = abs(deltaX)
+        padleft1 = int(abs(deltaX))
+        padright2 = int(abs(deltaX))
 
     d2 = numpy.pad(data2, ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
     d1 = numpy.pad(data1, ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
