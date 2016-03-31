@@ -84,6 +84,7 @@ class MyMainWindow():
         plugins.plugins['MOTD'].instance.activate()
 
         plugins.base.filetree.sigOpenFiles.connect(self.openfiles)
+        plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.openActionTriggered)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
         self.ui.modemenu.addWidget(pluginmode)
@@ -175,7 +176,10 @@ class MyMainWindow():
         # newimagetab = viewer.imageTabTracker([path], self.experiment, self)
         #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
-        plugins.base.activeplugin.openfiles(paths)
+        if len(paths) > 1:
+            plugins.plugins['Timeline'].instance.openfiles(paths)
+        else:
+            plugins.base.activeplugin.openfiles(paths)
 
         self.ui.statusbar.showMessage('Ready...')
 

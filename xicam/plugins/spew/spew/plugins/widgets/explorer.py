@@ -75,6 +75,12 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.sigOpenFiles.emit([path])
 
+    def openActionTriggered(self):
+        indices = self.selectedIndexes()
+        paths = [self.file_model.filePath(index) for index in indices]
+
+        self.sigOpenFiles.emit(paths)
+
     def getSelectedFilePath(self):
         selected =  str(self.file_model.filePath(self.currentIndex()))
         if selected == '':
@@ -494,6 +500,7 @@ class TabBarPlus(QtGui.QTabBar):
         self.plus_button.setMinimumSize(32, 32)
         self.plus_button.clicked.connect(self.plusClicked.emit)
         self.movePlusButton()  # Move to the correct location
+        self.setDocumentMode(True)
 
     def sizeHint(self):
         sizeHint = QtGui.QTabBar.sizeHint(self)

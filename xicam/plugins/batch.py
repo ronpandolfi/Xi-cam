@@ -77,4 +77,7 @@ class plugin(base.plugin):
                 else:
                     pass  # No ROI was defined, hm...
 
+            if os.path.splitext(path)[-1] != imageext:
+                writer.writeimage(dimg.data, path, ext=imageext)
+
         xglobals.statusbar.showMessage('Ready...')

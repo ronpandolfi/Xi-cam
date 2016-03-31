@@ -23,7 +23,7 @@ import formats  # injects fabio with custom formats
 
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
-                  '.out']
+                  '.out','.txt']
 imagecache = dict()
 
 
@@ -364,7 +364,8 @@ def loadpath(path):
     return loadimage(path)
 
 
-
+def loadxfs(path):
+    return np.loadtxt(path,skiprows=16,converters={0:lambda s: int(s.split(':')[0])*60*60+int(s.split(':')[1])*60+int(s.split(':')[2])})
 
 
 
