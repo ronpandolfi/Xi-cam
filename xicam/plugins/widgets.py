@@ -1386,6 +1386,13 @@ class fxsviewer(ImageView):
 
         self.setImage(avg)
 
+class xasviewer(pg.PlotWidget):
+    def __init__(self,paths,*args,**kwargs):
+        super(xasviewer, self).__init__(*args, **kwargs)
+        for path in paths:
+            for i in range(2,16):
+                self.plot(loader.loadxfs(path)[:,2],loader.loadxfs(path)[:,i],pen=(i,16))
+
 
 
 

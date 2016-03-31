@@ -109,19 +109,35 @@ class Monoclinic(SGClass):
     ############## IMPORTANT NOTE ################
     # Monoclinic must have the unique axis as b for this to work!
 
-    conditions = OrderedDict([('P2',[None,None,None]),
-                              (u'P2₁',[None,None,k]),
-                              ('C2',[hpk,h,k]),
-                              ('Pm',[None,None,None]),
-                              ('Pc',[None,l,None]),
-                              ('Cm',[hpk,h,k]),
-                              ('Cc',[hpk,[h,l],k]),
-                              ('P2/m',[None,None,None]),
-                              (u'P2₁/m',[None,None,k]),
-                              ('C2/m',[hpk,h,k]),
-                              ('P2/c',[None,l,None]),
-                              (u'P2₁/c',[None,l,k]),
-                              ('C2/c',[hpk,[h,l],k])])
+    conditions = OrderedDict([('P2',[None,None,None]), #3
+                              (u'P2₁',[None,None,k]), #4
+                              ('C2',[hpk,h,k]), #5
+                              ('A2',[kpl,l,k]),
+                              ('I2',[hpkpl,hpl,k]),
+                              ('Pm',[None,None,None]),#6
+                              ('Pc',[None,l,None]),#7
+                              ('Pa',[None,h,None]),
+                              ('Pn',[None,hpl,None]),
+                              ('Cm',[hpk,h,k]),#8
+                              ('Am',[hpk,h,k]),
+                              ('Im',[hpk,h,k]),
+                              ('Cc',[hpk,[h,l],k]),#9
+                              ('An',[kpl,[h,l],k]),
+                              ('Ia',[hpkpl,[h,l],k]),
+                              ('P2/m',[None,None,None]),#10
+                              (u'P2₁/m',[None,None,k]),#11
+                              ('C2/m',[hpk,h,k]),#12
+                              ('A2/m',[kpl,l,k]),
+                              ('I2/m',[hpkpl,hpl,k]),
+                              ('P2/c',[None,l,None]),#13
+                              ('P2/a',[None,h,None]),
+                              ('P2/n',[None,hpl,None]),
+                              (u'P2₁/c',[None,l,k]),#14
+                              (u'P2₁/a',[None,h,k]),
+                              (u'P2₁/n',[None,hpl,k]),
+                              ('C2/c',[hpk,[h,l],k]),#15
+                              ('A2/n',[kpl,[h,l],k]),
+                              ('I2/a',[hpkpl,[h,l],k])])
 
 
 
@@ -139,19 +155,34 @@ class Monoclinic(SGClass):
 
 class Orthorhombic(SGClass):
     conditions = OrderedDict([('P222',[None,None,None,None,None,None,None]), #16
-                              (u'P222₁',[None,None,None,None,None,None,l]),
-                              (u'P2₁2₁2',[None,None,None,None,h,k,None]),
-                              (u'P2₁2₁2₁',[None,None,None,None,h,k,l]),
-                              (u'C222₁',[hpk,k,h,hpk,h,k,l]),
-                              ('C222',[hpk,k,h,hpk,h,k,None]),
-                              ('F222',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
-                              ('I222',[hpkpl,kpl,hpl,hpk,h,k,l]),
-                              (u'I2₁2₁2₁',[hpkpl,kpl,hpl,hpk,h,k,l]),
-                              ('Pmm2',[None,None,None,None,None,None,None]),
-                              (u'Pmc2₁',[None,None,l,None,None,None,l]),
-                              ('Pcc2',[None,l,l,None,None,None,l]),
-                              ('Pma2',[None,None,h,None,h,None,None]),
-                              (u'Pca2₁',[None,l,h,None,h,None,l]),
+                              (u'P222₁',[None,None,None,None,None,None,l]),#17
+                              (u'P22₁2',[None,None,None,None,None,k,None]),
+                              (u'P2₁22',[None,None,None,None,h,None,None]),
+                              (u'P2₁2₁2',[None,None,None,None,h,k,None]),#18
+                              (u'P22₁2₁',[None,None,None,None,None,k,l]),
+                              (u'P2₁22₁',[None,None,None,None,h,None,l]),
+                              (u'P2₁2₁2₁',[None,None,None,None,h,k,l]),#19
+                              (u'C222₁',[hpk,k,h,hpk,h,k,l]),#20,unfilled to 25
+                              ('C222',[hpk,k,h,hpk,h,k,None]),#21
+                              ('F222',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),#22
+                              ('I222',[hpkpl,kpl,hpl,hpk,h,k,l]),#23
+                              (u'I2₁2₁2₁',[hpkpl,kpl,hpl,hpk,h,k,l]),#24
+                              ('Pmm2',[None,None,None,None,None,None,None]),#25
+                              ('Pm2m',[None,None,None,None,None,None,None]),
+                              ('P2mm',[None,None,None,None,None,None,None]),
+                              (u'Pmc2₁',[None,None,l,None,None,None,l]),#26
+                              (u'P2₁ma',[None,None,None,h,h,None,None]),
+                              (u'Pm2₁b',[None,None,None,k,None,k,None]),
+                              (u'P2₁am',[None,None,h,None,h,None,None]),
+                              ('Pcc2',[None,l,l,None,None,None,l]),#27
+                              ('P2aa',[None,None,h,h,h,None,None]),
+                              ('Pma2',[None,None,h,None,h,None,None]),#28
+                              ('Pm2a',[None,None,None,h,h,None,None]),
+                              ('P2mb',[None,None,None,h,None,k,None]),
+                              ('P2cm',[None,None,l,None,None,None,l]),
+                              (u'Pca2₁',[None,l,h,None,h,None,l]),#29
+                              (u'P2₁ab',[None,None,h,k,h,k,None]),
+                              (u'P2₁ca',[None,None,h,None,h,None,l]),
                               ('Pnc2',[None,kpl,l,None,None,k,l]),
                               (u'Pmn2₁',[None,None,hpl,None,h,None,l])]) #31
 

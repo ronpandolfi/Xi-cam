@@ -77,4 +77,6 @@ class plugin(base.plugin):
                 else:
                     pass  # No ROI was defined, hm...
 
+            writer.writeimage(dimg.data,path,ext=imageext)
+
         xglobals.statusbar.showMessage('Ready...')
