@@ -13,28 +13,25 @@ class NewtClient(User):
     BASE_URL = "https://newt.nersc.gov/newt"
     systems = ('edison', 'cori')
 
-    def __init__(self, username, password, system):
-        super(NewtClient, self).__init__(username, password)
+    def __init__(self):
+        super(NewtClient, self).__init__()
         self.authentication = None  # NewtClient.login(self)
         self.scratch_dir = None
         self.home_dir = None
-        self.check_system(system)
-        self.system = system  # Default system
-
 
     def __del__(self):
         self.logout()
         super(NewtClient, self).__del__()
 
-    def login(self):
-        credentials = {"username": self.username,
-                       "password": self.password}
+    def login(self, username, password):
+        credentials = {"username": username,
+                       "password": password}
 
         response = self.post(self.BASE_URL + "/auth", data=credentials)
 
         if response.json()['auth']:
             self.authentication = response
-            super(NewtClient, self).login()
+            super(NewtClient, self).login(username)
         else:
             self.authentication = None
 
@@ -188,7 +185,8 @@ class NewtClient(User):
 
         r = self.post(self.BASE_URL + '/command/' + system,
                       data={'executable': bin_path + '/' + command})
-        r.close()
+
+        return self.check_response(r)
 
     def delete_file(self, fpath, system):
         """
@@ -199,7 +197,7 @@ class NewtClient(User):
         :return: None
         """
         command = 'rm -rf ' + fpath
-        self.execute_command(command, system)
+        return self.execute_command(command, system)
 
     def move_file(self, fpath, dst_path, system):
         """
@@ -211,7 +209,7 @@ class NewtClient(User):
         :return: None
         """
         command = 'mv ' + fpath + ' ' + dst_path
-        self.execute_command(command, system)
+        return self.execute_command(command, system)
 
     def copy_file(self, fpath, dst_path, system):
         """
@@ -223,7 +221,24 @@ class NewtClient(User):
         :param system: str, NERSC system name
         """
         command = 'cp -ar ' + fpath + ' ' + dst_path
-        self.execute_command(command, system)
+        return self.execute_command(command, system)
+
+    def rsync(self, fpath, dst_path, system, *args):
+        """
+        Use rsync locally on a nersc system
+
+        :param fpath: str, source path
+        :param dst_path: str, dest path
+        :param system: str, nersc system
+        :param args: str, flags for rsync (ie '-p'
+        :return:
+        """
+        command = 'rsync '
+        for arg in args:
+            command += arg + ' '
+        command += fpath + ' ' + dst_path
+
+        return self.execute_command(command, system, bin_path='/usr/bin')
 
     def upload_file(self, fpath, dpath, system):
         """
@@ -288,7 +303,7 @@ class NewtClient(User):
 
         file_size = float(self.get_file_size(path, system))
         file_name = join(fpath, fname)
-        r = self.get(self.BASE_URL + '/file/' + system + '/' +  path + '?view=read', stream=True)
+        r = self.get(self.BASE_URL + '/file/' + system + '/' + path + '?view=read', stream=True)
 
         with open(file_name, 'wb') as f:
             downloaded = 0.0

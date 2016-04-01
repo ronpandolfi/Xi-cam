@@ -5,17 +5,21 @@ class User(object):
     class for user credentials and sending and posting requests
     """
 
-    def __init__(self, username, password):
+    def __init__(self):
         super(User, self).__init__()
-        self.username = username
-        self.password = password
         self.session = Session()
         self.logged_in = False
+        self.username = None
 
     def __del__(self):
-        self.session.close()
+        # Something weird is going on here??
+        try:
+            self.session.close()
+        except TypeError:
+            pass
 
-    def login(self):
+    def login(self, username):
+        self.username = username
         self.logged_in = True
 
     def logout(self):
