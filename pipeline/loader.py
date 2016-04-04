@@ -16,6 +16,7 @@ import writer
 from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
+import libtiff
 
 import numpy as nx
 
@@ -23,7 +24,7 @@ import formats  # injects fabio with custom formats
 
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
-                  '.out','.txt']
+                  '.out', '.txt', '.npy']
 imagecache = dict()
 
 
@@ -40,9 +41,9 @@ def loadimage(path):
             print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
             print 'Note: fabio 0.3.0 may have fixed this; check back later'
             path='HACK:'+path
-
-        if os.path.splitext(path)[1] in acceptableexts:
-            if os.path.splitext(path)[1] == '.gb':
+        ext = os.path.splitext(path)[1]
+        if ext in acceptableexts:
+            if ext == '.gb':
                 data = np.fromfile(path, np.float32)
                 if len(data) == 1475 * 1679:
                     data.shape = (1679, 1475)
@@ -53,10 +54,10 @@ def loadimage(path):
                 return data
 
 
-            elif os.path.splitext(path)[1] == '.fits':
+            elif ext == '.fits':
                 data = np.fliplr(pyfits.open(path)[2].data)
                 return data
-            elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
+            elif ext in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
                 # print nxroot.tree
                 if hasattr(nxroot, 'data'):
@@ -65,10 +66,12 @@ def loadimage(path):
                         return data
                     else:
                         return loadimage(str(nxroot.data.rawfile))
-            elif os.path.splitext(path)[1] == '.out':
+            elif ext == '.out':
                 data = np.loadtxt(path)
                 data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
                 return data
+            elif ext == '.npy':
+                return np.load( path)
             else:
                 # print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
@@ -367,7 +370,34 @@ def loadpath(path):
 def loadxfs(path):
     return np.loadtxt(path,skiprows=16,converters={0:lambda s: int(s.split(':')[0])*60*60+int(s.split(':')[1])*60+int(s.split(':')[2])})
 
+def convertto8bit(image):
+    display_min = image.min()
+    display_max = image.max()
+    #image = np.array(image, copy=False)
+    #image.clip(display_min, display_max, out=image)
+    #image -= display_min
+    np.true_divide(image,(display_max - display_min + 1) / 256.,out=image,casting='unsafe')
+    return image.astype(np.uint8)
 
+def loadtiffstack(path):
+    print 'Loading', path +'...'
+    data = np.swapaxes(libtiff.TIFF3D.open(path).read_image(),0,1)
+    print 'Sub-sampling array...'
+    #data = convertto8bit(data)
+    print 'Load complete. Size:',np.shape(data)
+    data=data[::4,::4,::4]
+    return data.astype(np.float32)
+
+def loadimageseries(pattern):
+    print 'Loading',pattern+'...'
+    files=glob.glob(pattern)
+    data=np.dstack([fabio.open(f).data for f in files])
+    print 'Log scaling data...'
+    data = (np.log(data * (data > 0) + (data < 1)))
+    print 'Converting to 8-bit and re-scaling...'
+    data = convertto8bit(data)
+    print 'Load complete. Size:',np.shape(data)
+    return data
 
 import integration, remesh, center_approx, variation, pathtools
 

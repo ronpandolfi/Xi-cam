@@ -29,14 +29,6 @@ class plugin(base.plugin):
 
         super(plugin, self).__init__(*args, **kwargs)
 
-        self.sigUpdateExperiment.connect(self.redrawcurrent)
-        self.sigUpdateExperiment.connect(self.replotcurrent)
-        self.sigUpdateExperiment.connect(self.invalidatecache)
-
-        self.spacegroupwidget = spacegroupwidget()
-        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
-        self.placeholders[1].addWidget(self.spacegroupwidget)
-
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
