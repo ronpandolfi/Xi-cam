@@ -9,6 +9,7 @@ viewWidget = None
 grid = None
 
 boxsize = 10
+spherescale =.2
 
 
 def load():
@@ -51,11 +52,11 @@ class orthoGLViewWidget(gl.GLViewWidget):
 
 class latticeFrame(gl.GLGridItem):
     def __init__(self, lines, antialias=True, glOptions='translucent'):
-        super(latticeFrame, self).__init__(size=None, color=None, antialias=True, glOptions='translucent')
+        super(latticeFrame, self).__init__(size=None, color=None)#, antialias=True, glOptions='translucent')
         self.setGLOptions(glOptions)
         self.antialias = antialias
         self.lines = lines
-        print lines
+       # print lines
 
 
     def paint(self):
@@ -95,25 +96,25 @@ def clear():
     viewWidget.update()
 
 
-def showLattice(a, b, c, orders=2, basis=None):
+def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale):
     clear()
 
-    vecs = latvec.latticevectors(a, b, c, orders)
+    vecs = latvec.latticevectors(a, b, c, zoffset, orders)
 
     if basis is None:
         basis = [(0, 0, 0)]
 
     for basisvec in basis:
         for vec in vecs:
-            addSphere(np.sum([vec, basisvec], axis=0), (.2, .2, .2))
+            addSphere(np.sum([vec, basisvec], axis=0),[spherescale]*3)
 
-    lines = latvec.latticelines(a, b, c, 2)
+    lines = latvec.latticelines(a, b, c, zoffset, orders-1)
 
     viewWidget.addItem(latticeFrame(lines))
 
 
 def addSphere(center, scale):
-    md = gl.MeshData.sphere(rows=10, cols=20)
+    md = gl.MeshData.sphere(rows=5, cols=10)
     alpha = .3
     sphere = gl.GLMeshItem(meshdata=md, smooth=True, color=(0, 1, 1, alpha), shader='shaded')
     sphere.translate(*center)

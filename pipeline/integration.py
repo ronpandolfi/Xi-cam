@@ -252,7 +252,7 @@ def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 
     return chi, chiprofile, color
 
 
-def cake(imgdata, experiment, mask=None, xres=100, yres=100):
+def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
     # if mask is None:
     # mask = np.zeros_like(imgdata)
     AI = experiment.getAI()

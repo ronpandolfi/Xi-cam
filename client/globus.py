@@ -20,14 +20,14 @@ class GlobusClient(User):
     delete_document = os.path.abspath('./json/globusdelete.json')
     transfer_document = os.path.abspath('./json/globustransfer.json')
 
-    def __init__(self, username, password):
-        super(GlobusClient, self).__init__(username, password)
+    def __init__(self):
+        super(GlobusClient, self).__init__()
         self.endpoints = {}
         self.authentication = None
 
-    def login(self):
+    def login(self, username, password):
         basic_auth = base64.b64encode('%s:%s'
-                                      % (self.username, self.password))
+                                      % (username, password))
         headers = {'Authorization': 'Basic %s' % basic_auth}
         r = self.get(self.AUTH_URL, headers=headers)
 
@@ -35,7 +35,7 @@ class GlobusClient(User):
             access_token = r.json()['access_token']
             self.authentication = {'Authorization': 'Globus-Goauthtoken %s'
                                    % access_token}
-            super(GlobusClient, self).login()
+            super(GlobusClient, self).login(username)
         else:
             self.authentication = None
 

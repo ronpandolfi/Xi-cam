@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from time import sleep
 from client.newt import NewtClient
 
 
@@ -11,24 +12,24 @@ class SpotClient(NewtClient):
     BASE_DIR = '/global/project/projectdirs/als/spade/warehouse'
     SPOT_URL = 'https://portal-auth.nersc.gov/als'
 
-    def __init__(self, username, password, system=None):
-        super(SpotClient, self).__init__(username, password, system)
+    def __init__(self):
+        super(SpotClient, self).__init__()
         self.spot_authentication = None
 
-    def login(self):
-        credentials = {"username": str(self.username),
-                       "password": str(self.password)}
+    def login(self, username, password):
+        credentials = {"username": username,
+                       "password": password}
         response = self.post(self.SPOT_URL + '/auth', data=credentials)
         if response.json()['auth']:
             self.authentication = response
-            super(SpotClient, self).login()
+            super(SpotClient, self).login(username, password)
         else:
             self.authentication = None
 
     def search(self, query, **kwargs):
         """
         Search a dataset on SPOT
-
+        :param query: str, search query
         :param kwargs: str, optional, from
             'sortterm': attribute to sort results by
             'sorttype': ascending 'asc' or descending 'desc'
@@ -169,9 +170,13 @@ class SpotClient(NewtClient):
         :return:
         """
         path = self.get_stage_path(dataset, stage)
-        r = self.post(self.SPOT_URL + '/hdf/stageifneeded' + path)
+        r = self.check_response(self.post(self.SPOT_URL + '/hdf/stageifneeded' + path))
+        # Wait for staging to finish
+        while r['location'] == 'unknown' or r['location'] == 'staging':
+            sleep(3)
+            r = self.check_response(self.post(self.SPOT_URL + '/hdf/stageifneeded' + path))
 
-        return self.check_response(r)
+        return r
 
     def download_dataset(self, dataset, stage, fpath, fname=None):
         """
@@ -213,13 +218,14 @@ class SpotClient(NewtClient):
         :param chunk_size
         :return: None
         """
+        r = self.stage_tape_2_disk(dataset, stage)
+
         path = self.get_stage_path(dataset, stage)
         if fname is None:
             fname = path.split('/')[-1]
         file_name = os.path.join(fpath, fname)
         file_size = float(self.get_dataset_size(dataset, stage))
 
-        r = self.stage_tape_2_disk(dataset, stage)
         r = self.get(self.SPOT_URL + '/hdf/download' + path, stream=True)
 
         with open(file_name, 'wb') as f:
@@ -234,6 +240,22 @@ class SpotClient(NewtClient):
 
         return
 
+    def transfer_2_nersc(self, dataset, stage, path, system):
+        # TODO need to find a way to make a generator out of this, here or from cp/rsync
+        """
+        Transfer a dataset to NERSC
+
+        :param dataset: str, dataset name
+        :param stage: str, stage name
+        :param path: str, absolute dest path on NERSC
+        :return:
+        """
+
+        r = self.stage_tape_2_disk(dataset, stage)
+        if r['location'] != 'staging' or r['ocation'] != 'unknown':
+            r = self.rsync(r['location'], path, system)
+
+        return r
 
 class SPOTError(Exception):
     """Raised when SPOT gets angry"""

@@ -9,12 +9,11 @@ import os
 from PySide import QtGui, QtCore
 from os.path import expanduser
 from collections import OrderedDict
-from spew import threads
-from spew.plugins.widgets import login
+from xicam import threads
+from xicam import xglobals
 from pipeline import loader
 
-QtCore.Signal = QtCore.Signal
-QtCore.Slot = QtCore.Slot
+NERSC_SYSTEMS = ['cori', 'edison']
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -25,12 +24,13 @@ class LocalFileView(QtGui.QTreeView):
     pathChanged = QtCore.Signal(str)
     sigOpenFiles = QtCore.Signal(list)
     sigOpenDir = QtCore.Signal(str)
+    sigDelete = QtCore.Signal()
+    sigOpen = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
 
         self.file_model = QtGui.QFileSystemModel()
-        self.mode = self.file_model
         self.setModel(self.file_model)
         self.path = expanduser('~')
         self.refresh(self.path)
@@ -39,8 +39,8 @@ class LocalFileView(QtGui.QTreeView):
         self.setHeaderHidden(True)
         for i in range(1, 4):
             header.hideSection(i)
-        filefilter = map(lambda s: '*'+s,loader.acceptableexts)
-        self.file_model.setNameFilters(filefilter)
+#        filefilter = map(lambda s: '*'+s,loader.acceptableexts)
+#        self.file_model.setNameFilters(filefilter)
         self.file_model.setNameFilterDisables(False)
         self.file_model.setResolveSymlinks(True)
         self.expandAll()
@@ -48,8 +48,15 @@ class LocalFileView(QtGui.QTreeView):
         self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         self.setSelectionMode(self.ExtendedSelection)
         self.setIconSize(QtCore.QSize(16, 16))
-#        self.setContextMenuPolicy(Qt.CustomContextMenu)
-#        self.customContextMenuRequested.connect(self.contextMenu)
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Delete', self)]
+        standardActions[0].triggered.connect(self.sigOpen.emit)
+        standardActions[1].triggered.connect(self.sigDelete.emit)
+        self.menu.addActions(standardActions)
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuActionClicked)
 
         self.doubleClicked.connect(self.onDoubleClick)
 
@@ -58,12 +65,13 @@ class LocalFileView(QtGui.QTreeView):
         Refresh the file tree, or switch directories and refresh
         """
         if path is None:
-            path = self.filetreepath
+            path = self.path
+        else:
+            self.path = path
 
         root = QtCore.QDir(path)
         self.file_model.setRootPath(root.absolutePath())
         self.setRootIndex(self.file_model.index(root.absolutePath()))
-        self.path = path
         self.pathChanged.emit(path)
 
     def onDoubleClick(self, index):
@@ -82,7 +90,7 @@ class LocalFileView(QtGui.QTreeView):
         self.sigOpenFiles.emit(paths)
 
     def getSelectedFilePath(self):
-        selected =  str(self.file_model.filePath(self.currentIndex()))
+        selected = str(self.file_model.filePath(self.currentIndex()))
         if selected == '':
             selected = None
         return selected
@@ -106,6 +114,17 @@ class LocalFileView(QtGui.QTreeView):
     def deleteFile(self):
         self.file_model.remove(self.currentIndex())
 
+    def openFile(self):
+        print 'Open files here or emit open signal to whoever wants it'
+
+    def menuActionClicked(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def addMenuAction(self, action_name, triggered_slot):
+        action = QtGui.QAction(action_name, self)
+        action.triggered.connect(triggered_slot)
+        self.menu.addAction(action)
+
 
 class FileExplorer(QtGui.QWidget):
     """
@@ -120,7 +139,7 @@ class FileExplorer(QtGui.QWidget):
         self.back_button = QtGui.QToolButton(self)
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap('gui/spew/back.png'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap('gui/back.png'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.back_button.setIcon(icon)
         self.back_button.setIconSize(QtCore.QSize(18, 18))
         self.back_button.setFixedSize(32, 32)
@@ -145,7 +164,7 @@ class FileExplorer(QtGui.QWidget):
     def onBackClick(self):
         path = self.file_view.path
         path = os.path.dirname(str(path))
-        self.file_view.refresh(path)
+        self.file_view.refresh(path=path)
 
     def setPathLabel(self, path):
         self.path_label.setText(path)
@@ -165,6 +184,10 @@ class RemoteFileView(QtGui.QListWidget):
     Remote file explorer (NERSC and Globus)
     """
     pathChanged = QtCore.Signal(str)
+    sigDelete = QtCore.Signal()
+    sigOpen = QtCore.Signal()
+    sigDownload = QtCore.Signal()
+    sigTransfer = QtCore.Signal()
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -172,11 +195,22 @@ class RemoteFileView(QtGui.QListWidget):
         self.client = remote_client
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Download', self)]
+        # QtGui.QAction('Open', self), QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
+        # standardActions[0].triggered.connect(self.sigOpen.emit)
+        # standardActions[1].triggered.connect(self.sigDelete.emit)
+        standardActions[0].triggered.connect(self.sigDownload.emit)
+        # standardActions[3].triggered.connect(self.sigTransfer.emit)
+        self.menu.addActions(standardActions)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuActionClicked)
+
     def onDoubleClick(self, item):
         file_name = item.text()
         if len(file_name.split('.')) == 1:
             path = self.path + '/' + str(file_name)
-            self.refresh(path)
+            self.refresh(path=path)
 
         elif '.h5' in file_name:
             # get file metadata here dudley boy
@@ -192,9 +226,11 @@ class RemoteFileView(QtGui.QListWidget):
         runnable = threads.RunnableMethod(self.fillList, self.client.get_dir_contents, path, *args)
         threads.queue.put(runnable)
 
-    def refresh(self, path):
-        self.path = path
-        self.getDirContents(self.path)
+    def refresh(self, path=None):
+        if path is None:
+            path = self.path
+        else:
+            self.path = path
         self.pathChanged.emit(path)
 
     def fillList(self, value):
@@ -222,6 +258,9 @@ class RemoteFileView(QtGui.QListWidget):
     def deleteFile(self):
         return None
 
+    def menuActionClicked(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
 
 class NERSCFileView(RemoteFileView):
     """
@@ -235,10 +274,12 @@ class NERSCFileView(RemoteFileView):
         self.path = self.client.scratch_dir
         self.getDirContents(self.path, self.system)
 
-    def refresh(self, path):
-        self.path = path
+    def refresh(self, path=None):
+        if path is None:
+            path = self.path
+
         super(NERSCFileView, self).getDirContents(path, self.system)
-        self.pathChanged.emit(path)
+        super(NERSCFileView, self).refresh(path=path)
 
     def downloadFile(self):
         fpath, outpath = super(NERSCFileView, self).downloadFile()
@@ -262,7 +303,9 @@ class NERSCFileView(RemoteFileView):
         return None
 
     def deleteFile(self):
-        return None
+        runnable = threads.RunnableMethod(None, self.client.delete_file, self.getSelectedFilePath(), self.system)
+        runnable.emitter.sigFinished.connect(self.refresh)
+        threads.queue.put(runnable)
 
 
 class GlobusFileView(RemoteFileView):
@@ -275,10 +318,11 @@ class GlobusFileView(RemoteFileView):
         super(GlobusFileView, self).__init__(globus_client, parent=parent)
         self.get_dir_contents('~')
 
-    def refresh(self, path):
-        self.path = path
+    def refresh(self, path=None):
+        if path is None:
+            path = self.path
         super(GlobusFileView, self).getDirContents(path, self.endpoint)
-        self.pathChanged.emit(path)
+        super(GlobusFileView, self).refresh(path=path)
 
     def downloadFile(self):
         fpath, outpath = super(GlobusFileView, self).downloadFile()
@@ -295,7 +339,6 @@ class GlobusFileView(RemoteFileView):
         desc = '{0} from {1}.'.format(os.path.split(fpath)[-1], self.endpoint)
         args = [self.endpoint, fpath, 'DEST ENDPOINT', outpath] #TODO Dest endpoint geeet it....
         kwargs = {}
-
         return desc, method, args, kwargs
 
     def uploadFile(self):
@@ -305,10 +348,16 @@ class GlobusFileView(RemoteFileView):
         fpath = self.getSelectedFilePath()
         self.client.delete_file(self.endpoint, fpath)
 
+
 class SpotDatasetView(QtGui.QTreeWidget):
     """
     Tree widgets showing Spot datasets
     """
+
+    sigOpen = QtCore.Signal()
+    sigDownload = QtCore.Signal()
+    sigTransfer = QtCore.Signal()
+
 
     def __init__(self, spot_client, parent=None):
         super(SpotDatasetView, self).__init__(parent)
@@ -317,6 +366,17 @@ class SpotDatasetView(QtGui.QTreeWidget):
                               'sorttype': 'desc', 'end_station': 'bl832'}
         self.getDatasets('')
         self.setHeaderHidden(True)
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Download', self)]
+        #QtGui.QAction('Open', self), QtGui.QAction('Preview', self), QtGui.QAction('Transfer', self)]
+        # standardActions[0].triggered.connect(self.sigOpen.emit)
+        # standardActions[1].triggered.connect(self.previewDataset)
+        standardActions[0].triggered.connect(self.sigDownload.emit)
+        # standardActions[3].triggered.connect(self.sigTransfer.emit)
+        self.menu.addActions(standardActions)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuActionClicked)
 
     def getDatasets(self, query):
         runnable = threads.RunnableMethod(self.createDatasetDictionary, self.client.search, query, **self.search_params)
@@ -375,8 +435,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         parent_items = self.findItems('*', QtCore.Qt.MatchWildcard)
         for item in parent_items:
             for child_item in [item.child(i) for i in range(item.childCount())]:
-                if child_item.child(i).text(0) == file_name:
-                    dset_item = child_item.child(i)
+                for child_child_item in [child_item.child(j) for j in range(child_item.childCount())]:
+                    if child_child_item.text(0) == file_name:
+                        dset_item = child_child_item
 
         if dset_item is not None:
             stage = str(dset_item.parent().text(0))
@@ -413,13 +474,29 @@ class SpotDatasetView(QtGui.QTreeWidget):
             return desc, method, args, kwargs
 
     def transferFile(self):
-        return None
+        fname = self.getSelectedFile()
+        stage, dataset = self.getDatasetAndStage(fname)
+        system = self.client.system
+        path = self.client.scratch_dir
+        desc = '{0} transfer from spot to {1}.'.format(fname, system)
+        method = self.client.transfer_2_nersc
+        args = [dataset, stage, path, system]
+        kwargs = {}
+
+        return desc, method, args, kwargs
 
     def uploadFile(self):
         return None
 
     def deleteFile(self):
         return None
+
+    def previewDataset(self):
+        print "Not implemented!"
+
+    def menuActionClicked(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
 
 class SpotDatasetExplorer(QtGui.QWidget):
     """
@@ -500,7 +577,6 @@ class TabBarPlus(QtGui.QTabBar):
         self.plus_button.setMinimumSize(32, 32)
         self.plus_button.clicked.connect(self.plusClicked.emit)
         self.movePlusButton()  # Move to the correct location
-        self.setDocumentMode(True)
 
     def sizeHint(self):
         sizeHint = QtGui.QTabBar.sizeHint(self)
@@ -536,13 +612,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     """
 
     sigOpenDataset = QtCore.Signal(str, str)
-    sigExternalJob = QtCore.Signal(str, str, object, list, dict)
-
-    newtabmenu = QtGui.QMenu(None)
-    loginspot = QtGui.QAction('Login to Spot',newtabmenu)
-    loginedison = QtGui.QAction('Login to Edison',newtabmenu)
-    logincori = QtGui.QAction('Login to Cori',newtabmenu)
-    newtabmenu.addActions([loginspot,loginedison,logincori])
+    sigLoginSuccess = QtCore.Signal(bool)
+    sigLoginRequest = QtCore.Signal()
+    sigProgJob = QtCore.Signal(str, object, list, dict)
+    sigPulsJob = QtCore.Signal(str, object, list, dict)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -557,15 +630,39 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         self.explorers['Local'] = FileExplorer(LocalFileView(self), self)
         self.addFileExplorer('Local', self.explorers['Local'])
+        self.explorers['Local'].file_view.sigOpen.connect(self.openDataset)
+        self.explorers['Local'].file_view.sigDelete.connect(self.deleteFile)
+
+        self.jobtab = JobTable(self)
+        # Do not understand why I need to add it and remove it so that its not added as a seperate widget
+        self.addTab(self.jobtab, 'Jobs')
+        self.removeTab(1)
+
+        self.sigProgJob.connect(self.jobtab.addProgJob)
+        self.sigPulsJob.connect(self.jobtab.addPulseJob)
 
         self.tab.plusClicked.connect(self.onPlusClicked)
         self.tabCloseRequested.connect(self.removeTab)
 
-        self.loginspot.triggered.connect(self.loginspotdialog)
+        self.newtabmenu = QtGui.QMenu(None)
+        self.addspot = QtGui.QAction('SPOT', self.newtabmenu)
+        self.addcori = QtGui.QAction('Cori', self.newtabmenu)
+        self.addedison = QtGui.QAction('Edison', self.newtabmenu)
+        self.addglobus = QtGui.QAction('Globus endpoint', self.newtabmenu)
+        self.standard_actions = [self.addspot, self.addcori, self.addedison] #, self.addglobus]
+        self.newtabmenu.addActions(self.standard_actions)
+        self.addspot.triggered.connect(self.addSPOTTab)
+        self.addedison.triggered.connect(lambda: self.addNERSCTab('edison'))
+        self.addcori.triggered.connect(lambda: self.addNERSCTab('cori'))
+
+    def enableActions(self):
+        for action in self.standard_actions:
+            action.setEnabled(True)
 
     def addFileExplorer(self, name, file_explorer, closable=False):
         self.explorers[name] = file_explorer
-        tab = self.addTab(file_explorer, name)
+        idx = len(self.explorers) - 1
+        tab = self.insertTab(idx, file_explorer, name)
         if closable is False:
             try:
                 self.tabBar().tabButton(tab, QtGui.QTabBar.RightSide).resize(0, 0)
@@ -576,29 +673,53 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         else:
             self.tabBar().tabButton(tab, QtGui.QTabBar.RightSide).resize(12, 12)
 
-    def addNERSCTab(self, client, system, closable=False):
+    @xglobals.login_exeption_handle
+    def addNERSCTab(self, system, closable=True, *args):
+        self.sigLoginSuccess.emit(xglobals.spot_client.logged_in)
+        self.sigLoginRequest.emit()
+        client = xglobals.load_spot(self.addNERSCTab, system, closable)
         explorer = FileExplorer(NERSCFileView(client, system, self))
+        explorer.file_view.sigOpen.connect(self.openDataset)
+        explorer.file_view.sigDelete.connect(self.deleteFile)
+        explorer.file_view.sigDownload.connect(self.downloadFile)
+        explorer.file_view.sigTransfer.connect(self.transferFile)
         self.addFileExplorer(system.capitalize(), explorer, closable=closable)
+        action = self.addcori if system == 'cori' else self.addedison
+        action.setEnabled(False)
 
-    def loginspotdialog(self):
-        ld=login.LoginDialog(remotename='SPOT',fileexplorer=self)
-        ld.exec_()
-
-    def addSPOTTab(self, client, closable=False):
+    @xglobals.login_exeption_handle
+    def addSPOTTab(self, closable=True, *args):
+        self.sigLoginSuccess.emit(xglobals.spot_client.logged_in)
+        self.sigLoginRequest.emit()
+        client = xglobals.load_spot(self.addSPOTTab, closable)
         explorer = SpotDatasetExplorer(client, self)
+        explorer.file_view.sigOpen.connect(self.openDataset)
+        explorer.file_view.sigDownload.connect(self.downloadFile)
+        explorer.file_view.sigTransfer.connect(self.transferFile)
         self.addFileExplorer('SPOT', explorer, closable=closable)
-        self.nersc_login = True
+        self.addspot.setEnabled(False)
 
-    def addGlobusTab(self, endpoint, client, closable=True):
+    @xglobals.login_exeption_handle
+    def addGlobusTab(self, endpoint, closable=True, *args):
+        self.sigLoginSuccess.emit(xglobals.globus_client.logged_in)
+        self.sigLoginRequest.emit()
+        client = xglobals.load_spot(self.addGlobusTab, endpoint, closable)
         explorer = FileExplorer(GlobusFileView(endpoint, client, self))
         name = endpoint.split('#')[-1]
         self.addFileExplorer(name, explorer, closable=closable)
-        self.globus_login = True
 
     def removeTab(self, p_int):
-        self.explorers.pop(self.explorers.keys()[p_int])
-        self.widget(p_int).deleteLater()
+        if self.tabText(p_int) != 'Jobs':
+            name = self.explorers.keys()[p_int]
+            self.explorers.pop(name)
+            self.widget(p_int).deleteLater()
+            action = [action for action in self.standard_actions if action.text() == name][0]
+            action.setEnabled(True)
         super(MultipleFileExplorer, self).removeTab(p_int)
+
+    def removeTabs(self):
+        for i in xrange(1, self.count()):
+            self.removeTab(1)
 
     def onPlusClicked(self):
         self.newtabmenu.popup(QtGui.QCursor.pos())
@@ -616,7 +737,11 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         data_type, ok = QtGui.QInputDialog.getItem(self, 'Open Dataset', 'Data type:', ['raw', 'reconstruction'],
                                                    editable=False)
         if ok:
-            path = self.getSelectedFilePath()
+            fileDialog = QtGui.QFileDialog(self, 'Select h5 file', os.path.expanduser('~'))
+            fileDialog.setNameFilters(['*.h5'])  # , '*.tiff', '*.tif'])
+            if fileDialog.exec_():
+                path = str(fileDialog.selectedFiles()[0])
+
             self.sigOpenDataset.emit(path, data_type)
 
     def deleteFile(self):
@@ -633,16 +758,110 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         upload = self.currentWidget().file_view.uploadFile()
         if upload is not None:
             desc, method, args, kwargs = upload
-            self.sigExternalJob.emit('Upload', desc, method, args, kwargs)
+            self.sigProgJob.emit(desc, method, args, kwargs)
+            self.addTab(self.jobtab, 'Jobs')
 
     def downloadFile(self):
         download = self.currentWidget().file_view.downloadFile()
         if download is not None:
             desc, method, args, kwargs = download
-            self.sigExternalJob.emit('Download', desc, method, args,    kwargs)
+            self.sigProgJob.emit(desc, method, args, kwargs)
+            self.addTab(self.jobtab, 'Jobs')
 
     def transferFile(self):
         transfer = self.currentWidget().file_view.transferFile()
         if transfer is not None:
             desc, method, args, kwargs = transfer
-            self.sigExternalJob.emit('Transfer', desc, method, args, kwargs)
+            if isinstance(self.currentWidget().file_view, SpotDatasetView):
+                # TODO Find a way to track the progress of rsync or cp on nersc to run the job as an iterator and get rid of if statement
+                print 'This absurd emit'
+                self.sigPulsJob.emit(desc, method, args, kwargs)
+            else:
+                self.sigProgJob.emit(desc, method, args, kwargs)
+            self.addTab(self.jobtab, 'Jobs')
+
+
+class JobTable(QtGui.QTableWidget):
+    """
+    Class with table of download, upload and transfer jobs
+    """
+
+    def __init__(self, parent=None):
+        super(JobTable, self).__init__(0, 2, parent=parent)
+        self.jobs = []
+
+        self.setHorizontalHeaderLabels(['Progress', 'Description'])
+        self.setFrameShape(QtGui.QFrame.NoFrame)
+        self.verticalHeader().hide()
+        self.horizontalHeader().setClickable(False)
+        self.horizontalHeader().setStretchLastSection(True)
+        self.horizontalHeader().setDefaultAlignment(QtCore.Qt.AlignLeft)
+        self.setShowGrid(False)
+
+    def addJob(self, job_desc):
+        row_num = self.rowCount()
+        self.insertRow(row_num)
+        jobentry = JobEntry()
+        jobentry.setDescription(job_desc)
+        self.jobs.append(jobentry)
+        self.setCellWidget(row_num, 0, jobentry.widget)
+        self.setCellWidget(row_num, 1, jobentry.desc_label)
+        return jobentry
+
+    @QtCore.Slot(str, object, list, dict)
+    def addProgJob(self, job_desc, method, args, kwargs):
+        job_entry = self.addJob(job_desc)
+        runnable = threads.RunnableIterator(job_entry.progress, method, *args, **kwargs)
+        threads.queue.put(runnable)
+        #jobentry.sigCancel.connect(lambda x: self.removeJob(x))
+        #return jobentry
+
+    @QtCore.Slot(str, object, list, dict)
+    def addPulseJob(self, job_type, job_desc, method, args, kwargs):
+        job_entry = self.addJob(job_type, job_desc)
+        job_entry.pulseStart()
+        runnable = threads.RunnableMethod(None, method, *args, **kwargs)
+        runnable.emitter.sigFinished.connect(job_entry.pulseStop)
+        threads.queue.put(runnable)
+
+    def removeJob(self, jobentry):
+        idx = self.jobs.index(jobentry)
+        del self.jobs[idx]
+        self.removeRow(idx)
+        jobentry.deleteLater()
+
+
+class JobEntry(QtGui.QWidget):
+    """
+    Job entries
+    """
+
+    sigCancel = QtCore.Signal(object)
+
+    def __init__(self):
+        super(JobEntry, self).__init__()
+        self.desc_label = QtGui.QLabel()
+        self.desc_label.setAlignment(QtCore.Qt.AlignVCenter)
+        self.progressbar = QtGui.QProgressBar()
+        self.progressbar.setRange(0, 100)
+        self.widget = QtGui.QWidget()
+        self.widget.setLayout(QtGui.QHBoxLayout())
+        self.widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.widget.layout().addWidget(self.progressbar)
+
+    def setDescription(self, desc):
+        self.desc_label.setText(desc)
+
+    def cancelPressed(self):
+        self.sigCancel.emit(self)
+
+    def progress(self, i):
+        i = int(i*100)
+        self.progressbar.setValue(i)
+
+    def pulseStart(self):
+        self.progressbar.setRange(0, 0)
+
+    def pulseStop(self):
+        self.progressbar.setRange(0, 100)
+        self.progress(1)

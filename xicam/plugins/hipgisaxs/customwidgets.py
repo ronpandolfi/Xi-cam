@@ -709,7 +709,7 @@ class structure(form):
     def showUnitCell(self):
         basis = [vecparam.value() for vecparam in self.Basis.children()]
         print basis
-        display.showLattice(self.LatticeA.value(), self.LatticeB.value(), self.LatticeC.value(), basis=basis)
+        display.showLattice(map(float,self.LatticeA.value()), map(float,self.LatticeB.value()), map(float,self.LatticeC.value()), basis=basis)
 
     def switchtoCustom(self):
         self.LatticeChoice.setValue(0)

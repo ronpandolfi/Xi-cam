@@ -1,9 +1,10 @@
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import ParameterTree
-from xicam import config
-from xicam import models
+from functools import partial
 import widgets
-from xicam.plugins.spew.spew.plugins.widgets import explorer,toolbars
+from xicam import config
+from xicam import models, xglobals
+from xicam.plugins import explorer, login
 
 activeplugin = None
 
@@ -15,10 +16,19 @@ l = QtGui.QVBoxLayout()
 l.setContentsMargins(0, 0, 0, 0)
 l.setSpacing(0)
 
-#filetree = widgets.fileTreeWidget()
 fileexplorer = explorer.MultipleFileExplorer(w)
-l.addWidget(fileexplorer)
 filetree = fileexplorer.explorers['Local'].file_view
+
+loginwidget = login.LoginDialog()
+loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
+#loginwidget.logoutClicked.connect(loginwidget.hide)
+loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
+loginwidget.logoutClicked.connect(fileexplorer.enableActions)
+loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
+loginwidget.sigLoggedIn.connect(xglobals.client_callback)
+
+l.addWidget(loginwidget)
+l.addWidget(fileexplorer)
 
 preview = widgets.previewwidget(filetree)
 w.addWidget(preview)
@@ -47,9 +57,7 @@ l.addWidget(booltoolbar)
 panelwidget = QtGui.QWidget()
 panelwidget.setLayout(l)
 w.addWidget(panelwidget)
-
 filetree.currentChanged = preview.loaditem
-
 w.setSizes([250, w.height() - 250])
 
 leftwidget = w
@@ -95,6 +103,7 @@ class plugin(QtCore.QObject):
             self.leftwidget = leftwidget
             self.filetree = filetree
             self.booltoolbar = booltoolbar
+            self.loginwidget = loginwidget
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
