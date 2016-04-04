@@ -1,7 +1,6 @@
 import pickle
 import pyFAI
 from pyFAI import geometry
-from pipeline import detectors
 import __builtin__
 
 from pyqtgraph.parametertree import Parameter

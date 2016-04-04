@@ -4,7 +4,6 @@ import os
 import h5py
 import numpy as np
 import pipeline
-import viewer
 from pipeline import loader
 from PySide import QtCore, QtGui
 from xicam import xglobals

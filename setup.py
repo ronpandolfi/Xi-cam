@@ -35,7 +35,7 @@ setup(
     author_email='ronpandolfi@lbl.gov',
 
     # Choose your license
-    license='BSD',
+    license='',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

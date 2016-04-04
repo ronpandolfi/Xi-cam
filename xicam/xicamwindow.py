@@ -22,7 +22,6 @@ import config
 import watcher
 import daemon
 import pipeline
-import rmc
 import qdarkstyle
 import plugins
 from xicam import xglobals
@@ -76,7 +75,6 @@ class MyMainWindow():
 
 
         # PLUG-INS
-        self.rmcpugin = rmc.gui(self.ui)
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
         plugins.initplugins(placeholders)

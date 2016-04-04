@@ -6,14 +6,14 @@ from xicam import xglobals
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
+disabledatstart = []
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, xas, spoth5file, hipgisaxs, batch #ipythonconsole,
+    import MOTD #ipythonconsole,
 
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, fluctuationscattering, xas, spoth5file, hipgisaxs, batch] #ipythonconsole,
+    modules = [MOTD] #ipythonconsole,
 
     for module in modules:
         link = pluginlink(module, placeholders)

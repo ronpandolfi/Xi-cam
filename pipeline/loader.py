@@ -6,7 +6,6 @@ import pyfits
 import os
 import numpy as np
 #from nexpy.api import nexus as nx
-import detectors
 import glob
 import re
 import time
@@ -19,7 +18,6 @@ from collections import OrderedDict
 
 import numpy as nx
 
-import formats  # injects fabio with custom formats
 
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
@@ -369,7 +367,6 @@ def loadxfs(path):
 
 
 
-import integration, remesh, center_approx, variation, pathtools
 
 class diffimage():
     def __init__(self, filepath=None, data=None, detector=None, experiment=None):
