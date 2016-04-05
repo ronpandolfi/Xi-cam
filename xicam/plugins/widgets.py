@@ -9,19 +9,15 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-from PySide import QtGui, QtCore
-from PySide.QtCore import Qt
+import os
+
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader
+from PySide import QtGui, QtCore
+
 from xicam import config
-from fabio import edfimage
-import os
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-from xicam import dialogs
-from xicam import xglobals
-import scipy
+from pipeline import loader
+
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -92,12 +88,6 @@ class ImageView(pg.ImageView):
         if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             ev.accept()
             self.sigKeyRelease.emit()
-
-
-from scipy.signal import fftconvolve
-
-
-
 
 
 class pluginModeWidget(QtGui.QWidget):

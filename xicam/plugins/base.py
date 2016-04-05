@@ -111,6 +111,7 @@ class plugin(QtCore.QObject):
         if not hasattr(self, 'leftwidget'):
             self.leftwidget = leftwidget
             self.filetree = filetree
+            self.fileexplorer = fileexplorer
             self.booltoolbar = booltoolbar
             self.loginwidget = loginwidget
 

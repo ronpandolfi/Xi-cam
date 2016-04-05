@@ -8,14 +8,11 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-
 import os
+
 import h5py
-import numpy as np
-import pipeline
-from pipeline import loader
-from PySide import QtCore, QtGui
-from xicam import xglobals
+
+from xicam.plugins.tomorex import loader
 
 
 class SPOT_H5DSet:

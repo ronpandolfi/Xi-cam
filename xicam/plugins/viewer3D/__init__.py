@@ -12,18 +12,15 @@ __status__ = "Beta"
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 import platform
 op_sys = platform.system()
-if op_sys == 'Darwin':
-    from Foundation import NSURL
+# if op_sys == 'Darwin':
+#     from Foundation import NSURL
 
 import os
-import numpy as np
-import pipeline
-from pipeline import loader
-from PySide import QtCore, QtGui
-from xicam import xglobals
+from PySide import QtGui
 import widgets as twidgets
 from xicam.plugins import widgets
 from xicam.plugins import base
+
 
 class plugin(base.plugin):
     name = "3D Viewer"

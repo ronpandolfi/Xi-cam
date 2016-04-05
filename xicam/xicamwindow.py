@@ -29,7 +29,6 @@ from PySide import QtCore
 
 import config
 import watcher
-import daemon
 import pipeline
 import qdarkstyle
 import plugins

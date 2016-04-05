@@ -39,16 +39,14 @@ With fly camera:
 * IJKL or mouse - look around
 """
 
-from itertools import cycle
-
 import numpy as np
-
-from PySide import QtGui,QtCore
-from vispy import app, scene, io
-from vispy.color import Colormap, BaseColormap,ColorArray
-from pipeline import loader
 import pyqtgraph as pg
-import imageio
+from PySide import QtGui,QtCore
+from vispy import scene
+from vispy.color import Colormap
+
+from xicam.plugins.tomorex import loader
+# import imageio
 import os
 
 
@@ -225,11 +223,11 @@ class volumeRenderWidget(scene.SceneCanvas):
 
         if path is not None:
             if '*' in path:
-                vol=loader.loadimageseries(path)
+                vol= loader.loadimageseries(path)
             elif os.path.splitext(path)[-1]=='.npy':
-                vol=loader.loadimage(path)
+                vol= loader.loadimage(path)
             else:
-                vol=loader.loadtiffstack(path)
+                vol= loader.loadtiffstack(path)
             self.vol=vol
 
         if vol is None:

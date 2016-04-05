@@ -15,12 +15,13 @@ Created on Mon Oct 19 17:22:00 2015
 """
 
 import os
-from PySide import QtGui, QtCore
-from os.path import expanduser
 from collections import OrderedDict
+from os.path import expanduser
+
+from PySide import QtGui, QtCore
+
 from xicam import threads
 from xicam import xglobals
-from pipeline import loader
 
 NERSC_SYSTEMS = ['cori', 'edison']
 
@@ -634,7 +635,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         self.tab = TabBarPlus()
         self.setTabBar(self.tab)
-
+        self.tab.setDocumentMode(True)
         self.setTabsClosable(True)
 
         self.explorers['Local'] = FileExplorer(LocalFileView(self), self)
