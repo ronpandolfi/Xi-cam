@@ -1,0 +1,22 @@
+<RCC>
+  <qresource>
+    <file>ascending.png</file>
+    <file>back.png</file>
+    <file>cancel.png</file>
+    <file>copy.png</file>
+    <file>crop.png</file>
+    <file>delete.png</file>
+    <file>descending.png</file>
+    <file>download.png</file>
+    <file>globus.png</file>
+    <file>image.png</file>
+    <file>logout.png</file>
+    <file>recon.png</file>
+    <file>refresh.png</file>
+    <file>search.png</file>
+    <file>sort.png</file>
+    <file>stack.png</file>
+    <file>transfer.png</file>
+    <file>upload.png</file>
+  </qresource>
+</RCC>
