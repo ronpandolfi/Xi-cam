@@ -42,6 +42,12 @@ class LoginDialog(QtGui.QWidget):
         self.ui.logout_button.clicked.connect(self.handleLogout)
         self.setStyleSheet('background-color:#111111;')
 
+        self.hide()
+
+        l = QtGui.QVBoxLayout()
+        l.addWidget(self.ui)
+        self.setLayout(l)
+
         # self.setWindowTitle('Login to {}'.format(remotename))
 
     # def show(self):
