@@ -19,10 +19,10 @@ disabledatstart = []
 
 
 def initplugins(placeholders):
-    import MOTD, viewer3D, tomorex #ipythonconsole,
+    import MOTD, viewer3D, tomorex, stack #ipythonconsole,
 
     global plugins, modules
-    modules = [MOTD, viewer3D, tomorex] #ipythonconsole,
+    modules = [MOTD, viewer3D, tomorex, stack] #ipythonconsole,
 
     for module in modules:
         link = pluginlink(module, placeholders)
