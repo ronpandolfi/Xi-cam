@@ -28,7 +28,7 @@ l.setSpacing(0)
 fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
-loginwidget = login.LoginDialog()
+loginwidget = login.LoginDialog()           # TODO: Integrate loginwidget into explorer
 loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
 loginwidget.logoutClicked.connect(loginwidget.hide)
 loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
