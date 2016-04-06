@@ -1,0 +1,298 @@
+median filter:
+- default: 3
+  name: size
+  type: int
+- default: 0
+  name: axis
+  type: int
+polar mean filter:
+- default: 300
+  name: thresh
+  type: float
+- default: 300
+  name: thresh_max
+  type: float
+- default: -100
+  name: thresh_min
+  type: float
+- default: 30
+  name: theta_min
+  suffix: deg
+  type: int
+- default: 30
+  name: rwidth
+  suffix: px
+  type: int
+Vo:
+- name: ind
+  type: int
+- default: -40
+  name: smin
+  suffix: px
+  type: int
+- default: 40
+  name: smax
+  suffix: px
+  type: int
+- default: 10
+  name: srad
+  suffix: px
+  type: float
+- default: 1
+  name: step
+  type: float
+- default: 2.0
+  name: ratio
+  type: float
+- default: 20
+  name: drop
+  type: int
+MBIR:
+  name: algorithm
+  type: list
+  values: []
+downsample:
+  default: 2
+  name: level
+  suffix: ^2
+  type: int
+Gaussian filter:
+- default: 3
+  name: sigma
+  type: float
+- default: 0
+  name: order
+  type: int
+background intensity:
+  default: 1
+  name: air
+  type: int
+Fourier-wavelet:
+- name: level
+  suffix: ^2
+  type: int
+- default: db5
+  name: wname
+  type: list
+  values:
+  - haar
+  - db5
+  - sym5
+- default: 2.0
+  name: sigma
+  type: float
+- default: true
+  name: pad
+  type: bool
+pad:
+- default: 2
+  name: axis
+  type: int
+- name: npad
+  sufix: pixels
+  type: int
+- default: edge
+  name: mode
+  type: list
+  values:
+  - constant
+  - edge
+Astra:
+  name: algorithm
+  type: list
+  values: []
+phase correlation:
+  default: 0.5
+  name: tol
+  suffix: px
+  type: float
+Nelder-Mead:
+- name: ind
+  type: int
+- name: init
+  suffix: px
+  type: float
+- default: 0.5
+  name: tol
+  suffix: px
+  type: float
+- default: true
+  name: mask
+  type: bool
+- default: 1.0
+  name: ratio
+  suffix: px/px
+  type: float
+Sobel filter:
+  default: 0
+  name: axis
+  type: int
+Titarenko:
+- default: 0
+  name: nblock
+  type: int
+- default: 1.5
+  name: alpha
+  type: float
+upsample:
+  default: 2
+  name: level
+  suffix: ^2
+  type: int
+smoothing filter:
+  default: 5
+  name: size
+  type: int
+regular:
+  name: cutoff
+  type: float
+nearest flats:
+  name: cutoff
+  type: float
+Tomopy:
+  children:
+  - children:
+      name: num_iter
+      type: int
+    name: art
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    name: bart
+    type: group
+  - children:
+      children:
+      - name: cutoff
+        type: float
+      - name: order
+        type: int
+      name: filter_name
+      type: list
+      values:
+      - none
+      - shepp
+      - cosine
+      - hann
+      - hamming
+      - ramlak
+      - parzen
+      - butterworth
+    name: fbp
+    type: group
+  - children:
+      children:
+      - name: cutoff
+        type: float
+      - name: order
+        type: int
+      name: filter_name
+      type: list
+      values:
+      - none
+      - shepp
+      - cosine
+      - hann
+      - hamming
+      - ramlak
+      - parzen
+      - butterworth
+    name: gridrec
+    type: group
+  - children:
+      name: num_iter
+      type: int
+    name: mlem
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    name: osem
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    name: ospml_hybrid
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    name: ospml_quad
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: reg_par
+      type: float
+    name: pml_hybrid
+    type: group
+  - children:
+    - name: num_iter
+      type: int
+    - name: reg_par
+      type: float
+    name: pml_quad
+    type: group
+  - children:
+      name: num_iter
+      type: int
+    name: sirt
+    type: group
+  name: algorithm
+  type: list
+  values:
+  - art
+  - bart
+  - fbpfbp
+  - gridrec
+  - mlem
+  - osem
+  - ospml_hybrid
+  - ospml_quad
+  - pml_hybrid
+  - pml_quad
+  - sirt
+mask:
+- default: 1.0
+  name: ratio
+  suffix: px/px
+  type: float
+- default: 0
+  name: val
+  type: float
+Paganin:
+- default: 0.0001
+  name: pixel_size
+  suffix: cm
+  type: float
+- default: 50
+  name: dist
+  suffix: cm
+  type: float
+- default: 20
+  name: energy
+  suffix: keV
+  type: float
+- default: 0.001
+  name: alpha
+  type: float
+- default: true
+  name: pad
+  type: bool
+remove outliers:
+- name: dif
+  type: float
+- default: 3
+  name: size
+  type: int
+- default: 0
+  name: axis
+  type: int
