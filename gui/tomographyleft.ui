@@ -46,7 +46,7 @@
         <height>781</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="featuresList">
+      <layout class="QVBoxLayout" name="functionsList">
        <property name="spacing">
         <number>0</number>
        </property>

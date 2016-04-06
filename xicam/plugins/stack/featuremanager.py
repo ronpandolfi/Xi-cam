@@ -2,6 +2,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
+import customwidgets
 
 
 features = []
@@ -11,6 +12,11 @@ layout = None
 def clearFeatures():
     global features
     features = []
+
+def addNormalize():
+    global features
+    features.append(customwidgets.funcNormalize())
+    update()
 
 
 def addSubstrate():
@@ -76,4 +82,4 @@ def load():
     # addLayer()
     # addLayer()
     # addParticle()
-
+    addNormalize()

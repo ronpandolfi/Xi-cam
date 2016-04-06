@@ -24,11 +24,11 @@ from xicam import xglobals
 import widgets as twidgets
 from xicam.plugins import widgets, explorer
 from xicam.plugins import base
-import toolbar
 from PySide import QtUiTools
 import featuremanager
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
+import ui
 
 
 class plugin(base.plugin):
@@ -36,56 +36,22 @@ class plugin(base.plugin):
 
     def __init__(self, *args, **kwargs):
 
-        self.toolbar = toolbar.tomotoolbar()
+        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.load()
 
-        self.centerwidget = QtGui.QTabWidget()
+        super(plugin, self).__init__(*args, **kwargs)
+
         self.centerwidget.currentChanged.connect(self.currentChanged)
-        self.centerwidget.setDocumentMode(True)
-        self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-
-
-
-
-
-        self.bottomwidget = None
-
-        self.featurewidget = QtUiTools.QUiLoader().load('gui/tomographyleft.ui')
-
-        self.leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
-        self.leftwidget.addWidget(self.featurewidget)
-        self.fileexplorer = explorer.MultipleFileExplorer()
-        self.leftwidget.addWidget(self.fileexplorer)
-
-
-
-
-        w = QtGui.QWidget()
-        l = QtGui.QVBoxLayout()
-        l.setContentsMargins(0, 0, 0, 0)
-
-        configtree = ParameterTree()
-        #configtree.setParameters(config.activeExperiment, showTop=False)
-        #config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
-        l.addWidget(configtree)
-
-        propertytable = QtGui.QTableView()
-        self.imagePropModel = models.imagePropModel(self.currentImage, propertytable)
-        propertytable.verticalHeader().hide()
-        propertytable.horizontalHeader().hide()
-        propertytable.setModel(self.imagePropModel)
-        propertytable.horizontalHeader().setStretchLastSection(True)
-        l.addWidget(propertytable)
-        w.setLayout(l)
-        self.rightwidget = w
+        self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
+        ui.propertytable.setModel(self.imagePropModel)
 
 
         # SETUP FEATURES
-        featuremanager.layout = self.featurewidget.featuresList
+        featuremanager.layout = ui.functionslist
         featuremanager.load()
 
-        super(plugin, self).__init__(*args, **kwargs)
+
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent

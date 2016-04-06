@@ -13,7 +13,8 @@ QWidget {
     outline: 0;
 }
 
-QWidget {
+
+QPushButton {
     border: 0px;
 }
 
