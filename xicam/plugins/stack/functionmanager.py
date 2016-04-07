@@ -11,6 +11,9 @@ layout = None
 
 def clearFeatures():
     global features
+    for feature in features:
+        feature.deleteLater()
+        del feature
     features = []
 
 def addFunction(function,subfunction):
