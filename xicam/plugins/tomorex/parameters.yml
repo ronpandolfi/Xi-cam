@@ -48,11 +48,11 @@ Vo:
   name: drop
   type: int
 MBIR:
-  name: algorithm
+- name: algorithm
   type: list
   values: []
 downsample:
-  default: 2
+- default: 2
   name: level
   suffix: ^2
   type: int
@@ -64,7 +64,7 @@ Gaussian filter:
   name: order
   type: int
 background intensity:
-  default: 1
+- default: 1
   name: air
   type: int
 Fourier-wavelet:
@@ -98,11 +98,11 @@ pad:
   - constant
   - edge
 Astra:
-  name: algorithm
+- name: algorithm
   type: list
   values: []
 phase correlation:
-  default: 0.5
+- default: 0.5
   name: tol
   suffix: px
   type: float
@@ -124,7 +124,7 @@ Nelder-Mead:
   suffix: px/px
   type: float
 Sobel filter:
-  default: 0
+- default: 0
   name: axis
   type: int
 Titarenko:
@@ -135,24 +135,24 @@ Titarenko:
   name: alpha
   type: float
 upsample:
-  default: 2
+- default: 2
   name: level
   suffix: ^2
   type: int
 smoothing filter:
-  default: 5
+- default: 5
   name: size
   type: int
 regular:
-  name: cutoff
+- name: cutoff
   type: float
 nearest flats:
-  name: cutoff
+- name: cutoff
   type: float
 Tomopy:
-  children:
+- children:
   - children:
-      name: num_iter
+    - name: num_iter
       type: int
     name: art
     type: group
@@ -164,7 +164,7 @@ Tomopy:
     name: bart
     type: group
   - children:
-      children:
+    - children:
       - name: cutoff
         type: float
       - name: order
@@ -183,7 +183,7 @@ Tomopy:
     name: fbp
     type: group
   - children:
-      children:
+    - children:
       - name: cutoff
         type: float
       - name: order
@@ -202,7 +202,7 @@ Tomopy:
     name: gridrec
     type: group
   - children:
-      name: num_iter
+    - name: num_iter
       type: int
     name: mlem
     type: group
@@ -242,7 +242,7 @@ Tomopy:
     name: pml_quad
     type: group
   - children:
-      name: num_iter
+    - name: num_iter
       type: int
     name: sirt
     type: group
