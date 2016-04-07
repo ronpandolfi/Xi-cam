@@ -1,11 +1,11 @@
-median filter:
+Median Filter:
 - default: 3
   name: size
   type: int
 - default: 0
   name: axis
   type: int
-polar mean filter:
+Polar Mean Filter:
 - default: 300
   name: thresh
   type: float
@@ -51,23 +51,23 @@ MBIR:
 - name: algorithm
   type: list
   values: []
-downsample:
+Downsample:
 - default: 2
   name: level
   suffix: ^2
   type: int
-Gaussian filter:
+Gaussian Filter:
 - default: 3
   name: sigma
   type: float
 - default: 0
   name: order
   type: int
-background intensity:
+Background Intensity:
 - default: 1
   name: air
   type: int
-Fourier-wavelet:
+Fourier-Wavelet:
 - name: level
   suffix: ^2
   type: int
@@ -84,7 +84,7 @@ Fourier-wavelet:
 - default: true
   name: pad
   type: bool
-pad:
+Pad:
 - default: 2
   name: axis
   type: int
@@ -101,7 +101,7 @@ Astra:
 - name: algorithm
   type: list
   values: []
-phase correlation:
+Phase Correlation:
 - default: 0.5
   name: tol
   suffix: px
@@ -123,7 +123,7 @@ Nelder-Mead:
   name: ratio
   suffix: px/px
   type: float
-Sobel filter:
+Sobel Filter:
 - default: 0
   name: axis
   type: int
@@ -134,22 +134,22 @@ Titarenko:
 - default: 1.5
   name: alpha
   type: float
-upsample:
+Upsample:
 - default: 2
   name: level
   suffix: ^2
   type: int
-smoothing filter:
+Smoothing Filter:
 - default: 5
   name: size
   type: int
-regular:
+Regular:
 - name: cutoff
   type: float
-nearest flats:
+Nearest Flats:
 - name: cutoff
   type: float
-Tomopy:
+TomoPy:
 - children:
   - children:
     - name: num_iter
@@ -260,7 +260,7 @@ Tomopy:
   - pml_hybrid
   - pml_quad
   - sirt
-mask:
+Mask:
 - default: 1.0
   name: ratio
   suffix: px/px
@@ -287,7 +287,7 @@ Paganin:
 - default: true
   name: pad
   type: bool
-remove outliers:
+Remove Outliers:
 - name: dif
   type: float
 - default: 3
