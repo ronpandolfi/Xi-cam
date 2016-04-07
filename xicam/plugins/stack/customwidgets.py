@@ -15,9 +15,10 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import numpy as np
 from pyFAI import detectors
-import featuremanager
+import functionmanager
 from collectionsmod import UnsortableOrderedDict
 import ui
+import functiondata
 
 
 try:
@@ -236,7 +237,7 @@ class featureWidget(QtGui.QWidget):
                                            'Are you sure you want to delete this feature?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            featuremanager.features = [feature for feature in featuremanager.features if feature is not self]
+            functionmanager.features = [feature for feature in functionmanager.features if feature is not self]
             self.deleteLater()
             ui.showForm(ui.blankForm)
 
@@ -251,7 +252,7 @@ class featureWidget(QtGui.QWidget):
 
 
     def hideothers(self):
-        for item in featuremanager.features:
+        for item in functionmanager.features:
             if hasattr(item, 'frame_2') and item is not self:
                 item.frame_2.hide()
 
@@ -270,7 +271,7 @@ class featureWidget(QtGui.QWidget):
 
     def setName(self, name):
         self.name = name
-        featuremanager.update()
+        functionmanager.update()
 
 
     def toDict(self):
@@ -338,7 +339,7 @@ class layer(featureWidget):
     def __init__(self, name=None):
         self._formpath = 'gui/guiLayer.ui'
         if name is None:
-            name = 'Layer ' + str(featuremanager.layercount() + 1)
+            name = 'Layer ' + str(functionmanager.layercount() + 1)
         super(layer, self).__init__(name)
 
     @property
@@ -389,7 +390,7 @@ class layer(featureWidget):
 
     def toDict(self):
         return UnsortableOrderedDict([('key', self.name),
-                                      ('order', featuremanager.features.index(self) - 1),
+                                      ('order', functionmanager.features.index(self) - 1),
                                       ('material', self.Material.value()),
                                       ('thickness', self.Thickness.value()),
                                       ('refindex', UnsortableOrderedDict([('delta', self.delta.value()),
@@ -399,7 +400,7 @@ class layer(featureWidget):
 class particle(featureWidget):
     def __init__(self, name=None):
         if name is None:
-            name = 'Particle ' + str(featuremanager.particlecount() + 1)
+            name = 'Particle ' + str(functionmanager.particlecount() + 1)
         super(particle, self).__init__(name)
 
         self.frame_2 = QtGui.QFrame(self)
@@ -766,17 +767,20 @@ class structure(form):
                                       ('position', list(self.Position.value())),
                                       ('basis', self.Basis.toDict())])
 
-class funcNormalize(featureWidget):
-    def __init__(self, subfunction=''):
+class func(featureWidget):
+    def __init__(self, function,subfunction):
         self._formpath = 'gui/guiLayer.ui'
-        name = 'Normalize (' + subfunction + ')'
-        super(funcNormalize, self).__init__(name)
+        name = function + ' (' + subfunction + ')'
+        super(func, self).__init__(name)
+        self.function = function
+        self.subfunction = subfunction
+        self.params = Parameter.create(name=self.function, children=functiondata.parameters[self.subfunction], type='group')
 
     @property
     def form(self):
         if self._form is None:
             self.parameterTree = ParameterTree()
-            #self.parameterTree.setParameters(self.parameter, showTop=False)
+            self.parameterTree.setParameters(self.params, showTop=True)
             self._form = self.parameterTree
             self.wireup()
         return self._form

@@ -69,13 +69,13 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QToolButton" name="addFeatureButton">
+      <widget class="QToolButton" name="addFunctionButton">
        <property name="text">
         <string>...</string>
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/hipgisaxsicons_0.png</normaloff>gui/hipgisaxsicons_0.png</iconset>
+         <normaloff>gui/icons_39.png</normaloff>gui/icons_39.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -86,13 +86,13 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="addParticleButton">
+      <widget class="QToolButton" name="moveUpButton">
        <property name="text">
         <string>...</string>
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/hipgisaxsicons_2.png</normaloff>gui/hipgisaxsicons_2.png</iconset>
+         <normaloff>gui/icons_38.png</normaloff>gui/icons_38.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -103,13 +103,30 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="addSubstrateButton">
+      <widget class="QToolButton" name="moveDownButton">
        <property name="text">
         <string>...</string>
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/hipgisaxsicons_1.png</normaloff>gui/hipgisaxsicons_1.png</iconset>
+         <normaloff>gui/icons_37.png</normaloff>gui/icons_37.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="clearButton">
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>gui/icons_36.png</normaloff>gui/icons_36.png</iconset>
        </property>
        <property name="iconSize">
         <size>

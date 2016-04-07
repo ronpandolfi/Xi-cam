@@ -4,6 +4,8 @@ from xicam.plugins import explorer
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import toolbar as ttoolbar
+import functiondata
+import functionmanager
 
 particlemenu = None
 blankForm = None
@@ -16,6 +18,14 @@ propertytable = None
 paramformstack = None
 functionslist = None
 
+class funcAction(QtGui.QAction):
+    def __init__(self, func, subfunc, *args,**kwargs):
+        super(funcAction, self).__init__(*args,**kwargs)
+        self.func=func
+        self.subfunc=subfunc
+        self.triggered.connect(self.addFunction)
+    def addFunction(self):
+        functionmanager.addFunction(self.func,self.subfunc)
 
 def load():
     global leftwidget, centerwidget, rightwidget, bottomwidget, blankForm, toolbar, propertytable, paramformstack, functionslist
@@ -31,6 +41,22 @@ def load():
 
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
     functionslist=functionwidget.functionsList
+
+    addfunctionmenu = QtGui.QMenu()
+    for func,subfuncs in functiondata.funcs.iteritems():
+        funcmenu = QtGui.QMenu(func)
+        addfunctionmenu.addMenu(funcmenu)
+        for subfunc in subfuncs:
+            funcaction=funcAction(func,subfunc,subfunc,funcmenu)
+            funcmenu.addAction(funcaction)
+
+
+
+    functionwidget.addFunctionButton.setMenu(addfunctionmenu)
+    functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+
+
+
 
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
     leftwidget.addWidget(functionwidget)

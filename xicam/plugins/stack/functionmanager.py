@@ -13,9 +13,9 @@ def clearFeatures():
     global features
     features = []
 
-def addNormalize():
+def addFunction(function,subfunction):
     global features
-    features.append(customwidgets.funcNormalize())
+    features.append(customwidgets.func(function,subfunction))
     update()
 
 
@@ -82,4 +82,3 @@ def load():
     # addLayer()
     # addLayer()
     # addParticle()
-    addNormalize()

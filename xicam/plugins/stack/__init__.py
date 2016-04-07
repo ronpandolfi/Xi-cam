@@ -25,7 +25,7 @@ import widgets as twidgets
 from xicam.plugins import widgets, explorer
 from xicam.plugins import base
 from PySide import QtUiTools
-import featuremanager
+import functionmanager
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import ui
@@ -48,8 +48,8 @@ class plugin(base.plugin):
 
 
         # SETUP FEATURES
-        featuremanager.layout = ui.functionslist
-        featuremanager.load()
+        functionmanager.layout = ui.functionslist
+        functionmanager.load()
 
 
         # DRAG-DROP

@@ -1,12 +1,12 @@
 center detection: [Nelder-Mead, Vo, phase correlation]
-downsample: downsample
+downsample: [downsample]
 filter: [Gaussian filter, median filter, Sobel filter]
-mask: mask
+mask: [mask]
 normalize: [regular, background intensity, nearest flats]
-pad: pad
-phase retrieval: Paganin
+pad: [pad]
+phase retrieval: [Paganin]
 reconstruction: [Tomopy, Astra, MBIR]
-remove outliers: remove outliers
-ring removal: Polar mean filter
+remove outliers: [remove outliers]
+ring removal: [Polar mean filter]
 stripe removal: [Fourier-wavelet, Titarenko, smoothing filter]
-upsample: upsample
+upsample: [upsample]
