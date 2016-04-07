@@ -45,7 +45,7 @@ from PySide import QtGui,QtCore
 from vispy import scene
 from vispy.color import Colormap
 
-from xicam.plugins.tomorex import loader
+from pipeline import loader
 # import imageio
 import os
 
