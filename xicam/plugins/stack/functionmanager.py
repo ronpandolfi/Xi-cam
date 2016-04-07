@@ -11,10 +11,15 @@ layout = None
 
 def clearFeatures():
     global features
-    for feature in features:
-        feature.deleteLater()
-        del feature
-    features = []
+    value = QtGui.QMessageBox.question(None, 'Delete all functions?',
+                                       'Are you sure you want to clear ALL functions?',
+                                       (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
+
+    if value is QtGui.QMessageBox.Yes:
+        for feature in features:
+            feature.deleteLater()
+            del feature
+        features = []
 
 def addFunction(function,subfunction):
     global features
