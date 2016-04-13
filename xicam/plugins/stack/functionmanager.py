@@ -19,38 +19,10 @@ def addFunction(function,subfunction):
     update()
 
 
-def addSubstrate():
-    global features
-    if not sum([type(feature) is customwidgets.substrate for feature in features]):
-        features.insert(0, customwidgets.substrate())
-    update()
-
-
-def addLayer():
-    global features
-    features.append(customwidgets.layer())
-    print features
-    update()
-
-
-def addParticle():
-    global features
-    features.append(customwidgets.particle())
-    update()
-
-
 def removeFeature(index):
     global features
     del features[index]
     update()
-
-
-def layercount():
-    return sum([type(feature) is customwidgets.layer for feature in features])
-
-
-def particlecount():
-    return sum([type(feature) is customwidgets.particle for feature in features])
 
 
 def update():
@@ -62,7 +34,7 @@ def update():
 
     # layout.addItem(QtGui.QSpacerItem(0,0,vData=QtGui.QSizePolicy.Expanding))
 
-    for item in features[::-1]:
+    for item in features:
         layout.addWidget(item)
 
 

@@ -32,7 +32,7 @@ import ui
 
 
 class plugin(base.plugin):
-    name = "Stack"
+    name = "Tomography"
 
     def __init__(self, *args, **kwargs):
 

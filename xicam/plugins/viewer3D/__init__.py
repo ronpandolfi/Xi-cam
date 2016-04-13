@@ -23,7 +23,7 @@ from xicam.plugins import base
 
 
 class plugin(base.plugin):
-    name = "3D Viewer"
+    name = "Viewer"
 
     def __init__(self, *args, **kwargs):
 

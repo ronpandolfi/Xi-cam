@@ -44,16 +44,19 @@ def load():
 
     addfunctionmenu = QtGui.QMenu()
     for func,subfuncs in functiondata.funcs.iteritems():
-        funcmenu = QtGui.QMenu(func)
-        addfunctionmenu.addMenu(funcmenu)
-        for subfunc in subfuncs:
-            funcaction=funcAction(func,subfunc,subfunc,funcmenu)
-            funcmenu.addAction(funcaction)
-
-
+        if len(subfuncs)>1:
+            funcmenu = QtGui.QMenu(func)
+            addfunctionmenu.addMenu(funcmenu)
+            for subfunc in subfuncs:
+                funcaction=funcAction(func,subfunc,subfunc,funcmenu)
+                funcmenu.addAction(funcaction)
+        elif len(subfuncs)==1:
+            funcaction=funcAction(func,func,func,addfunctionmenu)
+            addfunctionmenu.addAction(funcaction)
 
     functionwidget.addFunctionButton.setMenu(addfunctionmenu)
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+    functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
 
 
