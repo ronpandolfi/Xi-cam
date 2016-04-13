@@ -45,7 +45,7 @@ class RunnableMethod(QtCore.QRunnable):
         self.kwargs = kwargs
 
         if callback_slot is not None:
-            self.emitter.sigRetValue.connect(self._callback_slot,  QtCore.Qt.QueuedConnection)
+            self.emitter.sigRetValue.connect(self._callback_slot, QtCore.Qt.QueuedConnection)
 
     def run(self):
         # print 'Started {0} in thread {1}, will emit back to {2}'.format(self._method.__name__,

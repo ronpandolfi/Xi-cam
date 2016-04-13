@@ -178,25 +178,23 @@ class SpotClient(NewtClient):
 
         return r
 
-    def download_dataset(self, dataset, stage, fpath, fname=None):
+    def download_dataset(self, dataset, stage, save_path=None):
         """
         Download a specified dataset
 
         :param dataset: str, dataset name
         :param stage: str, stage name
-        :param fname: str, optional, file name (default will be name on SPOT)
-        :param fpath: str, path to location where file will be written
+        :param save_path: str, path and name to save file locally. If None name on SPOT is used and save in home directory
         :return: None
         """
         path = self.get_stage_path(dataset, stage)
-        if fname is None:
-            fname = path.split('/')[-1]
-        file_name = os.path.join(fpath, fname)
+        if save_path is None:
+            save_path = os.path.join(os.path.expanduser('~'), path.split('/')[-1])
 
         r = self.stage_tape_2_disk(dataset, stage)
         r = self.get(self.SPOT_URL + '/hdf/download' + path, stream=True)
 
-        with open(file_name, 'wb') as f:
+        with open(save_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=64*1024):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
@@ -205,30 +203,27 @@ class SpotClient(NewtClient):
 
         return self.check_login(r)
 
-    def download_dataset_generator(self, dataset, stage, fpath, fname=None,
-                                   chunk_size=64*1024):
+    def download_dataset_generator(self, dataset, stage, save_path=None, chunk_size=64*1024):
         """
         Download a dataset as a generator (yields the fraction downloaded)
         Useful to know the status of a download (for gui purposes)
 
         :param dataset: str, dataset name
         :param stage: str, stage name
-        :param fpath: str, path to location where file will be written
-        :param fname: str, optional, file name (default will be name on SPOT)
+        :param save_path: str, path and name to save file locally. If None name on SPOT is used and save in home directory
         :param chunk_size
         :return: None
         """
-        r = self.stage_tape_2_disk(dataset, stage)
 
         path = self.get_stage_path(dataset, stage)
-        if fname is None:
-            fname = path.split('/')[-1]
-        file_name = os.path.join(fpath, fname)
-        file_size = float(self.get_dataset_size(dataset, stage))
+        if save_path is None:
+            save_path = os.path.join(os.path.expanduser('~'), path.split('/')[-1])
 
+        file_size = float(self.get_dataset_size(dataset, stage))
+        r = self.stage_tape_2_disk(dataset, stage)
         r = self.get(self.SPOT_URL + '/hdf/download' + path, stream=True)
 
-        with open(file_name, 'wb') as f:
+        with open(save_path, 'wb') as f:
             downloaded = 0.0
             for chunk in r.iter_content(chunk_size=chunk_size):
                 if chunk:  # filter out keep-alive new chunks
