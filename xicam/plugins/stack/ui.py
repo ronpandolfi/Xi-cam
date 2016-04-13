@@ -58,7 +58,7 @@ def load():
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
-
+    functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
 
 
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
