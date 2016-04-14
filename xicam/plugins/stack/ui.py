@@ -62,13 +62,18 @@ def load():
 
     functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
 
-
+    #TODO find a way to share the base plugin loginwidget and fileexplorer
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
     leftwidget.addWidget(functionwidget)
+    l = QtGui.QVBoxLayout()
+    l.setContentsMargins(0, 0, 0, 0)
     loginwidget= login.LoginDialog()
-    leftwidget.addWidget(loginwidget)
+    l.addWidget(loginwidget)
     fileexplorer =  explorer.MultipleFileExplorer()
-    leftwidget.addWidget(fileexplorer)
+    l.addWidget(fileexplorer)
+    panelwidget = QtGui.QWidget()
+    panelwidget.setLayout(l)
+    leftwidget.addWidget(panelwidget)
 
     loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
     loginwidget.logoutClicked.connect(loginwidget.hide)
