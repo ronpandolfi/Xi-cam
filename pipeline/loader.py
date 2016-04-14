@@ -24,7 +24,7 @@ import writer
 from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
-import libtiff
+# import libtiff
 
 import numpy as nx
 

@@ -45,20 +45,9 @@ class LoginDialog(QtGui.QWidget):
         self.hide()
 
         l = QtGui.QVBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.ui)
         self.setLayout(l)
-
-        # self.setWindowTitle('Login to {}'.format(remotename))
-
-    # def show(self):
-    #     self.ui.show()
-    #     self.raise_()
-    #     super(LoginDialog, self).show()
-
-    # def hide(self):
-    #     if self.parent() is not None:
-    #         self.parent().hide()
-    #     super(LoginDialog, self).hide()
 
 
     def handleLogin(self):

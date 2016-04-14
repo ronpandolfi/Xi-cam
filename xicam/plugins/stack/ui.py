@@ -1,6 +1,8 @@
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
-from xicam.plugins import explorer
+from functools import partial
+from xicam import xglobals
+from xicam.plugins import explorer, login
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import toolbar as ttoolbar
@@ -60,9 +62,21 @@ def load():
 
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
     leftwidget.addWidget(functionwidget)
-    fileexplorer = explorer.MultipleFileExplorer()
+    loginwidget= login.LoginDialog()
+    leftwidget.addWidget(loginwidget)
+    fileexplorer =  explorer.MultipleFileExplorer()
     leftwidget.addWidget(fileexplorer)
 
+    loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
+    loginwidget.logoutClicked.connect(loginwidget.hide)
+    loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
+    loginwidget.logoutClicked.connect(fileexplorer.enableActions)
+    loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
+    loginwidget.sigLoggedIn.connect(xglobals.client_callback)
+
+    fileexplorer.sigLoginRequest.connect(loginwidget.show)
+    fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
+    fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
 
 
 

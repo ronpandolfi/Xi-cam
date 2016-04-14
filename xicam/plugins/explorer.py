@@ -680,8 +680,6 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             except AttributeError:
                 self.tabBar().tabButton(tab, QtGui.QTabBar.LeftSide).resize(0, 0)
                 self.tabBar().tabButton(tab, QtGui.QTabBar.LeftSide).hide()
-        else:
-            self.tabBar().tabButton(tab, QtGui.QTabBar.RightSide).resize(12, 12)
 
     @xglobals.login_exeption_handle
     def addNERSCTab(self, system, closable=True, *args):
