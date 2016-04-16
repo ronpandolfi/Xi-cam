@@ -196,7 +196,7 @@ class plugin(base.plugin):
         if type(paths) is not list:
             paths = [paths]
 
-        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, paths=paths, operation=operation,
+        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, src=paths, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))

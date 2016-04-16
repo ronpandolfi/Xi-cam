@@ -4,6 +4,7 @@ from fabio import fabioutils
 from pyFAI import detectors
 import numpy as np
 import sys, logging
+import h5py
 
 logger = logging.getLogger("openimage")
 
@@ -33,5 +34,48 @@ class rawimage(fabioimage):
 
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
-from fabio import mar345image
 
+class spoth5image(fabioimage):
+    def _readheader(self,f):
+        with h5py.File(f,'r') as h:
+            self.header=h.attrs
+    def read(self,f,frame=None):
+        self.filename=f
+        if frame is None:
+            frame = 0
+        with h5py.File(f,'r') as h:
+            dset=h[h.keys()[0]]
+            ddet=dset[dset.keys()[0]]
+            frames = [key for key in ddet.keys() if '.edf' in key]
+            dfrm=ddet[frames[frame]]
+            self.data = dfrm[0]
+
+        return self
+
+    @property
+    def nframes(self):
+        with h5py.File(self.filename,'r') as h:
+            dset=h[h.keys()[0]]
+            ddet=dset[dset.keys()[0]]
+            frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+        return frames
+
+    def __len__(self):
+        return self.nframes
+
+    @nframes.setter
+    def nframes(self,n):
+        pass
+
+    def getframe(self,frame):
+        with h5py.File(self.filename,'r') as h:
+            dset=h[h.keys()[0]]
+            ddet=dset[dset.keys()[0]]
+            frames = [key for key in ddet.keys() if '.edf' in key]
+            dfrm=ddet[frames[frame]]
+            self.data = dfrm[0]
+        return self
+
+fabio.openimage.spoth5image = spoth5image
+fabioutils.FILETYPES['h5'] = ['spoth5']
+fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'spoth5')

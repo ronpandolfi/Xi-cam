@@ -74,7 +74,7 @@ def loadimage(path):
                 return np.load( path)
             else:
                 # print 'Unhandled data type: ' + path
-                data = fabio.open(path).data
+                data = np.rot90(fabio.open(path).data,3)
                 return data
     except IOError:
         print('IO Error loading: ' + path)
@@ -730,20 +730,7 @@ class imageseries():
     def __len__(self):
         return len(self.paths)
 
-    @property
-    def xvals(self):
-        return numpy.array(sorted(self.paths.keys()))
 
-    def first(self):
-        if len(self.paths) > 0:
-            firstpath = sorted(list(self.paths.values()))[0]
-            print firstpath
-            return diffimage(filepath=firstpath, experiment=self.experiment)
-        else:
-            return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
-
-    def __getitem__(self, item):
-        return self.getDiffImage(self.paths.keys()[item])
 
     def getDiffImage(self, key):
         #print self.paths.keys()
@@ -869,3 +856,426 @@ class jpegimageset():
             return self.jpegs[item]
         else:
             return np.array([self.jpegs[i] for i in item])
+
+
+class diffimage2(object):
+    def __init__(self, detector=None, experiment=None):
+
+        """
+        Image class for diffraction images that caches and validates cache
+        :param detector: pyFAI.detectors.Detector
+        :param experiment: xicam.config.experiment
+        """
+
+
+        print 'Loading ' + '...'
+
+        self._detector = detector
+        self._params = None
+        self._thumb = None
+        self._variation = dict()
+        self._headers = None
+        self._jpeg = None
+        self.experiment = experiment
+        if self.experiment is None:
+            self.experiment = config.activeExperiment
+
+
+
+
+
+        ### All object I want to save that depend on config parameters must be cached in here instead!!!!
+        self.cache = dict()
+        self.cachecheck = None
+
+    @property
+    def xvals(self):
+        return numpy.array(sorted(self.paths.keys()))
+
+    def first(self):
+        if len(self.paths) > 0:
+            firstpath = sorted(list(self.paths.values()))[0]
+            print firstpath
+            return diffimage(filepath=firstpath, experiment=self.experiment)
+        else:
+            return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
+
+    def __getitem__(self, item):
+        return self.getDiffImage(self.paths.keys()[item])
+
+    def __len__(self):
+        return len(self.paths)
+
+    def updateexperiment(self):
+        # Force cache the detector
+        _ = self.detector
+
+        # Set experiment energy
+        if 'Beamline Energy' in self.params:
+            self.experiment.setvalue('Energy', self.params['Beamline Energy'])
+
+
+
+
+    def checkcache(self):
+        pass
+        # compare experiment with cachecheck
+
+    def invalidatecache(self):
+        self.cache = dict()
+        print 'cache cleared'
+
+    def cachedata(self):
+        if self._data is None:
+            if self.filepath is not None:
+                try:
+                    self._data = loadpath(self.filepath)
+                except IOError:
+                    debugtools.frustration()
+                    raise IOError('File moved, corrupted, or deleted. Load failed')
+
+    @property
+    def mask(self):
+        if self.experiment.mask is not None:
+            return self.experiment.mask
+        else:
+            return np.ones_like(self.data)
+
+    @property
+    def dataunrot(self):
+        self.cachedata()
+        return self._data
+
+    @property
+    def data(self):
+        self.cachedata()
+        data = self._data
+        if self._data is not None:
+            data = np.rot90(self._data, 3)
+        return data
+
+    @data.setter
+    def data(self, data):
+        self._data = data
+
+    @property
+    def params(self):
+        if self._params is None:
+            self._params = loadparas(self.paths[0])
+        return self._params
+
+    @property
+    def detector(self):
+        if self._detector is None:
+            if self.data is not None:
+                name, detector = self.finddetector()
+            else:
+                return None
+
+            if detector is None:  # If none are found, use the last working one
+                return self._detector
+
+            self.detectorname = name
+            mask = detector.calc_mask()
+            self._detector = detector
+            if detector is not None:
+                if self.experiment is not None:
+                    if mask is not None:
+                        self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Detector', name)
+        return self._detector
+
+    from fabio import brukerimage
+
+    def finddetector(self):
+        for name, detector in detectors.ALL_DETECTORS.iteritems():
+            if hasattr(detector, 'MAX_SHAPE'):
+                # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+                if detector.MAX_SHAPE == self.data.shape[::-1]:  #
+                    detector = detector()
+                    print 'Detector found: ' + name
+                    return name, detector
+            if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+                # print detector.BINNED_PIXEL_SIZE.keys()
+                if self.data.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                                             detector.BINNED_PIXEL_SIZE.keys()]:
+                    detector = detector()
+                    print 'Detector found with binning: ' + name
+                    return name, detector
+        return None, None
+        raise ValueError('Detector could not be identified!')
+
+    @detector.setter
+    def detector(self, value):
+        if type(value) == str:
+            try:
+                self._detector = detectors.ALL_DETECTORS[value]
+            except KeyError:
+                try:
+                    self._detector = getattr(detectors, value)
+                except AttributeError:
+                    raise KeyError('Detector not found in pyFAI registry: ' + value)
+        else:
+            self._detector = value
+
+    @property
+    def params(self):
+        if self._params is None:
+            self._params = loadparas(self.filepath)
+        return self._params
+
+    @property
+    def thumbnail(self):
+        if self._thumb is None:
+            self._thumb = loadthumbnail(self.filepath)
+            if self._thumb is None:
+                self._thumb = writer.thumbnail(self.data)
+        return self._thumb
+
+    @property
+    def jpeg(self):
+        if self._jpeg is None:
+            self._jpeg = writer.jpeg(self.data.astype(np.uint8))
+        return self._jpeg
+
+    def iscached(self, key):
+        return key in self.cache
+
+    def cachedetector(self):
+        _=self.detector
+
+    @property
+    def cake(self):
+        try:
+            self.cachedetector()
+            if not self.iscached('cake'):
+                cake, x, y = integration.cake(self.data, self.experiment)
+                cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
+                cakemask = cakemask > 0
+
+                print x, y
+
+                self.cache['cake'] = cake
+                self.cache['cakemask'] = cakemask
+                self.cache['cakeqx'] = x
+                self.cache['cakeqy'] = y
+
+            return self.cache['cake']
+        except AttributeError as ex:
+            print ex.message
+
+    @property
+    def remesh(self):
+        if not self.iscached('remesh'):
+            print 'headers:', self.headers
+            # read incident angle
+            if "Sample Alpha Stage" in self.headers:
+                alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
+            elif "Alpha" in self.headers:
+                alphai = np.deg2rad(float(self.headers['Alpha']))
+            elif "Sample Theta" in self.headers:
+                alphai = np.deg2rad(float(self.headers['Sample Theta']))
+            elif "samtilt" in self.headers:
+                alphai = np.deg2rad(float(self.headers['samtilt']))
+            else:
+                alphai = self.queryAlphaI()
+            if alphai is None:
+                return self.data
+
+            remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
+                                             self.experiment.getGeometry(), alphai)
+            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
+                                             self.experiment.getGeometry(), alphai)
+
+            self.cache['remesh'] = remeshdata
+            self.cache['remeshmask'] = remeshmask >0
+            self.cache['remeshqx'] = x
+            self.cache['remeshqy'] = y
+
+        return self.cache['remesh']
+
+    def queryAlphaI(self):
+        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
+                                                  decimals=3)
+        if alphai and ok:
+            alphai = np.deg2rad(alphai)
+            self.headers['Alpha'] = alphai
+            return alphai
+
+        return None
+
+
+    def __del__(self):
+        # TODO: do more here!
+        # if self._data is not None:
+        #    self.writenexus()
+        pass
+
+    @debugtools.timeit
+    def writenexus(self):
+        nxpath = pathtools.path2nexus(self.filepath)
+        w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
+                               variation=self._variation)
+        w.run()
+
+    def findcenter(self):
+        # Auto find the beam center
+        [x, y] = center_approx.center_approx(self.data)
+
+        # Set the center in the experiment
+        self.experiment.center = (x, y)
+
+    def integrate(self, mode='', cut=None):
+        ai = config.activeExperiment.getAI().getPyFAI()
+        iscake = False
+        return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
+
+    @debugtools.timeit  #0.07s on Izanami
+    def variation(self, operationindex, roi):
+        if operationindex not in self._variation or roi is not None:
+            nxpath = pathtools.path2nexus(self.filepath)
+            if os.path.exists(nxpath) and roi is None:
+                v = readvariation(nxpath)
+                #print v
+                if operationindex in v:
+                    self._variation[operationindex] = v[operationindex]
+                    print 'successful variation load!'
+                else:
+                    prv = pathtools.similarframe(self.filepath, -1)
+                    nxt = pathtools.similarframe(self.filepath, +1)
+                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+            else:
+                prv = pathtools.similarframe(self.filepath, -1)
+                nxt = pathtools.similarframe(self.filepath, +1)
+                if roi is None:
+                    print prv, self.dataunrot, nxt
+                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                else:
+                    v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
+                    return v
+        return self._variation[operationindex]
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = loadparas(self.filepath)
+
+        return self._headers
+
+    @property
+    def radialintegration(self):
+        if 'radialintegration' in self.cache.keys():
+            self.cache['radialintegration'] = integration.radialintegrate(self)
+
+        return self.cache['radialintegration']
+
+    def view(self,t):
+        if t is np.ndarray:
+            return self.data
+
+
+    def __getattr__(self, name):
+       if name in self.cache:
+           return self.cache[name]
+       else:
+           raise AttributeError('diffimage has no attribute: ' + name)
+
+
+
+class singlefilediffimage2(diffimage2):
+    ndim=2
+    def __init__(self, filepath, detector=None, experiment=None):
+        self.filepath = filepath
+        super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
+
+        self._data = None
+
+    def asarray(self):
+        return self.data
+
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = loadimage(self.filepath)
+        return self._data
+
+    def implements(self, t):
+        if t == 'MetaArray': return True
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+class multifilediffimage2(diffimage2):
+    ndim = 3
+    def __init__(self, filepaths, detector=None, experiment=None):
+        self.filepaths = filepaths
+        super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
+        self._framecache=dict()
+        self.currentframe = 0
+
+        self.dtype = self.data.dtype
+        self.max = np.max(self.data)
+        self.min = np.min(self.data)
+        self.shape = self.data.shape[0],self.data.shape[1],len(filepaths)
+        self.size = np.product(self.shape)
+
+    @property
+    def data(self):
+        return self._getframe(self.currentframe)
+
+    def _getframe(self,frame): # keeps 3 frames in cache at most
+        self.currentframe = frame
+        if frame in self._framecache:
+            return self._framecache[frame]
+        else:
+            if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
+            self._framecache[frame]=loadimage(self.filepaths[frame])
+
+    def __getitem__(self, item):
+        return self._getframe(item)
+
+class stackdiffimage2(diffimage2):
+    ndim = 3
+    def __init__(self, filepath, detector=None, experiment=None):
+        self.filepath = filepath
+        super(stackdiffimage2, self).__init__(detector=detector, experiment=experiment)
+
+        self.fabimage = fabio.open(filepath)
+
+        self._framecache=dict()
+        self.currentframe=0
+
+        self.dtype = self.data.dtype
+        self.max = np.max(self.data)
+        self.min = np.min(self.data)
+        self.shape = self.data.shape[0],self.data.shape[1],len(self.fabimage)
+        self.size = np.product(self.shape)
+
+    @property
+    def data(self):
+        return self._getframe(self.currentframe)
+
+    def _getframe(self,frame): # keeps 3 frames in cache at most
+        self.currentframe = frame
+        if frame not in self._framecache:
+            if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
+            self._framecache[frame]=self.fabimage.getframe(frame)
+        return self._framecache[frame]
+
+    def __getitem__(self, item):
+        return self._getframe(item)
+
+
+def loaddiffimage(src):
+    if type(src) in [unicode,str]:
+        return singlefilediffimage2(src)
+    elif type(src) is list and len(src)==1 and os.path.splitext(src[0])[-1]=='.h5':
+        return stackdiffimage2(src[0])
+    elif type(src) is list and len(src)==1:
+        return singlefilediffimage2(src[0])
+    elif type(src) is list:
+        return multifilediffimage2(src)
+    elif src is None:
+        return None
