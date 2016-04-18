@@ -5,37 +5,48 @@ from PySide import QtCore
 import customwidgets
 
 
-features = []
+functions = []
+currentfunction = 0
 layout = None
 
 
 def clearFeatures():
-    global features
+    global functions
     value = QtGui.QMessageBox.question(None, 'Delete all functions?',
                                        'Are you sure you want to clear ALL functions?',
                                        (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
 
     if value is QtGui.QMessageBox.Yes:
-        for feature in features:
+        for feature in functions:
             feature.deleteLater()
             del feature
-        features = []
+        functions = []
 
 
 def addFunction(function, subfunction):
-    global features
-    features.append(customwidgets.func(function, subfunction))
+    global functions, currentfunction
+    currentfunction = len(functions)
+    functions.append(customwidgets.func(function, subfunction))
     update()
 
 
-def removeFeature(index):
-    global features
-    del features[index]
+def removeFunction(index):
+    global functions
+    del functions[index]
+    update()
+
+
+def swapFunctions(idx_1, idx_2):
+    global functions, currentfunction
+    if idx_2 >= len(functions) or idx_2 < 0:
+        return
+    functions[idx_1], functions[idx_2] = functions[idx_2], functions[idx_1]
+    currentfunction = idx_2
     update()
 
 
 def update():
-    global layout
+    global layout, functions
     assert isinstance(layout, QtGui.QVBoxLayout)
 
     for i in range(layout.count()):
@@ -43,7 +54,7 @@ def update():
 
     # layout.addItem(QtGui.QSpacerItem(0,0,vData=QtGui.QSizePolicy.Expanding))
 
-    for item in features:
+    for item in functions:
         layout.addWidget(item)
 
 
@@ -57,5 +68,5 @@ def loadform(path):
 
 
 def load():
-    global features, layout
+    global functions, layout
     layout.setAlignment(QtCore.Qt.AlignBottom)

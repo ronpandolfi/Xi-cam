@@ -162,11 +162,13 @@ class featureWidget(QtGui.QWidget):
                                            'Are you sure you want to delete this feature?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            functionmanager.features = [feature for feature in functionmanager.features if feature is not self]
+            functionmanager.functions = [feature for feature in functionmanager.functions if feature is not self]
             self.deleteLater()
             ui.showForm(ui.blankForm)
 
     def mousePressEvent(self, *args, **kwargs):
+        functionmanager.currentfunction = functionmanager.functions.index(self)
+        print functionmanager.currentfunction
         self.showSelf()
         self.hideothers()
         self.setFocus()
@@ -177,7 +179,7 @@ class featureWidget(QtGui.QWidget):
 
 
     def hideothers(self):
-        for item in functionmanager.features:
+        for item in functionmanager.functions:
             if hasattr(item, 'frame_2') and item is not self:
                 item.frame_2.hide()
 

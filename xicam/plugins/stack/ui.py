@@ -68,6 +68,10 @@ def load():
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
     functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
+    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentfunction,
+                                                                                  functionmanager.currentfunction - 1))
+    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentfunction,
+                                                                                  functionmanager.currentfunction + 1))
 
     #TODO find a way to share the base plugin loginwidget and fileexplorer
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
