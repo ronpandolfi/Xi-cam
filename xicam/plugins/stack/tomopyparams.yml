@@ -47,10 +47,6 @@ Vo:
 - default: 20
   name: drop
   type: int
-MBIR:
-- name: algorithm
-  type: list
-  values: []
 Downsample:
 - default: 2
   name: level
@@ -97,10 +93,6 @@ Pad:
   values:
   - constant
   - edge
-Astra:
-- name: algorithm
-  type: list
-  values: []
 Phase Correlation:
 - default: 0.5
   name: tol
@@ -149,117 +141,6 @@ Regular:
 Nearest Flats:
 - name: cutoff
   type: float
-TomoPy:
-- children:
-  - children:
-    - name: num_iter
-      type: int
-    name: art
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: num_block
-      type: int
-    name: bart
-    type: group
-  - children:
-    - children:
-      - name: cutoff
-        type: float
-      - name: order
-        type: int
-      name: filter_name
-      type: list
-      values:
-      - none
-      - shepp
-      - cosine
-      - hann
-      - hamming
-      - ramlak
-      - parzen
-      - butterworth
-    name: fbp
-    type: group
-  - children:
-    - children:
-      - name: cutoff
-        type: float
-      - name: order
-        type: int
-      name: filter_name
-      type: list
-      values:
-      - none
-      - shepp
-      - cosine
-      - hann
-      - hamming
-      - ramlak
-      - parzen
-      - butterworth
-    name: gridrec
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    name: mlem
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: num_block
-      type: int
-    name: osem
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: num_block
-      type: int
-    name: ospml_hybrid
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: num_block
-      type: int
-    name: ospml_quad
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: reg_par
-      type: float
-    name: pml_hybrid
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    - name: reg_par
-      type: float
-    name: pml_quad
-    type: group
-  - children:
-    - name: num_iter
-      type: int
-    name: sirt
-    type: group
-  name: algorithm
-  type: list
-  values:
-  - art
-  - bart
-  - fbpfbp
-  - gridrec
-  - mlem
-  - osem
-  - ospml_hybrid
-  - ospml_quad
-  - pml_hybrid
-  - pml_quad
-  - sirt
 Mask:
 - default: 1.0
   name: ratio
@@ -296,3 +177,76 @@ Remove Outliers:
 - default: 0
   name: axis
   type: int
+ART:
+  - name: num_iter
+    type: int
+BART:
+  - name: num_iter
+    type: int
+  - name: num_block
+    type: int
+FBP:
+  - children:
+    - name: cutoff
+      type: float
+    - name: order
+      type: int
+    name: filter_name
+    type: list
+    values:
+    - none
+    - shepp
+    - cosine
+    - hann
+    - hamming
+    - ramlak
+    - parzen
+    - butterworth
+Gridrec:
+  - children:
+    - name: cutoff
+      type: float
+    - name: order
+      type: int
+    name: filter_name
+    type: list
+    values:
+    - none
+    - shepp
+    - cosine
+    - hann
+    - hamming
+    - ramlak
+    - parzen
+    - butterworth
+MLEM:
+  - name: num_iter
+    type: int
+OSEM:
+  - name: num_iter
+    type: int
+  - name: num_block
+    type: int
+OSMPL Hybrid:
+  - name: num_iter
+    type: int
+  - name: num_block
+    type: int
+OSMPL Quad:
+  - name: num_iter
+    type: int
+  - name: num_block
+    type: int
+PML Hybrid:
+  - name: num_iter
+    type: int
+  - name: reg_par
+    type: float
+PML Quad:
+  - name: num_iter
+    type: int
+  - name: reg_par
+    type: float
+SIRT:
+  - name: num_iter
+    type: int

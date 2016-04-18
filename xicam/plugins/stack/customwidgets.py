@@ -37,80 +37,6 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 
-class vector(QtGui.QWidget):
-    sigValueChanged = QtCore.Signal()
-    sigChanged = sigValueChanged
-
-
-    def __init__(self):
-        super(vector, self).__init__()
-
-        self.horizontalLayout = QtGui.QHBoxLayout(self)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.UnitCellVec1LeftParenthesis3D = QtGui.QLabel(self)
-        font = QtGui.QFont()
-        font.setPointSize(30)
-        self.UnitCellVec1LeftParenthesis3D.setFont(font)
-        self.UnitCellVec1LeftParenthesis3D.setObjectName(_fromUtf8("UnitCellVec1LeftParenthesis3D"))
-        self.horizontalLayout.addWidget(self.UnitCellVec1LeftParenthesis3D)
-        self.value1 = QtGui.QDoubleSpinBox(self)
-        self.value1.setDecimals(1)
-        self.value1.setMinimum(-1000.0)
-        self.value1.setMaximum(1000.0)
-        self.value1.setSingleStep(0.5)
-        self.value1.setProperty("value", 0.0)
-        self.value1.setObjectName(_fromUtf8("value1"))
-        self.horizontalLayout.addWidget(self.value1)
-        self.UnitCellVec1Comma1 = QtGui.QLabel(self)
-        self.UnitCellVec1Comma1.setObjectName(_fromUtf8("UnitCellVec1Comma1"))
-        self.horizontalLayout.addWidget(self.UnitCellVec1Comma1)
-        self.value2 = QtGui.QDoubleSpinBox(self)
-        self.value2.setDecimals(1)
-        self.value2.setMinimum(-1000.0)
-        self.value2.setMaximum(1000.0)
-        self.value2.setSingleStep(0.5)
-        self.value2.setObjectName(_fromUtf8("value2"))
-        self.horizontalLayout.addWidget(self.value2)
-        self.UnitCellVec1Comma2 = QtGui.QLabel(self)
-        self.UnitCellVec1Comma2.setObjectName(_fromUtf8("UnitCellVec1Comma2"))
-        self.horizontalLayout.addWidget(self.UnitCellVec1Comma2)
-        self.value3 = QtGui.QDoubleSpinBox(self)
-        self.value3.setDecimals(1)
-        self.value3.setMinimum(-1000.0)
-        self.value3.setMaximum(1000.0)
-        self.value3.setSingleStep(0.5)
-        self.value3.setObjectName(_fromUtf8("value3"))
-        self.horizontalLayout.addWidget(self.value3)
-        self.UnitCellVec1RightParenthesis3D = QtGui.QLabel(self)
-        self.UnitCellVec1RightParenthesis3D.setFont(font)
-        self.UnitCellVec1RightParenthesis3D.setObjectName(_fromUtf8("UnitCellVec1RightParenthesis3D"))
-        self.horizontalLayout.addWidget(self.UnitCellVec1RightParenthesis3D)
-
-        self.UnitCellVec1LeftParenthesis3D.setText("(")
-        self.UnitCellVec1Comma1.setText(",")
-        self.UnitCellVec1Comma2.setText(",")
-        self.UnitCellVec1RightParenthesis3D.setText(")")
-
-        self.value1.valueChanged.connect(self.sigValueChanged)
-        self.value2.valueChanged.connect(self.sigValueChanged)
-        self.value3.valueChanged.connect(self.sigValueChanged)
-
-    def value(self):
-        return self.value1.value(), self.value2.value(), self.value3.value()
-
-
-    def setValue(self, v):
-        self.value1.setValue(v[0])
-        self.value2.setValue(v[1])
-        self.value3.setValue(v[2])
-
-
-    def setEnabled(self, enabled):
-        self.value1.setEnabled(enabled)
-        self.value2.setEnabled(enabled)
-        self.value3.setEnabled(enabled)
-
 
 class ROlineEdit(QtGui.QLineEdit):
     def __init__(self, *args, **kwargs):
@@ -277,7 +203,6 @@ class featureWidget(QtGui.QWidget):
         return {}
 
 
-
 class form(QtGui.QWidget):
     def __init__(self, name):
         super(form, self).__init__()
@@ -294,17 +219,17 @@ class form(QtGui.QWidget):
     def wireup(self):
         pass
 
+
 class func(featureWidget):
-    def __init__(self, function,subfunction):
+    def __init__(self, function, subfunction):
         self._formpath = 'gui/guiLayer.ui'
-        name = function
-        print function,subfunction
+        self.name = function
         if function != subfunction:
-            name += ' (' + subfunction + ')'
-        super(func, self).__init__(name)
+            self.name += ' (' + subfunction + ')'
+        super(func, self).__init__(self.name)
         self.function = function
         self.subfunction = subfunction
-        self.params = Parameter.create(name=name, children=functiondata.parameters[self.subfunction], type='group')
+        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunction], type='group')
 
     @property
     def form(self):
@@ -319,6 +244,7 @@ class func(featureWidget):
         pass
 
 
+
 def loadform(path):
     guiloader = QUiLoader()
     f = QtCore.QFile(path)
@@ -328,149 +254,11 @@ def loadform(path):
     return form
 
 
-
-
-class VectorParameterItem(pTypes.WidgetParameterItem):
-    def makeWidget(self):
-        w = vector()
-        opts = self.param.opts
-        value = opts.get('value', None)
-        if value is not None:
-            w.setValue(value)
-
-        self.value = w.value
-        self.setValue = w.setValue
-
-        return w
-
-    def valueChanged(self, *args, **kwargs):
-        super(VectorParameterItem, self).valueChanged(*args, **kwargs)
-
-
-class VectorParameter(Parameter):
-    itemClass = VectorParameterItem
-
-    def __init__(self, *args, **kwargs):
-        super(VectorParameter, self).__init__(*args, **kwargs)
-
-
-    def defaultValue(self):
-        return (0, 0, 0)
-
-
-registerParameterType('Vector', VectorParameter, override=True)
-
-
-class ScalableGroup(pTypes.GroupParameter):
-    def __init__(self, **opts):
-        opts['type'] = 'group'
-        opts['addText'] = "Add"
-        pTypes.GroupParameter.__init__(self, **opts)
-
-    def addNew(self):
-        self.addChild(dict(name="Point %d" % (len(self.childs) + 1), type='Vector', removable=True, renamable=True))
-
-    def toArray(self):
-        return [list(child.value()) for child in self.children()]
-
-    def toDict(self):
-        d = dict()
-        for child in self.children():
-            d[child.opts['name']] = list(child.value())
-        return d
-
-
 class hideableGroupParameterItem(pTypes.GroupParameterItem):
     def optsChanged(self, param, opts):
         super(hideableGroupParameterItem, self).optsChanged(param, opts)
         if 'visible' in opts:
             self.setHidden(not opts['visible'])
-
-
-class DistParameter(pTypes.GroupParameter):
-    itemClass = hideableGroupParameterItem
-
-    def __init__(self, **opts):
-        opts['type'] = 'bool'
-        opts['value'] = True
-        pTypes.GroupParameter.__init__(self, **opts)
-
-        self.DistributionChoice = pTypes.ListParameter(name='Distribution', type='list', value=0,
-                                                       values=['Single value', 'Uniform', 'Random', 'Gaussian'])
-        self.Value = pTypes.SimpleParameter(name=opts['name'], type='float', value=0)
-        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
-        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
-        self.Mean = pTypes.SimpleParameter(name='Mean', type='float', value=0)
-        self.Variance = pTypes.SimpleParameter(name='Variance', type='float', value=0)
-        self.N = pTypes.SimpleParameter(name='Number of samples', type='int', value=0)
-
-        self.Min.hide()
-        self.Max.hide()
-        self.Mean.hide()
-        self.Variance.hide()
-        self.N.hide()
-
-        self.DistributionChoice.sigValueChanged.connect(self.distributionChanged)
-
-        self.addChildren([self.DistributionChoice, self.Value, self.Min, self.Max, self.Variance, self.N])
-
-
-    def distributionChanged(self, _, choice):
-        # print choice
-        if choice == 'Uniform':
-            self.Value.hide()
-            self.Min.show()
-            self.Max.show()
-            self.Mean.hide()
-            self.Variance.hide()
-            self.N.show()
-        elif choice == 'Single value':
-            self.Value.show()
-            self.Min.hide()
-            self.Max.hide()
-            self.Mean.hide()
-            self.Variance.hide()
-            self.N.hide()
-        elif choice == 'Random':
-            self.Value.hide()
-            self.Min.show()
-            self.Max.show()
-            self.Mean.hide()
-            self.Variance.hide()
-            self.N.show()
-        elif choice == 'Gaussian':
-            self.Value.hide()
-            self.Min.show()
-            self.Max.show()
-            self.Mean.show()
-            self.Variance.show()
-            self.N.show()
-
-    def toDict(self):
-        d = UnsortableOrderedDict()
-        choice = self.DistributionChoice.value()
-        d['type'] = self.opts['higKey'].lower()
-        if choice == 'Uniform':
-            d['min'] = self.Min.value()
-            d['max'] = self.Max.value()
-            d['N'] = self.N.value()
-            d['stat'] = 'uniform'
-        elif choice == 'Single value':
-            d['min'] = self.Value.value()
-            d['stat'] = 'single'
-        elif choice == 'Random':
-            d['min'] = self.Min.value()
-            d['max'] = self.Max.value()
-            d['N'] = self.N.value()
-            d['stat'] = 'random'
-        elif choice == 'Gaussian':
-            d['min'] = self.Min.value()
-            d['max'] = self.Max.value()
-            d['N'] = self.N.value()
-            d['stddev'] = np.sqrt(self.Variance.value())
-            d['mean'] = self.Mean.value()
-            d['stat'] = 'gaussian'
-        return d
 
 
 class StepParameter(pTypes.GroupParameter):

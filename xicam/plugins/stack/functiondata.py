@@ -4,7 +4,8 @@ import yaml
 with open('xicam/plugins/stack/funcs.yml','r') as stream:
     funcs=yaml.load(stream)
 
+parameters = {}
 
-with open('xicam/plugins/stack/parameters.yml','r') as stream:
-    parameters=yaml.load(stream)
-
+for file in ('tomopyparams.yml',): #, 'astraparams.yml', 'mbirparams.yml'):
+    with open('xicam/plugins/stack/'+file ,'r') as stream:
+        parameters.update(yaml.load(stream))

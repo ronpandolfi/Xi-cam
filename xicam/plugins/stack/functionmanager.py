@@ -21,9 +21,10 @@ def clearFeatures():
             del feature
         features = []
 
-def addFunction(function,subfunction):
+
+def addFunction(function, subfunction):
     global features
-    features.append(customwidgets.func(function,subfunction))
+    features.append(customwidgets.func(function, subfunction))
     update()
 
 
@@ -58,7 +59,3 @@ def loadform(path):
 def load():
     global features, layout
     layout.setAlignment(QtCore.Qt.AlignBottom)
-    # addSubstrate()
-    # addLayer()
-    # addLayer()
-    # addParticle()

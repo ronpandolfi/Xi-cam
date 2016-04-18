@@ -50,8 +50,15 @@ def load():
             funcmenu = QtGui.QMenu(func)
             addfunctionmenu.addMenu(funcmenu)
             for subfunc in subfuncs:
-                funcaction=funcAction(func,subfunc,subfunc,funcmenu)
-                funcmenu.addAction(funcaction)
+                if isinstance(subfuncs, dict) and len(subfuncs[subfunc]) > 0:
+                    optsmenu = QtGui.QMenu(subfunc)
+                    funcmenu.addMenu(optsmenu)
+                    for opt in subfuncs[subfunc]:
+                        funcaction = funcAction(func, opt, opt, funcmenu)
+                        optsmenu.addAction(funcaction)
+                else:
+                    funcaction=funcAction(func,subfunc,subfunc,funcmenu)
+                    funcmenu.addAction(funcaction)
         elif len(subfuncs)==1:
             funcaction=funcAction(func,func,func,addfunctionmenu)
             addfunctionmenu.addAction(funcaction)
@@ -94,7 +101,6 @@ def load():
 
     paramtree = ParameterTree()
     #configtree.setParameters(config.activeExperiment, showTop=False)
-    #config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
 
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
