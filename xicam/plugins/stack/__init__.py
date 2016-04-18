@@ -12,8 +12,8 @@ __status__ = "Beta"
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 import platform
 op_sys = platform.system()
-# if op_sys == 'Darwin':
-#     from Foundation import NSURL
+if op_sys == 'Darwin':
+    from Foundation import NSURL
 
 import os
 import numpy as np

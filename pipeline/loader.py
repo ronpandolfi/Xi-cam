@@ -24,7 +24,7 @@ import writer
 from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
-# import libtiff
+#import libtiff
 
 import numpy as nx
 
@@ -208,6 +208,7 @@ def scanparas(path, frame=None):
         paras = scanparaslines(lines)
 
     return paras
+
 
 def scanparaslines(lines):
     paras = OrderedDict()

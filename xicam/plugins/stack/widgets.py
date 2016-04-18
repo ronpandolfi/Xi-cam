@@ -134,6 +134,7 @@ class sinogramViewer(projectionViewer):
 
         self.timeLine.setValue(self.tVals[len(self.tVals)//2])
 
+
 class volumeViewer(QtGui.QWidget):
 
     sigImageChanged=QtCore.Signal()
@@ -268,6 +269,7 @@ class volumeViewer(QtGui.QWidget):
         writer = imageio.save('foo.mp4', fps=25)
         self.volumeRenderWidget.events.draw.connect(lambda e: writer.append_data(self.render()))
         self.volumeRenderWidget.events.close.connect(lambda e: writer.close())
+
 
 class volumeRenderWidget(scene.SceneCanvas):
 

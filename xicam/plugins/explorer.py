@@ -1,13 +1,4 @@
 # -*- coding: utf-8 -*-
-__author__ = "Luis Luque"
-__copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
-__license__ = ""
-__version__ = "1.2.1"
-__maintainer__ = "Ronald J Pandolfi"
-__email__ = "ronpandolfi@lbl.gov"
-__status__ = "Beta"
-
 """
 Created on Mon Oct 19 17:22:00 2015
 
@@ -15,13 +6,12 @@ Created on Mon Oct 19 17:22:00 2015
 """
 
 import os
-from collections import OrderedDict
-from os.path import expanduser
-
+import tempfile
 from PySide import QtGui, QtCore
-
+from collections import OrderedDict
 from xicam import threads
 from xicam import xglobals
+from pipeline import loader
 
 NERSC_SYSTEMS = ['cori', 'edison']
 
@@ -32,17 +22,16 @@ class LocalFileView(QtGui.QTreeView):
     """
 
     pathChanged = QtCore.Signal(str)
-    sigOpenFiles = QtCore.Signal(list)
+    sigOpen = QtCore.Signal(list)
     sigOpenDir = QtCore.Signal(str)
     sigDelete = QtCore.Signal()
-    sigOpen = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = expanduser('~')
+        self.path = os.path.expanduser('~')
         self.refresh(self.path)
 
         header = self.header()
@@ -61,7 +50,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.menu = QtGui.QMenu()
         standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Delete', self)]
-        standardActions[0].triggered.connect(self.sigOpen.emit)
+        standardActions[0].triggered.connect(self.openActionTriggered)
         standardActions[1].triggered.connect(self.sigDelete.emit)
         self.menu.addActions(standardActions)
 
@@ -91,13 +80,17 @@ class LocalFileView(QtGui.QTreeView):
         if os.path.isdir(path):
             self.refresh(path=path)
         else:
-            self.sigOpenFiles.emit([path])
+            self.sigOpen.emit([path])
 
     def openActionTriggered(self):
+
         indices = self.selectedIndexes()
         paths = [self.file_model.filePath(index) for index in indices]
 
-        self.sigOpenFiles.emit(paths)
+        if os.path.isdir(paths[0]):
+            self.refresh(path=paths[0])
+        else:
+            self.sigOpen.emit(paths)
 
     def getSelectedFilePath(self):
         selected = str(self.file_model.filePath(self.currentIndex()))
@@ -110,12 +103,6 @@ class LocalFileView(QtGui.QTreeView):
         if selected == '':
             selected = None
         return selected
-
-    def downloadFile(self):
-        return None
-
-    def transferFile(self):
-        return None
 
     def uploadFile(self):
         fpath = self.getSelectedFilePath()
@@ -195,9 +182,9 @@ class RemoteFileView(QtGui.QListWidget):
     """
     pathChanged = QtCore.Signal(str)
     sigDelete = QtCore.Signal()
-    sigOpen = QtCore.Signal()
-    sigDownload = QtCore.Signal()
-    sigTransfer = QtCore.Signal()
+    sigOpen = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(tuple)
+    sigTransfer = QtCore.Signal(tuple)
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -206,11 +193,11 @@ class RemoteFileView(QtGui.QListWidget):
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Download', self)]
-        # QtGui.QAction('Open', self), QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
-        # standardActions[0].triggered.connect(self.sigOpen.emit)
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self)]
+        # , QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
+        standardActions[0].triggered.connect(lambda: self.onDoubleClick(self.currentItem()))
         # standardActions[1].triggered.connect(self.sigDelete.emit)
-        standardActions[0].triggered.connect(self.sigDownload.emit)
+        standardActions[1].triggered.connect(self.downloadFile)
         # standardActions[3].triggered.connect(self.sigTransfer.emit)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -218,13 +205,13 @@ class RemoteFileView(QtGui.QListWidget):
 
     def onDoubleClick(self, item):
         file_name = item.text()
-        if len(file_name.split('.')) == 1:
+
+        if '.' in file_name:
+            save_path = os.path.join(tempfile.gettempdir(), file_name)
+            self.downloadFile(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
+        elif len(file_name.split('.')) == 1:
             path = self.path + '/' + str(file_name)
             self.refresh(path=path)
-
-        elif '.h5' in file_name:
-            # get file metadata here dudley boy
-            print file_name + " is an h5 file!"
 
     def getSelectedFilePath(self):
         return '{0}/{1}'.format(self.path, str(self.currentItem().text()))
@@ -251,18 +238,9 @@ class RemoteFileView(QtGui.QListWidget):
 
     def downloadFile(self):
         fpath = self.getSelectedFilePath()
-        fname = self.getSelectedFile()
-        fileDialog = QtGui.QFileDialog(self, 'Save as', os.path.expanduser('~'))
-        fileDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
-        fileDialog.selectFile(fname)
-        if fileDialog.exec_():
-            outpath = str(fileDialog.selectedFiles()[0])
-            return fpath, outpath
+        return fpath
 
     def transferFile(self):
-        return None
-
-    def uploadFile(self):
         return None
 
     def deleteFile(self):
@@ -291,25 +269,23 @@ class NERSCFileView(RemoteFileView):
         super(NERSCFileView, self).getDirContents(path, self.system)
         super(NERSCFileView, self).refresh(path=path)
 
-    def downloadFile(self):
-        fpath, outpath = super(NERSCFileView, self).downloadFile()
+    def downloadFile(self, save_path=None, fslot=None):
+        fpath = super(NERSCFileView, self).downloadFile()
         size = self.client.get_file_size(fpath, self.system)
         desc = 'File {0} from {1}'.format(fpath, self.system)
         if size < 100*2**20:
             method = self.client.download_file_generator
-            outpath, fname = os.path.split(outpath)
-            args = [fpath, self.system, outpath]
-            kwargs = {'fname': fname}
+            args = [fpath, self.system]
+            kwargs = {}
+            if save_path is not None:
+                kwargs['save_path'] = save_path
         else:
             # USE GLOBUS API CALL HERE, Think of how to get access to client
             pass
 
-        return desc, method, args, kwargs
+        self.sigDownload.emit((desc, method, args, kwargs, fslot))
 
     def transferFile(self):
-        return None
-
-    def uploadFile(self):
         return None
 
     def deleteFile(self):
@@ -334,14 +310,14 @@ class GlobusFileView(RemoteFileView):
         super(GlobusFileView, self).getDirContents(path, self.endpoint)
         super(GlobusFileView, self).refresh(path=path)
 
-    def downloadFile(self):
-        fpath, outpath = super(GlobusFileView, self).downloadFile()
+    def downloadFile(self, save_path=None, fslot=None):
+        fpath = super(GlobusFileView, self).downloadFile()
         method = self.client.transfer_generator
         desc = '{0} from {1}.'.format(os.path.split(fpath)[-1], self.endpoint)
-        args = [self.endpoint, fpath, 'LOCAL ENDPOINT', outpath] #TODO Local endpoint again....
+        args = [self.endpoint, fpath, 'LOCAL ENDPOINT'] #TODO Local endpoint again....
         kwargs = {}
 
-        return desc, method, args, kwargs
+        self.sigDownload.emit((desc, method, args, kwargs, fslot))
 
     def transferFile(self):
         fpath, outpath = super(GlobusFileView, self).downloadFile()
@@ -350,9 +326,6 @@ class GlobusFileView(RemoteFileView):
         args = [self.endpoint, fpath, 'DEST ENDPOINT', outpath] #TODO Dest endpoint geeet it....
         kwargs = {}
         return desc, method, args, kwargs
-
-    def uploadFile(self):
-        return None
 
     def deleteFile(self):
         fpath = self.getSelectedFilePath()
@@ -364,8 +337,8 @@ class SpotDatasetView(QtGui.QTreeWidget):
     Tree widgets showing Spot datasets
     """
 
-    sigOpen = QtCore.Signal()
-    sigDownload = QtCore.Signal()
+    sigOpen = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(tuple)
     sigTransfer = QtCore.Signal()
 
 
@@ -378,15 +351,23 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.setHeaderHidden(True)
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Download', self)]
-        #QtGui.QAction('Open', self), QtGui.QAction('Preview', self), QtGui.QAction('Transfer', self)]
-        # standardActions[0].triggered.connect(self.sigOpen.emit)
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self)]
+        #, QtGui.QAction('Preview', self), QtGui.QAction('Transfer', self)]
+        standardActions[0].triggered.connect(lambda: self.onDoubleClick(self.currentItem()))
         # standardActions[1].triggered.connect(self.previewDataset)
-        standardActions[0].triggered.connect(self.sigDownload.emit)
+        standardActions[1].triggered.connect(self.downloadFile)
         # standardActions[3].triggered.connect(self.sigTransfer.emit)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuActionClicked)
+        self.itemDoubleClicked.connect(self.onDoubleClick)
+
+    def onDoubleClick(self, item):
+        if item.childCount() != 0:
+            return
+        file_name = item.text(0)
+        save_path = os.path.join(tempfile.gettempdir(), file_name)
+        self.downloadFile(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
 
     def getDatasets(self, query):
         runnable = threads.RunnableMethod(self.createDatasetDictionary, self.client.search, query, **self.search_params)
@@ -440,18 +421,20 @@ class SpotDatasetView(QtGui.QTreeWidget):
             child.setText(0, unicode(value))
             item.addChild(child)
 
-    def getDatasetAndStage(self, file_name):
-        dataset, stage, dset_item = None, None, None
-        parent_items = self.findItems('*', QtCore.Qt.MatchWildcard)
-        for item in parent_items:
-            for child_item in [item.child(i) for i in range(item.childCount())]:
-                for child_child_item in [child_item.child(j) for j in range(child_item.childCount())]:
-                    if child_child_item.text(0) == file_name:
-                        dset_item = child_child_item
-
-        if dset_item is not None:
-            stage = str(dset_item.parent().text(0))
-            dataset = str(dset_item.parent().parent().text(0))
+    def getDatasetAndStage(self):
+        stage = self.currentItem().parent().text(0)
+        dataset = self.currentItem().parent().parent().text(0)
+        # dataset, stage, dset_item = None, None, None
+        # parent_items = self.findItems('*', QtCore.Qt.MatchWildcard)
+        # for item in parent_items:
+        #     for child_item in [item.child(i) for i in range(item.childCount())]:
+        #         for child_child_item in [child_item.child(j) for j in range(child_item.childCount())]:
+        #             if child_child_item.text(0) == file_name:
+        #                 dset_item = child_child_item
+        #
+        # if dset_item is not None:
+        #     stage = str(dset_item.parent().text(0))
+        #     dataset = str(dset_item.parent().parent().text(0))
 
         return stage, dataset
 
@@ -463,29 +446,23 @@ class SpotDatasetView(QtGui.QTreeWidget):
                 fname = item.text(0)
         return fname
 
-    def downloadFile(self):
-        fname = self.getSelectedFile()
-        if fname is None:
-            QtGui.QMessageBox.information(self, 'No file selected', 'Please select a file to download')
-            return
-        fileDialog = QtGui.QFileDialog(self, 'Save as', os.path.expanduser('~'))
-        fileDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
-        fileDialog.selectFile(fname)
-        if fileDialog.exec_():
-            outpath = str(fileDialog.selectedFiles()[0])
-            fpath, fname = os.path.split(outpath)
-            desc = '{} from SPOT.'.format(fname)
-            stage = self.currentItem().parent().text(0)
-            dataset = self.currentItem().parent().parent().text(0)
-            #stage, dataset = self.getDatasetAndStage(fname)
+    def downloadFile(self, save_path=None, fslot=None):
+        dset = self.getSelectedFile()
+
+        if dset is not None:
+            stage, dataset = self.getDatasetAndStage()
+            desc = '{} from SPOT.'.format(dset)
             method = self.client.download_dataset_generator
-            args = [dataset, stage, fpath]
-            kwargs = {'fname': fname}
-            return desc, method, args, kwargs
+            args = [dataset, stage]
+            kwargs = {}
+            if save_path is not None:
+                kwargs['save_path'] = save_path
+
+            self.sigDownload.emit((desc, method, args, kwargs, fslot))
 
     def transferFile(self):
         fname = self.getSelectedFile()
-        stage, dataset = self.getDatasetAndStage(fname)
+        stage, dataset = self.getDatasetAndStage()
         system = self.client.system
         path = self.client.scratch_dir
         desc = '{0} transfer from spot to {1}.'.format(fname, system)
@@ -494,9 +471,6 @@ class SpotDatasetView(QtGui.QTreeWidget):
         kwargs = {}
 
         return desc, method, args, kwargs
-
-    def uploadFile(self):
-        return None
 
     def deleteFile(self):
         return None
@@ -621,11 +595,11 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     Class for multiple location file explorer, capability to add GlobusFileView Tabs
     """
 
-    sigOpenDataset = QtCore.Signal(str, str)
     sigLoginSuccess = QtCore.Signal(bool)
     sigLoginRequest = QtCore.Signal()
-    sigProgJob = QtCore.Signal(str, object, list, dict)
-    sigPulsJob = QtCore.Signal(str, object, list, dict)
+    sigProgJob = QtCore.Signal(str, object, list, dict, object)
+    sigPulsJob = QtCore.Signal(str, object, list, dict, object)
+    sigOpenFiles = QtCore.Signal(list)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -635,13 +609,14 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         self.tab = TabBarPlus()
         self.setTabBar(self.tab)
-        self.tab.setDocumentMode(True)
+
+
         self.setTabsClosable(True)
 
         self.explorers['Local'] = FileExplorer(LocalFileView(self), self)
         self.addFileExplorer('Local', self.explorers['Local'])
-        self.explorers['Local'].file_view.sigOpen.connect(self.openDataset)
         self.explorers['Local'].file_view.sigDelete.connect(self.deleteFile)
+        self.explorers['Local'].file_view.sigOpen.connect(self.openFiles)
 
         self.jobtab = JobTable(self)
         # Do not understand why I need to add it and remove it so that its not added as a seperate widget
@@ -687,7 +662,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.sigLoginRequest.emit()
         client = xglobals.load_spot(self.addNERSCTab, system, closable)
         explorer = FileExplorer(NERSCFileView(client, system, self))
-        explorer.file_view.sigOpen.connect(self.openDataset)
+        explorer.file_view.sigOpen.connect(self.openFiles)
         explorer.file_view.sigDelete.connect(self.deleteFile)
         explorer.file_view.sigDownload.connect(self.downloadFile)
         explorer.file_view.sigTransfer.connect(self.transferFile)
@@ -701,7 +676,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.sigLoginRequest.emit()
         client = xglobals.load_spot(self.addSPOTTab, closable)
         explorer = SpotDatasetExplorer(client, self)
-        explorer.file_view.sigOpen.connect(self.openDataset)
+        explorer.file_view.sigOpen.connect(self.openFiles)
         explorer.file_view.sigDownload.connect(self.downloadFile)
         explorer.file_view.sigTransfer.connect(self.transferFile)
         self.addFileExplorer('SPOT', explorer, closable=closable)
@@ -741,16 +716,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def getPath(self, tab_name):
         return self.explorers[tab_name].path
 
-    def openDataset(self):
-        data_type, ok = QtGui.QInputDialog.getItem(self, 'Open Dataset', 'Data type:', ['raw', 'reconstruction'],
-                                                   editable=False)
-        if ok:
-            fileDialog = QtGui.QFileDialog(self, 'Select h5 file', os.path.expanduser('~'))
-            fileDialog.setNameFilters(['*.h5'])  # , '*.tiff', '*.tif'])
-            if fileDialog.exec_():
-                path = str(fileDialog.selectedFiles()[0])
-
-            self.sigOpenDataset.emit(path, data_type)
+    def openFiles(self, paths):
+        if len(paths) > 0:
+            print 'EMIT'
+            self.sigOpenFiles.emit(paths)
 
     def deleteFile(self):
         fname = self.currentWidget().file_view.getSelectedFile()
@@ -769,11 +738,19 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             self.sigProgJob.emit(desc, method, args, kwargs)
             self.addTab(self.jobtab, 'Jobs')
 
-    def downloadFile(self):
-        download = self.currentWidget().file_view.downloadFile()
+    def downloadFile(self, download):
         if download is not None:
-            desc, method, args, kwargs = download
-            self.sigProgJob.emit(desc, method, args, kwargs)
+            desc, method, args, kwargs, fslot = download
+            if 'save_path' not in kwargs:
+                fileDialog = QtGui.QFileDialog(self, 'Save as', os.path.expanduser('~'))
+                fileDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
+                fileDialog.selectFile(self.currentWidget().file_view.getSelectedFile())
+                if fileDialog.exec_():
+                    kwargs['save_path'] = str(fileDialog.selectedFiles()[0])
+                else:
+                    return
+
+            self.sigProgJob.emit(desc, method, args, kwargs, fslot)
             self.addTab(self.jobtab, 'Jobs')
 
     def transferFile(self):
@@ -817,9 +794,11 @@ class JobTable(QtGui.QTableWidget):
         return jobentry
 
     @QtCore.Slot(str, object, list, dict)
-    def addProgJob(self, job_desc, method, args, kwargs):
+    def addProgJob(self, job_desc, method, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc)
         runnable = threads.RunnableIterator(job_entry.progress, method, *args, **kwargs)
+        if finish_slot is not None:
+            runnable.emitter.sigFinished.connect(finish_slot)
         threads.queue.put(runnable)
         #jobentry.sigCancel.connect(lambda x: self.removeJob(x))
         #return jobentry
