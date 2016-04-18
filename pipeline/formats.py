@@ -67,7 +67,8 @@ class spoth5image(fabioimage):
     def nframes(self,n):
         pass
 
-    def getframe(self,frame):
+    def getframe(self,frame=None):
+        if frame is None: frame = 0
         with h5py.File(self.filename,'r') as h:
             dset=h[h.keys()[0]]
             ddet=dset[dset.keys()[0]]

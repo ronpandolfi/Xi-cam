@@ -202,7 +202,7 @@ class dimgViewer(QtGui.QWidget):
 
         # Cache radial integration
         if self.dimg is not None:
-            if self.dimg.data is not None:
+            if self.dimg.rawdata is not None:
                 self.redrawimage()
 
                 # self.q, self.radialprofile = self.dimg.radialintegrate
@@ -232,13 +232,13 @@ class dimgViewer(QtGui.QWidget):
 
         print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
-        Lmax = np.nanmax(self.dimg.data)
+        Lmax = np.nanmax(self.dimg.rawdata)
 
         if self.toolbar.actionLog_Intensity.isChecked():
             self.imgview.getHistogramWidget().item.setLevels(
-                np.log(max(np.nanmin(self.dimg.data * (self.dimg.data > 0)), 1)), np.log(Lmax))
+                np.log(max(np.nanmin(self.dimg.rawdata * (self.dimg.rawdata > 0)), 1)), np.log(Lmax))
         else:
-            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.data), 0), Lmax)
+            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.rawdata), 0), Lmax)
         print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
 
     def cacheLUT(self):
@@ -279,15 +279,7 @@ class dimgViewer(QtGui.QWidget):
                     x = mousePoint.x()
                     y = mousePoint.y()
 
-                    iscake = self.toolbar.actionCake.isChecked()
-                    isremesh = self.toolbar.actionRemeshing.isChecked()
-
-                    if iscake:
-                        data = self.dimg.cake
-                    elif isremesh:
-                        data = self.dimg.remesh
-                    else:
-                        data = self.dimg.data
+                    data = self.dimg.transformdata
 
                     # if iscake:
                     # q = pixel2cake(x, y, self.dimg)
@@ -400,9 +392,6 @@ class dimgViewer(QtGui.QWidget):
         if hasattr(self.plotwidget, 'qintegration'):
             self.plotwidget.qintegration.qLine.setVisible(True)
 
-    def redrawimageLowRes(self):
-        self.redrawimage(forcelow=True)
-
     def redrawimage(self, returnimg=False):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
@@ -418,14 +407,6 @@ class dimgViewer(QtGui.QWidget):
         ismaskshown = toolbar.actionShow_Mask.isChecked()
         iscake = toolbar.actionCake.isChecked()
         isremesh = toolbar.actionRemeshing.isChecked()
-        # img = self.dimg.data.copy()
-        # if forcelow:
-        # img = self.dimg.thumbnail.copy()
-        # scale = 10
-        # else:
-
-
-
 
         if isradialsymmetry:
             centerx = config.activeExperiment.center[0]
@@ -462,8 +443,6 @@ class dimgViewer(QtGui.QWidget):
             # imtest(symimg * padmask * (1 - marginmask))
             img = img * marginmask + symimg * padmask * (1 - marginmask)
 
-        mask = config.activeExperiment.mask
-
         if self.iscake:
             img = self.dimg.cake
             # print self.dimg.cakeqx
@@ -492,10 +471,10 @@ class dimgViewer(QtGui.QWidget):
         if returnimg:
             return img
         else:
-            self.imageitem.setImage(img,3)
+            self.imgview.setImage(img)
 
         if not iscake and not isremesh:
-            self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
+            self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
 
     def getcenter(self):
         if self.isremesh:
@@ -818,19 +797,15 @@ class dimgViewer(QtGui.QWidget):
         # if self.parent().findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
         #             tabtracker.replotassecondary()
 
-        if self.iscake:
-            data = self.dimg.cake
-        elif self.isremesh:
-            data = self.dimg.remesh
-        else:
-            data = self.dimg.data
+        data = self.dimg.transformdata
+
         ai = config.activeExperiment.getAI().getPyFAI()
         print 'centeroverride:', [c * config.activeExperiment.getvalue('Pixel Size X') for c in
                                   self.getcenter()[::-1]]
         print self.getcenter()
 
         xglobals.pool.apply_async(integration.radialintegratepyFAI,
-                                  args=((self.dimg.data if not self.isremesh else data),
+                                  args=((self.dimg.transformdata),
                                         (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
                                         [c * config.activeExperiment.getvalue('Pixel Size X') for c in
                                          self.getcenter()[::-1]]),
@@ -971,7 +946,7 @@ class dimgViewer(QtGui.QWidget):
         else:  # If the mask is completed
 
             # Get the region of the image that was selected; unforunately the region is trimmed
-            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.data), self.imageitem,
+            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.transformdata), self.imageitem,
                                                      returnMappedCoords=True)  # levels=(0, arr.max()
             # print maskedarea.shape
 
@@ -986,7 +961,7 @@ class dimgViewer(QtGui.QWidget):
             # Pad the mask so it has the same shape as the image
             maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
             maskedarea = np.pad(maskedarea, (
-                (0, self.dimg.data.shape[0] - maskedarea.shape[0]), (0, self.dimg.data.shape[1] - maskedarea.shape[1])),
+                (0, self.dimg.transformdata.shape[0] - maskedarea.shape[0]), (0, self.dimg.transformdata.shape[1] - maskedarea.shape[1])),
                                 mode='constant')
 
             # Add the masked area to the active mask
@@ -1426,7 +1401,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
             path = self.model.filePath(current)
             if os.path.isfile(path):
                 self.imgdata = loader.loadimage(path)
-                self.imageitem.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)),
+                self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)),3),
                                         autoLevels=True)
         except TypeError:
             self.imageitem.clear()

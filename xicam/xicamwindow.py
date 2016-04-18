@@ -92,6 +92,8 @@ class MyMainWindow():
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
 
+
+
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -100,9 +102,22 @@ class MyMainWindow():
         #self.calibrate()
         # self.updatepreprocessing()
         ##
+        testmenu = QtGui.QMenu('Testing')
+        single=QtGui.QAction('Single frame',testmenu)
+        single.triggered.connect(self.singletest)
+        stack=QtGui.QAction('Image stack',testmenu)
+        stack.triggered.connect(self.stacktest)
+        testmenu.addActions([single,stack])
+        self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
+
+    def singletest(self):
+        self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
+
+    def stacktest(self):
+        self.openfiles(['/tmp/20140905_191647_YL1031_.h5'])
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

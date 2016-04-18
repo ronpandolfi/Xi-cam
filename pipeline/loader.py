@@ -74,7 +74,7 @@ def loadimage(path):
                 return np.load( path)
             else:
                 # print 'Unhandled data type: ' + path
-                data = np.rot90(fabio.open(path).data,3)
+                data = fabio.open(path).data
                 return data
     except IOError:
         print('IO Error loading: ' + path)
@@ -870,6 +870,11 @@ class diffimage2(object):
 
         print 'Loading ' + '...'
 
+        self.logscale = True
+        self.remeshmode = False
+        self.cakemode = False
+
+        self._rawdata = None
         self._detector = detector
         self._params = None
         self._thumb = None
@@ -926,10 +931,10 @@ class diffimage2(object):
         print 'cache cleared'
 
     def cachedata(self):
-        if self._data is None:
+        if self._rawdata is None:
             if self.filepath is not None:
                 try:
-                    self._data = loadpath(self.filepath)
+                    self._rawdata = loadpath(self.filepath)
                 except IOError:
                     debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
@@ -939,24 +944,7 @@ class diffimage2(object):
         if self.experiment.mask is not None:
             return self.experiment.mask
         else:
-            return np.ones_like(self.data)
-
-    @property
-    def dataunrot(self):
-        self.cachedata()
-        return self._data
-
-    @property
-    def data(self):
-        self.cachedata()
-        data = self._data
-        if self._data is not None:
-            data = np.rot90(self._data, 3)
-        return data
-
-    @data.setter
-    def data(self, data):
-        self._data = data
+            return np.ones_like(self.rawdata)
 
     @property
     def params(self):
@@ -967,7 +955,7 @@ class diffimage2(object):
     @property
     def detector(self):
         if self._detector is None:
-            if self.data is not None:
+            if self.rawdata is not None:
                 name, detector = self.finddetector()
             else:
                 return None
@@ -993,19 +981,18 @@ class diffimage2(object):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
-                if detector.MAX_SHAPE == self.data.shape[::-1]:  #
+                if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                if self.data.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
+                if self.rawdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
                                              detector.BINNED_PIXEL_SIZE.keys()]:
                     detector = detector()
                     print 'Detector found with binning: ' + name
                     return name, detector
         return None, None
-        raise ValueError('Detector could not be identified!')
 
     @detector.setter
     def detector(self, value):
@@ -1046,28 +1033,21 @@ class diffimage2(object):
     def cachedetector(self):
         _=self.detector
 
-    @property
-    def cake(self):
-        try:
-            self.cachedetector()
-            if not self.iscached('cake'):
-                cake, x, y = integration.cake(self.data, self.experiment)
-                cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
-                cakemask = cakemask > 0
+    def cake(self,img,mask):
+        self.cachedetector()
+        if not self.iscached('cake'):
+            cake, x, y = integration.cake(img, self.experiment)
+            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment)
+            cakemask = cakemask > 0
 
-                print x, y
+            self.cache['cake'] = cake
+            self.cache['cakemask'] = cakemask
+            self.cache['cakeqx'] = x
+            self.cache['cakeqy'] = y
 
-                self.cache['cake'] = cake
-                self.cache['cakemask'] = cakemask
-                self.cache['cakeqx'] = x
-                self.cache['cakeqy'] = y
+        return self.cache['cake']
 
-            return self.cache['cake']
-        except AttributeError as ex:
-            print ex.message
-
-    @property
-    def remesh(self):
+    def remesh(self,img,mask):
         if not self.iscached('remesh'):
             print 'headers:', self.headers
             # read incident angle
@@ -1084,9 +1064,9 @@ class diffimage2(object):
             if alphai is None:
                 return self.data
 
-            remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
+            remeshdata, x, y = remesh.remesh(np.rot90(img, 1).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
-            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
@@ -1116,7 +1096,7 @@ class diffimage2(object):
     @debugtools.timeit
     def writenexus(self):
         nxpath = pathtools.path2nexus(self.filepath)
-        w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
+        w = writer.nexusmerger(img=self._rawdata, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
                                variation=self._variation)
         w.run()
 
@@ -1173,7 +1153,7 @@ class diffimage2(object):
 
     def view(self,t):
         if t is np.ndarray:
-            return self.data
+            return self.displaydata
 
 
     def __getattr__(self, name):
@@ -1183,6 +1163,8 @@ class diffimage2(object):
            raise AttributeError('diffimage has no attribute: ' + name)
 
 
+# each diffimage class should implement:
+# rawdata, transformdata, displaydata
 
 class singlefilediffimage2(diffimage2):
     ndim=2
@@ -1190,22 +1172,49 @@ class singlefilediffimage2(diffimage2):
         self.filepath = filepath
         super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
 
-        self._data = None
+
 
     def asarray(self):
-        return self.data
+        return self.displaydata
 
     @property
-    def data(self):
-        if self._data is None:
-            self._data = loadimage(self.filepath)
-        return self._data
+    def rawdata(self):
+        # 'Permanently' cached
+        if self._rawdata is None:
+            self._rawdata = np.rot90(loadimage(self.filepath),3)
+        return self._rawdata
+
+    @property
+    def transformdata(self):
+        # 'Temporary' cached
+        img = self._rawdata
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            if 'cake' not in self.cache:
+                img = self.cake(img)
+        elif self.remeshmode:
+            if 'remesh ' not in self.cache:
+                img = self.remesh(img)
+
+        return img
+
+    @property
+    def displaydata(self):
+        # Not cached
+        if self.logscale:
+            return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
+        return self.transformdata
+
 
     def implements(self, t):
         if t == 'MetaArray': return True
 
     def __getitem__(self, item):
-        return self.data[item]
+        return self.displaydata[item]
 
 class multifilediffimage2(diffimage2):
     ndim = 3
@@ -1222,10 +1231,37 @@ class multifilediffimage2(diffimage2):
         self.size = np.product(self.shape)
 
     @property
-    def data(self):
-        return self._getframe(self.currentframe)
+    def rawdata(self):
+        # 'Permanently' cached
+        if self._rawdata is None:
+            self._rawdata = self._getframe()
+        return self._rawdata
 
-    def _getframe(self,frame): # keeps 3 frames in cache at most
+    @property
+    def transformdata(self):
+        # 'Temporary' cached
+        if self.cakemode:
+            if 'cake' not in self.cache:
+                self.cake()
+            return self.cache['cake']
+
+        elif self.remeshmode:
+            if 'remesh' not in self.cache:
+                self.remesh()
+            return self.cache['remesh']
+
+        return self.rawdata
+
+    @property
+    def displaydata(self):
+        # Not cached
+        if self.logscale:
+            return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
+        return self.transformdata
+
+    def _getframe(self,frame=None): # keeps 3 frames in cache at most
+        if frame is None: frame=self.currentframe
+
         self.currentframe = frame
         if frame in self._framecache:
             return self._framecache[frame]
@@ -1247,21 +1283,50 @@ class stackdiffimage2(diffimage2):
         self._framecache=dict()
         self.currentframe=0
 
-        self.dtype = self.data.dtype
-        self.max = np.max(self.data)
-        self.min = np.min(self.data)
-        self.shape = self.data.shape[0],self.data.shape[1],len(self.fabimage)
+        raw = self.rawdata
+        self.dtype = raw.dtype
+        self.max = np.max(raw)
+        self.min = np.min(raw)
+        self.shape = len(self.fabimage),raw.shape[0],raw.shape[1]
         self.size = np.product(self.shape)
 
     @property
-    def data(self):
-        return self._getframe(self.currentframe)
+    def rawdata(self):
+        # 'Permanently' cached
+        if self._rawdata is None:
+            self._rawdata = self._getframe()
+        return self._rawdata
 
-    def _getframe(self,frame): # keeps 3 frames in cache at most
+    @property
+    def transformdata(self):
+        # 'Temporary' cached
+        if self.cakemode:
+            if 'cake' not in self.cache:
+                self.cake()
+            return self.cache['cake']
+
+        elif self.remeshmode:
+            if 'remesh ' not in self.cache:
+                self.remesh()
+            return self.cache['remesh']
+
+        return self.rawdata
+
+    @property
+    def displaydata(self):
+        # Not cached
+        if self.logscale:
+            return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
+        return self.transformdata
+
+    def _getframe(self,frame=None): # keeps 3 frames in cache at most
+        if frame is None: frame=self.currentframe
+        if type(frame) is list and type(frame[0]) is slice:
+            frame= frame[1].step
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
-            self._framecache[frame]=self.fabimage.getframe(frame)
+            if len(self._framecache)>2: del self._framecache[self._framecache.keys()[0]] #del the first cached item
+            self._framecache[frame]=np.rot90(self.fabimage.getframe(frame).data,3)
         return self._framecache[frame]
 
     def __getitem__(self, item):
