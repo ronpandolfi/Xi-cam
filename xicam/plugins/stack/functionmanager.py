@@ -1,9 +1,9 @@
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
-
+import ui
 import customwidgets
-
+import tomopy
 
 functions = []
 currentfunction = 0
@@ -21,12 +21,13 @@ def clearFeatures():
             feature.deleteLater()
             del feature
         functions = []
+        ui.showform(ui.blankform)
 
 
-def addFunction(function, subfunction):
+def addFunction(function, subfunction, package=tomopy):
     global functions, currentfunction
     currentfunction = len(functions)
-    functions.append(customwidgets.func(function, subfunction))
+    functions.append(customwidgets.func(function, subfunction, package))
     update()
 
 

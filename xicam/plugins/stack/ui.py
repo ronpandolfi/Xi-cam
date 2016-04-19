@@ -10,7 +10,7 @@ import functiondata
 import functionmanager
 
 particlemenu = None
-blankForm = None
+blankform = None
 leftwidget = None
 centerwidget = None
 rightwidget = None
@@ -30,7 +30,7 @@ class funcAction(QtGui.QAction):
         functionmanager.addFunction(self.func,self.subfunc)
 
 def load():
-    global leftwidget, centerwidget, rightwidget, bottomwidget, blankForm, toolbar, propertytable, paramformstack, functionslist
+    global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist
     # Load the gui from file
     toolbar = ttoolbar.tomotoolbar()
 
@@ -46,7 +46,7 @@ def load():
 
     addfunctionmenu = QtGui.QMenu()
     for func,subfuncs in functiondata.funcs.iteritems():
-        if len(subfuncs)>1:
+        if len(subfuncs)>1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             addfunctionmenu.addMenu(funcmenu)
             for subfunc in subfuncs:
@@ -97,14 +97,11 @@ def load():
     fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
     fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
 
-
-
     rightwidget = QtGui.QWidget()
     l = QtGui.QVBoxLayout()
     l.setContentsMargins(0, 0, 0, 0)
 
     paramtree = ParameterTree()
-    #configtree.setParameters(config.activeExperiment, showTop=False)
 
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
@@ -119,14 +116,14 @@ def load():
     l.addWidget(propertytable)
     rightwidget.setLayout(l)
 
-    blankForm = QtGui.QLabel('Select a function on the\nleft panel to edit...')
-    blankForm.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-    blankForm.setAlignment(QtCore.Qt.AlignCenter)
-    showForm(blankForm)
+    blankform = QtGui.QLabel('Select a function on the\nleft panel to edit...')
+    blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
+    blankform.setAlignment(QtCore.Qt.AlignCenter)
+    showform(blankform)
 
     return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar
 
 
-def showForm(widget):
+def showform(widget):
     paramformstack.addWidget(widget)
     paramformstack.setCurrentWidget(widget)

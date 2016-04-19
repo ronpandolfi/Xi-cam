@@ -1,24 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'vector.ui'
-#
-# Created: Sat Oct 17 11:23:24 2015
-# by: PyQt4 UI code generator 4.11.3
-#
-# WARNING! All changes made in this file will be lost!
-
-import json
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
-import pyqtgraph as pg
+from functools import partial
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import numpy as np
-from pyFAI import detectors
 import functionmanager
 from collectionsmod import UnsortableOrderedDict
 import ui
 import functiondata
+import introspect
 
 
 try:
@@ -53,18 +45,10 @@ class ROlineEdit(QtGui.QLineEdit):
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)
-        self.setReadOnly(False)
+        self.setReadOnly(True)
         self.setFrame(True)
         self.setFocus()
         self.selectAll()
-
-
-# Form implementation generated from reading ui file 'layer.ui'
-#
-# Created: Thu Oct 22 09:52:22 2015
-# by: pyside-uic 0.2.15 running on PySide 1.2.2
-#
-# WARNING! All changes made in this file will be lost!
 
 
 class featureWidget(QtGui.QWidget):
@@ -155,7 +139,12 @@ class featureWidget(QtGui.QWidget):
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
 
-
+    @property
+    def form(self):
+        if self._form is None:
+            self._form = loadform(self._formpath)
+            self.wireup()
+        return self._form
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
@@ -164,31 +153,22 @@ class featureWidget(QtGui.QWidget):
         if value is QtGui.QMessageBox.Yes:
             functionmanager.functions = [feature for feature in functionmanager.functions if feature is not self]
             self.deleteLater()
-            ui.showForm(ui.blankForm)
+            ui.showform(ui.blankform)
 
     def mousePressEvent(self, *args, **kwargs):
-        functionmanager.currentfunction = functionmanager.functions.index(self)
-        print functionmanager.currentfunction
         self.showSelf()
         self.hideothers()
         self.setFocus()
+        functionmanager.currentfunction = functionmanager.functions.index(self)
         super(featureWidget, self).mousePressEvent(*args, **kwargs)
 
     def showSelf(self):
-        ui.showForm(self.form)
-
+        ui.showform(self.form)
 
     def hideothers(self):
         for item in functionmanager.functions:
             if hasattr(item, 'frame_2') and item is not self:
                 item.frame_2.hide()
-
-    @property
-    def form(self):
-        if self._form is None:
-            self._form = loadform(self._formpath)
-            self.wireup()
-        return self._form
 
     def wireup(self):
         if hasattr(self.form, 'txtName'):
@@ -223,15 +203,25 @@ class form(QtGui.QWidget):
 
 
 class func(featureWidget):
-    def __init__(self, function, subfunction):
-        self._formpath = 'gui/guiLayer.ui'
+    def __init__(self, function, subfunction, package):
+        self.func_name = function
+        self.subfunc_name = subfunction
         self.name = function
+        self._formpath = 'gui/guiLayer.ui'
+        self._form = None
+        self._settable_kwargs = None
+        self._partial = None
+        self.__function = getattr(package, functiondata.names[self.subfunc_name])
+        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
+        self.setDefaults()
+
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
         super(func, self).__init__(self.name)
-        self.function = function
-        self.subfunction = subfunction
-        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunction], type='group')
+
+    def wireup(self):
+            for param in self.params.children():
+                param.sigValueChanged.connect(self.paramChanged)
 
     @property
     def form(self):
@@ -242,9 +232,28 @@ class func(featureWidget):
             self.wireup()
         return self._form
 
-    def wireup(self):
-        pass
+    @property
+    def settable_kwargs(self):
+        if self._settable_kwargs is None:
+            self._settable_kwargs = {}
+            for param in self.params.children():
+                self._settable_kwargs.update({param.name(): param.value()})
+        return self._settable_kwargs
 
+    def paramChanged(self, param):
+        self.settable_kwargs.update({param.name(): param.value()})
+
+    def setDefaults(self):
+        defaults = introspect.get_arg_defaults(self.__function)
+        for param in self.params.children():
+            if param.name() in defaults:
+                param.setDefault(defaults[param.name()])
+                param.setValue(defaults[param.name()])
+
+    @property
+    def partial(self):
+        self._partial = partial(self.__function, **self.settable_kwargs)
+        return self._partial
 
 
 def loadform(path):

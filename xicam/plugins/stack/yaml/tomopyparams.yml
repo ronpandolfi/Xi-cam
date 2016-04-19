@@ -141,7 +141,7 @@ Regular:
 Nearest Flats:
 - name: cutoff
   type: float
-Mask:
+Circular Mask:
 - default: 1.0
   name: ratio
   suffix: px/px
@@ -149,7 +149,7 @@ Mask:
 - default: 0
   name: val
   type: float
-Paganin:
+Phase Retrieval:
 - default: 0.0001
   name: pixel_size
   suffix: cm
