@@ -396,85 +396,29 @@ class dimgViewer(QtGui.QWidget):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
-        toolbar = self.toolbar
 
-        img = self.dimg
-        scale = 1
+        self.dimg.cakemode = self.iscake
+        self.dimg.remeshmode = self.isremesh
+        self.dimg.radialsymmetrymode = self.isradialsymmetry
+        self.dimg.mirrorsymmetrymode = self.ismirrorsymmetry
+        self.dimg.logscale = self.islogintensity
 
-        islogintensity = toolbar.actionLog_Intensity.isChecked()
-        isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
-        ismirrorsymmetry = toolbar.actionMirror_Symmetry.isChecked()
-        ismaskshown = toolbar.actionShow_Mask.isChecked()
-        iscake = toolbar.actionCake.isChecked()
-        isremesh = toolbar.actionRemeshing.isChecked()
 
-        if isradialsymmetry:
-            centerx = config.activeExperiment.center[0]
-            centery = config.activeExperiment.center[1]
-            symimg = np.rot90(img.copy(), 2)
-            # imtest(symimg)
-            xshift = -(img.shape[0] - 2 * centerx)
-            yshift = -(img.shape[1] - 2 * centery)
-            symimg = np.roll(symimg, int(xshift), axis=0)
-            symimg = np.roll(symimg, int(yshift), axis=1)
-            # imtest(symimg)
-            marginmask = config.activeExperiment.mask
-            # imtest(marginmask)
-
-            x, y = np.indices(img.shape)
-            padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-            # imtest(padmask)
-            # imtest(symimg * padmask * (1 - marginmask))
-            img = img * marginmask + symimg * padmask * (1 - marginmask)
-
-        elif ismirrorsymmetry:
-            centery = config.activeExperiment.getvalue('Center Y')
-            symimg = np.fliplr(img.copy())
-            # imtest(symimg)
-            yshift = -(img.shape[1] - 2 * centery)
-            symimg = np.roll(symimg, int(yshift), axis=1)
-            # imtest(symimg)
-            marginmask = 1 - config.activeExperiment.mask
-            # imtest(marginmask)
-
-            x, y = np.indices(img.shape)
-            padmask = ((yshift < y) & (y < (yshift + img.shape[1])))
-            # imtest(padmask)
-            # imtest(symimg * padmask * (1 - marginmask))
-            img = img * marginmask + symimg * padmask * (1 - marginmask)
-
-        if self.iscake:
-            img = self.dimg.cake
-            # print self.dimg.cakeqx
-            # print self.dimg.cakeqy
-
-        elif self.isremesh:
-            img = self.dimg.remesh
-            # print self.dimg.remeshqx
-            # print self.dimg.remeshqy
-
-        if self.iscake:
-            if self.centerplot is not None:
-                self.centerplot.clear()
-        else:
-            self.drawcenter()
 
         if self.ismaskshown:
             self.maskoverlay()
         else:
             self.maskimage.clear()
 
-        # When the log intensity button toggles, switch the log scaling on the image
-        # if islogintensity:
-        #     img = (np.log(img * (img > 0) + (img < 1)))
-
         if returnimg:
-            return img
+            return self.dimg
         else:
-            self.imgview.setImage(img)
+            self.imgview.setImage(self.dimg)
 
-        if not iscake and not isremesh:
-            self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
+        self.drawcenter()
+
+        # if not iscake and not isremesh:
+        #     self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
 
     def getcenter(self):
         if self.isremesh:
@@ -1048,7 +992,7 @@ class dimgViewer(QtGui.QWidget):
             lowerleft = [max(int(c), 0) for c in self.captureROI.pos()]
             topright = [max(int(s + p), 0) for s, p in zip(self.captureROI.size(), self.captureROI.pos())]
 
-            dataregion = self.dimg.data[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
+            dataregion = self.dimg.rawdata[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             maskregion = self.dimg.mask[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             guesspath = self.paths[0]
 

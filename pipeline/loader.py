@@ -859,6 +859,7 @@ class jpegimageset():
 
 
 class diffimage2(object):
+
     def __init__(self, detector=None, experiment=None):
 
         """
@@ -873,6 +874,8 @@ class diffimage2(object):
         self.logscale = True
         self.remeshmode = False
         self.cakemode = False
+        self.radialsymmetrymode = False
+        self.mirrorsymmetrymode = False
 
         self._rawdata = None
         self._detector = detector
@@ -1064,7 +1067,7 @@ class diffimage2(object):
             if alphai is None:
                 return self.data
 
-            remeshdata, x, y = remesh.remesh(np.rot90(img, 1).copy(), self.filepath,
+            remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
             remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
@@ -1155,6 +1158,46 @@ class diffimage2(object):
         if t is np.ndarray:
             return self.displaydata
 
+    def radialsymmetryfill(self,img):
+        centerx = config.activeExperiment.center[0]
+        centery = config.activeExperiment.center[1]
+        symimg = np.rot90(img.copy(), 2)
+
+        xshift = -(img.shape[0] - 2 * centerx)
+        yshift = -(img.shape[1] - 2 * centery)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        symimg = np.roll(symimg, int(yshift), axis=1)
+
+        marginmask = config.activeExperiment.mask
+
+
+        x, y = np.indices(img.shape)
+        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
+
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
+    def mirrorsymmetryfill(self,img):
+        centerx = config.activeExperiment.getvalue('Center X')
+        symimg = np.flipud(img.copy())
+        self.imtest(symimg)
+        xshift = -(img.shape[1] - 2 * centerx)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        self.imtest(symimg)
+        marginmask = config.activeExperiment.mask
+        self.imtest(marginmask)
+
+        x, y = np.indices(img.shape)
+        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
+        self.imtest(padmask)
+        self.imtest(symimg * padmask * (1 - marginmask))
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
+    def imtest(self,img):
+        from matplotlib import pylab as plt
+        plt.imshow(img)
+        plt.show()
 
     def __getattr__(self, name):
        if name in self.cache:
@@ -1173,7 +1216,6 @@ class singlefilediffimage2(diffimage2):
         super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
 
 
-
     def asarray(self):
         return self.displaydata
 
@@ -1186,7 +1228,7 @@ class singlefilediffimage2(diffimage2):
 
     @property
     def transformdata(self):
-        # 'Temporary' cached
+        # Not cached
         img = self._rawdata
         if self.radialsymmetrymode:
             img = self.radialsymmetryfill(img)
@@ -1194,11 +1236,10 @@ class singlefilediffimage2(diffimage2):
             img = self.mirrorsymmetryfill(img)
 
         if self.cakemode:
-            if 'cake' not in self.cache:
-                img = self.cake(img)
+            img = self.cake(img,self.mask)
         elif self.remeshmode:
-            if 'remesh ' not in self.cache:
-                img = self.remesh(img)
+            img = self.remesh(img,self.mask)
+
 
         return img
 
