@@ -43,21 +43,19 @@ class spoth5image(fabioimage):
         self.filename=f
         if frame is None:
             frame = 0
-        with h5py.File(f,'r') as h:
-            dset=h[h.keys()[0]]
-            ddet=dset[dset.keys()[0]]
-            frames = [key for key in ddet.keys() if '.edf' in key]
-            dfrm=ddet[frames[frame]]
-            self.data = dfrm[0]
 
-        return self
+        return self.getframe(frame)
+
 
     @property
     def nframes(self):
         with h5py.File(self.filename,'r') as h:
             dset=h[h.keys()[0]]
             ddet=dset[dset.keys()[0]]
-            frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+            if self.isburst:
+                frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+            else:
+                frames = 1
         return frames
 
     def __len__(self):
@@ -68,14 +66,45 @@ class spoth5image(fabioimage):
         pass
 
     def getframe(self,frame=None):
-        if frame is None: frame = 0
-        with h5py.File(self.filename,'r') as h:
+        if frame is None:
+            frame = 0
+        f = self.filename
+        with h5py.File(f,'r') as h:
             dset=h[h.keys()[0]]
             ddet=dset[dset.keys()[0]]
-            frames = [key for key in ddet.keys() if '.edf' in key]
-            dfrm=ddet[frames[frame]]
+            if self.isburst:
+                frames = [key for key in ddet.keys() if '.edf' in key]
+                dfrm=ddet[frames[frame]]
+            elif self.istiled:
+                high = ddet[u'high']
+                low  = ddet[u'low']
+                frames = [high[high.keys()[0]],low[low.keys()[0]]]
+                dfrm = frames[frame]
+            else:
+                dfrm = ddet
             self.data = dfrm[0]
         return self
+
+    @property
+    def isburst(self):
+        try:
+            with h5py.File(self.filename,'r') as h:
+                dset=h[h.keys()[0]]
+                ddet=dset[dset.keys()[0]]
+                return not (u'high' in ddet.keys() and u'low' in ddet.keys())
+        except AttributeError:
+            return False
+
+    @property
+    def istiled(self):
+        try:
+            with h5py.File(self.filename,'r') as h:
+                dset=h[h.keys()[0]]
+                ddet=dset[dset.keys()[0]]
+                return u'high' in ddet.keys() and u'low' in ddet.keys()
+        except AttributeError:
+            return False
+
 
 fabio.openimage.spoth5image = spoth5image
 fabioutils.FILETYPES['h5'] = ['spoth5']
