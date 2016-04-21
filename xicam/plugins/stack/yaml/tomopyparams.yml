@@ -1,101 +1,84 @@
 Median Filter:
-- default: 3
-  name: size
+- name: size
   type: int
-- default: 0
-  name: axis
+- name: axis
   type: int
+  limits: [0, 2]
 Polar Mean Filter:
-- default: 300
-  name: thresh
+- name: thresh
   type: float
-- default: 300
-  name: thresh_max
+- name: thresh_max
   type: float
-- default: -100
-  name: thresh_min
+- name: thresh_min
   type: float
-- default: 30
-  name: theta_min
+- name: theta_min
   suffix: deg
   type: int
-- default: 30
-  name: rwidth
+  limits: [0, 360]
+- name: rwidth
   suffix: px
   type: int
 Vo:
 - name: ind
   type: int
-- default: -40
-  name: smin
+- name: smin
   suffix: px
   type: int
-- default: 40
-  name: smax
+- name: smax
   suffix: px
   type: int
-- default: 10
-  name: srad
+- name: srad
   suffix: px
   type: float
-- default: 1
-  name: step
+- name: step
   type: float
-- default: 2.0
-  name: ratio
+- name: ratio
   type: float
-- default: 20
-  name: drop
+- name: drop
   type: int
 Downsample:
-- default: 2
-  name: level
+- name: level
   suffix: ^2
   type: int
+- name: axis
+  type: int
+  limits: [0, 2]
 Gaussian Filter:
-- default: 3
-  name: sigma
+- name: sigma
   type: float
-- default: 0
-  name: order
+- name: order
   type: int
 Background Intensity:
-- default: 1
-  name: air
+- name: air
   type: int
 Fourier-Wavelet:
 - name: level
   suffix: ^2
   type: int
-- default: db5
-  name: wname
+- name: wname
   type: list
   values:
   - haar
   - db5
   - sym5
-- default: 2.0
-  name: sigma
+- name: sigma
   type: float
-- default: true
-  name: pad
+- name: pad
   type: bool
 Pad:
-- default: 2
-  name: axis
+- name: axis
   type: int
+  limits: [0, 2]
 - name: npad
-  sufix: pixels
+  sufix: px
   type: int
-- default: edge
-  name: mode
+- name: mode
   type: list
   values:
   - constant
   - edge
 Phase Correlation:
-- default: 0.5
-  name: tol
+- name: tol
   suffix: px
   type: float
 Nelder-Mead:
@@ -104,36 +87,32 @@ Nelder-Mead:
 - name: init
   suffix: px
   type: float
-- default: 0.5
-  name: tol
+- name: tol
   suffix: px
   type: float
-- default: true
-  name: mask
+- name: mask
   type: bool
-- default: 1.0
-  name: ratio
+- name: ratio
   suffix: px/px
   type: float
 Sobel Filter:
-- default: 0
-  name: axis
+- name: axis
+  limits: [0, 2]
   type: int
 Titarenko:
-- default: 0
-  name: nblock
+- name: nblock
   type: int
-- default: 1.5
-  name: alpha
+- name: alpha
   type: float
 Upsample:
-- default: 2
-  name: level
+- name: level
   suffix: ^2
   type: int
+- name: axis
+  type: int
+  limits: [0, 2]
 Smoothing Filter:
-- default: 5
-  name: size
+- name: size
   type: int
 Regular:
 - name: cutoff
@@ -142,50 +121,51 @@ Nearest Flats:
 - name: cutoff
   type: float
 Circular Mask:
-- default: 1.0
-  name: ratio
+- name: ratio
   suffix: px/px
   type: float
-- default: 0
-  name: val
+- name: val
   type: float
 Phase Retrieval:
-- default: 0.0001
-  name: pixel_size
+- name: pixel_size
   suffix: cm
   type: float
-- default: 50
-  name: dist
+- name: dist
   suffix: cm
   type: float
-- default: 20
-  name: energy
+- name: energy
   suffix: keV
   type: float
-- default: 0.001
-  name: alpha
+- name: alpha
   type: float
-- default: true
-  name: pad
+- name: pad
   type: bool
 Remove Outliers:
 - name: dif
   type: float
-- default: 3
-  name: size
+- name: size
   type: int
-- default: 0
-  name: axis
+- name: axis
   type: int
+  limits: [0, 2]
 ART:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
 BART:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: num_block
     type: int
 FBP:
+  - name: center
+    type: float
+    suffix: px
   - children:
     - name: cutoff
       type: float
@@ -203,6 +183,9 @@ FBP:
     - parzen
     - butterworth
 Gridrec:
+  - name: center
+    type: float
+    suffix: px
   - children:
     - name: cutoff
       type: float
@@ -220,33 +203,54 @@ Gridrec:
     - parzen
     - butterworth
 MLEM:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
 OSEM:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: num_block
     type: int
 OSMPL Hybrid:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: num_block
     type: int
 OSMPL Quad:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: num_block
     type: int
 PML Hybrid:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: reg_par
     type: float
 PML Quad:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int
   - name: reg_par
     type: float
 SIRT:
+  - name: center
+    type: float
+    suffix: px
   - name: num_iter
     type: int

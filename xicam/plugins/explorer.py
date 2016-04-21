@@ -117,11 +117,6 @@ class LocalFileView(QtGui.QTreeView):
     def menuActionClicked(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
-    def addMenuAction(self, action_name, triggered_slot):
-        action = QtGui.QAction(action_name, self)
-        action.triggered.connect(triggered_slot)
-        self.menu.addAction(action)
-
 
 class FileExplorer(QtGui.QWidget):
     """
@@ -718,7 +713,6 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def openFiles(self, paths):
         if len(paths) > 0:
-            print 'EMIT'
             self.sigOpenFiles.emit(paths)
 
     def deleteFile(self):

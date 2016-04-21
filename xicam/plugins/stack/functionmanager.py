@@ -12,7 +12,10 @@ layout = None
 
 def clearFeatures():
     global functions
-    value = QtGui.QMessageBox.question(None, 'Delete all functions?',
+    if len(functions) == 0:
+        return
+
+    value = QtGui.QMessageBox.question(None, 'Delete functions',
                                        'Are you sure you want to clear ALL functions?',
                                        (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
 
@@ -26,6 +29,14 @@ def clearFeatures():
 
 def addFunction(function, subfunction, package=tomopy):
     global functions, currentfunction
+    if function in [func.func_name for func in functions]:
+        value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
+                                           '{} function already in pipeline.\n'
+                                           'Are you sure you need another one?'.format(function),
+                                           (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+        if value is QtGui.QMessageBox.No:
+            return
+
     currentfunction = len(functions)
     functions.append(customwidgets.func(function, subfunction, package))
     update()

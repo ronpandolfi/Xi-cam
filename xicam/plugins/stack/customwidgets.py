@@ -148,7 +148,7 @@ class featureWidget(QtGui.QWidget):
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
-                                           'Are you sure you want to delete this feature?',
+                                           'Are you sure you want to delete this function?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
             functionmanager.functions = [feature for feature in functionmanager.functions if feature is not self]
@@ -204,20 +204,34 @@ class form(QtGui.QWidget):
 
 class func(featureWidget):
     def __init__(self, function, subfunction, package):
-        self.func_name = function
-        self.subfunc_name = subfunction
         self.name = function
-        self._formpath = 'gui/guiLayer.ui'
-        self._form = None
-        self._settable_kwargs = None
-        self._partial = None
-        self.__function = getattr(package, functiondata.names[self.subfunc_name])
-        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
-        self.setDefaults()
-
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
         super(func, self).__init__(self.name)
+
+        self.func_name = function
+        self.subfunc_name = subfunction
+        self._formpath = 'gui/guiLayer.ui'
+        self._form = None
+        self._param_dict = None
+        self._partial = None
+        self.__function = getattr(package, functiondata.names[self.subfunc_name])
+        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
+
+        self.kwargs_complement = introspect.get_arg_defaults(self.__function)
+        for key in self.param_dict.keys():
+            if key in self.kwargs_complement:
+                del self.kwargs_complement[key]
+        self.args_complement = introspect.get_arg_names(self.__function)
+        s = set(self.param_dict.keys() + self.kwargs_complement.keys())
+        self.args_complement = [i for i in self.args_complement if i not in s]
+
+        self.setDefaults()
+
+        self.menu = QtGui.QMenu()
+        action = QtGui.QAction('Test Parameter Range', self)
+        action.triggered.connect(self.testParamRequested)
+        self.menu.addAction(action)
 
     def wireup(self):
             for param in self.params.children():
@@ -226,34 +240,66 @@ class func(featureWidget):
     @property
     def form(self):
         if self._form is None:
-            self.parameterTree = ParameterTree()
-            self.parameterTree.setParameters(self.params, showTop=True)
-            self._form = self.parameterTree
+            self._form = ParameterTree()
+            self._form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            self._form.customContextMenuRequested.connect(self.menuActionClicked)
+            self._form.setParameters(self.params, showTop=True)
             self.wireup()
         return self._form
 
     @property
-    def settable_kwargs(self):
-        if self._settable_kwargs is None:
-            self._settable_kwargs = {}
-            for param in self.params.children():
-                self._settable_kwargs.update({param.name(): param.value()})
-        return self._settable_kwargs
-
-    def paramChanged(self, param):
-        self.settable_kwargs.update({param.name(): param.value()})
-
-    def setDefaults(self):
-        defaults = introspect.get_arg_defaults(self.__function)
+    def param_dict(self):
+        if self._param_dict is None:
+            self._param_dict = {}
         for param in self.params.children():
-            if param.name() in defaults:
-                param.setDefault(defaults[param.name()])
-                param.setValue(defaults[param.name()])
+            self._param_dict.update({param.name(): param.value()})
+        return self._param_dict
 
     @property
     def partial(self):
-        self._partial = partial(self.__function, **self.settable_kwargs)
+        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        self._partial = partial(self.__function, **kwargs)
         return self._partial
+
+    @property
+    def func_signature(self):
+        signature = str(self.__function.__name__) + '('
+        for arg in self.args_complement:
+            signature += '{},'.format(arg)
+        for param, value in self.param_dict.iteritems():
+            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else '{0}=\'{1}\','.format(param, value)
+        for param, value in self.kwargs_complement.iteritems():
+            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else '{0}=\'{1}\','.format(param, value)
+        return signature[:-1] + ')'
+
+    def paramChanged(self, param):
+        self.param_dict.update({param.name(): param.value()})
+
+    def setDefaults(self): #TODO gridrec filter_pars are children of filter_name so are not captured in defaults
+        defaults = introspect.get_arg_defaults(self.__function)
+        for param in self.params.children():
+            if param.name() in defaults:
+                if isinstance(defaults[param.name()], unicode):
+                    defaults[param.name()] = str(defaults[param.name()])
+                param.setDefault(defaults[param.name()])
+                param.setValue(defaults[param.name()])
+
+    def run(self, **args):
+        for arg in args.keys():
+            if arg not in self.args_complement:
+                raise ValueError('{} is not an argument to {}'.format(arg, self.__function.__name__))
+        if len(args) != len(self.args_complement):
+            raise ValueError('{} requires {} more arguments, {} given'.format(self.__function.__name__,
+                                                                              len(self.args_complement), len(args)))
+        return self.partial(**args)
+
+    def menuActionClicked(self, pos):
+        print self.func_signature
+        if self.form.currentItem().parent():
+            self.menu.exec_(self.form.mapToGlobal(pos))
+
+    def testParamRequested(self):
+        print self.form.currentItem()
 
 
 def loadform(path):
@@ -272,49 +318,9 @@ class hideableGroupParameterItem(pTypes.GroupParameterItem):
             self.setHidden(not opts['visible'])
 
 
-class StepParameter(pTypes.GroupParameter):
-    itemClass = hideableGroupParameterItem
+class TestRangeDialog(QtGui.QDialog):
 
-    def __init__(self, **opts):
-        opts['type'] = 'bool'
-        opts['value'] = True
-        pTypes.GroupParameter.__init__(self, **opts)
-
-        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
-        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
-        self.Step = pTypes.SimpleParameter(name='Step', type='float', value=0)
-
-        self.addChildren([self.Min, self.Max, self.Step])
-
-    def toDict(self):
-        d = dict()
-        d['min'] = self.Min.value()
-        d['max'] = self.Max.value()
-        d['step'] = self.Step.value()
-
-        return d
-
-
-class MinMaxParameter(pTypes.GroupParameter):
-    itemClass = hideableGroupParameterItem
-
-    def __init__(self, **opts):
-        opts['type'] = 'bool'
-        opts['value'] = True
-        pTypes.GroupParameter.__init__(self, **opts)
-
-        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
-        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
-
-        self.addChildren([self.Min, self.Max])
-
-    def value(self):
-        return [self.Min.value(), self.Max.value()]
-
-
-    def toDict(self):
-        d = UnsortableOrderedDict()
-        d['min'] = self.Min.value()
-        d['max'] = self.Max.value()
-
-        return d
+    def __init__(self, dtype, range=None, values=None, **opts):
+        super(TestRangeDialog, self).__init__(**opts)
+        l = QtGui.QHBoxLayout(self)
+        self.button_box
