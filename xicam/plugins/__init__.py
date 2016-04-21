@@ -10,10 +10,10 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, xas, ipythonconsole, spoth5file, hipgisaxs, batch, viewer3D
+    import MOTD, viewer, timeline, library, fluctuationscattering, xas, ipythonconsole, spoth5file, hipgisaxs, batch, viewer3D, tomography
 
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, xas, viewer3D, spoth5file, hipgisaxs, batch]
+    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, xas, viewer3D, spoth5file, hipgisaxs, batch, tomography]
 
     for module in modules:
         link = pluginlink(module, placeholders)
