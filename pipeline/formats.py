@@ -1,4 +1,6 @@
 import fabio, pyFAI
+import h5py
+import numpy as np
 from fabio.fabioimage import fabioimage
 from fabio import fabioutils
 from pyFAI import detectors
@@ -35,3 +37,94 @@ fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
 from fabio import mar345image
 
+
+class bl832h5image(fabioimage):
+
+    def __init__(self, data=None , header=None):
+        super(bl832h5image, self).__init__(data=data, header=header)
+        self._h5 = None
+        self._dgroup = None
+        self.frames = None
+        self.sinogram = None
+
+    # Context manager for "with" statement compatibility
+    def __enter__(self, *arg, **kwarg):
+        return self
+
+    def __exit__(self, *arg, **kwarg):
+        self.close()
+
+    def _readheader(self,f):
+        if self._h5 is not None:
+            self.header=dict(self._h5.attrs)
+            self.header.update(**self._dgroup.attrs)
+
+    def read(self, f, frame=None):
+        self.filename = f
+        if frame is None:
+            frame = 0
+        if self._h5 is None:
+            self._h5 = h5py.File(self.filename, 'r')
+            self._dgroup = self._find_dataset_group(self._h5)
+            self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+        self.readheader(f)
+        dfrm = self._dgroup[self.frames[frame]]
+        self.data = dfrm[0]
+        return self
+
+    @property
+    def nframes(self):
+        return sum(map(lambda key: 'bak' not in key and 'drk' not in key, self._dgroup.keys()))
+
+    @nframes.setter
+    def nframes(self, n):
+        pass
+
+    def getsinogram(self, idx=None):
+        if idx is None: idx = self.data.shape[0]//2
+        self.sinogram = np.vstack([frame[0, idx] for frame in map(lambda x: self._dgroup[self.frames[x]], range(self.nframes))])
+        return self
+
+    def __len__(self):
+        return self.nframes
+
+    def getframe(self, frame=0):
+        self.data = self._dgroup[self.frames[frame]][0]
+        return self
+
+    def next(self):
+        pass
+
+    def previous(self):
+        pass
+
+    def close(self):
+        self._h5.close()
+
+    def _find_dataset_group(self, h5object):
+        keys = h5object.keys()
+        if len(keys) == 1:
+            if isinstance(h5object[keys[0]], h5py.Group):
+                group_keys = h5object[keys[0]].keys()
+                if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
+                    return h5object[keys[0]]
+                else:
+                    return self._find_dataset_group(h5object[keys[0]])
+            else:
+                raise Exception('Unable to find dataset group')
+        else:
+            raise Exception('Unable to find dataset group')
+
+
+
+fabio.openimage.bl832h5 = bl832h5image
+fabioutils.FILETYPES['h5'] = ['bl832h5']
+fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
+
+if __name__ == '__main__':
+    from matplotlib.pyplot import imshow, show
+    data = fabio.open('/home/lbluque/Desktop/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    data.getsinogram(500)
+    print data.sinogram.shape
+    imshow(data.sinogram, cmap='gray')
+    show()

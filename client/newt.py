@@ -20,7 +20,8 @@ class NewtClient(User):
         self.home_dir = None
 
     def __del__(self):
-        self.logout()
+        if self.logged_in:
+            self.logout()
         super(NewtClient, self).__del__()
 
     def login(self, username, password):

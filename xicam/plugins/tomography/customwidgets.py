@@ -96,21 +96,6 @@ class featureWidget(QtGui.QWidget):
         self.line.setFrameShadow(QtGui.QFrame.Sunken)
         self.line.setObjectName("line")
         self.horizontalLayout_2.addWidget(self.line)
-        # self.pushButton_2 = QtGui.QPushButton(self.frame)
-        # sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(0)
-        # sizePolicy.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
-        # self.pushButton_2.setSizePolicy(sizePolicy)
-        # self.pushButton_2.setStyleSheet("margin:0 0 0 0;")
-        # self.pushButton_2.setFlat(True)
-        # self.pushButton_2.setObjectName("pushButton_2")
-        # self.horizontalLayout_2.addWidget(self.pushButton_2)
-        # self.line_2 = QtGui.QFrame(self.frame)
-        # self.line_2.setFrameShape(QtGui.QFrame.VLine)
-        # self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
-        # self.line_2.setObjectName("line_2")
-        # self.horizontalLayout_2.addWidget(self.line_2)
         self.txtName = ROlineEdit(self.frame)
         self.txtName.setObjectName("txtName")
         self.horizontalLayout_2.addWidget(self.txtName)
@@ -133,8 +118,6 @@ class featureWidget(QtGui.QWidget):
         self.verticalLayout.addWidget(self.frame)
 
         self.txtName.mousePressEvent = self.mousePressEvent
-
-        # self.pushButton_2.setText("O")
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
@@ -219,6 +202,8 @@ class func(featureWidget):
         self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
 
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
+        if function == 'Reconstruction':
+            self.kwargs_complement['algorithm'] = subfunction.lower()
         for key in self.param_dict.keys():
             if key in self.kwargs_complement:
                 del self.kwargs_complement[key]

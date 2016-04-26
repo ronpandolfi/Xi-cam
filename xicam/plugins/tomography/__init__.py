@@ -71,15 +71,14 @@ class plugin(base.plugin):
     def dragEnterEvent(self, e):
         print(e)
         e.accept()
-        # if e.mimeData().hasFormat('text/plain'):
-        # e.accept()
-        # else:
-        #     e.accept()
 
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
-        self.centerwidget.currentWidget().load()
+        try:
+            self.centerwidget.currentWidget().load()
+        except AttributeError:
+            pass
         self.imagePropModel.widgetchanged()
 
     def tabCloseRequested(self, index):

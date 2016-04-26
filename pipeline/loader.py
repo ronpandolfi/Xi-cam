@@ -6,6 +6,7 @@ import pyfits
 import os
 import numpy as np
 #from nexpy.api import nexus as nx
+from copy import copy
 import detectors
 import glob
 import re
@@ -73,7 +74,6 @@ def loadimage(path):
             elif ext == '.npy':
                 return np.load( path)
             else:
-                # print 'Unhandled data type: ' + path
                 data = fabio.open(path).data
                 return data
     except IOError:
@@ -869,3 +869,88 @@ class jpegimageset():
             return self.jpegs[item]
         else:
             return np.array([self.jpegs[i] for i in item])
+
+
+class StackImage(object):
+    ndim = 3
+    def __init__(self, filepath=None, data=None):
+        super(StackImage, self).__init__()
+        self._rawdata = None
+        self.filepath = filepath
+
+        if filepath is not None:
+            self.fabimage = fabio.open(filepath)
+        elif data is not None:
+            self.fabimage = data
+        else:
+            if filepath is None and data is None:
+                raise ValueError('Either data or path to file must be provided')
+
+        self._framecache = dict()
+        self.currentframe = 0
+
+        raw = self.rawdata
+        self.dtype = raw.dtype
+        self.max = np.max(raw)
+        self.min = np.min(raw)
+        self.shape = len(self.fabimage),raw.shape[0],raw.shape[1]
+        self.size = np.product(self.shape)
+
+    @property
+    def rawdata(self):
+        # 'Permanently' cached
+        if self._rawdata is None:
+            self._rawdata = self._getframe()
+        return self._rawdata
+
+    def _getframe(self, frame=None): # keeps 3 frames in cache at most
+        if frame is None: frame=self.currentframe
+        if type(frame) is list and type(frame[0]) is slice:
+            frame= frame[1].step
+        self.currentframe = frame
+        if frame not in self._framecache:
+            if len(self._framecache) > 2: del self._framecache[self._framecache.keys()[0]] #del the first cached item
+            self._framecache[frame]=np.rot90(self.fabimage.getframe(frame).data, 3)
+        return self._framecache[frame]
+
+    def invalidatecache(self):
+        self.cache = dict()
+        print 'cache cleared'
+
+    def __getitem__(self, item):
+        return self._getframe(item)
+
+    def __del__(self):
+        try:
+            self.fabimage.close()
+        except ValueError:
+            pass
+
+
+class SinogramStack(StackImage):
+
+    def __new__(cls):
+        print 'NEW'
+        cls.invalidatecache()
+
+    @classmethod
+    def cast(cls, obj):
+        new_obj = copy(obj)
+        new_obj.__class__ = cls
+        new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
+        return new_obj
+
+    def _getframe(self, frame=None):
+        if frame is None: frame = self.currentframe
+        if type(frame) is list and type(frame[0]) is slice:
+            frame = frame[1].step
+        self.currentframe = frame
+        if frame not in self._framecache:
+            if len(self._framecache) > 10: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            self._framecache[frame] = np.rot90(self.fabimage.getsinogram(frame).sinogram, 3)
+        return self._framecache[frame]
+
+
+def loadstackimage(src):
+    return StackImage(src)
+

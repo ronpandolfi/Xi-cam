@@ -54,12 +54,11 @@ import os
 
 class tomoWidget(QtGui.QWidget):
 
-    def __init__(self,paths=None,data = None, *args,**kwargs):
+    def __init__(self, paths=None, data=None, *args,**kwargs):
         super(tomoWidget, self).__init__()
 
         self.paths = paths
         self.data = data
-
         self.viewstack = QtGui.QStackedWidget()
 
         self.viewmode = QtGui.QTabBar()
@@ -70,10 +69,10 @@ class tomoWidget(QtGui.QWidget):
         self.viewmode.addTab('Reconstruction')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
-        self.projectionViewer = projectionViewer(paths=paths, data=data)
+        self.projectionViewer = StackViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.projectionViewer)
 
-        self.sinogramViewer = sinogramViewer(paths=paths, data=data)
+        self.sinogramViewer = StackViewer(data=self.projectionViewer.data, sinogram=True)
         self.viewstack.addWidget(self.sinogramViewer)
 
         self.previewViewer = previewViewer(paths=paths, data=data)
@@ -82,8 +81,8 @@ class tomoWidget(QtGui.QWidget):
         self.processViewer = processViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.processViewer)
 
-        self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
-        self.viewstack.addWidget(self.reconstructionViewer)
+        # self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
+        # self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0,0,0,0)
@@ -97,42 +96,28 @@ class tomoWidget(QtGui.QWidget):
         self.viewstack.setCurrentIndex(index)
 
 
+class StackViewer(pg.ImageView):
+    def __init__(self, paths=None, data=None, sinogram=False, *args, **kwargs):
+        super(StackViewer, self).__init__()
 
-class projectionViewer(pg.ImageView):
-    xy=0
-    yz=1
-    xz=2
-
-    def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(projectionViewer, self).__init__()
+        if paths is None and data is None:
+            raise ValueError('Either data or path to file must be provided')
 
         if data is not None:
-            self.data=data
-
+            self.data = data
         elif paths is not None and len(paths):
-            self.data = loader.loadimage(paths)
+            self.data = loader.loadstackimage(paths)
 
-        self.data = np.swapaxes(self.data,1,2) # Not sure why this is necessary
+        if sinogram:
+            self.data = loader.SinogramStack.cast(self.data)
 
-        self.setImage(self.data)#, axes={'t':0, 'x':2, 'y':1, 'c':3})
-
+        self.setImage(self.data) #, axes={'t':0, 'x':2, 'y':1, 'c':3})
+        self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
         self.autoLevels()
-        self.getView().invertY(True)
+        self.getView().invertY(False)
 
-    def setDisplayAxes(self,axes):
-        if axes==self.yz:
-            self.setImage(self.data)#, axes={'t':0, 'x':2, 'y':1, 'c':3})
-        elif axes==self.xz:
-            self.setImage(np.swapaxes(self.data,0,2)) #, axes={'t':2, 'x':0, 'y':1, 'c':3})
-
-
-class sinogramViewer(projectionViewer):
-
-    def __init__(self,*args,**kwargs):
-        super(sinogramViewer, self).__init__(*args, **kwargs)
-        self.setDisplayAxes(self.xz)
-
-        self.timeLine.setValue(self.tVals[len(self.tVals)//2])
+        if sinogram: self.setCurrentIndex(self.data.shape[0]//2)
+        print self.data.shape
 
 
 class volumeViewer(QtGui.QWidget):
