@@ -142,8 +142,8 @@ class plugin(base.plugin):
         self.centerwidget.widget(index).deleteLater()
 
     def getCurrentTab(self):
-        if self.centerwidget.currentWidget() is None:
-            return None
+        if self.centerwidget.currentWidget() is None: return None
+        if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
     def calibrate(self):
@@ -215,10 +215,10 @@ class plugin(base.plugin):
         return self.getCurrentTab()
 
     def replotcurrent(self):
-        self.getCurrentTab().replot()
+        if self.getCurrentTab(): self.getCurrentTab().replot()
 
     def invalidatecache(self):
-        self.getCurrentTab().dimg.invalidatecache()
+        if self.getCurrentTab(): self.getCurrentTab().dimg.invalidatecache()
 
     def togglespacegroup(self):
         if self.toolbar.actionSpaceGroup.isChecked():

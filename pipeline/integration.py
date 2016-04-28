@@ -89,10 +89,10 @@ def pixel_2Dintegrate(dimg, mask=None):
 
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(dimg.data)
+        mask = np.zeros_like(dimg.rawdata)
 
     # mask data
-    data = dimg.data * (1 - mask)
+    data = dimg.transformdata * (1 - mask)
 
     # calculate data radial profile
     x, y = np.indices(data.shape)

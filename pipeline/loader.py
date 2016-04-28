@@ -1105,7 +1105,7 @@ class diffimage2(object):
 
     def findcenter(self):
         # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.data)
+        [x, y] = center_approx.center_approx(self.rawdata)
 
         # Set the center in the experiment
         self.experiment.center = (x, y)

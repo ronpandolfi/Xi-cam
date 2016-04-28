@@ -72,8 +72,8 @@ EXT = Extension(name='pipeline.cWarpImage',
 
 setup(
     app=APP,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
+    #options={'py2app': OPTIONS},
+    #setup_requires=['py2app'],
     include_dirs=[np.get_include()],
     ext_modules=[EXT],
 

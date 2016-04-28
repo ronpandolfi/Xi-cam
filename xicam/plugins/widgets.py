@@ -474,7 +474,7 @@ class dimgViewer(QtGui.QWidget):
         # if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
         region = ROI.LineROI(
             self.getcenter(),
-            [self.getcenter()[0], -self.dimg.data.shape[0]], 5, removable=True)
+            [self.getcenter()[0], -self.dimg.transformdata.shape[0]], 5, removable=True)
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
@@ -495,7 +495,7 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in verticalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.data.shape[1]],
+                                      bounds=[0, self.dimg.transformdata.shape[1]],
                                       values=[self.getcenter()[0] - 10,
                                               10 + self.getcenter()[0]])
         for line in region.lines:
@@ -520,7 +520,7 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in horizontalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.data.shape[0]],
+                                      bounds=[0, self.dimg.transformdata.shape[0]],
                                       values=[10 - self.getcenter()[1],
                                               10 + self.getcenter()[1]])
         for line in region.lines:
@@ -576,7 +576,7 @@ class dimgViewer(QtGui.QWidget):
 
     @debugtools.timeit
     def calibrate(self):
-        if self.dimg.data is None:
+        if self.dimg.transformdata is None:
             return
 
         self.sigPlotQIntegration.disconnect(self.plotqintegration)
@@ -642,17 +642,9 @@ class dimgViewer(QtGui.QWidget):
 
         cut = None
 
-        # if self.toolbar.actionMultiPlot.isChecked():
-        # for tab in self.parent().centerwidget.findChildren(OOMTabItem):
-        # if self.parent().centerwidget.currentWidget() is not tab:
-        #             tab.replotassecondary()
 
-        if self.iscake:
-            data = self.dimg.cake
-        elif self.isremesh:
-            data = self.dimg.remesh
-        else:
-            data = self.dimg.data
+
+        data = self.dimg.transformdata
 
         ai = config.activeExperiment.getAI().getPyFAI()
         xglobals.pool.apply_async(integration.chiintegratepyFAI,
@@ -661,7 +653,7 @@ class dimgViewer(QtGui.QWidget):
         # pipeline.integration.chiintegratepyFAI(self.dimg.data, self.dimg.mask, ai, precaked=self.iscake)
 
         for roi in self.viewbox.addedItems:
-            try:
+            # try:
                 if hasattr(roi, 'isdeleting'):
                     if not roi.isdeleting:
                         print type(roi)
@@ -670,38 +662,6 @@ class dimgViewer(QtGui.QWidget):
                             cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
                             print 'Cut:', cut.shape
 
-                        # elif type(roi) is pg.LineSegmentROI:
-                        #
-                        #
-                        # cut = self.region.getArrayRegion(data, self.imageitem)
-                        #
-                        #     x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
-                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
-                        #                     cut.__len__())
-                        #     y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
-                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
-                        #                     cut.__len__())
-                        #
-                        #     q = pixel2q(x, y, self.dimg.experiment)
-                        #     qmiddle = q.argmin()
-                        #     leftq = -q[0:qmiddle]
-                        #     rightq = q[qmiddle:]
-                        #
-                        #     if leftq.__len__() > 1: self.parentwindow.qintegration.plot(leftq, cut[:qmiddle])
-                        #     if rightq.__len__() > 1: self.parentwindow.qintegration.plot(rightq, cut[qmiddle:])
-
-                        # elif type(roi) is ROI.LinearRegionItem:
-                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
-                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
-                        #
-                        #     else:
-                        #         print debugtools.frustration()
 
                         if cut is not None:
                             if self.iscake:
@@ -718,7 +678,7 @@ class dimgViewer(QtGui.QWidget):
 
                                 ai = config.activeExperiment.getAI().getPyFAI()
                                 self.pool.apply_async(integration.chiintegratepyFAI,
-                                                      args=(self.dimg.data, self.dimg.mask, ai, self.iscake, cut,
+                                                      args=(self.dimg.transformdata, self.dimg.mask, ai, self.iscake, cut,
                                                             [0, 255, 255]),
                                                       callback=self.chiintegrationrelay)
 
@@ -726,20 +686,12 @@ class dimgViewer(QtGui.QWidget):
 
                     else:
                         self.viewbox.removeItem(roi)
-            except Exception as ex:
-                print 'Warning: error displaying ROI integration.'
-                print ex.message
 
     def replotq(self):
         if not config.activeExperiment.iscalibrated:
             return None
 
         cut = None
-
-        # if self.toolbar.actionMultiPlot.isChecked():
-        # for tabtracker in self.parent().findChildren(OOMTabItem):
-        # if self.parent().findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
-        #             tabtracker.replotassecondary()
 
         data = self.dimg.transformdata
 
@@ -756,7 +708,7 @@ class dimgViewer(QtGui.QWidget):
                                   callback=self.qintegrationrelay)
 
         for roi in self.viewbox.addedItems:
-            try:
+            # try:
                 if hasattr(roi, 'isdeleting'):
                     if not roi.isdeleting:
                         print type(roi)
@@ -819,8 +771,8 @@ class dimgViewer(QtGui.QWidget):
 
                                 ai = config.activeExperiment.getAI().getPyFAI()
                                 xglobals.pool.apply_async(integration.radialintegratepyFAI, args=(
-                                    (self.dimg.data if not self.isremesh else data),
-                                    (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, cut,
+                                    (self.dimg.transformdata),
+                                    (self.dimg.mask), ai, cut, #if not self.isremesh else self.dimg.remeshmask
                                     [0, 255, 255], [c * config.activeExperiment.getvalue('Pixel Size X') for c in
                                                     self.getcenter()[::-1]]),
                                                           callback=self.qintegrationrelay)
@@ -828,9 +780,9 @@ class dimgViewer(QtGui.QWidget):
 
                     else:
                         self.viewbox.removeItem(roi)
-            except Exception as ex:
-                print 'Warning: error displaying ROI integration.'
-                print ex.message
+            # except Exception as ex:
+            #     print 'Warning: error displaying ROI integration.'
+            #     print ex.message
 
     def qintegrationrelay(self, *args, **kwargs):
         self.sigPlotQIntegration.emit(*args, **kwargs)
