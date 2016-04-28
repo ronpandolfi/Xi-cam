@@ -45,7 +45,9 @@ class bl832h5image(fabioimage):
         self._h5 = None
         self._dgroup = None
         self.frames = None
-        self.sinogram = None
+        self._flats = None
+        self._darks = None
+        self._sinogram = None
 
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
@@ -71,6 +73,18 @@ class bl832h5image(fabioimage):
         dfrm = self._dgroup[self.frames[frame]]
         self.data = dfrm[0]
         return self
+
+    @property
+    def flats(self):
+        if self._flats is None:
+            self._flats = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'bak' in key])
+        return self._flats
+
+    @property
+    def darks(self):
+        if self._darks is None:
+            self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
+        return self._darks
 
     @property
     def nframes(self):
@@ -123,8 +137,9 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 
 if __name__ == '__main__':
     from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/Desktop/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    data = fabio.open('/home/lbluque/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
     data.getsinogram(500)
-    print data.sinogram.shape
+    print data.darks.shape
+    print data.flats.shape
     imshow(data.sinogram, cmap='gray')
     show()

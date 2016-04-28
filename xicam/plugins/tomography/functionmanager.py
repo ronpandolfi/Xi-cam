@@ -1,12 +1,13 @@
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
+from xicam import threads
 import ui
 import customwidgets
 import tomopy
 
 functions = []
-currentfunction = 0
+currentindex = 0
 layout = None
 
 
@@ -28,7 +29,7 @@ def clearFeatures():
 
 
 def addFunction(function, subfunction, package=tomopy):
-    global functions, currentfunction
+    global functions, currentindex
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
@@ -37,8 +38,10 @@ def addFunction(function, subfunction, package=tomopy):
         if value is QtGui.QMessageBox.No:
             return
 
-    currentfunction = len(functions)
-    functions.append(customwidgets.func(function, subfunction, package))
+    currentindex = len(functions)
+    func = customwidgets.FuncWidget(function, subfunction, package)
+    func.sigPreview.connect(runpreview)
+    functions.append(func)
     update()
 
 
@@ -49,12 +52,36 @@ def removeFunction(index):
 
 
 def swapFunctions(idx_1, idx_2):
-    global functions, currentfunction
+    global functions, currentindex
     if idx_2 >= len(functions) or idx_2 < 0:
         return
     functions[idx_1], functions[idx_2] = functions[idx_2], functions[idx_1]
-    currentfunction = idx_2
+    currentindex = idx_2
     update()
+
+
+def runpreview():
+    global currentindex, functions
+    func =  functions[currentindex]
+    try:
+        data = ui.centerwidget.currentWidget().widget
+    except AttributeError:
+        return
+
+    kwargs = {}
+
+    for arg in func.args_complement:
+        if arg in ('arr', 'tomo'):
+            kwargs[arg] = data.getdata()[1]
+        elif arg in 'flats':
+            kwargs[arg] = data.getflats()
+        elif arg in 'darks':
+            kwargs[arg] = data.getdarks()
+
+    kwargs.update(**func.kwargs_complement)
+    print kwargs
+    # runnable = threads.RunnableMethod(show, func.partial, **kwargs)
+    # threads.queue.put(runnable)
 
 
 def update():
@@ -82,3 +109,9 @@ def loadform(path):
 def load():
     global functions, layout
     layout.setAlignment(QtCore.Qt.AlignBottom)
+
+
+def show(data):
+    from matplotlib.pyplot import imshow, show
+    imshow(data)
+    show()

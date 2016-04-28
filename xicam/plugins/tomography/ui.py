@@ -3,6 +3,7 @@ from PySide.QtUiTools import QUiLoader
 from functools import partial
 from xicam import xglobals
 from xicam.plugins import explorer, login
+import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import toolbar as ttoolbar
@@ -20,6 +21,7 @@ propertytable = None
 paramformstack = None
 functionslist = None
 
+
 class funcAction(QtGui.QAction):
     def __init__(self, func, subfunc, *args,**kwargs):
         super(funcAction, self).__init__(*args,**kwargs)
@@ -28,6 +30,7 @@ class funcAction(QtGui.QAction):
         self.triggered.connect(self.addFunction)
     def addFunction(self):
         functionmanager.addFunction(self.func,self.subfunc)
+
 
 def load():
     global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist
@@ -68,10 +71,10 @@ def load():
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
     functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
-    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentfunction,
-                                                                                  functionmanager.currentfunction - 1))
-    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentfunction,
-                                                                                  functionmanager.currentfunction + 1))
+    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                                                      functionmanager.currentindex - 1))
+    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                                                        functionmanager.currentindex + 1))
 
     #TODO find a way to share the base plugin loginwidget and fileexplorer
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
@@ -105,14 +108,15 @@ def load():
 
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
+    paramformstack.setMinimumHeight(300)
     l.addWidget(paramformstack)
 
-    propertytable = QtGui.QTableView()
-
+    propertytable = pg.TableWidget() #QtGui.QTableView()
+    propertytable.setLineWidth(0)
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().hide()
-
     propertytable.horizontalHeader().setStretchLastSection(True)
+
     l.addWidget(propertytable)
     rightwidget.setLayout(l)
 

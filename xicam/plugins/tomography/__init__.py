@@ -43,8 +43,8 @@ class plugin(base.plugin):
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
-        ui.propertytable.setModel(self.imagePropModel)
+        # self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
+        # ui.propertytable.setModel(self.imagePropModel)
 
 
         # SETUP FEATURES
@@ -75,13 +75,13 @@ class plugin(base.plugin):
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
-        try:
-            self.centerwidget.currentWidget().load()
-        except AttributeError:
-            pass
-        self.imagePropModel.widgetchanged()
+
+        self.centerwidget.currentWidget().load()
+        # self.imagePropModel.widgetchanged()
+        ui.propertytable.setData([[key, value] for key, value in self.currentImage().data.header.items()])
 
     def tabCloseRequested(self, index):
+        ui.propertytable.clear()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):
@@ -92,3 +92,6 @@ class plugin(base.plugin):
         widget = widgets.OOMTabItem(itemclass=twidgets.tomoWidget, paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
+
+    def currentImage(self):
+        return self.centerwidget.currentWidget().widget

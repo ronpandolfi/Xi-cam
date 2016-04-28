@@ -29,31 +29,24 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 
-
 class ROlineEdit(QtGui.QLineEdit):
     def __init__(self, *args, **kwargs):
         super(ROlineEdit, self).__init__(*args, **kwargs)
         self.setReadOnly(True)
         self.setFrame(False)
 
-
     def focusOutEvent(self, *args, **kwargs):
         super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
-        self.setReadOnly(True)
-        self.setFrame(False)
         self.setCursor(QtCore.Qt.ArrowCursor)
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)
-        self.setReadOnly(True)
         self.setFrame(True)
         self.setFocus()
         self.selectAll()
 
 
 class featureWidget(QtGui.QWidget):
-    sigUpdateDisplayUnitCell = QtCore.Signal()
-
     def __init__(self, name=''):
         self.name = name
 
@@ -77,20 +70,20 @@ class featureWidget(QtGui.QWidget):
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.pushButton = QtGui.QPushButton(self.frame)
+        self.previewButton = QtGui.QPushButton(self.frame)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy)
-        self.pushButton.setStyleSheet("margin:0 0 0 0;")
-        self.pushButton.setText("")
+        sizePolicy.setHeightForWidth(self.previewButton.sizePolicy().hasHeightForWidth())
+        self.previewButton.setSizePolicy(sizePolicy)
+        self.previewButton.setStyleSheet("margin:0 0 0 0;")
+        self.previewButton.setText("")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.pushButton.setIcon(icon)
-        self.pushButton.setFlat(True)
-        self.pushButton.setObjectName("pushButton")
-        self.horizontalLayout_2.addWidget(self.pushButton)
+        self.previewButton.setIcon(icon)
+        self.previewButton.setFlat(True)
+        self.previewButton.setObjectName("pushButton")
+        self.horizontalLayout_2.addWidget(self.previewButton)
         self.line = QtGui.QFrame(self.frame)
         self.line.setFrameShape(QtGui.QFrame.VLine)
         self.line.setFrameShadow(QtGui.QFrame.Sunken)
@@ -105,16 +98,16 @@ class featureWidget(QtGui.QWidget):
         self.line_3.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_3.setObjectName("line_3")
         self.horizontalLayout_2.addWidget(self.line_3)
-        self.pushButton_3 = QtGui.QPushButton(self.frame)
-        self.pushButton_3.setStyleSheet("margin:0 0 0 0;")
-        self.pushButton_3.setText("")
+        self.closeButton = QtGui.QPushButton(self.frame)
+        self.closeButton.setStyleSheet("margin:0 0 0 0;")
+        self.closeButton.setText("")
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap("gui/close-button.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.pushButton_3.setIcon(icon1)
-        self.pushButton_3.setFlat(True)
-        self.pushButton_3.setObjectName("pushButton_3")
-        self.pushButton_3.clicked.connect(self.delete)
-        self.horizontalLayout_2.addWidget(self.pushButton_3)
+        self.closeButton.setIcon(icon1)
+        self.closeButton.setFlat(True)
+        self.closeButton.setObjectName("pushButton_3")
+        self.closeButton.clicked.connect(self.delete)
+        self.horizontalLayout_2.addWidget(self.closeButton)
         self.verticalLayout.addWidget(self.frame)
 
         self.txtName.mousePressEvent = self.mousePressEvent
@@ -122,12 +115,12 @@ class featureWidget(QtGui.QWidget):
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
 
-    @property
-    def form(self):
-        if self._form is None:
-            self._form = loadform(self._formpath)
-            self.wireup()
-        return self._form
+    # @property
+    # def form(self):
+    #     if self._form is None:
+    #         self._form = loadform(self._formpath)
+    #         self.wireup()
+    #     return self._form
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
@@ -140,57 +133,37 @@ class featureWidget(QtGui.QWidget):
 
     def mousePressEvent(self, *args, **kwargs):
         self.showSelf()
-        self.hideothers()
         self.setFocus()
-        functionmanager.currentfunction = functionmanager.functions.index(self)
+        functionmanager.currentindex = functionmanager.functions.index(self)
         super(featureWidget, self).mousePressEvent(*args, **kwargs)
 
     def showSelf(self):
         ui.showform(self.form)
 
-    def hideothers(self):
-        for item in functionmanager.functions:
-            if hasattr(item, 'frame_2') and item is not self:
-                item.frame_2.hide()
+    # def hideothers(self):
+    #     for item in functionmanager.functions:
+    #         if hasattr(item, 'frame_2') and item is not self:
+    #             item.frame_2.hide()
 
-    def wireup(self):
-        if hasattr(self.form, 'txtName'):
-            self.form.txtName.setText(self.name)
-            self.form.txtName.textChanged.connect(self.setName)
-
+    # def wireup(self):
+    #     if hasattr(self.form, 'txtName'):
+    #         self.form.txtName.setText(self.name)
+    #         self.form.txtName.textChanged.connect(self.setName)
 
     def setName(self, name):
         self.name = name
         functionmanager.update()
 
 
-    def toDict(self):
-        return {}
+class FuncWidget(featureWidget):
 
+    sigPreview = QtCore.Signal()
 
-class form(QtGui.QWidget):
-    def __init__(self, name):
-        super(form, self).__init__()
-        self._form = None
-        self.wireup()
-        self.form
-
-    @property
-    def form(self):
-        if self._form is None:
-            self._form = loadform(self._formpath)
-        return self._form
-
-    def wireup(self):
-        pass
-
-
-class func(featureWidget):
     def __init__(self, function, subfunction, package):
         self.name = function
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
-        super(func, self).__init__(self.name)
+        super(FuncWidget, self).__init__(self.name)
 
         self.func_name = function
         self.subfunc_name = subfunction
@@ -201,12 +174,15 @@ class func(featureWidget):
         self.__function = getattr(package, functiondata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
 
+        # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
         if function == 'Reconstruction':
             self.kwargs_complement['algorithm'] = subfunction.lower()
         for key in self.param_dict.keys():
             if key in self.kwargs_complement:
                 del self.kwargs_complement[key]
+
+        # Create a list of argument names (this will most generally be the data passed to the function)
         self.args_complement = introspect.get_arg_names(self.__function)
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
@@ -214,9 +190,13 @@ class func(featureWidget):
         self.setDefaults()
 
         self.menu = QtGui.QMenu()
+        # action = QtGui.QAction('Preview', self)
+        # action.triggered.connect(self.previewTriggered)
         action = QtGui.QAction('Test Parameter Range', self)
-        action.triggered.connect(self.testParamRequested)
+        action.triggered.connect(self.testParamTriggered)
         self.menu.addAction(action)
+
+        self.previewButton.clicked.connect(self.sigPreview.emit)
 
     def wireup(self):
             for param in self.params.children():
@@ -283,28 +263,11 @@ class func(featureWidget):
         if self.form.currentItem().parent():
             self.menu.exec_(self.form.mapToGlobal(pos))
 
-    def testParamRequested(self):
+    def testParamTriggered(self):
         print self.form.currentItem()
 
 
-def loadform(path):
-    guiloader = QUiLoader()
-    f = QtCore.QFile(path)
-    f.open(QtCore.QFile.ReadOnly)
-    form = guiloader.load(f)
-    f.close()
-    return form
-
-
-class hideableGroupParameterItem(pTypes.GroupParameterItem):
-    def optsChanged(self, param, opts):
-        super(hideableGroupParameterItem, self).optsChanged(param, opts)
-        if 'visible' in opts:
-            self.setHidden(not opts['visible'])
-
-
 class TestRangeDialog(QtGui.QDialog):
-
     def __init__(self, dtype, range=None, values=None, **opts):
         super(TestRangeDialog, self).__init__(**opts)
         l = QtGui.QHBoxLayout(self)

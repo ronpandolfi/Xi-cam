@@ -48,6 +48,7 @@ from vispy import app, scene, io
 from vispy.color import Colormap, BaseColormap,ColorArray
 from pipeline import loader
 import pyqtgraph as pg
+from pyqtgraph.parametertree import ParameterTree
 import imageio
 import os
 
@@ -55,13 +56,15 @@ import os
 class tomoWidget(QtGui.QWidget):
 
     def __init__(self, paths=None, data=None, *args,**kwargs):
+
+        if paths is None and data is None:
+            raise ValueError('Either data or path to file must be provided')
+
         super(tomoWidget, self).__init__()
 
-        self.paths = paths
-        self.data = data
-        self.viewstack = QtGui.QStackedWidget()
+        self.viewstack = QtGui.QStackedWidget(self)
 
-        self.viewmode = QtGui.QTabBar()
+        self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram')
         self.viewmode.addTab('Preview')
@@ -69,13 +72,19 @@ class tomoWidget(QtGui.QWidget):
         self.viewmode.addTab('Reconstruction')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
-        self.projectionViewer = StackViewer(paths=paths, data=data)
+        if data is not None:
+            self.data = data
+        elif paths is not None and len(paths):
+            self.data = self.loaddata(paths)
+
+        self.projectionViewer = StackViewer(self.data)
         self.viewstack.addWidget(self.projectionViewer)
 
-        self.sinogramViewer = StackViewer(data=self.projectionViewer.data, sinogram=True)
+        self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data))
+        self.sinogramViewer.setCurrentIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.previewViewer = previewViewer(paths=paths, data=data)
+        self.previewViewer = PreviewViewer()
         self.viewstack.addWidget(self.previewViewer)
 
         self.processViewer = processViewer(paths=paths, data=data)
@@ -84,7 +93,7 @@ class tomoWidget(QtGui.QWidget):
         # self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
-        l = QtGui.QVBoxLayout()
+        l = QtGui.QVBoxLayout(self)
         l.setContentsMargins(0,0,0,0)
         l.addWidget(self.viewstack)
         l.addWidget(self.viewmode)
@@ -92,32 +101,49 @@ class tomoWidget(QtGui.QWidget):
 
         self.viewmode.currentChanged.connect(self.currentChanged)
 
+    @staticmethod
+    def loaddata(paths):
+        return loader.ProjectionStack(paths)
+
+    def getdata(self):
+        return self.projectionViewer.currentdata, self.sinogramViewer.currentdata
+
+    def getflats(self):
+        return self.data.flats
+
+    def getdarks(self):
+        return self.data.darks
+
     def currentChanged(self,index):
         self.viewstack.setCurrentIndex(index)
 
 
+
 class StackViewer(pg.ImageView):
-    def __init__(self, paths=None, data=None, sinogram=False, *args, **kwargs):
-        super(StackViewer, self).__init__()
+    def __init__(self, data, *args, **kwargs):
+        super(StackViewer, self).__init__(*args, **kwargs)
+        self.data = data
 
-        if paths is None and data is None:
-            raise ValueError('Either data or path to file must be provided')
-
-        if data is not None:
-            self.data = data
-        elif paths is not None and len(paths):
-            self.data = loader.loadstackimage(paths)
-
-        if sinogram:
-            self.data = loader.SinogramStack.cast(self.data)
-
-        self.setImage(self.data) #, axes={'t':0, 'x':2, 'y':1, 'c':3})
+        self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
+        self.getImageItem().setAutoDownsample(True)
         self.autoLevels()
         self.getView().invertY(False)
 
-        if sinogram: self.setCurrentIndex(self.data.shape[0]//2)
-        print self.data.shape
+    @property
+    def currentdata(self):
+        return self.data[self.data.currentframe]
+
+
+class PreviewViewer(QtGui.QSplitter):
+    def __init__(self, *args, **kwargs):
+        super(PreviewViewer, self).__init__(*args, **kwargs)
+        self.setOrientation(QtCore.Qt.Vertical)
+        self.functionform = QtGui.QStackedWidget() #ParameterTree()
+        self.imageview = pg.ImageView(self)
+
+        self.addWidget(self.imageview)
+        self.addWidget(self.functionform)
 
 
 class volumeViewer(QtGui.QWidget):
@@ -419,10 +445,6 @@ class VolumeVisual(scene.visuals.Volume):
             self._create_vertex_data()
 
 scene.visuals.Volume=VolumeVisual
-
-class previewViewer(pg.ImageView):
-    def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(previewViewer, self).__init__()
 
 class processViewer(QtGui.QWidget):
     def __init__(self, paths=None, data=None, *args, **kwargs):

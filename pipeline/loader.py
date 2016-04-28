@@ -874,7 +874,7 @@ class jpegimageset():
 class StackImage(object):
     ndim = 3
     def __init__(self, filepath=None, data=None):
-        super(StackImage, self).__init__()
+        # super(StackImage, self).__init__()
         self._rawdata = None
         self.filepath = filepath
 
@@ -885,6 +885,7 @@ class StackImage(object):
         else:
             if filepath is None and data is None:
                 raise ValueError('Either data or path to file must be provided')
+        self.header = self.fabimage.header
 
         self._framecache = dict()
         self.currentframe = 0
@@ -902,6 +903,7 @@ class StackImage(object):
         if self._rawdata is None:
             self._rawdata = self._getframe()
         return self._rawdata
+
 
     def _getframe(self, frame=None): # keeps 3 frames in cache at most
         if frame is None: frame=self.currentframe
@@ -927,10 +929,16 @@ class StackImage(object):
             pass
 
 
+class ProjectionStack(StackImage):
+    def __init__(self, *args, **kwargs):
+        super(ProjectionStack, self).__init__(*args, **kwargs)
+        self.flats = self.fabimage.flats
+        self.darks = self.fabimage.darks
+
+
 class SinogramStack(StackImage):
 
     def __new__(cls):
-        print 'NEW'
         cls.invalidatecache()
 
     @classmethod
@@ -950,7 +958,4 @@ class SinogramStack(StackImage):
             self._framecache[frame] = np.rot90(self.fabimage.getsinogram(frame).sinogram, 3)
         return self._framecache[frame]
 
-
-def loadstackimage(src):
-    return StackImage(src)
 
