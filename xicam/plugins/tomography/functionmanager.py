@@ -115,3 +115,11 @@ def show(data):
     from matplotlib.pyplot import imshow, show
     imshow(data)
     show()
+
+def test():
+    global functions
+    if len(functions) > 0:
+        params = {}
+        for func in functions:
+            params[func.subfunc_name] = func.param_dict
+        ui.centerwidget.currentWidget().widget.test(params)

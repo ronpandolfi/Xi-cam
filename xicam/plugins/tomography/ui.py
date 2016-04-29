@@ -10,7 +10,6 @@ import toolbar as ttoolbar
 import functiondata
 import functionmanager
 
-particlemenu = None
 blankform = None
 leftwidget = None
 centerwidget = None
@@ -45,7 +44,7 @@ def load():
     bottomwidget = None
 
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
-    functionslist=functionwidget.functionsList
+    functionslist = functionwidget.functionsList
 
     addfunctionmenu = QtGui.QMenu()
     for func,subfuncs in functiondata.funcs.iteritems():
@@ -70,12 +69,6 @@ def load():
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
-    functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
-    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                                                      functionmanager.currentindex - 1))
-    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                                                        functionmanager.currentindex + 1))
-
     #TODO find a way to share the base plugin loginwidget and fileexplorer
     leftwidget =  QtGui.QSplitter(QtCore.Qt.Vertical)
     leftwidget.addWidget(functionwidget)
@@ -89,17 +82,6 @@ def load():
     panelwidget.setLayout(l)
     leftwidget.addWidget(panelwidget)
 
-    loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
-    loginwidget.logoutClicked.connect(loginwidget.hide)
-    loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
-    loginwidget.logoutClicked.connect(fileexplorer.enableActions)
-    loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
-    loginwidget.sigLoggedIn.connect(xglobals.client_callback)
-
-    fileexplorer.sigLoginRequest.connect(loginwidget.show)
-    fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
-    fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
-
     rightwidget = QtGui.QWidget()
     l = QtGui.QVBoxLayout()
     l.setContentsMargins(0, 0, 0, 0)
@@ -112,9 +94,7 @@ def load():
     l.addWidget(paramformstack)
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
-    propertytable.setLineWidth(0)
     propertytable.verticalHeader().hide()
-    propertytable.horizontalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
 
     l.addWidget(propertytable)
@@ -125,7 +105,28 @@ def load():
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar
+    #wire stuff up
+    functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
+    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                                                      functionmanager.currentindex - 1))
+    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                                                        functionmanager.currentindex + 1))
+
+    loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
+    loginwidget.logoutClicked.connect(loginwidget.hide)
+    loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
+    loginwidget.logoutClicked.connect(fileexplorer.enableActions)
+    loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
+    loginwidget.sigLoggedIn.connect(xglobals.client_callback)
+
+    fileexplorer.sigLoginRequest.connect(loginwidget.show)
+    fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
+    fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
+
+
+    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar, functionwidget
+
+
 
 
 def showform(widget):

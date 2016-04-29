@@ -7,6 +7,7 @@ import os
 import numpy as np
 #from nexpy.api import nexus as nx
 from copy import copy
+
 import detectors
 import glob
 import re
@@ -888,6 +889,7 @@ class StackImage(object):
         self.header = self.fabimage.header
 
         self._framecache = dict()
+        self._cachesize = 2
         self.currentframe = 0
 
         raw = self.rawdata
@@ -908,12 +910,15 @@ class StackImage(object):
     def _getframe(self, frame=None): # keeps 3 frames in cache at most
         if frame is None: frame=self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
-            frame= frame[1].step
+            frame = 0 #frame[1].step
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache) > 2: del self._framecache[self._framecache.keys()[0]] #del the first cached item
-            self._framecache[frame]=np.rot90(self.fabimage.getframe(frame).data, 3)
+            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]] #del the first cached item
+            self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
+
+    def _getimage(self, frame):
+        return np.rot90(self.fabimage.getframe(frame).data, 3)
 
     def invalidatecache(self):
         self.cache = dict()
@@ -930,13 +935,16 @@ class StackImage(object):
 
 
 class ProjectionStack(StackImage):
-    def __init__(self, *args, **kwargs):
-        super(ProjectionStack, self).__init__(*args, **kwargs)
+    def __init__(self, filepath=None, data=None):
+        super(ProjectionStack, self).__init__(filepath=filepath, data=data)
         self.flats = self.fabimage.flats
         self.darks = self.fabimage.darks
 
 
 class SinogramStack(StackImage):
+    def __init__(self, filepath=None, data=None):
+        super(ProjectionStack, self).__init__(filepath=filepath, data=data)
+        self._cachesize = 10
 
     def __new__(cls):
         cls.invalidatecache()
@@ -948,14 +956,5 @@ class SinogramStack(StackImage):
         new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
         return new_obj
 
-    def _getframe(self, frame=None):
-        if frame is None: frame = self.currentframe
-        if type(frame) is list and type(frame[0]) is slice:
-            frame = frame[1].step
-        self.currentframe = frame
-        if frame not in self._framecache:
-            if len(self._framecache) > 10: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
-            self._framecache[frame] = np.rot90(self.fabimage.getsinogram(frame).sinogram, 3)
-        return self._framecache[frame]
-
-
+    def _getimage(self, frame):
+        return np.rot90(self.fabimage.getsinogram(frame).sinogram, 3)

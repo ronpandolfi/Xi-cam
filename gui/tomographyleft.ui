@@ -14,16 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>0</number>
    </property>
    <item>
@@ -43,23 +34,14 @@
         <x>0</x>
         <y>0</y>
         <width>536</width>
-        <height>781</height>
+        <height>787</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="functionsList">
        <property name="spacing">
         <number>0</number>
        </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
+       <property name="margin">
         <number>0</number>
        </property>
       </layout>
@@ -137,7 +119,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="runLocal">
+      <widget class="QToolButton" name="previewButton">
        <property name="text">
         <string>...</string>
        </property>

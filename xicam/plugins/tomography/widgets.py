@@ -39,10 +39,8 @@ With fly camera:
 * IJKL or mouse - look around
 """
 
-from itertools import cycle
-
+from collections import deque
 import numpy as np
-
 from PySide import QtGui,QtCore
 from vispy import app, scene, io
 from vispy.color import Colormap, BaseColormap,ColorArray
@@ -69,7 +67,7 @@ class tomoWidget(QtGui.QWidget):
         self.viewmode.addTab('Sinogram')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('Process')
-        self.viewmode.addTab('Reconstruction')
+        # self.viewmode.addTab('Reconstruction')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -84,7 +82,7 @@ class tomoWidget(QtGui.QWidget):
         self.sinogramViewer.setCurrentIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.previewViewer = PreviewViewer()
+        self.previewViewer = PreviewViewer(self.data.shape[2])
         self.viewstack.addWidget(self.previewViewer)
 
         self.processViewer = processViewer(paths=paths, data=data)
@@ -117,6 +115,9 @@ class tomoWidget(QtGui.QWidget):
     def currentChanged(self,index):
         self.viewstack.setCurrentIndex(index)
 
+    def test(self, params):
+        self.previewViewer.test(params)
+
 
 
 class StackViewer(pg.ImageView):
@@ -136,14 +137,53 @@ class StackViewer(pg.ImageView):
 
 
 class PreviewViewer(QtGui.QSplitter):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
-        self.setOrientation(QtCore.Qt.Vertical)
+        self.maxpreviews = maxpreviews if maxpreviews is not None else 10
+
+        self.dim = dim
+
+        # Use collections.deque with 2D numpy arrays instead of a 3D numpy array
+        self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
+        self.previewdata = deque(maxlen=self.maxpreviews)
+        # shape = (self.maxpreviews, dim, dim)
+
+
+        self.setOrientation(QtCore.Qt.Horizontal)
         self.functionform = QtGui.QStackedWidget() #ParameterTree()
         self.imageview = pg.ImageView(self)
-
-        self.addWidget(self.imageview)
+        self.setCurrentIndex = self.imageview.setCurrentIndex
+        # self.imageview.setImage(self.previews)
         self.addWidget(self.functionform)
+        self.addWidget(self.imageview)
+
+        self.imageview.sigTimeChanged.connect(self.indexChanged)
+
+    # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
+    # from the previewdata deque but are still in the functionform widget?
+    def addPreview(self, image, funcdata):
+        self.previews.appendleft(image)
+        functree = DataTreeWidget()
+        functree.setHeaderHidden(True)
+        functree.setData(funcdata, hideRoot=True)
+        self.previewdata.appendleft(functree)
+        self.functionform.addWidget(functree)
+        self.imageview.setImage(self.previews)
+        self.functionform.setCurrentWidget(functree)
+
+    @QtCore.Slot(object, object)
+    def indexChanged(self, index, time):
+        self.functionform.setCurrentWidget(self.previewdata[index])
+
+    def test(self, params):
+        self.addPreview(np.random.rand(self.dim, self.dim), params)
+
+    # def keyPressEvent(self, e):
+    #     print "Pressed"
+    #     if len(self.keysPressed) == 1:
+    #         key = list(self.keysPressed.keys())[0]
+    #         if type(key) in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down, QtCore.Qt.Key_PageUp, QtCore.Qt.Key_PageDown):
+    #             self.indexChanged(self.imageview.currentIndex, None)
 
 
 class volumeViewer(QtGui.QWidget):
@@ -405,6 +445,7 @@ class SliceWidget(pg.HistogramLUTWidget):
         bounds=(bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
 
+
 class VolumeVisual(scene.visuals.Volume):
     def set_data(self, vol, clim=None):
         """ Set the volume data.
@@ -446,10 +487,105 @@ class VolumeVisual(scene.visuals.Volume):
 
 scene.visuals.Volume=VolumeVisual
 
+
 class processViewer(QtGui.QWidget):
     def __init__(self, paths=None, data=None, *args, **kwargs):
         super(processViewer, self).__init__()
 
+
 class reconstructionViewer(volumeViewer):
     def __init__(self, paths=None, data=None, *args, **kwargs):
         super(reconstructionViewer, self).__init__()
+
+
+class DataTreeWidget(QtGui.QTreeWidget):
+    """
+    Widget for displaying hierarchical python data structures
+    (eg, nested dicts, lists, and arrays)
+    """
+
+
+    def __init__(self, parent=None, data=None):
+        QtGui.QTreeWidget.__init__(self, parent)
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setData(data)
+        self.setColumnCount(2)
+        self.setHeaderLabels(['Parameter', 'value'])
+
+    def setData(self, data, hideRoot=False):
+        """data should be a dictionary."""
+        self.clear()
+        self.buildTree(data, self.invisibleRootItem(), hideRoot=hideRoot)
+        self.expandToDepth(3)
+        self.resizeColumnToContents(0)
+
+    def buildTree(self, data, parent, name='', hideRoot=False):
+        if hideRoot:
+            node = parent
+        else:
+            node = QtGui.QTreeWidgetItem([name, ""])
+            parent.addChild(node)
+
+        if isinstance(data, dict):
+            for k in data.keys():
+                self.buildTree(data[k], node, str(k))
+        elif isinstance(data, list) or isinstance(data, tuple):
+            for i in range(len(data)):
+                self.buildTree(data[i], node, str(i))
+        else:
+            node.setText(1, str(data))
+
+
+class ArrayDeque(deque):
+    # perhaps will need to add check of datatype everytime a new array is added with extend, append, etc??
+    def __init__(self, arraylist=[], arrayshape=None, dtype=None, maxlen=None):
+        if not arraylist and not arrayshape:
+            raise ValueError('One of arraylist or arrayshape must be specified')
+
+        super(ArrayDeque, self).__init__(iterable=arraylist, maxlen=maxlen)
+
+        self._shape = [len(self)]
+        self._dtype = dtype
+
+        if arraylist:
+            if False in [np.array_equal(arraylist[0].shape, array.shape) for array in arraylist[1:]]:
+                raise ValueError('All arrays in arraylist must have the same dimensions')
+            elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
+                raise ValueError('All arrays in arraylist must have the same data type')
+            map(self._shape.append, arraylist[0].shape)
+        elif arrayshape:
+            map(self._shape.append, arrayshape)
+
+        self.ndim = len(self._shape)
+
+    @property
+    def shape(self):
+        self._shape[0] = len(self)
+        return self._shape
+
+    @property
+    def size(self):
+        return np.product(self._shape)
+
+    @property
+    def dtype(self):
+        if self._dtype is None and self.shape[0]:
+            self._dtype = self.__getitem__(0).dtype
+        return self._dtype
+
+    @property
+    def max(self):
+        return np.max(max(self, key=lambda x:np.max(x)))
+
+    @property
+    def min(self):
+        return np.min(min(self, key=lambda x:np.min(x)))
+
+    def __getitem__(self, item):
+        if type(item) is list and isinstance(item[0], slice):
+            dq_item = item.pop(0)
+            if isinstance(dq_item, slice):
+                dq_item = dq_item.stop if dq_item.stop is not None else dq_item.start if dq_item.start is not None else 0
+            return super(ArrayDeque, self).__getitem__(dq_item).__getitem__(item)
+        else:
+            return super(ArrayDeque, self).__getitem__(item)

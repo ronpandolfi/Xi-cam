@@ -36,13 +36,14 @@ class plugin(base.plugin):
 
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.load()
+        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.load()
 
         super(plugin, self).__init__(*args, **kwargs)
 
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+        self.functionwidget.previewButton.clicked.connect(functionmanager.test)
         # self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
         # ui.propertytable.setModel(self.imagePropModel)
 
@@ -79,6 +80,7 @@ class plugin(base.plugin):
         self.centerwidget.currentWidget().load()
         # self.imagePropModel.widgetchanged()
         ui.propertytable.setData([[key, value] for key, value in self.currentImage().data.header.items()])
+        ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
