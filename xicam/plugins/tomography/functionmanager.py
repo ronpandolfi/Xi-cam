@@ -2,6 +2,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from functools import partial
+from copy import copy
 from xicam import threads
 import ui
 import customwidgets
@@ -44,7 +45,6 @@ def addFunction(function, subfunction, package=tomopy):
         func = customwidgets.ReconFuncWidget(function, subfunction, package)
     else:
         func = customwidgets.FuncWidget(function, subfunction, package)
-    func.sigPreview.connect(runpreviewstack)
     functions.append(func)
     update()
 
@@ -80,14 +80,16 @@ def runpreviewstack():
         return
 
     params = OrderedDict()
+    init = False
     for i, func in enumerate(functions):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
 
         kwargs = {}
         for arg in func.args_complement:
-            if i == 0 and arg in ('arr', 'tomo'):
-                kwargs[arg] = widget.getdata()[1]
+            if not init and arg in ('arr', 'tomo'):
+                print 'init'
+                kwargs[arg] = copy(widget.getsino())
                 print kwargs[arg].shape
                 angles = kwargs[arg].shape[0] #TODO have this and COR as inputs to each dataset NOT HERE
             elif arg in 'flats':
@@ -95,14 +97,15 @@ def runpreviewstack():
             elif arg in 'darks':
                 kwargs[arg] = widget.getdarks()
 
-            params[func.subfunc_name] =  func.param_dict
+            params[func.subfunc_name] =  copy(func.param_dict)
             kwargs.update(**func.param_dict)
             kwargs.update(**func.kwargs_complement)
-
+            print func.func_signature
         if func.func_name == 'Reconstruction':
             kwargs['theta'] = tomopy.angles(angles) #TODO have this and COR as inputs to each dataset NOT HERE
 
-        if i == 0:
+        if not init:
+            init = True
             funstack = partial(func.partial, **kwargs)
         else:
             funstack = partial(func.partial, funstack(), **kwargs)

@@ -59,13 +59,11 @@ def login(client, credentials):
     if not spot_client.logged_in:
         runnable = threads.RunnableMethod(client_callback, client.login, usr, pwd)
         threads.queue.put(runnable)
-        threads.worker_thread.start()
 
 
 def logout(client, callback):
     runnable = threads.RunnableMethod(callback, client.logout)
     threads.queue.put(runnable)
-    threads.worker_thread.start()
 
 
 class NotLoggedInError(Exception):

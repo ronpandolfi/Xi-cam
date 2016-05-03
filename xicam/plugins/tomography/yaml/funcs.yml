@@ -1,6 +1,7 @@
 Center Detection: [Nelder-Mead, Vo, Phase Correlation]
 Downsample: [Downsample]
 Filter: [Gaussian Filter, Median Filter, Sobel Filter]
+Negative Logarithm: [Negative Logarithm]
 Circular Mask: [Circular Mask]
 Normalize: [Regular, Background Intensity, Nearest Flats]
 Pad: [Pad]

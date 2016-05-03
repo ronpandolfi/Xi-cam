@@ -18,3 +18,4 @@ Smoothing Filter: remove_stripe_sf
 Titarenko: remove_stripe_ti
 Phase Retrieval: retrieve_phase
 Sobel Filter: sobel_filter
+Negative Logarithm: minus_log

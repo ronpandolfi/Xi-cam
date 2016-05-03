@@ -94,7 +94,6 @@ def load():
     l.addWidget(paramformstack)
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
-    propertytable.setMinimumHeight(400)
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
 

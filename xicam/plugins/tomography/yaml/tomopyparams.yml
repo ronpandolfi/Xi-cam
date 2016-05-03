@@ -77,6 +77,7 @@ Pad:
   values:
   - constant
   - edge
+Negative Logarithm: []
 Phase Correlation:
 - name: tol
   suffix: px
@@ -126,6 +127,10 @@ Circular Mask:
   type: float
 - name: val
   type: float
+- name: axis
+  type: int
+  limits: [0, 2]
+  default: 0
 Phase Retrieval:
 - name: pixel_size
   suffix: cm

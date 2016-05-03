@@ -151,9 +151,6 @@ class featureWidget(QtGui.QWidget):
 
 
 class FuncWidget(featureWidget):
-
-    sigPreview = QtCore.Signal()
-
     def __init__(self, function, subfunction, package):
         self.name = function
         if function != subfunction:
@@ -186,8 +183,6 @@ class FuncWidget(featureWidget):
         action = QtGui.QAction('Test Parameter Range', self)
         action.triggered.connect(self.testParamTriggered)
         self.menu.addAction(action)
-
-        self.previewButton.clicked.connect(self.sigPreview.emit)
 
     def wireup(self):
             for param in self.params.children():

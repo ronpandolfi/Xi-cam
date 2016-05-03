@@ -103,20 +103,23 @@ class tomoWidget(QtGui.QWidget):
     def loaddata(paths):
         return loader.ProjectionStack(paths)
 
-    def getdata(self):
-        return self.projectionViewer.currentdata[np.newaxis,:,:], self.sinogramViewer.currentdata[:,np.newaxis,:]
+    def getsino(self):
+        return self.sinogramViewer.currentdata[:,np.newaxis,:]
 
     def getflats(self):
-        return self.data.flats
+        return self.data.flats[:,self.sinogramViewer.currentIndex,:]
 
     def getdarks(self):
-        return self.data.darks
+        return self.data.darks[:,self.sinogramViewer.currentIndex,:]
 
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 
     def addPreview(self, params, recon):
-        self.previewViewer.addPreview(recon[0], params)
+        npad = int((recon.shape[1] - self.data.shape[1])/2)
+        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
+        self.previewViewer.addPreview(recon, params)
+        self.viewstack.setCurrentWidget(self.previewViewer)
 
     def test(self, params):
         self.previewViewer.test(params)
