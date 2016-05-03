@@ -88,9 +88,7 @@ def runpreviewstack():
         kwargs = {}
         for arg in func.args_complement:
             if not init and arg in ('arr', 'tomo'):
-                print 'init'
                 kwargs[arg] = copy(widget.getsino())
-                print kwargs[arg].shape
                 angles = kwargs[arg].shape[0] #TODO have this and COR as inputs to each dataset NOT HERE
             elif arg in 'flats':
                 kwargs[arg] = widget.getflats()
@@ -100,7 +98,6 @@ def runpreviewstack():
             params[func.subfunc_name] =  copy(func.param_dict)
             kwargs.update(**func.param_dict)
             kwargs.update(**func.kwargs_complement)
-            print func.func_signature
         if func.func_name == 'Reconstruction':
             kwargs['theta'] = tomopy.angles(angles) #TODO have this and COR as inputs to each dataset NOT HERE
 

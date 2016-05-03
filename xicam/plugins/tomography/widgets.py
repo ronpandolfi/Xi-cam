@@ -88,7 +88,7 @@ class tomoWidget(QtGui.QWidget):
         self.processViewer = processViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.processViewer)
 
-        # self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
+        self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout(self)
@@ -153,7 +153,7 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.setOrientation(QtCore.Qt.Horizontal)
         self.functionform = QtGui.QStackedWidget() #ParameterTree()
-        self.imageview = pg.ImageView(self)
+        self.imageview = ImageView(self)
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(self.functionform)
         self.addWidget(self.imageview)
@@ -178,13 +178,6 @@ class PreviewViewer(QtGui.QSplitter):
 
     def test(self, params):
         self.addPreview(np.random.rand(self.dim, self.dim), params)
-
-    # def keyPressEvent(self, e):
-    #     print "Pressed"
-    #     if len(self.keysPressed) == 1:
-    #         key = list(self.keysPressed.keys())[0]
-    #         if type(key) in (QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down, QtCore.Qt.Key_PageUp, QtCore.Qt.Key_PageDown):
-    #             self.indexChanged(self.imageview.currentIndex, None)
 
 
 class volumeViewer(QtGui.QWidget):
@@ -604,3 +597,29 @@ class ArrayDeque(deque):
             return super(ArrayDeque, self).__getitem__(dq_item).__getitem__(item)
         else:
             return super(ArrayDeque, self).__getitem__(item)
+
+
+class ImageView(pg.ImageView):
+    def keyPressEvent(self, ev):
+        super(ImageView, self).keyPressEvent(ev)
+        self.timeLineChanged()
+
+    def timeIndex(self, slider):
+        ## Return the time and frame index indicated by a slider
+        if self.image is None:
+            return (0,0)
+
+        t = slider.value()
+
+        xv = self.tVals
+        if xv is None:
+            ind = int(t)
+        else:
+            if len(xv) < 2:
+                return (0,0)
+            totTime = xv[-1] + (xv[-1]-xv[-2])
+            inds = np.argwhere(xv <= t)
+            if len(inds) < 1:
+                return (0,t)
+            ind = inds[-1,0]
+        return ind, t
