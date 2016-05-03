@@ -6,8 +6,8 @@ Normalize: [Regular, Background Intensity, Nearest Flats]
 Pad: [Pad]
 Phase Retrieval: [Phase Retrieval]
 Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
-                 Astra: [FP, BP, FBP, SIRT, SART, ART, CGLS, FP CUDA, BP CUDA, FBP CUDA, SIRT CUDA, SART CUDA,
-                         CGLS CUDA, EM CUDA, FP3D_CUDA, BP3D CUDA, FDK CUDA, SIRT3D CUDA, CGLS3D CUDA],
+                 Astra: [], #[FP, BP, FBP, SIRT, SART, ART, CGLS, FP CUDA, BP CUDA, FBP CUDA, SIRT CUDA, SART CUDA,
+                         #CGLS CUDA, EM CUDA, FP3D_CUDA, BP3D CUDA, FDK CUDA, SIRT3D CUDA, CGLS3D CUDA],
                  MBIR: []}
 Remove Outliers: [Remove Outliers]
 Ring Removal: [Polar Mean Filter]

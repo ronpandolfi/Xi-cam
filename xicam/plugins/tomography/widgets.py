@@ -82,7 +82,7 @@ class tomoWidget(QtGui.QWidget):
         self.sinogramViewer.setCurrentIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.previewViewer = PreviewViewer(self.data.shape[2])
+        self.previewViewer = PreviewViewer(self.data.shape[1])
         self.viewstack.addWidget(self.previewViewer)
 
         self.processViewer = processViewer(paths=paths, data=data)
@@ -578,6 +578,20 @@ class ArrayDeque(deque):
     @property
     def min(self):
         return np.min(min(self, key=lambda x:np.min(x)))
+
+    def append(self, arr):
+        if arr.shape != tuple(self.shape[1:]):
+            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        elif self.dtype is not None and arr.dtype != self.dtype:
+            raise ValueError('Array must be of type {}'.format(self.dtype))
+        super(ArrayDeque, self).append(arr)
+
+    def appendleft(self, arr):
+        if arr.shape != tuple(self.shape[1:]):
+            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        elif self.dtype is not None and arr.dtype != self.dtype:
+            raise ValueError('Array must be of type {}'.format(self.dtype))
+        super(ArrayDeque, self).appendleft(arr)
 
     def __getitem__(self, item):
         if type(item) is list and isinstance(item[0], slice):

@@ -82,6 +82,8 @@ class featureWidget(QtGui.QWidget):
         icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
+        self.previewButton.setCheckable(True)
+        self.previewButton.setChecked(True)
         self.previewButton.setObjectName("pushButton")
         self.horizontalLayout_2.addWidget(self.previewButton)
         self.line = QtGui.QFrame(self.frame)
@@ -114,13 +116,6 @@ class featureWidget(QtGui.QWidget):
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
-
-    # @property
-    # def form(self):
-    #     if self._form is None:
-    #         self._form = loadform(self._formpath)
-    #         self.wireup()
-    #     return self._form
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
@@ -176,8 +171,6 @@ class FuncWidget(featureWidget):
 
         # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
-        if function == 'Reconstruction':
-            self.kwargs_complement['algorithm'] = subfunction.lower()
         for key in self.param_dict.keys():
             if key in self.kwargs_complement:
                 del self.kwargs_complement[key]
@@ -263,6 +256,14 @@ class FuncWidget(featureWidget):
 
     def testParamTriggered(self):
         print self.form.currentItem()
+
+
+class ReconFuncWidget(FuncWidget):
+    def __init__(self, function, subfunction, package):
+        super(ReconFuncWidget, self).__init__(function, subfunction, package)
+        self.previewButton.setCheckable(False)
+        self.previewButton.setChecked(True)
+        self.kwargs_complement['algorithm'] = subfunction.lower()
 
 
 class TestRangeDialog(QtGui.QDialog):

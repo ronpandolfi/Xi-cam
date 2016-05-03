@@ -16,5 +16,5 @@ with open('xicam/plugins/tomography/yaml/funcnames.yml','r') as stream:
 for algorithm in funcs['Reconstruction']['TomoPy']:
     names[algorithm] = 'recon'
 
-for algorithm in funcs['Reconstruction']['Astra']:
-    names[algorithm] = 'recon'
+# for algorithm in funcs['Reconstruction']['Astra']:
+#     names[algorithm] = 'recon'

@@ -1,5 +1,6 @@
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui, QtCore
+from collections import OrderedDict
 from functools import partial
 from xicam import threads
 import ui
@@ -39,7 +40,10 @@ def addFunction(function, subfunction, package=tomopy):
             return
 
     currentindex = len(functions)
-    func = customwidgets.FuncWidget(function, subfunction, package)
+    if function == 'Reconstruction':
+        func = customwidgets.ReconFuncWidget(function, subfunction, package)
+    else:
+        func = customwidgets.FuncWidget(function, subfunction, package)
     func.sigPreview.connect(runpreviewstack)
     functions.append(func)
     update()
@@ -70,8 +74,16 @@ def runpreviewstack():
     if len(functions) < 0:
         return
 
-    params = {}
+    if 'Reconstruction' not in [func.func_name for func in functions]:
+        QtGui.QMessageBox.warning(None, 'Reconstruction method required',
+                                  'You have to select a reconstruction method to run a preview')
+        return
+
+    params = OrderedDict()
     for i, func in enumerate(functions):
+        if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
+            continue
+
         kwargs = {}
         for arg in func.args_complement:
             if i == 0 and arg in ('arr', 'tomo'):
