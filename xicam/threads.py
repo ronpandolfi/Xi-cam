@@ -59,7 +59,6 @@ class RunnableMethod(QtCore.QRunnable):
             self.emitter.sigRetValue.emit(value)
         except Exception, e:
             raise e
-        #     value = e
         # finally:
         #     self.emitter.sigFinished.emit(value)
         self.emitter.sigFinished.emit()

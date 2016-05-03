@@ -190,8 +190,6 @@ class FuncWidget(featureWidget):
         self.setDefaults()
 
         self.menu = QtGui.QMenu()
-        # action = QtGui.QAction('Preview', self)
-        # action.triggered.connect(self.previewTriggered)
         action = QtGui.QAction('Test Parameter Range', self)
         action.triggered.connect(self.testParamTriggered)
         self.menu.addAction(action)

@@ -12,8 +12,8 @@ __status__ = "Beta"
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 import platform
 op_sys = platform.system()
-if op_sys == 'Darwin':
-    from Foundation import NSURL
+# if op_sys == 'Darwin':
+#     from Foundation import NSURL
 
 import os
 import numpy as np
@@ -43,15 +43,19 @@ class plugin(base.plugin):
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        self.functionwidget.previewButton.clicked.connect(functionmanager.test)
-        # self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
-        # ui.propertytable.setModel(self.imagePropModel)
-
+        # wire stuff up
+        self.functionwidget.previewButton.clicked.connect(functionmanager.runpreviewstack)
+        self.functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
+        self.functionwidget.moveUpButton.clicked.connect(
+            lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                  functionmanager.currentindex - 1))
+        self.functionwidget.moveDownButton.clicked.connect(
+            lambda: functionmanager.swapFunctions(functionmanager.currentindex,
+                                                  functionmanager.currentindex + 1))
 
         # SETUP FEATURES
         functionmanager.layout = ui.functionslist
         functionmanager.load()
-
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)

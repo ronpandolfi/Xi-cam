@@ -1,6 +1,6 @@
 from PySide.QtUiTools import QUiLoader
-from PySide import QtGui
-from PySide import QtCore
+from PySide import QtGui, QtCore
+from functools import partial
 from xicam import threads
 import ui
 import customwidgets
@@ -40,7 +40,7 @@ def addFunction(function, subfunction, package=tomopy):
 
     currentindex = len(functions)
     func = customwidgets.FuncWidget(function, subfunction, package)
-    func.sigPreview.connect(runpreview)
+    func.sigPreview.connect(runpreviewstack)
     functions.append(func)
     update()
 
@@ -60,28 +60,43 @@ def swapFunctions(idx_1, idx_2):
     update()
 
 
-def runpreview():
-    global currentindex, functions
-    func =  functions[currentindex]
+def runpreviewstack():
+    global functions
     try:
-        data = ui.centerwidget.currentWidget().widget
+        widget = ui.centerwidget.currentWidget().widget
     except AttributeError:
         return
 
-    kwargs = {}
+    if len(functions) < 0:
+        return
 
-    for arg in func.args_complement:
-        if arg in ('arr', 'tomo'):
-            kwargs[arg] = data.getdata()[1]
-        elif arg in 'flats':
-            kwargs[arg] = data.getflats()
-        elif arg in 'darks':
-            kwargs[arg] = data.getdarks()
+    params = {}
+    for i, func in enumerate(functions):
+        kwargs = {}
+        for arg in func.args_complement:
+            if i == 0 and arg in ('arr', 'tomo'):
+                kwargs[arg] = widget.getdata()[1]
+                print kwargs[arg].shape
+                angles = kwargs[arg].shape[0] #TODO have this and COR as inputs to each dataset NOT HERE
+            elif arg in 'flats':
+                kwargs[arg] = widget.getflats()
+            elif arg in 'darks':
+                kwargs[arg] = widget.getdarks()
 
-    kwargs.update(**func.kwargs_complement)
-    print kwargs
-    # runnable = threads.RunnableMethod(show, func.partial, **kwargs)
-    # threads.queue.put(runnable)
+            params[func.subfunc_name] =  func.param_dict
+            kwargs.update(**func.param_dict)
+            kwargs.update(**func.kwargs_complement)
+
+        if func.func_name == 'Reconstruction':
+            kwargs['theta'] = tomopy.angles(angles) #TODO have this and COR as inputs to each dataset NOT HERE
+
+        if i == 0:
+            funstack = partial(func.partial, **kwargs)
+        else:
+            funstack = partial(func.partial, funstack(), **kwargs)
+
+    runnable = threads.RunnableMethod(partial(widget.addPreview, params), funstack)
+    threads.queue.put(runnable)
 
 
 def update():

@@ -104,7 +104,7 @@ class tomoWidget(QtGui.QWidget):
         return loader.ProjectionStack(paths)
 
     def getdata(self):
-        return self.projectionViewer.currentdata, self.sinogramViewer.currentdata
+        return self.projectionViewer.currentdata[np.newaxis,:,:], self.sinogramViewer.currentdata[:,np.newaxis,:]
 
     def getflats(self):
         return self.data.flats
@@ -112,12 +112,14 @@ class tomoWidget(QtGui.QWidget):
     def getdarks(self):
         return self.data.darks
 
-    def currentChanged(self,index):
+    def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
+
+    def addPreview(self, params, recon):
+        self.previewViewer.addPreview(recon[0], params)
 
     def test(self, params):
         self.previewViewer.test(params)
-
 
 
 class StackViewer(pg.ImageView):
@@ -133,7 +135,7 @@ class StackViewer(pg.ImageView):
 
     @property
     def currentdata(self):
-        return self.data[self.data.currentframe]
+        return np.rot90(self.data[self.data.currentframe]) #these rotations are very annoying
 
 
 class PreviewViewer(QtGui.QSplitter):
@@ -143,17 +145,13 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.dim = dim
 
-        # Use collections.deque with 2D numpy arrays instead of a 3D numpy array
         self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
         self.previewdata = deque(maxlen=self.maxpreviews)
-        # shape = (self.maxpreviews, dim, dim)
-
 
         self.setOrientation(QtCore.Qt.Horizontal)
         self.functionform = QtGui.QStackedWidget() #ParameterTree()
         self.imageview = pg.ImageView(self)
         self.setCurrentIndex = self.imageview.setCurrentIndex
-        # self.imageview.setImage(self.previews)
         self.addWidget(self.functionform)
         self.addWidget(self.imageview)
 

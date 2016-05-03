@@ -90,10 +90,11 @@ def load():
 
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
-    paramformstack.setMinimumHeight(300)
+    paramformstack.setMinimumHeight(200)
     l.addWidget(paramformstack)
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
+    propertytable.setMinimumHeight(400)
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
 
@@ -104,13 +105,6 @@ def load():
     blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
-
-    #wire stuff up
-    functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
-    functionwidget.moveUpButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                                                      functionmanager.currentindex - 1))
-    functionwidget.moveDownButton.clicked.connect(lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                                                        functionmanager.currentindex + 1))
 
     loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
     loginwidget.logoutClicked.connect(loginwidget.hide)
