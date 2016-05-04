@@ -75,11 +75,13 @@ class tomoWidget(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
+        self.cor = self.data.shape[2]/2
+
         self.projectionViewer = StackViewer(self.data)
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data))
-        self.sinogramViewer.setCurrentIndex(self.sinogramViewer.data.shape[0] // 2)
+        self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1])
@@ -121,20 +123,47 @@ class tomoWidget(QtGui.QWidget):
         self.previewViewer.addPreview(recon, params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
+    def setCorValue(self, value):
+        self.cor = value
+
     def test(self, params):
         self.previewViewer.test(params)
 
 
 class StackViewer(pg.ImageView):
-    def __init__(self, data, *args, **kwargs):
+    def __init__(self, data, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
         self.data = data
-
+        self.ui.roiBtn.setParent(None)
         self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
         self.getImageItem().setAutoDownsample(True)
         self.autoLevels()
         self.getView().invertY(False)
+
+        self.view_label = QtGui.QLabel(self)
+        self.view_label.setText('No: ')
+        self.view_spinBox = QtGui.QSpinBox(self)
+        self.view_spinBox.setRange(0, data.shape[0] - 1)
+        l = QtGui.QHBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        l.addWidget(self.view_label)
+        l.addWidget(self.view_spinBox)
+        l.addStretch(1)
+        w = QtGui.QWidget()
+        w.setLayout(l)
+        self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
+        self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
+
+        self.sigTimeChanged.connect(self.indexChanged)
+        self.view_spinBox.valueChanged.connect(self.setCurrentIndex)
+
+    def indexChanged(self, ind, time):
+        self.view_spinBox.setValue(ind)
+
+    def setIndex(self, ind):
+        self.setCurrentIndex(ind)
+        self.view_spinBox.setValue(ind)
 
     @property
     def currentdata(self):
@@ -154,6 +183,7 @@ class PreviewViewer(QtGui.QSplitter):
         self.setOrientation(QtCore.Qt.Horizontal)
         self.functionform = QtGui.QStackedWidget() #ParameterTree()
         self.imageview = ImageView(self)
+        self.imageview.ui.roiBtn.setParent(None)
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(self.functionform)
         self.addWidget(self.imageview)

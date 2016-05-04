@@ -83,11 +83,19 @@ class plugin(base.plugin):
 
         self.centerwidget.currentWidget().load()
         # self.imagePropModel.widgetchanged()
-        ui.propertytable.setData([[key, value] for key, value in self.currentImage().data.header.items()])
+        ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
         ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
+        ui.cor_spinBox.setValue(self.currentDataset().cor)
+        ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
+
+        recon = functionmanager.recon_function
+        if recon is not None:
+            ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
+            recon.setCenterParam(self.currentDataset().cor)
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
+        ui.cor_spinBox.clear()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):
@@ -99,5 +107,5 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
-    def currentImage(self):
+    def currentDataset(self):
         return self.centerwidget.currentWidget().widget

@@ -2,10 +2,11 @@
 
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
+import numpy as np
 from functools import partial
+from time import sleep
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-import numpy as np
 import functionmanager
 from collectionsmod import UnsortableOrderedDict
 import ui
@@ -245,12 +246,33 @@ class FuncWidget(featureWidget):
         return self.partial(**args)
 
     def menuActionClicked(self, pos):
-        print self.func_signature
         if self.form.currentItem().parent():
             self.menu.exec_(self.form.mapToGlobal(pos))
 
     def testParamTriggered(self):
-        print self.form.currentItem()
+        param = self.form.currentItem().param
+        if param.type() == 'int' or param.type() == 'float':
+            start, end, step = None, None, None
+            if 'limits' in param.opts:
+                start, end = param.opts['limits']
+                step = (end - start)/3 + 1
+            elif param.value() is not None:
+                start, end, step = param.value()//2, 4*(param.value())//2, param.value()//2
+            test = TestRangeDialog(param.type(), (start, end, step))
+            if test.exec_():
+                for i in np.arange(*test.selectedRange()):
+                    param.setValue(i)
+                    functionmanager.runpreviewstack()
+                    # TODO avoid having to make this to wait
+                    # Seems to have a race condition when trying to access data in functionmanager.runpreviewstack()
+                    sleep(0.7)
+        elif param.type() == 'list':
+            test = TestListRangeDialog(param.opts['values'])
+            if test.exec_():
+                for i in test.selectedOptions():
+                    param.setValue(i)
+                    functionmanager.runpreviewstack()
+                    sleep(0.7)
 
 
 class ReconFuncWidget(FuncWidget):
@@ -260,9 +282,93 @@ class ReconFuncWidget(FuncWidget):
         self.previewButton.setChecked(True)
         self.kwargs_complement['algorithm'] = subfunction.lower()
 
+    def setCenterParam(self, value):
+        for param in self.params.children():
+            if param.name() == 'center':
+                param.setValue(value)
+
 
 class TestRangeDialog(QtGui.QDialog):
-    def __init__(self, dtype, range=None, values=None, **opts):
+    def __init__(self, dtype, prange, **opts):
         super(TestRangeDialog, self).__init__(**opts)
-        l = QtGui.QHBoxLayout(self)
-        self.button_box
+        SpinBox = QtGui.QSpinBox if dtype == 'int' else QtGui.QDoubleSpinBox
+        self.gridLayout = QtGui.QGridLayout(self)
+        self.spinBox = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox, 1, 0, 1, 1)
+        self.spinBox_2 = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox_2, 1, 1, 1, 1)
+        self.spinBox_3 = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox_3, 1, 2, 1, 1)
+        self.label = QtGui.QLabel(self)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.label_2 = QtGui.QLabel(self)
+        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label_2, 0, 1, 1, 1)
+        self.label_3 = QtGui.QLabel(self)
+        self.label_3.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label_3, 0, 2, 1, 1)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.gridLayout.addWidget(self.buttonBox, 0, 3, 2, 1)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        if prange is not (None, None, None):
+            self.spinBox.setMaximum(3 * prange[2])
+            self.spinBox_2.setMaximum(3 * prange[2])
+            self.spinBox_3.setMaximum(prange[2])
+
+            self.spinBox.setValue(prange[0])
+            self.spinBox_2.setValue(prange[1])
+            self.spinBox_3.setValue(prange[2])
+
+
+        self.setWindowTitle(_translate("Dialog", "Set parameter range", None))
+        self.label.setText(_translate("Dialog", "Start", None))
+        self.label_2.setText(_translate("Dialog", "End", None))
+        self.label_3.setText(_translate("Dialog", "Step", None))
+
+    def selectedRange(self):
+        # return the end as selected end + step so that the range includes the end
+        return self.spinBox.value(), self.spinBox_2.value()  + self.spinBox_3.value(), self.spinBox_3.value()
+
+
+class TestListRangeDialog(QtGui.QDialog):
+    def __init__(self, options, **opts):
+        super(TestListRangeDialog, self).__init__(**opts)
+        self.gridLayout = QtGui.QGridLayout(self)
+        self.comboBox = QtGui.QComboBox(self)
+        self.gridLayout.addWidget(self.comboBox, 1, 0, 1, 1)
+        self.lineEdit = QtGui.QLineEdit(self)
+        self.lineEdit.setReadOnly(True)
+        self.gridLayout.addWidget(self.lineEdit, 2, 0, 1, 1)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.gridLayout.addWidget(self.buttonBox, 1, 1, 2, 1)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.setWindowTitle(_translate("Dialog", "Set parameter range", None))
+
+        self.options = options
+        self.comboBox.addItems(options)
+        self.comboBox.activated.connect(self.addToList)
+        self.lineEdit.setText(' '.join(options))
+        self.lineEdit.keyPressEvent = self.keyPressEvent
+
+    def addToList(self, option):
+        self.lineEdit.setText(str(self.lineEdit.text()) + ' ' + self.options[option])
+
+    def keyPressEvent(self, ev):
+        if ev.key() == QtCore.Qt.Key_Backspace or ev.key() == QtCore.Qt.Key_Delete:
+            self.lineEdit.setText(' '.join(str(self.lineEdit.text()).split(' ')[:-1]))
+        elif ev.key() == QtCore.Qt.Key_Enter or ev.key() == QtCore.Qt.Key_Return:
+            self.addToList(self.comboBox.currentIndex())
+        ev.accept()
+
+    def selectedOptions(self):
+        return str(self.lineEdit.text()).split(' ')

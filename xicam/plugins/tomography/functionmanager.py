@@ -2,13 +2,15 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from functools import partial
-from copy import copy
+from copy import deepcopy
 from xicam import threads
 import ui
 import customwidgets
 import tomopy
+import numpy as np
 
 functions = []
+recon_function = None
 currentindex = 0
 layout = None
 
@@ -31,7 +33,7 @@ def clearFeatures():
 
 
 def addFunction(function, subfunction, package=tomopy):
-    global functions, currentindex
+    global functions, recon_function, currentindex
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
@@ -43,6 +45,8 @@ def addFunction(function, subfunction, package=tomopy):
     currentindex = len(functions)
     if function == 'Reconstruction':
         func = customwidgets.ReconFuncWidget(function, subfunction, package)
+        recon_function = func
+        ui.cor_spinBox.valueChanged.connect(func.setCenterParam)
     else:
         func = customwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
@@ -88,14 +92,14 @@ def runpreviewstack():
         kwargs = {}
         for arg in func.args_complement:
             if not init and arg in ('arr', 'tomo'):
-                kwargs[arg] = copy(widget.getsino())
+                kwargs[arg] = deepcopy(widget.getsino())
                 angles = kwargs[arg].shape[0] #TODO have this and COR as inputs to each dataset NOT HERE
             elif arg in 'flats':
-                kwargs[arg] = widget.getflats()
+                kwargs[arg] = deepcopy(widget.getflats())
             elif arg in 'darks':
-                kwargs[arg] = widget.getdarks()
+                kwargs[arg] = deepcopy(widget.getdarks())
 
-            params[func.subfunc_name] =  copy(func.param_dict)
+            params[func.subfunc_name] =  deepcopy(func.param_dict)
             kwargs.update(**func.param_dict)
             kwargs.update(**func.kwargs_complement)
         if func.func_name == 'Reconstruction':
@@ -117,8 +121,6 @@ def update():
 
     for i in range(layout.count()):
         layout.itemAt(i).parent = None
-
-    # layout.addItem(QtGui.QSpacerItem(0,0,vData=QtGui.QSizePolicy.Expanding))
 
     for item in functions:
         layout.addWidget(item)

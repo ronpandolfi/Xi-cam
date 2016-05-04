@@ -19,6 +19,7 @@ toolbar = None
 propertytable = None
 paramformstack = None
 functionslist = None
+cor_spinBox = None
 
 
 class funcAction(QtGui.QAction):
@@ -32,7 +33,7 @@ class funcAction(QtGui.QAction):
 
 
 def load():
-    global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist
+    global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist, cor_spinBox
     # Load the gui from file
     toolbar = ttoolbar.tomotoolbar()
 
@@ -93,10 +94,19 @@ def load():
     paramformstack.setMinimumHeight(200)
     l.addWidget(paramformstack)
 
+    l1 = QtGui.QHBoxLayout()
+    l1.setContentsMargins(0, 0, 0, 0)
+    l1.addWidget(QtGui.QLabel('Center of rotation: '))
+    cor_spinBox = QtGui.QDoubleSpinBox()
+    cor_spinBox.setMaximum(9999)
+    cor_spinBox.clear()
+    l1.addWidget(cor_spinBox)
+
+    l.insertLayout(2, l1)
+
     propertytable = pg.TableWidget() #QtGui.QTableView()
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
-
     l.addWidget(propertytable)
     rightwidget.setLayout(l)
 
