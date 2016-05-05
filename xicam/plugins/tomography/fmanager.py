@@ -3,11 +3,12 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from functools import partial
 from copy import deepcopy
+import yamlmod
 from xicam import threads
 import ui
-import customwidgets
-import tomopy
-import numpy as np
+import fwidgets
+import reconpkg
+import fdata
 
 functions = []
 recon_function = None
@@ -32,7 +33,7 @@ def clearFeatures():
         ui.showform(ui.blankform)
 
 
-def addFunction(function, subfunction, package=tomopy):
+def addFunction(function, subfunction, package=reconpkg.tomopy):
     global functions, recon_function, currentindex
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
@@ -44,11 +45,11 @@ def addFunction(function, subfunction, package=tomopy):
 
     currentindex = len(functions)
     if function == 'Reconstruction':
-        func = customwidgets.ReconFuncWidget(function, subfunction, package)
+        func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
         ui.cor_spinBox.valueChanged.connect(func.setCenterParam)
     else:
-        func = customwidgets.FuncWidget(function, subfunction, package)
+        func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
     update()
 
@@ -103,7 +104,7 @@ def runpreviewstack():
             kwargs.update(**func.param_dict)
             kwargs.update(**func.kwargs_complement)
         if func.func_name == 'Reconstruction':
-            kwargs['theta'] = tomopy.angles(angles) #TODO have this and COR as inputs to each dataset NOT HERE
+            kwargs['theta'] = reconpkg.tomopy.angles(angles) #TODO have this and COR as inputs to each dataset NOT HERE
 
         if not init:
             init = True
@@ -152,3 +153,22 @@ def test():
         for func in functions:
             params[func.subfunc_name] = func.param_dict
         ui.centerwidget.currentWidget().widget.test(params)
+
+def load_function_stack(yaml_file):
+    global functions, currentindex
+    with open(yaml_file, 'r') as f:
+        stack = yamlmod.ordered_load(f)
+        # stack = yamlmod.yaml.load(f)
+    for func, subfuncs in stack.iteritems():
+        for subfunc in subfuncs:
+            if func == 'Reconstruction':
+                addFunction(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+            else:
+                addFunction(func, subfunc)
+            funcWidget = functions[currentindex]
+            for param in subfuncs[subfunc]:
+                if 'Package' in param:
+                    continue
+                child = funcWidget.params.child(param['name'])
+                child.setValue(param['value'])
+                child.setDefault(param['value'])

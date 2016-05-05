@@ -7,8 +7,8 @@ import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import toolbar as ttoolbar
-import functiondata
-import functionmanager
+import fdata
+import fmanager
 
 blankform = None
 leftwidget = None
@@ -29,7 +29,7 @@ class funcAction(QtGui.QAction):
         self.subfunc=subfunc
         self.triggered.connect(self.addFunction)
     def addFunction(self):
-        functionmanager.addFunction(self.func,self.subfunc)
+        fmanager.addFunction(self.func, self.subfunc)
 
 
 def load():
@@ -48,7 +48,7 @@ def load():
     functionslist = functionwidget.functionsList
 
     addfunctionmenu = QtGui.QMenu()
-    for func,subfuncs in functiondata.funcs.iteritems():
+    for func,subfuncs in fdata.funcs.iteritems():
         if len(subfuncs)>1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             addfunctionmenu.addMenu(funcmenu)

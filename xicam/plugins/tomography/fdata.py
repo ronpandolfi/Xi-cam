@@ -1,7 +1,6 @@
 import yaml
 
-
-with open('xicam/plugins/tomography/yaml/funcs.yml','r') as stream:
+with open('xicam/plugins/tomography/yaml/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
 parameters = {}

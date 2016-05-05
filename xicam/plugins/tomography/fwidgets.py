@@ -7,10 +7,10 @@ from functools import partial
 from time import sleep
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-import functionmanager
+import fmanager
 from collectionsmod import UnsortableOrderedDict
 import ui
-import functiondata
+import fdata
 import introspect
 
 
@@ -123,14 +123,14 @@ class featureWidget(QtGui.QWidget):
                                            'Are you sure you want to delete this function?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            functionmanager.functions = [feature for feature in functionmanager.functions if feature is not self]
+            fmanager.functions = [feature for feature in fmanager.functions if feature is not self]
             self.deleteLater()
             ui.showform(ui.blankform)
 
     def mousePressEvent(self, *args, **kwargs):
         self.showSelf()
         self.setFocus()
-        functionmanager.currentindex = functionmanager.functions.index(self)
+        fmanager.currentindex = fmanager.functions.index(self)
         super(featureWidget, self).mousePressEvent(*args, **kwargs)
 
     def showSelf(self):
@@ -148,7 +148,7 @@ class featureWidget(QtGui.QWidget):
 
     def setName(self, name):
         self.name = name
-        functionmanager.update()
+        fmanager.update()
 
 
 class FuncWidget(featureWidget):
@@ -164,8 +164,8 @@ class FuncWidget(featureWidget):
         self._form = None
         self._param_dict = None
         self._partial = None
-        self.__function = getattr(package, functiondata.names[self.subfunc_name])
-        self.params = Parameter.create(name=self.name, children=functiondata.parameters[self.subfunc_name], type='group')
+        self.__function = getattr(package, fdata.names[self.subfunc_name])
+        self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
 
         # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
@@ -262,7 +262,7 @@ class FuncWidget(featureWidget):
             if test.exec_():
                 for i in np.arange(*test.selectedRange()):
                     param.setValue(i)
-                    functionmanager.runpreviewstack()
+                    fmanager.runpreviewstack()
                     # TODO avoid having to make this to wait
                     # Seems to have a race condition when trying to access data in functionmanager.runpreviewstack()
                     sleep(0.7)
@@ -271,7 +271,7 @@ class FuncWidget(featureWidget):
             if test.exec_():
                 for i in test.selectedOptions():
                     param.setValue(i)
-                    functionmanager.runpreviewstack()
+                    fmanager.runpreviewstack()
                     sleep(0.7)
 
 
@@ -287,6 +287,14 @@ class ReconFuncWidget(FuncWidget):
             if param.name() == 'center':
                 param.setValue(value)
 
+    @property
+    def param_dict(self):
+        self._param_dict = super(ReconFuncWidget, self).param_dict
+        if self.subfunc_name == 'Gridrec':
+            filter_par = [self._param_dict['cutoff'], self._param_dict['order']]
+            self._param_dict['filter_par'] = filter_par
+        del self._param_dict['cutoff'], self._param_dict['order']
+        return self._param_dict
 
 class TestRangeDialog(QtGui.QDialog):
     def __init__(self, dtype, prange, **opts):

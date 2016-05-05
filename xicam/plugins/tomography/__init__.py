@@ -25,7 +25,7 @@ import widgets as twidgets
 from xicam.plugins import widgets, explorer
 from xicam.plugins import base
 from PySide import QtUiTools
-import functionmanager
+import fmanager
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import ui
@@ -44,18 +44,19 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # wire stuff up
-        self.functionwidget.previewButton.clicked.connect(functionmanager.runpreviewstack)
-        self.functionwidget.clearButton.clicked.connect(functionmanager.clearFeatures)
+        self.functionwidget.previewButton.clicked.connect(fmanager.runpreviewstack)
+        self.functionwidget.clearButton.clicked.connect(fmanager.clearFeatures)
         self.functionwidget.moveUpButton.clicked.connect(
-            lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                  functionmanager.currentindex - 1))
+            lambda: fmanager.swapFunctions(fmanager.currentindex,
+                                           fmanager.currentindex - 1))
         self.functionwidget.moveDownButton.clicked.connect(
-            lambda: functionmanager.swapFunctions(functionmanager.currentindex,
-                                                  functionmanager.currentindex + 1))
+            lambda: fmanager.swapFunctions(fmanager.currentindex,
+                                           fmanager.currentindex + 1))
 
         # SETUP FEATURES
-        functionmanager.layout = ui.functionslist
-        functionmanager.load()
+        fmanager.layout = ui.functionslist
+        fmanager.load()
+        fmanager.load_function_stack('xicam/plugins/tomography/yaml/functionstack.yml')
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -88,7 +89,7 @@ class plugin(base.plugin):
         ui.cor_spinBox.setValue(self.currentDataset().cor)
         ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
 
-        recon = functionmanager.recon_function
+        recon = fmanager.recon_function
         if recon is not None:
             ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
             recon.setCenterParam(self.currentDataset().cor)

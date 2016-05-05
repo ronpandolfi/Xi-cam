@@ -171,12 +171,7 @@ FBP:
   - name: center
     type: float
     suffix: px
-  - children:
-    - name: cutoff
-      type: float
-    - name: order
-      type: int
-    name: filter_name
+  - name: filter_name
     type: list
     values:
     - none
@@ -187,16 +182,15 @@ FBP:
     - ramlak
     - parzen
     - butterworth
+  - name: cutoff
+    type: float
+  - name: order
+    type: int
 Gridrec:
   - name: center
     type: float
     suffix: px
-  - children:
-    - name: cutoff
-      type: float
-    - name: order
-      type: int
-    name: filter_name
+  - name: filter_name
     type: list
     values:
     - none
@@ -207,6 +201,10 @@ Gridrec:
     - ramlak
     - parzen
     - butterworth
+  - name: cutoff
+    type: float
+  - name: order
+    type: int
 MLEM:
   - name: center
     type: float

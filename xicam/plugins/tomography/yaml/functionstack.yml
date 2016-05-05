@@ -1,0 +1,29 @@
+Normalization:
+  Regular: []
+Negative Logarithm:
+  Negative Logarithm: []
+Stripe Removal:
+  Fourier-Wavelet:
+  - name: wname
+    value: db5
+  - name: sigma
+    value: 2
+  - name: pad
+    value: True
+Reconstruction:
+  Gridrec:
+  - name: cutoff
+    value: 0.25
+  - name: order
+    value: 2
+  - name: filter_name
+    value: butterworth
+  - Package: tomopy
+Circular Mask:
+  Circular Mask:
+  - name: ratio
+    value: 1.0
+  - name: val
+    value: 0
+  - name: axis
+    value: 0
