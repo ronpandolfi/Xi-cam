@@ -14,22 +14,6 @@ import fdata
 import introspect
 
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
-
-
 class ROlineEdit(QtGui.QLineEdit):
     def __init__(self, *args, **kwargs):
         super(ROlineEdit, self).__init__(*args, **kwargs)
@@ -136,16 +120,6 @@ class featureWidget(QtGui.QWidget):
     def showSelf(self):
         ui.showform(self.form)
 
-    # def hideothers(self):
-    #     for item in functionmanager.functions:
-    #         if hasattr(item, 'frame_2') and item is not self:
-    #             item.frame_2.hide()
-
-    # def wireup(self):
-    #     if hasattr(self.form, 'txtName'):
-    #         self.form.txtName.setText(self.name)
-    #         self.form.txtName.textChanged.connect(self.setName)
-
     def setName(self, name):
         self.name = name
         fmanager.update()
@@ -192,7 +166,7 @@ class FuncWidget(featureWidget):
     @property
     def form(self):
         if self._form is None:
-            self._form = ParameterTree()
+            self._form = ParameterTree(showHeader=False)
             self._form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             self._form.customContextMenuRequested.connect(self.menuActionClicked)
             self._form.setParameters(self.params, showTop=True)
@@ -295,6 +269,7 @@ class ReconFuncWidget(FuncWidget):
             self._param_dict['filter_par'] = filter_par
         del self._param_dict['cutoff'], self._param_dict['order']
         return self._param_dict
+
 
 class TestRangeDialog(QtGui.QDialog):
     def __init__(self, dtype, prange, **opts):

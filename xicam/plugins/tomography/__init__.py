@@ -104,7 +104,7 @@ class plugin(base.plugin):
         if type(paths) is list:
             paths = paths[0]
 
-        widget = widgets.OOMTabItem(itemclass=twidgets.tomoWidget, paths=paths)
+        widget = widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 

@@ -41,6 +41,7 @@ With fly camera:
 
 from collections import deque
 import numpy as np
+import psutil
 from PySide import QtGui,QtCore
 from vispy import app, scene, io
 from vispy.color import Colormap, BaseColormap,ColorArray
@@ -51,14 +52,16 @@ import imageio
 import os
 
 
-class tomoWidget(QtGui.QWidget):
-
+class TomoViewer(QtGui.QWidget):
+    """
+    Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
+    """
     def __init__(self, paths=None, data=None, *args,**kwargs):
 
         if paths is None and data is None:
             raise ValueError('Either data or path to file must be provided')
 
-        super(tomoWidget, self).__init__()
+        super(TomoViewer, self).__init__()
 
         self.viewstack = QtGui.QStackedWidget(self)
 
@@ -77,20 +80,20 @@ class tomoWidget(QtGui.QWidget):
 
         self.cor = self.data.shape[2]/2
 
-        self.projectionViewer = StackViewer(self.data)
+        self.projectionViewer = StackViewer(self.data, parent=self)
         self.viewstack.addWidget(self.projectionViewer)
 
-        self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data))
+        self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.previewViewer = PreviewViewer(self.data.shape[1])
+        self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.viewstack.addWidget(self.previewViewer)
 
-        self.processViewer = processViewer(paths=paths, data=data)
+        self.processViewer = ProcessViewer(paths, self.data.shape[::2], parent=self)
         self.viewstack.addWidget(self.processViewer)
 
-        self.reconstructionViewer = reconstructionViewer(paths=paths, data=data)
+        self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout(self)
@@ -100,6 +103,7 @@ class tomoWidget(QtGui.QWidget):
         self.setLayout(l)
 
         self.viewmode.currentChanged.connect(self.currentChanged)
+        self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
     @staticmethod
     def loaddata(paths):
@@ -131,6 +135,9 @@ class tomoWidget(QtGui.QWidget):
 
 
 class StackViewer(pg.ImageView):
+    """
+    PG ImageView subclass to view projections or sinograms of a tomography dataset
+    """
     def __init__(self, data, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
         self.data = data
@@ -171,6 +178,10 @@ class StackViewer(pg.ImageView):
 
 
 class PreviewViewer(QtGui.QSplitter):
+    """
+    Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
+    corresponding preview
+    """
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
         self.maxpreviews = maxpreviews if maxpreviews is not None else 10
@@ -210,12 +221,12 @@ class PreviewViewer(QtGui.QSplitter):
         self.addPreview(np.random.rand(self.dim, self.dim), params)
 
 
-class volumeViewer(QtGui.QWidget):
+class VolumeViewer(QtGui.QWidget):
 
     sigImageChanged=QtCore.Signal()
 
     def __init__(self,path=None,data=None,*args,**kwargs):
-        super(volumeViewer, self).__init__()
+        super(VolumeViewer, self).__init__()
 
         self.levels=[0,1]
 
@@ -223,7 +234,7 @@ class volumeViewer(QtGui.QWidget):
         l.setContentsMargins(0,0,0,0)
         l.setSpacing(0)
 
-        self.volumeRenderWidget=volumeRenderWidget()
+        self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self)
@@ -346,10 +357,10 @@ class volumeViewer(QtGui.QWidget):
         self.volumeRenderWidget.events.close.connect(lambda e: writer.close())
 
 
-class volumeRenderWidget(scene.SceneCanvas):
+class VolumeRenderWidget(scene.SceneCanvas):
 
     def __init__(self,vol=None,path=None,size=(800,600),show=False):
-        super(volumeRenderWidget, self).__init__(keys='interactive',size=size,show=show)
+        super(VolumeRenderWidget, self).__init__(keys='interactive', size=size, show=show)
 
         # Prepare canvas
         self.measure_fps()
@@ -509,25 +520,138 @@ class VolumeVisual(scene.visuals.Volume):
         if self._index_buffer is None:
             self._create_vertex_data()
 
+
 scene.visuals.Volume=VolumeVisual
 
 
-class processViewer(QtGui.QWidget):
-    def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(processViewer, self).__init__()
+class ProcessViewer(QtGui.QTabWidget):
+    """
+    Viewer class to define run settings for a full tomography dataset reconstruction job. Has tab for local run settings
+    and tab for remote job settins.
+    """
+    def __init__(self, path, dim, parent=None):
+        super(ProcessViewer, self).__init__(parent=parent)
+        self.setTabPosition(QtGui.QTabWidget.West)
+        s = QtGui.QSplitter(QtCore.Qt.Horizontal)
+        w = QtGui.QWidget()
+        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        w.setContentsMargins(0,0,0,0)
+        l = QtGui.QGridLayout()
+        l.setContentsMargins(0,0,0,0)
+        l.setSpacing(0)
+
+        path, name = os.path.split(path)
+        name = 'RECON_' + name
+        path = os.path.join(path, name)
+
+        # Create Local Parameter Tree
+        self.localparamtree = pg.parametertree.ParameterTree(showHeader=False)
+        precon, plocal, pspecs = self.setupParams(dim, path)
+        self.reconsettings = pg.parametertree.Parameter.create(name='Reconstruction Settings', type='group',
+                                                               children=precon)
+        self.localparamtree.setParameters(self.reconsettings, showTop=True)
+        self.localsettings = pg.parametertree.Parameter.create(name='Run Settings', type='group', children=plocal)
+        self.localparamtree.addParameters(self.localsettings, showTop=True)
+        self.localspecs = pg.parametertree.Parameter.create(name='Local Specifications', type='group', children=pspecs)
+        self.localparamtree.addParameters(self.localspecs, showTop=True)
+
+        l.addWidget(self.localparamtree, 0, 0, 1, 2)
+
+        # Run and cancel push buttons
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.runButton = QtGui.QPushButton()
+        self.runButton.setIcon(icon)
+        self.runButton.setFlat(True)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.cancelButton = QtGui.QPushButton()
+        self.cancelButton.setIcon(icon)
+        self.cancelButton.setFlat(True)
+
+        l.addWidget(self.runButton, 1, 0, 1, 1)
+        l.addWidget(self.cancelButton, 1, 1, 1, 1)
+
+        w.setLayout(l)
+        s.addWidget(w)
+
+        # Text Browser for console
+        self.local_console = QtGui.QTextBrowser()
+        self.local_console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        s.addWidget(self.local_console)
+
+        self.addTab(s, 'Local')
+        self.addTab(QtGui.QWidget(), 'Remote')
+
+        # Wire up parameters
+        self.reconsettings.param('Browse').sigActivated.connect(
+            lambda: self.reconsettings.param('Output Name').setValue(str(QtGui.QFileDialog.getSaveFileName(
+                directory=path)[0])))
+
+        sinostart = self.reconsettings.param('First Sinogram')
+        sinoend = self.reconsettings.param('Last Sinogram')
+        sinostep = self.reconsettings.param('Step Sinogram')
+        nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
+        chunks = self.localsettings.param('Sinogram Chunks')
+        sinos = self.localsettings.param('Sinograms per Chunk')
+        chunkschanged = lambda: sinos.setValue((nsino()) // chunks.value(), blockSignal=sinoschanged)
+        sinoschanged = lambda: chunks.setValue((nsino() + 1)// sinos.value(),  blockSignal=chunkschanged)
+        chunks.sigValueChanged.connect(chunkschanged)
+        sinos.sigValueChanged.connect(sinoschanged)
+        sinostart.sigValueChanged.connect(chunkschanged)
+        sinoend.sigValueChanged.connect(chunkschanged)
+        sinostep.sigValueChanged.connect(chunkschanged)
+
+        chunks.setValue(1)
+
+    def setupParams(self, dim, path):
+        # Local Recon Settings
+        precon = [{'name': 'First Sinogram', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
+                  {'name': 'Last Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1]},
+                  {'name': 'First Projection', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
+                  {'name': 'Last Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
+                  {'name': 'Ouput Format', 'type': 'list', 'values': ['SPOT HDF5 (.h5)', 'TIFF (.tiff)'],
+                   'default': '832 HDF5 (.h5)'},
+                  {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
+                  {'name': 'Browse', 'type': 'action'},
+                  ]
+        # Local Run Settings
+        total, available = self.memory()
+        cores = self.cores()
+        prun = [{'name': 'Cores', 'type': 'int', 'value': cores, 'default': None},
+                  {'name': 'Sinogram Chunks', 'type': 'int', 'value': 0, 'default': 1},
+                  {'name': 'Sinograms per Chunk', 'type': 'int', 'value': 0, 'default': 1}]
+        # Local Specifications
+        # siPrefix probably does not use base 2. Oh well memory will be an estimate
+        pspecs = [{'name': 'Total Cores', 'type': 'int', 'value': cores, 'readonly': True},
+                  {'name': 'Total Memory', 'type': 'float', 'value': total, 'suffix': 'B', 'siPrefix': True,
+                   'readonly': True},
+                  {'name': 'Available Memory', 'type': 'float', 'value': available, 'suffix': 'B', 'siPrefix': True,
+                   'readonly': True}]
+        return precon, plocal, pspecs
+
+    @staticmethod
+    def memory():
+        memory = psutil.virtual_memory()
+        return memory.total, memory.available
+
+    @staticmethod
+    def cores():
+        return psutil.cpu_count()
 
 
-class reconstructionViewer(volumeViewer):
+class ReconstructionViewer(VolumeViewer):
     def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(reconstructionViewer, self).__init__()
+        super(ReconstructionViewer, self).__init__()
 
 
 class DataTreeWidget(QtGui.QTreeWidget):
     """
     Widget for displaying hierarchical python data structures
-    (eg, nested dicts, lists, and arrays)
+    (eg, nested dicts, lists, and arrays), adapted from pyqtgraph datatree.
     """
-
 
     def __init__(self, parent=None, data=None):
         QtGui.QTreeWidget.__init__(self, parent)
@@ -561,8 +685,11 @@ class DataTreeWidget(QtGui.QTreeWidget):
 
 
 class ArrayDeque(deque):
-    # perhaps will need to add check of datatype everytime a new array is added with extend, append, etc??
+    """
+    Class for a numpy array deque where arrays can be appended on both ends.
+    """
     def __init__(self, arraylist=[], arrayshape=None, dtype=None, maxlen=None):
+        # perhaps will need to add check of datatype everytime a new array is added with extend, append, etc??
         if not arraylist and not arrayshape:
             raise ValueError('One of arraylist or arrayshape must be specified')
 
@@ -630,6 +757,9 @@ class ArrayDeque(deque):
 
 
 class ImageView(pg.ImageView):
+    """
+    Subclass of PG ImageView to correct z-slider signal behavior.
+    """
     def keyPressEvent(self, ev):
         super(ImageView, self).keyPressEvent(ev)
         self.timeLineChanged()
