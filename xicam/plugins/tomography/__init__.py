@@ -46,14 +46,14 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # wire stuff up
-        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.runpipeline(*fmanager.pipelinefunction()))
-        self.functionwidget.clearButton.clicked.connect(fmanager.clearFeatures)
+        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline(*fmanager.construct_pipeline_function()))
+        self.functionwidget.clearButton.clicked.connect(fmanager.clear_features)
         self.functionwidget.moveUpButton.clicked.connect(
-            lambda: fmanager.swapFunctions(fmanager.currentindex,
-                                           fmanager.currentindex - 1))
+            lambda: fmanager.swap_functions(fmanager.currentindex,
+                                            fmanager.currentindex - 1))
         self.functionwidget.moveDownButton.clicked.connect(
-            lambda: fmanager.swapFunctions(fmanager.currentindex,
-                                           fmanager.currentindex + 1))
+            lambda: fmanager.swap_functions(fmanager.currentindex,
+                                            fmanager.currentindex + 1))
 
         # SETUP FEATURES
         fmanager.layout = ui.functionslist

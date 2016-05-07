@@ -29,7 +29,7 @@ class funcAction(QtGui.QAction):
         self.subfunc=subfunc
         self.triggered.connect(self.addFunction)
     def addFunction(self):
-        fmanager.addFunction(self.func, self.subfunc)
+        fmanager.add_function(self.func, self.subfunc)
 
 
 def load():

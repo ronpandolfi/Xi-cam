@@ -209,14 +209,18 @@ class FuncWidget(FeatureWidget):
                 param.setDefault(defaults[param.name()])
                 param.setValue(defaults[param.name()])
 
-    def run(self, **args):
-        for arg in args.keys():
-            if arg not in self.args_complement:
-                raise ValueError('{} is not an argument to {}'.format(arg, self.__function.__name__))
-        if len(args) != len(self.args_complement):
-            raise ValueError('{} requires {} more arguments, {} given'.format(self.__function.__name__,
-                                                                              len(self.args_complement), len(args)))
-        return self.partial(**args)
+    def allReadOnly(self, boolean):
+        for param in self.params.children():
+            param.setReadonly(boolean)
+
+    # def run(self, **args):
+    #     for arg in args.keys():
+    #         if arg not in self.args_complement:
+    #             raise ValueError('{} is not an argument to {}'.format(arg, self.__function.__name__))
+    #     if len(args) != len(self.args_complement):
+    #         raise ValueError('{} requires {} more arguments, {} given'.format(self.__function.__name__,
+    #                                                                           len(self.args_complement), len(args)))
+    #     return self.partial(**args)
 
     def menuActionClicked(self, pos):
         if self.form.currentItem().parent():
@@ -237,11 +241,13 @@ class FuncWidget(FeatureWidget):
         else:
             return
 
+        # Will probably need to lock up inputs to function parameter trees, because if they are messed with as
+        # the preview pipeline functions are being computed, BAD THINGS HAPPEN!
         if test.exec_():
             def f(i):
                 param.setValue(i)
-                return fmanager.pipelinefunction()
-            fmanager.runpipeline(lambda: map(f, test.selectedRange()), partial(map, lambda x: fmanager.runpipeline(*x)))
+                return fmanager.construct_pipeline_function()
+            fmanager.run_pipeline(lambda: map(f, test.selectedRange()), partial(map, lambda x: fmanager.run_pipeline(*x)))
 
 
 
