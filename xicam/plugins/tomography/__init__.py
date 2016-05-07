@@ -32,8 +32,10 @@ import ui
 
 
 class plugin(base.plugin):
+    """
+    Tomography plugin class
+    """
     name = "Tomography"
-
     def __init__(self, *args, **kwargs):
 
         self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.load()
@@ -44,7 +46,7 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # wire stuff up
-        self.functionwidget.previewButton.clicked.connect(fmanager.runpreviewstack)
+        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.runpipeline(*fmanager.pipelinefunction()))
         self.functionwidget.clearButton.clicked.connect(fmanager.clearFeatures)
         self.functionwidget.moveUpButton.clicked.connect(
             lambda: fmanager.swapFunctions(fmanager.currentindex,
@@ -82,17 +84,19 @@ class plugin(base.plugin):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
 
-        self.centerwidget.currentWidget().load()
-        # self.imagePropModel.widgetchanged()
-        ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
-        ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
-        ui.cor_spinBox.setValue(self.currentDataset().cor)
-        ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
+        try:
+            self.centerwidget.currentWidget().load()
+            ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
+            ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
+            ui.cor_spinBox.setValue(self.currentDataset().cor)
+            ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
 
-        recon = fmanager.recon_function
-        if recon is not None:
-            ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
-            recon.setCenterParam(self.currentDataset().cor)
+            recon = fmanager.recon_function
+            if recon is not None:
+                ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
+                recon.setCenterParam(self.currentDataset().cor)
+        except AttributeError as e:
+            print e.message
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()

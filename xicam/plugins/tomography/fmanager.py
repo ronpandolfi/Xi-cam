@@ -69,20 +69,20 @@ def swapFunctions(idx_1, idx_2):
     update()
 
 
-def runpreviewstack():
+def pipelinefunction():
     global functions
     try:
         widget = ui.centerwidget.currentWidget().widget
     except AttributeError:
-        return
+        return None, None
 
     if len(functions) < 0:
-        return
+        return None, None
 
     if 'Reconstruction' not in [func.func_name for func in functions]:
         QtGui.QMessageBox.warning(None, 'Reconstruction method required',
                                   'You have to select a reconstruction method to run a preview')
-        return
+        return None, None
 
     params = OrderedDict()
     init = False
@@ -112,8 +112,13 @@ def runpreviewstack():
         else:
             funstack = partial(func.partial, funstack(), **kwargs)
 
-    runnable = threads.RunnableMethod(partial(widget.addPreview, params), funstack)
-    threads.queue.put(runnable)
+    return funstack, partial(widget.addPreview, params)
+
+
+def runpipeline(funstack, callback):
+    if funstack is not None:
+        runnable = threads.RunnableMethod(callback, funstack)
+        threads.queue.put(runnable)
 
 
 def update():

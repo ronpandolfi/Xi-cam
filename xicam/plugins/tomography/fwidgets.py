@@ -14,30 +14,29 @@ import fdata
 import introspect
 
 
-class ROlineEdit(QtGui.QLineEdit):
-    def __init__(self, *args, **kwargs):
-        super(ROlineEdit, self).__init__(*args, **kwargs)
-        self.setReadOnly(True)
-        self.setFrame(False)
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
 
-    def focusOutEvent(self, *args, **kwargs):
-        super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
-        self.setCursor(QtCore.Qt.ArrowCursor)
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
 
-    def mouseDoubleClickEvent(self, *args, **kwargs):
-        super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)
-        self.setFrame(True)
-        self.setFocus()
-        self.selectAll()
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 
-class featureWidget(QtGui.QWidget):
+class FeatureWidget(QtGui.QWidget):
     def __init__(self, name=''):
         self.name = name
 
         self._form = None
 
-        super(featureWidget, self).__init__()
+        super(FeatureWidget, self).__init__()
 
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -115,7 +114,7 @@ class featureWidget(QtGui.QWidget):
         self.showSelf()
         self.setFocus()
         fmanager.currentindex = fmanager.functions.index(self)
-        super(featureWidget, self).mousePressEvent(*args, **kwargs)
+        super(FeatureWidget, self).mousePressEvent(*args, **kwargs)
 
     def showSelf(self):
         ui.showform(self.form)
@@ -125,7 +124,7 @@ class featureWidget(QtGui.QWidget):
         fmanager.update()
 
 
-class FuncWidget(featureWidget):
+class FuncWidget(FeatureWidget):
     def __init__(self, function, subfunction, package):
         self.name = function
         if function != subfunction:
@@ -160,8 +159,8 @@ class FuncWidget(featureWidget):
         self.menu.addAction(action)
 
     def wireup(self):
-            for param in self.params.children():
-                param.sigValueChanged.connect(self.paramChanged)
+        for param in self.params.children():
+            param.sigValueChanged.connect(self.paramChanged)
 
     @property
     def form(self):
@@ -233,20 +232,17 @@ class FuncWidget(featureWidget):
             elif param.value() is not None:
                 start, end, step = param.value()//2, 4*(param.value())//2, param.value()//2
             test = TestRangeDialog(param.type(), (start, end, step))
-            if test.exec_():
-                for i in np.arange(*test.selectedRange()):
-                    param.setValue(i)
-                    fmanager.runpreviewstack()
-                    # TODO avoid having to make this to wait
-                    # Seems to have a race condition when trying to access data in functionmanager.runpreviewstack()
-                    sleep(0.7)
         elif param.type() == 'list':
             test = TestListRangeDialog(param.opts['values'])
-            if test.exec_():
-                for i in test.selectedOptions():
-                    param.setValue(i)
-                    fmanager.runpreviewstack()
-                    sleep(0.7)
+        else:
+            return
+
+        if test.exec_():
+            def f(i):
+                param.setValue(i)
+                return fmanager.pipelinefunction()
+            fmanager.runpipeline(lambda: map(f, test.selectedRange()), partial(map, lambda x: fmanager.runpipeline(*x)))
+
 
 
 class ReconFuncWidget(FuncWidget):
@@ -272,6 +268,10 @@ class ReconFuncWidget(FuncWidget):
 
 
 class TestRangeDialog(QtGui.QDialog):
+    """
+    Simple QDialgog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
+    parameter
+    """
     def __init__(self, dtype, prange, **opts):
         super(TestRangeDialog, self).__init__(**opts)
         SpinBox = QtGui.QSpinBox if dtype == 'int' else QtGui.QDoubleSpinBox
@@ -316,10 +316,14 @@ class TestRangeDialog(QtGui.QDialog):
 
     def selectedRange(self):
         # return the end as selected end + step so that the range includes the end
-        return self.spinBox.value(), self.spinBox_2.value()  + self.spinBox_3.value(), self.spinBox_3.value()
+        return np.arange(self.spinBox.value(), self.spinBox_2.value(), self.spinBox_3.value())
 
 
 class TestListRangeDialog(QtGui.QDialog):
+    """
+    Simple QDialgog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
+    in order to test the different function parameters.
+    """
     def __init__(self, options, **opts):
         super(TestListRangeDialog, self).__init__(**opts)
         self.gridLayout = QtGui.QGridLayout(self)
@@ -353,5 +357,22 @@ class TestListRangeDialog(QtGui.QDialog):
             self.addToList(self.comboBox.currentIndex())
         ev.accept()
 
-    def selectedOptions(self):
+    def selectedRange(self):
         return str(self.lineEdit.text()).split(' ')
+
+
+class ROlineEdit(QtGui.QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super(ROlineEdit, self).__init__(*args, **kwargs)
+        self.setReadOnly(True)
+        self.setFrame(False)
+
+    def focusOutEvent(self, *args, **kwargs):
+        super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
+        self.setCursor(QtCore.Qt.ArrowCursor)
+
+    def mouseDoubleClickEvent(self, *args, **kwargs):
+        super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)
+        self.setFrame(True)
+        self.setFocus()
+        self.selectAll()

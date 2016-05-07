@@ -44,7 +44,7 @@ import numpy as np
 import psutil
 from PySide import QtGui,QtCore
 from vispy import app, scene, io
-from vispy.color import Colormap, BaseColormap,ColorArray
+from vispy.color import Colormap, BaseColormap, ColorArray
 from pipeline import loader
 import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
@@ -93,7 +93,7 @@ class TomoViewer(QtGui.QWidget):
         self.processViewer = ProcessViewer(paths, self.data.shape[::2], parent=self)
         self.viewstack.addWidget(self.processViewer)
 
-        self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
+        # self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout(self)
@@ -192,17 +192,26 @@ class PreviewViewer(QtGui.QSplitter):
         self.previewdata = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
-        self.functionform = QtGui.QStackedWidget() #ParameterTree()
+        self.functionform = QtGui.QStackedWidget()
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
+
+        self.deleteButton = QtGui.QPushButton(self.imageview)
+        self.deleteButton.setText("")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.deleteButton.setIcon(icon)
+        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 1, 1, 1)
+
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(self.functionform)
         self.addWidget(self.imageview)
 
+        self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
-    # from the previewdata deque but are still in the functionform widget?
+    # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
     def addPreview(self, image, funcdata):
         self.previews.appendleft(image)
         functree = DataTreeWidget()
@@ -213,12 +222,23 @@ class PreviewViewer(QtGui.QSplitter):
         self.imageview.setImage(self.previews)
         self.functionform.setCurrentWidget(functree)
 
+    def removePreview(self):
+        if len(self.previews) > 0:
+            idx = self.imageview.currentIndex
+            self.functionform.removeWidget(self.previewdata[idx])
+            del self.previews[idx]
+            del self.previewdata[idx]
+            if len(self.previews) == 0:
+                self.imageview.clear()
+            else:
+                self.imageview.setImage(self.previews)
+
     @QtCore.Slot(object, object)
     def indexChanged(self, index, time):
-        self.functionform.setCurrentWidget(self.previewdata[index])
-
-    def test(self, params):
-        self.addPreview(np.random.rand(self.dim, self.dim), params)
+        try:
+            self.functionform.setCurrentWidget(self.previewdata[index])
+        except IndexError:
+            print 'index {} does not exist'
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -546,11 +566,11 @@ class ProcessViewer(QtGui.QTabWidget):
 
         # Create Local Parameter Tree
         self.localparamtree = pg.parametertree.ParameterTree(showHeader=False)
-        precon, plocal, pspecs = self.setupParams(dim, path)
+        precon, prun, pspecs = self.setupParams(dim, path)
         self.reconsettings = pg.parametertree.Parameter.create(name='Reconstruction Settings', type='group',
                                                                children=precon)
         self.localparamtree.setParameters(self.reconsettings, showTop=True)
-        self.localsettings = pg.parametertree.Parameter.create(name='Run Settings', type='group', children=plocal)
+        self.localsettings = pg.parametertree.Parameter.create(name='Run Settings', type='group', children=prun)
         self.localparamtree.addParameters(self.localsettings, showTop=True)
         self.localspecs = pg.parametertree.Parameter.create(name='Local Specifications', type='group', children=pspecs)
         self.localparamtree.addParameters(self.localspecs, showTop=True)
@@ -630,7 +650,7 @@ class ProcessViewer(QtGui.QTabWidget):
                    'readonly': True},
                   {'name': 'Available Memory', 'type': 'float', 'value': available, 'suffix': 'B', 'siPrefix': True,
                    'readonly': True}]
-        return precon, plocal, pspecs
+        return precon, prun, pspecs
 
     @staticmethod
     def memory():
