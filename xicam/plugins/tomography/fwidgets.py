@@ -192,15 +192,17 @@ class FuncWidget(FeatureWidget):
         for arg in self.args_complement:
             signature += '{},'.format(arg)
         for param, value in self.param_dict.iteritems():
-            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else '{0}=\'{1}\','.format(param, value)
+            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
+                '{0}=\'{1}\','.format(param, value)
         for param, value in self.kwargs_complement.iteritems():
-            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else '{0}=\'{1}\','.format(param, value)
+            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
+                '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
 
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
 
-    def setDefaults(self): #TODO gridrec filter_pars are children of filter_name so are not captured in defaults
+    def setDefaults(self):
         defaults = introspect.get_arg_defaults(self.__function)
         for param in self.params.children():
             if param.name() in defaults:
@@ -241,13 +243,14 @@ class FuncWidget(FeatureWidget):
         else:
             return
 
-        # Will probably need to lock up inputs to function parameter trees, because if they are messed with as
-        # the preview pipeline functions are being computed, BAD THINGS HAPPEN!
+        # TODO perhaps use a lock/mutex in the data accessing and actually run each preview in its own thread
+        # TODO do not update the param but the param_dict
         if test.exec_():
             def f(i):
                 param.setValue(i)
-                return fmanager.construct_pipeline_function()
-            fmanager.run_pipeline(lambda: map(f, test.selectedRange()), partial(map, lambda x: fmanager.run_pipeline(*x)))
+                return fmanager.construct_preview_pipeline()
+            fmanager.run_pipeline_preview(lambda: map(f, test.selectedRange()),
+                                          partial(map, lambda x: fmanager.run_pipeline_preview(*x)))
 
 
 

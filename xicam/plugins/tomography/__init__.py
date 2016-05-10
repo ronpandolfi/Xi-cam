@@ -46,7 +46,7 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # wire stuff up
-        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline(*fmanager.construct_pipeline_function()))
+        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
         self.functionwidget.clearButton.clicked.connect(fmanager.clear_features)
         self.functionwidget.moveUpButton.clicked.connect(
             lambda: fmanager.swap_functions(fmanager.currentindex,

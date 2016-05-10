@@ -74,6 +74,20 @@ class bl832h5image(fabioimage):
         self.data = dfrm[0]
         return self
 
+    def _find_dataset_group(self, h5object):
+        keys = h5object.keys()
+        if len(keys) == 1:
+            if isinstance(h5object[keys[0]], h5py.Group):
+                group_keys = h5object[keys[0]].keys()
+                if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
+                    return h5object[keys[0]]
+                else:
+                    return self._find_dataset_group(h5object[keys[0]])
+            else:
+                raise Exception('Unable to find dataset group')
+        else:
+            raise Exception('Unable to find dataset group')
+
     @property
     def flats(self):
         if self._flats is None:
@@ -96,8 +110,16 @@ class bl832h5image(fabioimage):
 
     def getsinogram(self, idx=None):
         if idx is None: idx = self.data.shape[0]//2
-        self.sinogram = np.vstack([frame[0, idx] for frame in map(lambda x: self._dgroup[self.frames[x]], range(self.nframes))])
+        self.sinogram = np.vstack([frame[0, idx] for frame in map(lambda x: self._dgroup[self.frames[x]],
+                                                                  range(self.nframes))])
         return self
+
+    def getsinogramchunk(self, proj_slice, sino_slc):
+        shape = (proj_slice.stop - proj_slice.start, sino_slc.stop - sino_slc.start, self.data.shape[1])
+        arr = np.empty(shape)
+        for i in range(proj_slice.start, proj_slice.stop, proj_slice.step):
+            arr[i] = self._dgroup[self.frames[i]][0, sino_slc, :]
+        return arr
 
     def __len__(self):
         return self.nframes
@@ -115,20 +137,6 @@ class bl832h5image(fabioimage):
     def close(self):
         self._h5.close()
 
-    def _find_dataset_group(self, h5object):
-        keys = h5object.keys()
-        if len(keys) == 1:
-            if isinstance(h5object[keys[0]], h5py.Group):
-                group_keys = h5object[keys[0]].keys()
-                if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
-                    return h5object[keys[0]]
-                else:
-                    return self._find_dataset_group(h5object[keys[0]])
-            else:
-                raise Exception('Unable to find dataset group')
-        else:
-            raise Exception('Unable to find dataset group')
-
 
 
 fabio.openimage.bl832h5 = bl832h5image
@@ -137,9 +145,10 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 
 if __name__ == '__main__':
     from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    data.getsinogram(500)
+    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    arr = data.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+    print arr.shape
     print data.darks.shape
     print data.flats.shape
-    imshow(data.sinogram, cmap='gray')
-    show()
+    # imshow(data.sinogram, cmap='gray')
+    # show()

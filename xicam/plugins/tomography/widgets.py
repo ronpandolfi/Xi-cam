@@ -50,6 +50,7 @@ import pyqtgraph as pg
 from pyqtgraph.parametertree import ParameterTree
 import imageio
 import os
+import fmanager
 
 
 class TomoViewer(QtGui.QWidget):
@@ -91,6 +92,7 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.previewViewer)
 
         self.processViewer = ProcessViewer(paths, self.data.shape[::2], parent=self)
+        self.processViewer.sigRunClicked.connect(fmanager.run_full_recon)
         self.viewstack.addWidget(self.processViewer)
 
         # self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
@@ -109,14 +111,24 @@ class TomoViewer(QtGui.QWidget):
     def loaddata(paths):
         return loader.ProjectionStack(paths)
 
-    def getsino(self):
-        return self.sinogramViewer.currentdata[:,np.newaxis,:]
+    def getsino(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
+        else:
+            return np.ascontiguousarray(self.data.fabimage.getsinogramchunk(proj_slice=slice(*slc[0]),
+                                                                            sino_slc=slice(*slc[1])))
 
-    def getflats(self):
-        return self.data.flats[:,self.sinogramViewer.currentIndex,:]
+    def getflats(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.data.flats[:,self.sinogramViewer.currentIndex,:])
+        else:
+            return np.ascontiguousarray(self.data.flats[slice(*slc[0]), slice(*slc[1]), :])
 
-    def getdarks(self):
-        return self.data.darks[:,self.sinogramViewer.currentIndex,:]
+    def getdarks(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.data.darks[:,self.sinogramViewer.currentIndex,:])
+        else:
+            return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
 
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
@@ -549,6 +561,9 @@ class ProcessViewer(QtGui.QTabWidget):
     Viewer class to define run settings for a full tomography dataset reconstruction job. Has tab for local run settings
     and tab for remote job settins.
     """
+
+    sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int)
+
     def __init__(self, path, dim, parent=None):
         super(ProcessViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
@@ -561,12 +576,12 @@ class ProcessViewer(QtGui.QTabWidget):
         l.setSpacing(0)
 
         path, name = os.path.split(path)
-        name = 'RECON_' + name
-        path = os.path.join(path, name)
+        name = 'RECON_' + name.split('.')[0]
+        out_path = os.path.join(path, name)
 
         # Create Local Parameter Tree
         self.localparamtree = pg.parametertree.ParameterTree(showHeader=False)
-        precon, prun, pspecs = self.setupParams(dim, path)
+        precon, prun, pspecs = self.setupParams(dim, out_path)
         self.reconsettings = pg.parametertree.Parameter.create(name='Reconstruction Settings', type='group',
                                                                children=precon)
         self.localparamtree.setParameters(self.reconsettings, showTop=True)
@@ -603,19 +618,22 @@ class ProcessViewer(QtGui.QTabWidget):
         self.addTab(s, 'Local')
         self.addTab(QtGui.QWidget(), 'Remote')
 
+        # Wire up buttons
+        self.runButton.clicked.connect(self.runButtonClicked)
+
         # Wire up parameters
         self.reconsettings.param('Browse').sigActivated.connect(
-            lambda: self.reconsettings.param('Output Name').setValue(str(QtGui.QFileDialog.getSaveFileName(
-                directory=path)[0])))
+            lambda: self.reconsettings.param('Output Name').setValue(str(QtGui.QFileDialog.getSaveFileName(self,
+                                                                  'Save reconstruction as', out_path)[0])))
 
-        sinostart = self.reconsettings.param('First Sinogram')
-        sinoend = self.reconsettings.param('Last Sinogram')
+        sinostart = self.reconsettings.param('Start Sinogram')
+        sinoend = self.reconsettings.param('End Sinogram')
         sinostep = self.reconsettings.param('Step Sinogram')
         nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
         chunks = self.localsettings.param('Sinogram Chunks')
         sinos = self.localsettings.param('Sinograms per Chunk')
-        chunkschanged = lambda: sinos.setValue((nsino()) // chunks.value(), blockSignal=sinoschanged)
-        sinoschanged = lambda: chunks.setValue((nsino() + 1)// sinos.value(),  blockSignal=chunkschanged)
+        chunkschanged = lambda: sinos.setValue(np.round((nsino()) // chunks.value()), blockSignal=sinoschanged)
+        sinoschanged = lambda: chunks.setValue((nsino() - 1)// sinos.value() + 1,  blockSignal=chunkschanged)
         chunks.sigValueChanged.connect(chunkschanged)
         sinos.sigValueChanged.connect(sinoschanged)
         sinostart.sigValueChanged.connect(chunkschanged)
@@ -626,14 +644,14 @@ class ProcessViewer(QtGui.QTabWidget):
 
     def setupParams(self, dim, path):
         # Local Recon Settings
-        precon = [{'name': 'First Sinogram', 'type': 'int', 'value': 0, 'default': 0},
+        precon = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Last Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1]},
-                  {'name': 'First Projection', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'End Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1]},
+                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Last Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
+                  {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
                   {'name': 'Ouput Format', 'type': 'list', 'values': ['SPOT HDF5 (.h5)', 'TIFF (.tiff)'],
-                   'default': '832 HDF5 (.h5)'},
+                   'default': 'TIFF (.tiff)'},
                   {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
                   {'name': 'Browse', 'type': 'action'},
                   ]
@@ -660,6 +678,26 @@ class ProcessViewer(QtGui.QTabWidget):
     @staticmethod
     def cores():
         return psutil.cpu_count()
+
+    def log2local(self, msg):
+        self.local_console.insertPlainText(msg)
+
+    def sino_indices(self):
+        return (self.reconsettings.child('Start Sinogram').value(),
+                self.reconsettings.child('End Sinogram').value(),
+                self.reconsettings.child('Step Sinogram').value())
+
+    def proj_indices(self):
+        return (self.reconsettings.child('Start Projection').value(),
+                self.reconsettings.child('End Projection').value(),
+                self.reconsettings.child('Step Projection').value())
+
+    def runButtonClicked(self):
+        self.sigRunClicked.emit(self.proj_indices(), self.sino_indices(),
+                                self.reconsettings.child('Output Name').value(),
+                                self.reconsettings.child('Ouput Format').value(),
+                                self.localsettings.child('Sinogram Chunks').value(),
+                                self.localsettings.child('Cores').value())
 
 
 class ReconstructionViewer(VolumeViewer):

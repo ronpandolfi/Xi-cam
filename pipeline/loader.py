@@ -913,7 +913,8 @@ class StackImage(object):
             frame = 0 #frame[1].step
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]] #del the first cached item
+            # del the first cached item
+            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
@@ -943,7 +944,7 @@ class ProjectionStack(StackImage):
 
 class SinogramStack(StackImage):
     def __init__(self, filepath=None, data=None):
-        super(ProjectionStack, self).__init__(filepath=filepath, data=data)
+        super(SinogramStack, self).__init__(filepath=filepath, data=data)
         self._cachesize = 10
 
     def __new__(cls):
