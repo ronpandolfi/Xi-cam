@@ -16,7 +16,7 @@ import writer
 from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
-# import libtiff
+import libtiff
 
 import numpy as nx
 
@@ -55,7 +55,7 @@ def loadimage(path):
 
 
             elif ext == '.fits':
-                data = np.fliplr(pyfits.open(path)[2].data)
+                data = np.rot90(np.fliplr(pyfits.open(path)[2].data),2)
                 return data
             elif ext in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
@@ -358,7 +358,7 @@ def loadpath(path):
         try:
             if '_lo_' in path:
                 path2 = path.replace('_lo_', '_hi_')
-            elif '_hi_' in path:
+            else: # '_hi_' in path:
                 path2 = path.replace('_hi_', '_lo_')
             return loadstichted(path, path2)
         except Exception as ex:
@@ -1223,7 +1223,7 @@ class singlefilediffimage2(diffimage2):
     def rawdata(self):
         # 'Permanently' cached
         if self._rawdata is None:
-            self._rawdata = np.rot90(loadimage(self.filepath),3)
+            self._rawdata = np.rot90(loadpath(self.filepath),3)
         return self._rawdata
 
     @property

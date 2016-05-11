@@ -150,7 +150,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], centeroverride=None):
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], centeroverride=None, requestkey = None):
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
@@ -212,7 +212,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
     q = q[:len(radialprofile)] / 10.0
 
-    return q, radialprofile, color
+    return q, radialprofile, color, requestkey
 
 
 def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], xres=1000, yres=1000):
@@ -274,3 +274,12 @@ def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):
 
     mask = np.flipud(mask)
     return mask * Imagedata
+
+def qintegrate(*args,**kwargs):
+    # if dimg.cakemode:
+    #     return xintegrate(dimg.cake, cut, callbackcolor)
+    # else:
+         return radialintegratepyFAI(*args,**kwargs)
+
+def xintegrate(dimg, cut, callbackcolor):
+    return range(dimg.transformdata.shape[1]), np.sum(dimg.transformdata*cut,axis=0), callbackcolor

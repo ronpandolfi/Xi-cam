@@ -309,8 +309,8 @@ class dimgViewer(QtGui.QWidget):
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
                     if hasattr(self.plotwidget, 'qintegration'):
-                        self.plotwidget.qintegration.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
-                        self.plotwidget.qintegration.qLine.show()
+                        self.plotwidget.qintegration.movPosLine(self.getq(mousePoint.x(), mousePoint.y()))
+
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
@@ -326,7 +326,7 @@ class dimgViewer(QtGui.QWidget):
             else:
                 self.coordslabel.setText(u"<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
                 if hasattr(self.plotwidget, 'qintegration'):
-                    self.plotwidget.qintegration.qLine.hide()
+                    self.plotwidget.qintegration.posLine.hide()
 
     def getq(self, x, y, mode=None):  # This is a mess...rewrite it sometime
         iscake = self.toolbar.actionCake.isChecked()
@@ -381,7 +381,7 @@ class dimgViewer(QtGui.QWidget):
         self.vLine.setVisible(False)
         # self.coordslabel.setVisible(False)
         if hasattr(self.plotwidget, 'qintegration'):
-            self.plotwidget.qintegration.qLine.setVisible(False)
+            self.plotwidget.qintegration.posLine.setVisible(False)
 
     def enterEvent(self, evt):
         """
@@ -390,7 +390,7 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(True)
         self.vLine.setVisible(True)
         if hasattr(self.plotwidget, 'qintegration'):
-            self.plotwidget.qintegration.qLine.setVisible(True)
+            self.plotwidget.qintegration.posLine.setVisible(True)
 
     def redrawimage(self, returnimg=False):
         """
@@ -619,22 +619,25 @@ class dimgViewer(QtGui.QWidget):
         config.activeExperiment.center = cen
         self.drawcenter()
 
+    def getROIs(self):
+        return [roi for roi in self.viewbox.addedItems if hasattr(roi, 'isdeleting') and not roi.isdeleting]
+
     def replot(self):
-
-        if self.plotwidget.currentIndex() == 0:
-            self.plotwidget.qintegration.clear()
-
-            # self.replotprimary()
-            self.plotwidget.qintegration.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-            self.plotwidget.qintegration.qLine.setVisible(False)
-            self.plotwidget.qintegration.addItem(self.plotwidget.qintegration.qLine)
-            self.replotq()
-        elif self.plotwidget.currentIndex() == 1:
-            self.plotwidget.chiintegration.clear()
-            self.plotwidget.chiintegration.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-            self.plotwidget.chiintegration.chiLine.setVisible(False)
-            self.plotwidget.chiintegration.addItem(self.plotwidget.chiintegration.chiLine)
-            self.replotchi()
+        self.plotwidget.widget(self.plotwidget.currentIndex()).replot(self.dimg,self.getROIs(),self.imageitem)
+        # if self.plotwidget.currentIndex() == 0:
+        #     self.plotwidget.qintegration.clear()
+        #
+        #     # self.replotprimary()
+        #     self.plotwidget.qintegration.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        #     self.plotwidget.qintegration.qLine.setVisible(False)
+        #     self.plotwidget.qintegration.addItem(self.plotwidget.qintegration.qLine)
+        #     self.replotq()
+        # elif self.plotwidget.currentIndex() == 1:
+        #     self.plotwidget.chiintegration.clear()
+        #     self.plotwidget.chiintegration.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        #     self.plotwidget.chiintegration.chiLine.setVisible(False)
+        #     self.plotwidget.chiintegration.addItem(self.plotwidget.chiintegration.chiLine)
+        #     self.replotchi()
 
     def replotchi(self):
         if not config.activeExperiment.iscalibrated:
@@ -743,18 +746,6 @@ class dimgViewer(QtGui.QWidget):
                             if leftq.__len__() > 1: self.plotwidget.qintegration.plot(leftq, cut[:qmiddle])
                             if rightq.__len__() > 1: self.plotwidget.qintegration.plot(rightq, cut[qmiddle:])
 
-                        # elif type(roi) is ROI.LinearRegionItem:
-                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
-                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
-                        #
-                        #     else:
-                        #         print debugtools.frustration()
 
                         if cut is not None:
                             if self.iscake:
@@ -1161,29 +1152,93 @@ class integrationwidget(QtGui.QTabWidget):
         self.setTabPosition(self.West)
         self.qintegration = qintegrationwidget()
         self.chiintegration = chiintegrationwidget()
+        self.xintegration = xintegrationwidget()
+        self.zintegration = zintegrationwidget()
         self.addTab(self.qintegration, u'q')
         self.addTab(self.chiintegration, u'χ')
+        self.addTab(self.xintegration, u'x')
+        self.addTab(self.zintegration, u'z')
         self.currentChanged.connect(self.sigReplot)
 
+class integrationsubwidget(pg.PlotWidget):
+    def __init__(self,axislabel):
+        super(integrationsubwidget, self).__init__()
+        self.setLabel('bottom', axislabel, '')
+        self.posLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        self.posLine.setVisible(False)
+        self.addItem(self.posLine)
 
-class qintegrationwidget(pg.PlotWidget):
+
+    def replot(self,dimg,rois,imageitem):
+        pass
+
+    def replotcallback(self):
+        pass
+
+class qintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
     def __init__(self):
-        super(qintegrationwidget, self).__init__()
-        self.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
-        self.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-        self.qLine.setVisible(False)
-        self.addItem(self.qLine)
+        super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+        self.requestkey = 0
+        self.iscleared = False
+
+    def replot(self,dimg,rois,imageitem):
+        self.requestkey +=1
+        self.iscleared = False
+        # replot full integration
+        xglobals.pool.apply_async(integration.qintegrate, args=(dimg.transformdata,
+                                                                         dimg.mask if not dimg.remeshmode else self.dimg.remeshmask,
+                                                                         dimg.experiment.getAI().getPyFAI(), None, None, None, self.requestkey),
+                                           callback=self.replotcallback)
 
 
-class chiintegrationwidget(pg.PlotWidget):
+        # replot roi integration
+        for roi in rois:
+            if roi.isdeleting:
+                roi.deleteLater()
+                continue
+
+            cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+            print 'Cut:', cut.shape
+
+            if cut is not None:
+                xglobals.pool.apply_async(integration.qintegrate, args=(dimg, cut, [0, 255, 255]), callback=self.replotcallback)
+
+    def replotcallback(self,*args,**kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def plotresult(self, result):
+
+        (x, y, color,requestkey) = result
+        if requestkey == self.requestkey:
+            if not self.iscleared:
+                self.plotItem.clear()
+                self.addItem(self.posLine)
+                self.iscleared = True
+            if color is None:
+                color = [255, 255, 255]
+            curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
+            curve.setZValue(3 * 255 - sum(color))
+
+            self.plotItem.update()
+
+    def movPosLine(self,qx,qz=None,dimg=None):
+        self.posLine.setPos(qx)
+        self.posLine.show()
+
+
+class chiintegrationwidget(integrationsubwidget):
     def __init__(self):
-        super(chiintegrationwidget, self).__init__()
-        # self.chiintegration = chiintegrationwidget.getPlotItem()
-        self.setLabel('bottom', u'χ (Degrees)')
-        self.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-        self.chiLine.setVisible(False)
-        self.addItem(self.chiLine)
+        super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
 
+class xintegrationwidget(integrationsubwidget):
+    def __init__(self):
+        super(xintegrationwidget, self).__init__(axislabel=u'q<sub>x</sub> (\u212B\u207B\u00B9)')
+
+class zintegrationwidget(integrationsubwidget):
+    def __init__(self):
+        super(zintegrationwidget, self).__init__(axislabel=u'q<sub>z</sub> (\u212B\u207B\u00B9)')
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()

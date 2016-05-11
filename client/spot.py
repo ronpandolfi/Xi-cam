@@ -152,6 +152,7 @@ class SpotClient(NewtClient):
         path = self.get_stage_path(dataset, stage)
         r = self.session.head(self.SPOT_URL + '/hdf/download' + path)
         head = r.headers
+        if not 'content-length' in head: return 1
         size = int(head['content-length'])
 
         return size

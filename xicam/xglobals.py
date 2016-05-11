@@ -1,4 +1,4 @@
-import multiprocessing
+from pathos import multiprocessing
 from collections import OrderedDict
 from functools import partial
 import threads
