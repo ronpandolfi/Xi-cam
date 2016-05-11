@@ -8,6 +8,19 @@
 # Adapted for use as a widget by Ron Pandolfi
 # volumeViewer.getHistogram method borrowed from PyQtGraph
 
+from collections import deque
+import numpy as np
+import psutil
+from PySide import QtGui, QtCore
+from vispy import scene  # , app, io
+from vispy.color import Colormap  # , BaseColormap, ColorArray
+from pipeline import loader
+import pyqtgraph as pg
+from pyqtgraph.parametertree import ParameterTree
+import imageio
+import os
+import fmanager
+
 __author__ = "Ronald J Pandolfi"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -39,30 +52,17 @@ With fly camera:
 * IJKL or mouse - look around
 """
 
-from collections import deque
-import numpy as np
-import psutil
-from PySide import QtGui,QtCore
-from vispy import app, scene, io
-from vispy.color import Colormap, BaseColormap, ColorArray
-from pipeline import loader
-import pyqtgraph as pg
-from pyqtgraph.parametertree import ParameterTree
-import imageio
-import os
-import fmanager
-
 
 class TomoViewer(QtGui.QWidget):
     """
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
     """
-    def __init__(self, paths=None, data=None, *args,**kwargs):
+    def __init__(self, paths=None, data=None, *args, **kwargs):
 
         if paths is None and data is None:
             raise ValueError('Either data or path to file must be provided')
 
-        super(TomoViewer, self).__init__()
+        super(TomoViewer, self).__init__(*args, **kwargs)
 
         self.viewstack = QtGui.QStackedWidget(self)
 
@@ -70,8 +70,9 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Projection')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram')
         self.viewmode.addTab('Preview')
+        self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Process')
-        # self.viewmode.addTab('Reconstruction')
+        self.viewmode.addTab('Reconstruction')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -91,15 +92,19 @@ class TomoViewer(QtGui.QWidget):
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.viewstack.addWidget(self.previewViewer)
 
+        self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
+        self.viewstack.addWidget(self.preview3DViewer)
+
         self.processViewer = ProcessViewer(paths, self.data.shape[::2], parent=self)
         self.processViewer.sigRunClicked.connect(fmanager.run_full_recon)
         self.viewstack.addWidget(self.processViewer)
 
+        # Make this a stack viewer with a stack of the recon
         # self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout(self)
-        l.setContentsMargins(0,0,0,0)
+        l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.viewstack)
         l.addWidget(self.viewmode)
         self.setLayout(l)
@@ -120,13 +125,13 @@ class TomoViewer(QtGui.QWidget):
 
     def getflats(self, slc=None):
         if slc is None:
-            return np.ascontiguousarray(self.data.flats[:,self.sinogramViewer.currentIndex,:])
+            return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
         else:
             return np.ascontiguousarray(self.data.flats[slice(*slc[0]), slice(*slc[1]), :])
 
     def getdarks(self, slc=None):
         if slc is None:
-            return np.ascontiguousarray(self.data.darks[:,self.sinogramViewer.currentIndex,:])
+            return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
             return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
 
@@ -650,7 +655,7 @@ class ProcessViewer(QtGui.QTabWidget):
                   {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
                   {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
-                  {'name': 'Ouput Format', 'type': 'list', 'values': ['SPOT HDF5 (.h5)', 'TIFF (.tiff)'],
+                  {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)', 'SPOT HDF5 (.h5)'],
                    'default': 'TIFF (.tiff)'},
                   {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
                   {'name': 'Browse', 'type': 'action'},

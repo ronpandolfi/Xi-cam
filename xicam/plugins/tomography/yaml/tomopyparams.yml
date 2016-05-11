@@ -48,6 +48,7 @@ Gaussian Filter:
   type: float
 - name: order
   type: int
+  limits: [0, 3]
 Background Intensity:
 - name: air
   type: int
