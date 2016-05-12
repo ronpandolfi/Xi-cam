@@ -498,7 +498,7 @@ class diffimage():
     def detector(self):
         if self._detector is None:
             if self.data is not None:
-                name, detector = self.finddetector()
+                name, detector, binning = self.finddetector()
             else:
                 return None
 
@@ -512,8 +512,8 @@ class diffimage():
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1*binning)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2*binning)
                     self.experiment.setvalue('Detector', name)
         return self._detector
 
@@ -527,14 +527,14 @@ class diffimage():
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector
+                    return name, detector, 1
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                if self.data.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
-                                             detector.BINNED_PIXEL_SIZE.keys()]:
-                    detector = detector()
-                    print 'Detector found with binning: ' + name
-                    return name, detector
+                for binning in detector.BINNED_PIXEL_SIZE.keys():
+                    if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                        detector = detector()
+                        print 'Detector found with binning: ' + name
+                        return name, detector, binning
         return None, None
         raise ValueError('Detector could not be identified!')
 
