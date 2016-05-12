@@ -12,8 +12,8 @@ __status__ = "Beta"
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 import platform
 op_sys = platform.system()
-if op_sys == 'Darwin':
-    from Foundation import NSURL
+# if op_sys == 'Darwin':
+#     from Foundation import NSURL
 
 import os
 import numpy as np
@@ -25,32 +25,42 @@ import widgets as twidgets
 from xicam.plugins import widgets, explorer
 from xicam.plugins import base
 from PySide import QtUiTools
-import functionmanager
+import fmanager
 from pyqtgraph.parametertree import ParameterTree
 from xicam import models
 import ui
 
 
 class plugin(base.plugin):
+    """
+    Tomography plugin class
+    """
     name = "Tomography"
-
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.load()
+        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.loadUi()
 
         super(plugin, self).__init__(*args, **kwargs)
 
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        self.imagePropModel = models.imagePropModel(self.currentImage, ui.propertytable)
-        ui.propertytable.setModel(self.imagePropModel)
-
-
+        # wire stuff up
+        # self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
+        self.functionwidget.clearButton.clicked.connect(fmanager.clear_features)
+        self.functionwidget.moveUpButton.clicked.connect(
+            lambda: fmanager.swap_functions(fmanager.currentindex,
+                                            fmanager.currentindex - 1))
+        self.functionwidget.moveDownButton.clicked.connect(
+            lambda: fmanager.swap_functions(fmanager.currentindex,
+                                            fmanager.currentindex + 1))
+        self.functionwidget.loadPipelineButton.clicked.connect(fmanager.open_pipeline_file)
+        self.functionwidget.resetPipelineButton.clicked.connect(lambda: fmanager.load_function_pipeline(
+                                                        'xicam/plugins/tomography/yaml/functionstack.yml'))
         # SETUP FEATURES
-        functionmanager.layout = ui.functionslist
-        functionmanager.load()
-
+        fmanager.layout = ui.functionslist
+        fmanager.load()
+        fmanager.load_function_pipeline('xicam/plugins/tomography/yaml/functionstack.yml')
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -71,18 +81,28 @@ class plugin(base.plugin):
     def dragEnterEvent(self, e):
         print(e)
         e.accept()
-        # if e.mimeData().hasFormat('text/plain'):
-        # e.accept()
-        # else:
-        #     e.accept()
 
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
-        self.centerwidget.currentWidget().load()
-        self.imagePropModel.widgetchanged()
+
+        try:
+            self.centerwidget.currentWidget().load()
+            ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
+            ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
+            ui.cor_spinBox.setValue(self.currentDataset().cor)
+            ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
+
+            recon = fmanager.recon_function
+            if recon is not None:
+                ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
+                recon.setCenterParam(self.currentDataset().cor)
+        except AttributeError as e:
+            print e.message
 
     def tabCloseRequested(self, index):
+        ui.propertytable.clear()
+        ui.cor_spinBox.clear()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):
@@ -90,6 +110,9 @@ class plugin(base.plugin):
         if type(paths) is list:
             paths = paths[0]
 
-        widget = widgets.OOMTabItem(itemclass=twidgets.tomoWidget, paths=paths)
+        widget = widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
+
+    def currentDataset(self):
+        return self.centerwidget.currentWidget().widget
