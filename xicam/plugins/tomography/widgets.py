@@ -67,12 +67,12 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection')  # TODO: Add icons!
-        self.viewmode.addTab('Sinogram')
+        self.viewmode.addTab('Projection Viewer')  # TODO: Add icons!
+        self.viewmode.addTab('Sinogram Viewer')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Process')
-        self.viewmode.addTab('Reconstruction')
+        self.viewmode.addTab('Run Pipeline')
+        self.viewmode.addTab('Reconstruction View')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -80,7 +80,7 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-        self.cor = self.data.shape[2]/2
+        self.cor = self.data.shape[1]/2
 
         self.projectionViewer = StackViewer(self.data, parent=self)
         self.viewstack.addWidget(self.projectionViewer)
@@ -95,7 +95,7 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.processViewer = ProcessViewer(paths, self.data.shape[::2], parent=self)
+        self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
         self.processViewer.sigRunClicked.connect(fmanager.run_full_recon)
         self.viewstack.addWidget(self.processViewer)
 
@@ -209,21 +209,40 @@ class PreviewViewer(QtGui.QSplitter):
         self.previewdata = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
+
+        l = QtGui.QVBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
+        self.setDefaultsButton = QtGui.QPushButton(self)
+        self.setDefaultsButton.setText("Set Pipeline Parameters")
+        l.addWidget(self.functionform)
+        l.addWidget(self.setDefaultsButton)
+        panel = QtGui.QWidget(self)
+        panel.setLayout(l)
+
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
+
+        self.runButton = QtGui.QPushButton(self.imageview)
+        self.runButton.setText("")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.runButton.setIcon(icon)
+        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 1, 1, 1)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.deleteButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
-        self.addWidget(self.functionform)
+        self.addWidget(panel)
         self.addWidget(self.imageview)
 
+        self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
+        self.runButton.clicked.connect(lambda:fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
 
@@ -249,6 +268,10 @@ class PreviewViewer(QtGui.QSplitter):
                 self.imageview.clear()
             else:
                 self.imageview.setImage(self.previews)
+
+    def defaultsButtonClicked(self):
+        current_data = self.previewdata[self.imageview.currentIndex]
+        print current_data
 
     @QtCore.Slot(object, object)
     def indexChanged(self, index, time):
@@ -561,7 +584,7 @@ class VolumeVisual(scene.visuals.Volume):
 scene.visuals.Volume=VolumeVisual
 
 
-class ProcessViewer(QtGui.QTabWidget):
+class RunViewer(QtGui.QTabWidget):
     """
     Viewer class to define run settings for a full tomography dataset reconstruction job. Has tab for local run settings
     and tab for remote job settins.
@@ -570,7 +593,7 @@ class ProcessViewer(QtGui.QTabWidget):
     sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int)
 
     def __init__(self, path, dim, parent=None):
-        super(ProcessViewer, self).__init__(parent=parent)
+        super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
         s = QtGui.QSplitter(QtCore.Qt.Horizontal)
         w = QtGui.QWidget()
@@ -655,7 +678,7 @@ class ProcessViewer(QtGui.QTabWidget):
                   {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
                   {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
-                  {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)', 'SPOT HDF5 (.h5)'],
+                  {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)'],
                    'default': 'TIFF (.tiff)'},
                   {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
                   {'name': 'Browse', 'type': 'action'},
