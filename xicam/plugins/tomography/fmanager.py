@@ -1,5 +1,6 @@
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui, QtCore
+import os
 from collections import OrderedDict
 from functools import partial
 from copy import deepcopy
@@ -99,7 +100,7 @@ def lock_function_params(boolean):
         func.allReadOnly(boolean)
 
 
-def load_function_stack(yaml_file):
+def load_function_pipeline(yaml_file):
     global functions, currentindex
     with open(yaml_file, 'r') as f:
         stack = yamlmod.ordered_load(f)
@@ -117,6 +118,12 @@ def load_function_stack(yaml_file):
                 child = funcWidget.params.child(param['name'])
                 child.setValue(param['value'])
                 child.setDefault(param['value'])
+
+def open_pipeline_file():
+    pipeline_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file', os.path.expanduser('~'),
+                                                      '*.yml')[0]
+    if pipeline_file != '':
+        load_function_pipeline(pipeline_file)
 
 
 def construct_preview_pipeline():

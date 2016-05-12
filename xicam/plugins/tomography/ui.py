@@ -32,7 +32,7 @@ class funcAction(QtGui.QAction):
         fmanager.add_function(self.func, self.subfunc)
 
 
-def load():
+def loadUi():
     global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist, cor_spinBox
     # Load the gui from file
     toolbar = ttoolbar.tomotoolbar()
@@ -70,12 +70,14 @@ def load():
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
-    rightwidget = QtGui.QWidget()
+    rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical) #QtGui.QWidget()
+
+    # l.addWidget(paramformstack)
+
     l = QtGui.QVBoxLayout()
     l.setContentsMargins(0, 0, 0, 0)
 
     paramtree = ParameterTree()
-
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
     paramformstack.setMinimumHeight(200)
@@ -84,19 +86,24 @@ def load():
     l1 = QtGui.QHBoxLayout()
     l1.setContentsMargins(0, 0, 0, 0)
     l1.addWidget(QtGui.QLabel('Center of rotation: '))
-    cor_spinBox = QtGui.QDoubleSpinBox()
+    cor_settings = QtGui.QWidget(rightwidget)
+    cor_spinBox = QtGui.QDoubleSpinBox(cor_settings)
     cor_spinBox.setMaximum(9999)
     cor_spinBox.clear()
     l1.addWidget(cor_spinBox)
+    cor_settings.setLayout(l1)
+    l.addWidget(cor_settings)
 
-    l.insertLayout(2, l1)
+    parameditor = QtGui.QWidget()
+    parameditor.setLayout(l)
+    rightwidget.addWidget(parameditor)
+    rightwidget.addWidget(functionwidget)
+
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
     propertytable.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-    l.addWidget(functionwidget)
-    rightwidget.setLayout(l)
 
     # TODO find a way to share the base plugin loginwidget and fileexplorer
     leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical)

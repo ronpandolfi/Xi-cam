@@ -14,7 +14,7 @@ class mainwindow():
     def __init__(self, app):
         self.app = app
 
-        ui.load()
+        ui.loadUi()
 
         # INIT FORMS
         self.computationForm = None

@@ -21,7 +21,7 @@ class plugin(base.plugin):
     def __init__(self, *args, **kwargs):
 
 
-        self.leftwidget, self.centerwidget, self.rightwidget = ui.load()
+        self.leftwidget, self.centerwidget, self.rightwidget = ui.loadUi()
 
 
         # INIT FORMS

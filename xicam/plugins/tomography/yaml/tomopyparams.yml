@@ -38,7 +38,6 @@ Vo:
   type: int
 Downsample:
 - name: level
-  suffix: ^2
   type: int
 - name: axis
   type: int
@@ -54,7 +53,6 @@ Background Intensity:
   type: int
 Fourier-Wavelet:
 - name: level
-  suffix: ^2
   type: int
 - name: wname
   type: list
@@ -108,7 +106,6 @@ Titarenko:
   type: float
 Upsample:
 - name: level
-  suffix: ^2
   type: int
 - name: axis
   type: int

@@ -38,7 +38,7 @@ class plugin(base.plugin):
     name = "Tomography"
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.load()
+        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.loadUi()
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -46,7 +46,7 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # wire stuff up
-        self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
+        # self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
         self.functionwidget.clearButton.clicked.connect(fmanager.clear_features)
         self.functionwidget.moveUpButton.clicked.connect(
             lambda: fmanager.swap_functions(fmanager.currentindex,
@@ -54,11 +54,13 @@ class plugin(base.plugin):
         self.functionwidget.moveDownButton.clicked.connect(
             lambda: fmanager.swap_functions(fmanager.currentindex,
                                             fmanager.currentindex + 1))
-
+        self.functionwidget.loadPipelineButton.clicked.connect(fmanager.open_pipeline_file)
+        self.functionwidget.resetPipelineButton.clicked.connect(lambda: fmanager.load_function_pipeline(
+                                                        'xicam/plugins/tomography/yaml/functionstack.yml'))
         # SETUP FEATURES
         fmanager.layout = ui.functionslist
         fmanager.load()
-        fmanager.load_function_stack('xicam/plugins/tomography/yaml/functionstack.yml')
+        fmanager.load_function_pipeline('xicam/plugins/tomography/yaml/functionstack.yml')
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
