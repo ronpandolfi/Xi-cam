@@ -69,6 +69,5 @@ class PrincetonMTE(pyFAI.detectors.Detector):
         self._mask = False
         self._mask_crc = None
 
-
-ALL_DETECTORS = {'princetonMTE': PrincetonMTE}
-ALL_DETECTORS.update(pyFAI.detectors.ALL_DETECTORS)
+class _Rayonix_SX165(pyFAI.detectors.RayonixSx165):
+    pass

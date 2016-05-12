@@ -7,6 +7,7 @@ import os
 import numpy as np
 #from nexpy.api import nexus as nx
 import detectors
+import pyFAI
 import glob
 import re
 import time
@@ -518,7 +519,8 @@ class diffimage():
     from fabio import brukerimage
 
     def finddetector(self):
-        for name, detector in detectors.ALL_DETECTORS.iteritems():
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+            print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
@@ -539,7 +541,7 @@ class diffimage():
     def detector(self, value):
         if type(value) == str:
             try:
-                self._detector = detectors.ALL_DETECTORS[value]
+                self._detector = pyFAI.detectors.ALL_DETECTORS[value]
             except KeyError:
                 try:
                     self._detector = getattr(detectors, value)
