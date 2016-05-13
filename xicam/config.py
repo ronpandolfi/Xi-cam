@@ -1,8 +1,9 @@
+# --coding: utf-8 --
 import pickle
 import pyFAI
 from pyFAI import geometry
 from pipeline import detectors
-import __builtin__
+
 
 from pyqtgraph.parametertree import Parameter
 import numpy as np
@@ -44,6 +45,10 @@ class experiment(Parameter):
                       {'name': 'Center Y', 'type': 'float', 'value': 0, 'suffix': ' px'},
                       {'name': 'Detector Distance', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-3},
+                      {'name': 'Detector Tilt', 'type': 'float', 'value': 0, 'siPrefix': False, 'suffix': u'°',
+                       'step': 1e-1},
+                      {'name': 'Detector Rotation', 'type': 'float', 'value': 0, 'siPrefix': False, 'suffix': u'°',
+                       'step': 1e-1},
                       {'name': 'Energy', 'type': 'float', 'value': 10000, 'siPrefix': True, 'suffix': 'eV'},
                       {'name': 'Wavelength', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm'},
                       # {'name': 'View Mask', 'type': 'action'},
@@ -169,8 +174,8 @@ class experiment(Parameter):
 
     def getDetector(self):
         key = self.getvalue('Detector')
-        if key in detectors.ALL_DETECTORS:
-            return detectors.ALL_DETECTORS[self.getvalue('Detector')]()
+        if key in pyFAI.detectors.ALL_DETECTORS:
+            return pyFAI.detectors.ALL_DETECTORS[self.getvalue('Detector')]()
 
     def edit(self):
         pass

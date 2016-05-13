@@ -3,8 +3,8 @@ from fabio import edfimage
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
-if op_sys == 'Darwin':
-    from Foundation import NSURL
+# if op_sys == 'Darwin':
+#     from Foundation import NSURL
 
 import base
 from PySide import QtGui

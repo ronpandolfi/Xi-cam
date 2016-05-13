@@ -16,18 +16,17 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-
-
 import config
 import watcher
 import daemon
 import pipeline
+import rmc
 import qdarkstyle
 import plugins
 from xicam import xglobals
+from xicam import threads
 
-
-class MyMainWindow():
+class MyMainWindow(QtGui.QMainWindow):
     def __init__(self,app):
 
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
@@ -91,8 +90,7 @@ class MyMainWindow():
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
 
-
-
+        threads.worker_thread.start()
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -111,6 +109,11 @@ class MyMainWindow():
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
+
+    def closeEvent(self, ev):
+        print 'here'
+        threads.worker_thread.quit()
+        ev.accept()
 
     def singletest(self):
         self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
