@@ -308,8 +308,9 @@ class dimgViewer(QtGui.QWidget):
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
-                    if hasattr(self.plotwidget, 'qintegration'):
-                        self.plotwidget.qintegration.movPosLine(self.getq(mousePoint.x(), mousePoint.y()))
+
+                    self.plotwidget.movPosLine(self.getq(mousePoint.x(), mousePoint.y(),mode='parallel'),
+                                               self.getq(mousePoint.x(), mousePoint.y(), mode='z'))
 
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
@@ -1160,6 +1161,9 @@ class integrationwidget(QtGui.QTabWidget):
         self.addTab(self.zintegration, u'z')
         self.currentChanged.connect(self.sigReplot)
 
+    def movPosLine(self,*args,**kwargs):
+        self.widget(self.currentIndex()).movPosLine(*args,**kwargs)
+
 class integrationsubwidget(pg.PlotWidget):
     def __init__(self,axislabel):
         super(integrationsubwidget, self).__init__()
@@ -1168,12 +1172,38 @@ class integrationsubwidget(pg.PlotWidget):
         self.posLine.setVisible(False)
         self.addItem(self.posLine)
 
+        self.iscleared = True
+        self.requestkey = 0
+
 
     def replot(self,dimg,rois,imageitem):
         pass
 
     def replotcallback(self):
         pass
+
+    def applyintegration(self,integrationfunction,dimg,rois,data,mask,imageitem):
+        self.requestkey += 1
+        self.iscleared = False
+        # replot full integration
+        xglobals.pool.apply_async(integrationfunction, args=(data, mask, dimg.experiment.getAI().getPyFAI(), None,
+                                                                       None, None, self.requestkey),
+                                  callback=self.replotcallback)
+
+        # replot roi integration
+        for roi in rois:
+            if roi.isdeleting:
+                roi.deleteLater()
+                continue
+
+            cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+            print 'Cut:', cut.shape
+
+            if cut is not None:
+                xglobals.pool.apply_async(integration.chiintegratepyFAI,
+                                          args=(dimg.transformdata, cut, [0, 255, 255], self.requestkey),
+                                          callback=self.replotcallback)
+
 
 class qintegrationwidget(integrationsubwidget):
     sigPlotResult = QtCore.Signal(object)
@@ -1187,23 +1217,27 @@ class qintegrationwidget(integrationsubwidget):
         self.requestkey +=1
         self.iscleared = False
         # replot full integration
-        xglobals.pool.apply_async(integration.qintegrate, args=(dimg.transformdata,
-                                                                         dimg.mask if not dimg.remeshmode else self.dimg.remeshmask,
-                                                                         dimg.experiment.getAI().getPyFAI(), None, None, None, self.requestkey),
-                                           callback=self.replotcallback)
+        if dimg.cakemode:
+            # integrate x
+            pass
+        else:
+            xglobals.pool.apply_async(integration.qintegrate, args=(dimg.transformdata,
+                                                                             dimg.transformmask,
+                                                                             dimg.experiment.getAI().getPyFAI(), None, None, None, self.requestkey),
+                                               callback=self.replotcallback)
 
 
-        # replot roi integration
-        for roi in rois:
-            if roi.isdeleting:
-                roi.deleteLater()
-                continue
+            # replot roi integration
+            for roi in rois:
+                if roi.isdeleting:
+                    roi.deleteLater()
+                    continue
 
-            cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
-            print 'Cut:', cut.shape
+                cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+                print 'Cut:', cut.shape
 
-            if cut is not None:
-                xglobals.pool.apply_async(integration.qintegrate, args=(dimg, cut, [0, 255, 255]), callback=self.replotcallback)
+                if cut is not None:
+                    xglobals.pool.apply_async(integration.qintegrate, args=(dimg, cut, [0, 255, 255]), callback=self.replotcallback)
 
     def replotcallback(self,*args,**kwargs):
         self.sigPlotResult.emit(*args, **kwargs)
@@ -1223,14 +1257,69 @@ class qintegrationwidget(integrationsubwidget):
 
             self.plotItem.update()
 
-    def movPosLine(self,qx,qz=None,dimg=None):
-        self.posLine.setPos(qx)
+    def movPosLine(self,qx,qz,dimg=None):
+        self.posLine.setPos(np.linalg.norm([qx,qz]))
         self.posLine.show()
 
 
 class chiintegrationwidget(integrationsubwidget):
+
+    sigPlotResult = QtCore.Signal(object)
+
     def __init__(self):
         super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
+        self.sigPlotResult.connect(self.plotresult)
+        self.requestkey = 0
+        self.iscleared = False
+
+    def replot(self, dimg, rois, imageitem):
+        self.requestkey += 1
+        self.iscleared = False
+        # replot full integration
+        if dimg.cakemode:
+            # integrate x
+            pass
+        else:#data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], xres=1000, yres=1000
+            xglobals.pool.apply_async(integration.chiintegratepyFAI, args=(dimg.transformdata,
+                                                                    dimg.transformmask,
+                                                                    dimg.experiment.getAI().getPyFAI(), None, None,
+                                                                    None, self.requestkey),
+                                      callback=self.replotcallback)
+
+            # replot roi integration
+            for roi in rois:
+                if roi.isdeleting:
+                    roi.deleteLater()
+                    continue
+
+                cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+                print 'Cut:', cut.shape
+
+                if cut is not None:
+                    xglobals.pool.apply_async(integration.chiintegratepyFAI, args=(dimg.transformdata, cut, [0, 255, 255],self.requestkey),
+                                              callback=self.replotcallback)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def plotresult(self, result):
+
+        (x, y, color, requestkey) = result
+        if requestkey == self.requestkey:
+            if not self.iscleared:
+                self.plotItem.clear()
+                self.addItem(self.posLine)
+                self.iscleared = True
+            if color is None:
+                color = [255, 255, 255]
+            curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
+            curve.setZValue(3 * 255 - sum(color))
+
+            self.plotItem.update()
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(np.rad2deg(np.arctan2(qz,qx)))
+        self.posLine.show()
 
 class xintegrationwidget(integrationsubwidget):
     def __init__(self):

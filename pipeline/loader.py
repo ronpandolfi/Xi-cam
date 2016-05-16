@@ -7,7 +7,7 @@ import os
 import numpy as np
 #from nexpy.api import nexus as nx
 from copy import copy
-import detectors
+from pyFAI import detectors
 import pyFAI
 import glob
 import re
@@ -519,8 +519,6 @@ class diffimage():
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2*binning)
                     self.experiment.setvalue('Detector', name)
         return self._detector
-
-    from fabio import brukerimage
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
@@ -1348,6 +1346,21 @@ class singlefilediffimage2(diffimage2):
         elif self.remeshmode:
             img = self.remesh(img,self.mask)
 
+
+        return img
+
+    @property
+    def transformmask(self):
+        img = self.mask
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cake(img, self.mask)
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask)
 
         return img
 
