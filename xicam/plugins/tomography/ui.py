@@ -1,25 +1,16 @@
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
-from functools import partial
-from xicam import xglobals
-from xicam.plugins import explorer, login
 import pyqtgraph as pg
-from pyqtgraph.parametertree import ParameterTree
-from xicam import models
+from pyqtgraph import parametertree as pt
 import toolbar as ttoolbar
 import fdata
 import fmanager
 
 blankform = None
-leftwidget = None
-centerwidget = None
-rightwidget = None
-bottomwidget = None
-toolbar = None
 propertytable = None
+configparams = None
 paramformstack = None
-functionslist = None
-cor_spinBox = None
+functionwidget = None
 
 
 class funcAction(QtGui.QAction):
@@ -33,8 +24,8 @@ class funcAction(QtGui.QAction):
 
 
 def loadUi():
-    global leftwidget, centerwidget, rightwidget, bottomwidget, blankform, toolbar, propertytable, paramformstack, functionslist, cor_spinBox
-    # Load the gui from file
+    global blankform, propertytable, configparams, functionwidget, paramformstack
+
     toolbar = ttoolbar.tomotoolbar()
 
     centerwidget = QtGui.QTabWidget()
@@ -44,8 +35,8 @@ def loadUi():
 
     bottomwidget = None
 
+    # Load the gui from file
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
-    functionslist = functionwidget.functionsList
 
     addfunctionmenu = QtGui.QMenu()
     for func,subfuncs in fdata.funcs.iteritems():
@@ -70,74 +61,48 @@ def loadUi():
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
-    rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical) #QtGui.QWidget()
-
-    # l.addWidget(paramformstack)
+    leftwidget = QtGui.QWidget()
 
     l = QtGui.QVBoxLayout()
     l.setContentsMargins(0, 0, 0, 0)
 
-    paramtree = ParameterTree()
+    paramtree = pt.ParameterTree()
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
-    paramformstack.setMinimumHeight(200)
+    paramformstack.setFixedHeight(160)
     l.addWidget(paramformstack)
+    l.addWidget(functionwidget)
 
-    l1 = QtGui.QHBoxLayout()
-    l1.setContentsMargins(0, 0, 0, 0)
-    l1.addWidget(QtGui.QLabel('Center of rotation: '))
-    cor_settings = QtGui.QWidget(rightwidget)
-    cor_spinBox = QtGui.QDoubleSpinBox(cor_settings)
-    cor_spinBox.setMaximum(9999)
-    cor_spinBox.clear()
-    l1.addWidget(cor_spinBox)
-    cor_settings.setLayout(l1)
-    l.addWidget(cor_settings)
+    leftwidget.setLayout(l)
 
-    parameditor = QtGui.QWidget()
-    parameditor.setLayout(l)
-    rightwidget.addWidget(parameditor)
-    rightwidget.addWidget(functionwidget)
+    rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
+    configtree = pt.ParameterTree()
+    configtree.setMinimumHeight(230)
+    params = [{'name': 'Rotation Center', 'type': 'float', 'value': 0, 'default': 0, 'suffix':'px'},
+              {'name': 'Rotation Angle', 'type': 'float', 'value':0, 'default': 0, 'suffix':u'\u00b0'},
+              {'name': 'Recon Rotation', 'type': 'float', 'value': 0, 'default': 0, 'suffix': u'\u00b0'},
+              {'name': 'Notes', 'type': 'text', 'value': ''}]
+    configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
+    configtree.setParameters(configparams, showTop=False)
+    rightwidget.addWidget(configtree)
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
     propertytable.verticalHeader().hide()
     propertytable.horizontalHeader().setStretchLastSection(True)
     propertytable.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
 
-    # TODO find a way to share the base plugin loginwidget and fileexplorer
-    leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
-    leftwidget.addWidget(propertytable)
-    l = QtGui.QVBoxLayout()
-    l.setContentsMargins(0, 0, 0, 0)
-    loginwidget = login.LoginDialog()
-    l.addWidget(loginwidget)
-    fileexplorer = explorer.MultipleFileExplorer()
-    l.addWidget(fileexplorer)
-    panelwidget = QtGui.QWidget()
-    panelwidget.setLayout(l)
-    leftwidget.addWidget(panelwidget)
+    rightwidget.addWidget(propertytable)
+    # rightwidget.setLayout(l)
+    propertytable.hide()
+
 
     blankform = QtGui.QLabel('Select a function from\n below to set parameters...')
     blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
-    loginwidget.logoutClicked.connect(loginwidget.hide)
-    loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
-    loginwidget.logoutClicked.connect(fileexplorer.enableActions)
-    loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
-    loginwidget.sigLoggedIn.connect(xglobals.client_callback)
-
-    fileexplorer.sigLoginRequest.connect(loginwidget.show)
-    fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
-    fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
-
-
-    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar, functionwidget
-
-
+    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar
 
 
 def showform(widget):
