@@ -4,7 +4,6 @@ import sys
 from PySide import QtGui, QtCore
 
 from xicam import xglobals
-from xicam import threads
 from xicam.splash import SplashScreen
 import xicam
 
@@ -26,7 +25,6 @@ def main():
     splash.activateWindow()
     app.setActiveWindow(splash)
     app.processEvents()
-    app.lastWindowClosed.connect(threads.worker_thread.exit)
 
     sys.exit(app.exec_())
 

@@ -182,7 +182,8 @@ def set_input_data(fpartial, datawidget, data_slc=None):
 def run_pipeline_preview(funstack, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(callback, funstack)
-        threads.queue.put(runnable)
+        threads.worker.startRunnable(runnable)
+        # threads.queue.put(runnable)
 
 
 def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):

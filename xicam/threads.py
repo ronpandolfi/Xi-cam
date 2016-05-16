@@ -104,12 +104,9 @@ class Worker(QtCore.QObject):
             print "Worker got item {} off queue".format(type(item))
             self.startRunnable(item)
             self.queue.task_done()
-            time.sleep(.3)
+            time.sleep(1)
 
 # Application globals
 global queue, worker
 queue = Queue.Queue()
 worker = Worker(queue)
-worker_thread = QtCore.QThread(objectName='workerThread')
-worker.moveToThread(worker_thread)
-worker_thread.started.connect(worker.run)
