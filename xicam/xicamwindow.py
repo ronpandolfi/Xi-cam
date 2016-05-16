@@ -27,11 +27,11 @@ from xicam import threads
 
 class MyMainWindow(QtGui.QMainWindow):
     def __init__(self,app):
+        super(MyMainWindow, self).__init__()
 
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
 
         import plugins
-
 
         self._pool = None
         # Load the gui from file

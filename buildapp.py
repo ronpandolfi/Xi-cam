@@ -56,7 +56,7 @@ OPTIONS = {'argv_emulation': False,
            'includes': [
                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage', 'pygments.lexers.python',
-               'pygments.styles.monokai', 'pygments.styles.default'
+               'pygments.styles.monokai', 'pygments.styles.default', 'ipython', 'ipykernel.datapub'
            ],
            'excludes': [
                'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet', 'matplotlib.tests', 'matplotlib.testing'
@@ -71,6 +71,8 @@ EXT = Extension(name='pipeline.cWarpImage',
                 include_dirs=[np.get_include()],
 
 )
+
+
 
 setup(
     app=APP,

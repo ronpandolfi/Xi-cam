@@ -16,7 +16,7 @@ class SplashScreen(QtGui.QSplashScreen):
 
     def startworker(self):
         from xicam import threads
-        threads.worker_thread.start()
+        #threads.worker_thread.start()
 
     def launchwindow(self):
         if not self._launching:

@@ -6,7 +6,7 @@ with open('yaml/tomography/functions.yml','r') as stream:
 parameters = {}
 
 for file in ('tomopyparams.yml',): #, 'astraparams.yml', 'mbirparams.yml'):
-    with open('yaml/tomography/yaml/'+file ,'r') as stream:
+    with open('yaml/tomography/'+file ,'r') as stream:
         parameters.update(yaml.load(stream))
 
 with open('yaml/tomography/funcnames.yml','r') as stream:

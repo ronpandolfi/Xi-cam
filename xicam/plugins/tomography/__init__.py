@@ -56,11 +56,11 @@ class plugin(base.plugin):
                                             fmanager.currentindex + 1))
         self.functionwidget.loadPipelineButton.clicked.connect(fmanager.open_pipeline_file)
         self.functionwidget.resetPipelineButton.clicked.connect(lambda: fmanager.load_function_pipeline(
-                                                        'xicam/plugins/tomography/yaml/functionstack.yml'))
+                                                        'yaml/tomography/functionstack.yml'))
         # SETUP FEATURES
         fmanager.layout = ui.functionslist
         fmanager.load()
-        fmanager.load_function_pipeline('xicam/plugins/tomography/yaml/functionstack.yml')
+        fmanager.load_function_pipeline('yaml/tomography/functionstack.yml')
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
