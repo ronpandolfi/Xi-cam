@@ -9,6 +9,8 @@ from xicam import threads
 import ui
 import fwidgets
 import reconpkg
+import fdata
+import warnings
 
 functions = []
 recon_function = None
@@ -33,8 +35,11 @@ def clear_features():
         ui.showform(ui.blankform)
 
 
-def add_function(function, subfunction, package=reconpkg.tomopy):
+def add_function(function, subfunction, package=reconpkg.packages['tomopy']):
     global functions, recon_function, currentindex
+
+    if not hasattr(package,fdata.names[subfunction]): return
+
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
@@ -107,17 +112,21 @@ def load_function_pipeline(yaml_file):
         # stack = yamlmod.yaml.load(f)
     for func, subfuncs in stack.iteritems():
         for subfunc in subfuncs:
-            if func == 'Reconstruction':
-                add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
-            else:
-                add_function(func, subfunc)
-            funcWidget = functions[currentindex]
-            for param in subfuncs[subfunc]:
-                if 'Package' in param:
-                    continue
-                child = funcWidget.params.child(param['name'])
-                child.setValue(param['value'])
-                child.setDefault(param['value'])
+            try:
+                if func == 'Reconstruction':
+                    add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+                else:
+                    add_function(func, subfunc)
+                funcWidget = functions[currentindex]
+                for param in subfuncs[subfunc]:
+                    if 'Package' in param:
+                        continue
+                    child = funcWidget.params.child(param['name'])
+                    child.setValue(param['value'])
+                    child.setDefault(param['value'])
+            except IndexError:
+                # TODO: make this failure more graceful
+                warnings.warn('Failed to load subfunction: ' + subfunc)
 
 def open_pipeline_file():
     pipeline_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file', os.path.expanduser('~'),

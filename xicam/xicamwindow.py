@@ -20,7 +20,6 @@ import config
 import watcher
 import daemon
 import pipeline
-import rmc
 import qdarkstyle
 import plugins
 from xicam import xglobals
