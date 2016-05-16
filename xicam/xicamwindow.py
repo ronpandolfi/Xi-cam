@@ -89,7 +89,7 @@ class MyMainWindow(QtGui.QMainWindow):
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
 
-        threads.worker_thread.start()
+        # threads.worker_thread.start()
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -109,10 +109,10 @@ class MyMainWindow(QtGui.QMainWindow):
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
 
-    def closeEvent(self, ev):
-        print 'here'
-        threads.worker_thread.quit()
-        ev.accept()
+    # def closeEvent(self, ev):
+    #     print 'here'
+    #     threads.worker_thread.quit()
+    #     ev.accept()
 
     def singletest(self):
         self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
