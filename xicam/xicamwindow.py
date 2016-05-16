@@ -90,7 +90,7 @@ class MyMainWindow(QtGui.QMainWindow):
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
 
-        threads.worker_thread.start()
+        # threads.worker_thread.start()
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -103,10 +103,10 @@ class MyMainWindow(QtGui.QMainWindow):
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
 
-    def closeEvent(self, ev):
-        print 'here'
-        threads.worker_thread.quit()
-        ev.accept()
+    # def closeEvent(self, ev):
+    #     print 'here'
+    #     threads.worker_thread.quit()
+    #     ev.accept()
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

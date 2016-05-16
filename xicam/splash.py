@@ -11,9 +11,12 @@ class SplashScreen(QtGui.QSplashScreen):
 
     def mousePressEvent(self, *args, **kwargs):
         self.timer.stop()
+        self.startworker()
         self.launchwindow()
 
-
+    def startworker(self):
+        from xicam import threads
+        threads.worker_thread.start()
 
     def launchwindow(self):
         if not self._launching:
