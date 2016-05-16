@@ -277,8 +277,9 @@ class PreviewViewer(QtGui.QSplitter):
     def indexChanged(self, index, time):
         try:
             self.functionform.setCurrentWidget(self.previewdata[index])
-        except IndexError:
-            print 'index {} does not exist'
+        except IndexError as e:
+            print e.message
+            print 'index {} does not exist'.format(index)
 
 
 class VolumeViewer(QtGui.QWidget):

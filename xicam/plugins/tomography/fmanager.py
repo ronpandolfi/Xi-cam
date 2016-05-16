@@ -47,7 +47,7 @@ def add_function(function, subfunction, package=reconpkg.tomopy):
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
-        ui.cor_spinBox.valueChanged.connect(func.setCenterParam)
+        ui.configparams.child('Rotation Center').sigValueChanged.connect(func.setCenterParam)
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
