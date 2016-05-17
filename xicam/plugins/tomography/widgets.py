@@ -67,8 +67,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection Viewer')  # TODO: Add icons!
-        self.viewmode.addTab('Sinogram Viewer')
+        self.viewmode.addTab('Projection View')  # TODO: Add icons!
+        self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Run Pipeline')

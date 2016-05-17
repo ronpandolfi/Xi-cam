@@ -11,6 +11,7 @@ propertytable = None
 configparams = None
 paramformstack = None
 functionwidget = None
+centerwidget = None
 
 
 class funcAction(QtGui.QAction):
@@ -20,11 +21,11 @@ class funcAction(QtGui.QAction):
         self.subfunc=subfunc
         self.triggered.connect(self.addFunction)
     def addFunction(self):
-        fmanager.add_function(self.func, self.subfunc)
+        fmanager.add_action(self.func, self.subfunc)
 
 
 def loadUi():
-    global blankform, propertytable, configparams, functionwidget, paramformstack
+    global blankform, propertytable, configparams, functionwidget, paramformstack, centerwidget
 
     toolbar = ttoolbar.tomotoolbar()
 
@@ -37,6 +38,14 @@ def loadUi():
 
     # Load the gui from file
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
+
+    functionwidget.clearButton.clicked.connect(fmanager.clear_action)
+    functionwidget.moveUpButton.clicked.connect(
+        lambda: fmanager.swap_functions(fmanager.currentindex,
+                                        fmanager.currentindex - 1))
+    functionwidget.moveDownButton.clicked.connect(
+        lambda: fmanager.swap_functions(fmanager.currentindex,
+                                        fmanager.currentindex + 1))
 
     addfunctionmenu = QtGui.QMenu()
     for func,subfuncs in fdata.funcs.iteritems():
@@ -60,6 +69,28 @@ def loadUi():
     functionwidget.addFunctionButton.setMenu(addfunctionmenu)
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
+
+    filefuncmenu = QtGui.QMenu()
+    openaction = QtGui.QAction(filefuncmenu)
+    openaction.triggered.connect(fmanager.open_pipeline_file)
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/open_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    openaction.setIcon(icon)
+    saveaction = QtGui.QAction(filefuncmenu)
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/save.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    saveaction.setIcon(icon)
+    refreshaction = QtGui.QAction(filefuncmenu)
+    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
+                                                           'xicam/plugins/tomography/yaml/functionstack.yml'))
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    refreshaction.setIcon(icon)
+    filefuncmenu.addActions([openaction, saveaction, refreshaction])
+
+    functionwidget.fileButton.setMenu(filefuncmenu)
+    functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+    functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
 
     leftwidget = QtGui.QWidget()
 
