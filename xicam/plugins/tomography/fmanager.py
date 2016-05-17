@@ -112,7 +112,6 @@ def load_function_pipeline(yaml_file):
     global functions, currentindex
     with open(yaml_file, 'r') as f:
         stack = yamlmod.ordered_load(f)
-        # stack = yamlmod.yaml.load(f)
     clear_functions()
     for func, subfuncs in stack.iteritems():
         for subfunc in subfuncs:
@@ -128,6 +127,7 @@ def load_function_pipeline(yaml_file):
                 child.setValue(param['value'])
                 child.setDefault(param['value'])
 
+
 def open_pipeline_file():
     pipeline_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file', os.path.expanduser('~'),
                                                       '*.yml')[0]
@@ -135,34 +135,37 @@ def open_pipeline_file():
         load_function_pipeline(pipeline_file)
 
 
-def construct_preview_pipeline():
+def pipeline_preview_action(widget, update=True, slc=None):
     global functions
 
     if len(functions) < 1:
-        return None, None
-
-    if 'Reconstruction' not in [func.func_name for func in functions]:
+        return None, None, None
+    elif 'Reconstruction' not in [func.func_name for func in functions]:
         QtGui.QMessageBox.warning(None, 'Reconstruction method required',
                                   'You have to select a reconstruction method to run a preview')
-        return None, None
+        return None, None, None
 
-    widget = ui.centerwidget.currentWidget().widget
-    lock_function_params(True)
+    return construct_preview_pipeline(widget, update=update, slc=slc)
+
+
+def construct_preview_pipeline(widget, update=True, slc=None):
+    global functions
+
+    lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
     funstack = []
     for i, func in enumerate(functions):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        params[func.subfunc_name] = deepcopy(func.param_dict)
+        params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget))
     lock_function_params(False)
 
-    return funstack, widget.getsino(), partial(ui.centerwidget.currentWidget().widget.addPreview, params)
+    return funstack, widget.getsino(slc), partial(widget.addPreview, params)
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None, ncore=None):
     kwargs = {}
-    args = ()
     for arg in argnames:
         if arg in 'flats':
             kwargs[arg] = datawidget.getflats(slc=data_slc)
@@ -175,27 +178,23 @@ def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None,
         angles = datawidget.data.shape[0]
         kwargs['theta'] = reconpkg.tomopy.angles(angles)
 
-    return partial(fpartial, **kwargs)
-
-
-def set_input_data(fpartial, datawidget, data_slc=None):
-    return partial(fpartial, datawidget.getsino(slc=data_slc))
+    if kwargs:
+        return partial(fpartial, **kwargs)
+    else:
+        return fpartial
 
 
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
+        runnable.lock = threads.mutex
         threads.queue.put(runnable)
 
 
-def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
+def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore):
     global functions
     lock_function_params(True)
-    # partials = [deepcopy(update_function_partial(f.partial, f.func_name, f.args_complement,
-    #                                              data_slc=(sino, proj), ncore=ncore) for f in functions)]
-    widget = ui.centerwidget.currentWidget().widget
     partials = [(f.name, deepcopy(f.partial), f.args_complement) for f in functions]
-
     lock_function_params(False)
 
     import dxchange as dx
@@ -210,7 +209,6 @@ def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     threads.queue.put(runnable_it)
 
 
-#TODO use reduce as well
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
     write_start = sino[0]
     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1

@@ -90,16 +90,18 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.sinogramViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
+        self.previewViewer.sigPreviewClicked.connect(
+            lambda: fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self)))
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
         self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
-        self.processViewer.sigRunClicked.connect(fmanager.run_full_recon)
+        self.processViewer.sigRunClicked.connect(lambda: fmanager.run_full_recon(self))
         self.viewstack.addWidget(self.processViewer)
 
-        # Make this a stack viewer with a stack of the recon
+        #TODO Make this a stack viewer with a stack of the recon
         # self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
         # self.viewstack.addWidget(self.reconstructionViewer)
 
@@ -146,9 +148,6 @@ class TomoViewer(QtGui.QWidget):
 
     def setCorValue(self, value):
         self.cor = value
-
-    def test(self, params):
-        self.previewViewer.test(params)
 
 
 class StackViewer(pg.ImageView):
@@ -199,6 +198,8 @@ class PreviewViewer(QtGui.QSplitter):
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
     """
+    sigPreviewClicked = QtCore.Signal()
+
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
         self.maxpreviews = maxpreviews if maxpreviews is not None else 10
@@ -243,9 +244,17 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
-        self.runButton.clicked.connect(lambda:fmanager.run_preview_recon(*fmanager.construct_preview_pipeline()))
+        self.runButton.clicked.connect(self.previewClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
+
+    @ QtCore.Slot(object, object)
+    def indexChanged(self, index, time):
+        try:
+            self.functionform.setCurrentWidget(self.previewdata[index])
+        except IndexError as e:
+            print e.message
+            print 'index {} does not exist'.format(index)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
@@ -274,14 +283,8 @@ class PreviewViewer(QtGui.QSplitter):
         current_data = self.previewdata[self.imageview.currentIndex]
         print current_data
 
-    @QtCore.Slot(object, object)
-    def indexChanged(self, index, time):
-        try:
-            self.functionform.setCurrentWidget(self.previewdata[index])
-        except IndexError as e:
-            print e.message
-            print 'index {} does not exist'.format(index)
-
+    def previewClicked(self):
+        self.sigPreviewClicked.emit()
 
 class VolumeViewer(QtGui.QWidget):
 

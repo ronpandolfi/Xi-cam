@@ -41,6 +41,7 @@ class RunnableMethod(QtCore.QRunnable):
         self.emitter = Emitter()
         self._callback_slot = callback_slot
         self._method = method
+        self.lock = None
         self.args = args
         self.kwargs = kwargs
 
@@ -53,14 +54,19 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 self._callback_slot.__name__)
         # self.emitter.sigFinished.connect(self._callback_slot)  # Connect here or in constructor?
         try:
+            if self.lock is not None: self.lock.lock()
             value = self._method(*self.args, **self.kwargs)
-            if value is None:
-                value = False
-            self.emitter.sigRetValue.emit(value)
-        except Exception, e:
-            raise e
+        except Exception:
+            raise
         finally:
-            self.emitter.sigFinished.emit()
+            if self.lock is not None: self.lock.unlock()
+
+        if value is None:
+            value = False
+
+        self.emitter.sigRetValue.emit(value)
+
+        self.emitter.sigFinished.emit()
 
 
 class RunnableIterator(RunnableMethod):
@@ -101,12 +107,13 @@ class Worker(QtCore.QObject):
     def run(self):
         while True:
             item = self.queue.get()
-            print "Worker got item {} off queue".format(type(item))
+            # print "Worker got item {} off queue".format(type(item))
             self.startRunnable(item)
             self.queue.task_done()
             time.sleep(1)
 
 # Application globals
-global queue, worker
+global queue, worker, mutex
 queue = Queue.Queue()
 worker = Worker(queue)
+mutex = QtCore.QMutex()
