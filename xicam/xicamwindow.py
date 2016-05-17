@@ -20,19 +20,17 @@ import config
 import watcher
 import daemon
 import pipeline
-import rmc
 import qdarkstyle
 import plugins
 from xicam import xglobals
 from xicam import threads
 
-class MyMainWindow(QtGui.QMainWindow):
+class MyMainWindow():
     def __init__(self,app):
-
+        super(MyMainWindow, self).__init__()
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
 
         import plugins
-
 
         self._pool = None
         # Load the gui from file
@@ -43,6 +41,7 @@ class MyMainWindow(QtGui.QMainWindow):
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
+        self.ui.closeEvent = self.closeEvent
 
 
         # STYLE
@@ -89,8 +88,23 @@ class MyMainWindow(QtGui.QMainWindow):
 
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
+        # Startuo worker thread
+        self.worker_thread = QtCore.QThread(self, objectName='workerThread')
+        threads.worker.moveToThread(self.worker_thread)
+        self.worker_thread.started.connect(threads.worker.run)
+        self.worker_thread.start()
 
-        threads.worker_thread.start()
+
+<<<<<<< .merge_file_BkyHfb
+<<<<<<< .merge_file_CxrdKQ
+<<<<<<< .merge_file_3UuSn1
+
+=======
+>>>>>>> .merge_file_GNLai1
+=======
+>>>>>>> .merge_file_sDW4TT
+=======
+>>>>>>> .merge_file_dmNzRa
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -110,16 +124,18 @@ class MyMainWindow(QtGui.QMainWindow):
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
 
-    def closeEvent(self, ev):
-        print 'here'
-        threads.worker_thread.quit()
-        ev.accept()
+<<<<<<< .merge_file_3UuSn1
 
     def singletest(self):
         self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
 
     def stacktest(self):
         self.openfiles(['/tmp/20140905_191647_YL1031_.h5'])
+=======
+    def closeEvent(self, ev):
+        self.worker_thread.quit()
+        ev.accept()
+>>>>>>> .merge_file_GNLai1
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

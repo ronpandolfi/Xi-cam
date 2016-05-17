@@ -7,7 +7,7 @@ import os
 import numpy as np
 #from nexpy.api import nexus as nx
 from copy import copy
-import detectors
+from pyFAI import detectors
 import pyFAI
 import glob
 import re
@@ -18,7 +18,11 @@ import writer
 from xicam import debugtools, config
 from PySide import QtGui
 from collections import OrderedDict
-import libtiff
+import warnings
+try:
+    import libtiff
+except IOError:
+    warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
 
 import numpy as nx
 
@@ -515,8 +519,6 @@ class diffimage():
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2*binning)
                     self.experiment.setvalue('Detector', name)
         return self._detector
-
-    from fabio import brukerimage
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
@@ -1082,8 +1084,6 @@ class diffimage2(object):
                     self.experiment.setvalue('Detector', name)
         return self._detector
 
-    from fabio import brukerimage
-
     def finddetector(self):
         for name, detector in detectors.ALL_DETECTORS.iteritems():
             if hasattr(detector, 'MAX_SHAPE'):
@@ -1094,18 +1094,18 @@ class diffimage2(object):
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                if self.rawdata.shape[::-1] in [tuple(np.array(detector.MAX_SHAPE) / b) for b in
-                                             detector.BINNED_PIXEL_SIZE.keys()]:
+                if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                     detector = detector()
                     print 'Detector found with binning: ' + name
                     return name, detector
         return None, None
 
+
     @detector.setter
     def detector(self, value):
         if type(value) == str:
             try:
-                self._detector = detectors.ALL_DETECTORS[value]
+                self._detector = pyFAI.detectors.ALL_DETECTORS[value]
             except KeyError:
                 try:
                     self._detector = getattr(detectors, value)
@@ -1344,6 +1344,21 @@ class singlefilediffimage2(diffimage2):
         elif self.remeshmode:
             img = self.remesh(img,self.mask)
 
+
+        return img
+
+    @property
+    def transformmask(self):
+        img = self.mask
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cake(img, self.mask)
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask)
 
         return img
 

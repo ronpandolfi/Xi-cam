@@ -67,8 +67,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection Viewer')  # TODO: Add icons!
-        self.viewmode.addTab('Sinogram Viewer')
+        self.viewmode.addTab('Projection View')  # TODO: Add icons!
+        self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Run Pipeline')
@@ -228,21 +228,22 @@ class PreviewViewer(QtGui.QSplitter):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.runButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.deleteButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 2, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 1, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(panel)
         self.addWidget(self.imageview)
 
+        self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
-        self.runButton.clicked.connect(lambda:fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
+        self.runButton.clicked.connect(lambda:fmanager.run_preview_recon(*fmanager.construct_preview_pipeline()))
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
 
@@ -277,8 +278,9 @@ class PreviewViewer(QtGui.QSplitter):
     def indexChanged(self, index, time):
         try:
             self.functionform.setCurrentWidget(self.previewdata[index])
-        except IndexError:
-            print 'index {} does not exist'
+        except IndexError as e:
+            print e.message
+            print 'index {} does not exist'.format(index)
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -660,8 +662,8 @@ class RunViewer(QtGui.QTabWidget):
         nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
         chunks = self.localsettings.param('Sinogram Chunks')
         sinos = self.localsettings.param('Sinograms per Chunk')
-        chunkschanged = lambda: sinos.setValue(np.round((nsino()) // chunks.value()), blockSignal=sinoschanged)
-        sinoschanged = lambda: chunks.setValue((nsino() - 1)// sinos.value() + 1,  blockSignal=chunkschanged)
+        chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
+        sinoschanged = lambda: chunks.setValue(np.round((nsino() -1)/ sinos.value()) + 1,  blockSignal=chunkschanged)
         chunks.sigValueChanged.connect(chunkschanged)
         sinos.sigValueChanged.connect(sinoschanged)
         sinostart.sigValueChanged.connect(chunkschanged)
@@ -672,12 +674,12 @@ class RunViewer(QtGui.QTabWidget):
 
     def setupParams(self, dim, path):
         # Local Recon Settings
-        precon = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'End Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1]},
-                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0]},
+        precon = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, 'limits':[0, dim[1]]},
+                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[1]]},
+                  {'name': 'End Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1], 'limits': [0, dim[1]]},
+                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0, 'limits': [0, dim[0]]},
+                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[0]]},
+                  {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0], 'limits': [0, dim[0]]},
                   {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)'],
                    'default': 'TIFF (.tiff)'},
                   {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
@@ -687,8 +689,8 @@ class RunViewer(QtGui.QTabWidget):
         total, available = self.memory()
         cores = self.cores()
         prun = [{'name': 'Cores', 'type': 'int', 'value': cores, 'default': None},
-                  {'name': 'Sinogram Chunks', 'type': 'int', 'value': 0, 'default': 1},
-                  {'name': 'Sinograms per Chunk', 'type': 'int', 'value': 0, 'default': 1}]
+                  {'name': 'Sinogram Chunks', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]},
+                  {'name': 'Sinograms per Chunk', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]}]
         # Local Specifications
         # siPrefix probably does not use base 2. Oh well memory will be an estimate
         pspecs = [{'name': 'Total Cores', 'type': 'int', 'value': cores, 'readonly': True},
@@ -846,9 +848,13 @@ class ImageView(pg.ImageView):
     """
     Subclass of PG ImageView to correct z-slider signal behavior.
     """
+    sigDeletePressed = QtCore.Signal()
     def keyPressEvent(self, ev):
         super(ImageView, self).keyPressEvent(ev)
-        self.timeLineChanged()
+        if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
+            self.timeLineChanged()
+        elif ev.key() == QtCore.Qt.Key_Delete or ev.key() == QtCore.Qt.Key_Backspace:
+            self.sigDeletePressed.emit()
 
     def timeIndex(self, slider):
         ## Return the time and frame index indicated by a slider

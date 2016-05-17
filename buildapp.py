@@ -6,8 +6,10 @@ Usage:
 
 OS X Notes:
 
-1. Comment out all ...'.__doc__'... lines in pyfits.hdu.table.py AND pyfits.convenience.py
-2. Modify inspect:
+1. dyld_find() got an unexpected... -> change loader to loader_path
+2. backports.shutil_get_terminal_size? -> uninstall and reinstall it
+2. Comment out all ...'.__doc__'... lines in pyfits.hdu.table.py AND pyfits.convenience.py
+3. Modify inspect:
 
     def getsourcelines(object):
         '''Return a list of source lines and starting line number for an object.
@@ -41,7 +43,7 @@ APP = ['main.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
            'qt_plugins': 'imageformats',
-           'resources':['gui'],
+           'resources':['gui','yaml'],
            'iconfile': 'gui/icon.icns',
            'plist': {
                'CFBundleName': 'Xi-cam',
@@ -54,12 +56,12 @@ OPTIONS = {'argv_emulation': False,
            'includes': [
                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage', 'pygments.lexers.python',
-               'pygments.styles.monokai', 'pygments.styles.default'
+               'pygments.styles.monokai', 'pygments.styles.default', 'ipython', 'ipykernel.datapub'
            ],
            'excludes': [
                'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet', 'matplotlib.tests', 'matplotlib.testing'
            ],
-           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'nexpy', 'h5py']
+           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'h5py']
 }
 
 EXT = Extension(name='pipeline.cWarpImage',
@@ -70,10 +72,12 @@ EXT = Extension(name='pipeline.cWarpImage',
 
 )
 
+
+
 setup(
     app=APP,
-    #options={'py2app': OPTIONS},
-    #setup_requires=['py2app'],
+    options={'py2app': OPTIONS},
+    setup_requires=['py2app'],
     include_dirs=[np.get_include()],
     ext_modules=[EXT],
 

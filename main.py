@@ -6,7 +6,6 @@ from PySide import QtGui, QtCore
 from xicam import xglobals
 from xicam.splash import SplashScreen
 
-
 def main():
     xglobals.load()
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
@@ -24,6 +23,7 @@ def main():
     splash.activateWindow()
     app.setActiveWindow(splash)
     app.processEvents()
+    #app.lastWindowClosed.connect(threads.worker_thread.exit)
 
     sys.exit(app.exec_())
 

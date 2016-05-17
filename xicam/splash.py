@@ -13,8 +13,19 @@ class SplashScreen(QtGui.QSplashScreen):
         self.timer.stop()
         self.launchwindow()
 
+<<<<<<< .merge_file_0iGisb
+<<<<<<< .merge_file_v08iGR
+<<<<<<< .merge_file_Wu0LGX
+    def startworker(self):
+        from xicam import threads
+        #threads.worker_thread.start()
 
-
+=======
+>>>>>>> .merge_file_Px3KAX
+=======
+>>>>>>> .merge_file_BLtuUR
+=======
+>>>>>>> .merge_file_LSB5gc
     def launchwindow(self):
         if not self._launching:
             self._launching = True

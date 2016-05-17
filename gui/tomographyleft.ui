@@ -108,22 +108,13 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="loadPipelineButton">
+      <widget class="QToolButton" name="fileButton">
        <property name="text">
         <string/>
        </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="resetPipelineButton">
-       <property name="text">
-        <string/>
+       <property name="icon">
+        <iconset>
+         <normaloff>gui/open_32.png</normaloff>gui/open_32.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -160,7 +151,7 @@
   <zorder>moveUpButton</zorder>
   <zorder>moveDownButton</zorder>
   <zorder>addFunctionButton</zorder>
-  <zorder>loadPipelineButton</zorder>
+  <zorder>fileButton</zorder>
   <zorder>resetPipelineButton</zorder>
   <zorder>clearButton</zorder>
   <zorder></zorder>

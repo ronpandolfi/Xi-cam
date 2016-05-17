@@ -9,6 +9,8 @@ from xicam import threads
 import ui
 import fwidgets
 import reconpkg
+import fdata
+import warnings
 
 functions = []
 recon_function = None
@@ -16,7 +18,7 @@ currentindex = 0
 layout = None
 
 
-def clear_features():
+def clear_action():
     global functions
     if len(functions) == 0:
         return
@@ -24,30 +26,67 @@ def clear_features():
     value = QtGui.QMessageBox.question(None, 'Delete functions',
                                        'Are you sure you want to clear ALL functions?',
                                        (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-
     if value is QtGui.QMessageBox.Yes:
-        for feature in functions:
-            feature.deleteLater()
-            del feature
-        functions = []
-        ui.showform(ui.blankform)
+        clear_functions()
 
 
-def add_function(function, subfunction, package=reconpkg.tomopy):
+def clear_functions():
+    global functions
+    for feature in functions:
+        feature.deleteLater()
+        del feature
+    functions = []
+    ui.showform(ui.blankform)
+
+
+<<<<<<< .merge_file_R7EuN7
+<<<<<<< .merge_file_0mU8CO
+<<<<<<< .merge_file_zpZZBS
+def add_function(function, subfunction, package=reconpkg.packages['tomopy']):
     global functions, recon_function, currentindex
+
+    if not hasattr(package,fdata.names[subfunction]): return
+
+=======
+>>>>>>> .merge_file_IdolKV
+=======
+>>>>>>> .merge_file_qrRxeO
+=======
+>>>>>>> .merge_file_nCx5J7
+def add_action(function, subfunction, package=reconpkg.tomopy):
+    global functions, recon_function
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
                                            'Are you sure you need another one?'.format(function),
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-        if value is QtGui.QMessageBox.No:
-            return
+        if value is QtGui.QMessageBox.Yes:
+            add_function(function, subfunction, package=package)
+<<<<<<< .merge_file_R7EuN7
+<<<<<<< .merge_file_0mU8CO
+<<<<<<< .merge_file_zpZZBS
 
+
+=======
+
+
+>>>>>>> .merge_file_IdolKV
+=======
+
+
+>>>>>>> .merge_file_qrRxeO
+=======
+
+
+>>>>>>> .merge_file_nCx5J7
+def add_function(function, subfunction, package=reconpkg.tomopy):
+    global functions, recon_function, currentindex
     currentindex = len(functions)
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
-        ui.cor_spinBox.valueChanged.connect(func.setCenterParam)
+        ui.configparams.child('Rotation Center').sigValueChanged.connect(
+            lambda: func.setCenterParam(ui.configparams.child('Rotation Center').value()))
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
@@ -105,19 +144,24 @@ def load_function_pipeline(yaml_file):
     with open(yaml_file, 'r') as f:
         stack = yamlmod.ordered_load(f)
         # stack = yamlmod.yaml.load(f)
+    clear_functions()
     for func, subfuncs in stack.iteritems():
         for subfunc in subfuncs:
-            if func == 'Reconstruction':
-                add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
-            else:
-                add_function(func, subfunc)
-            funcWidget = functions[currentindex]
-            for param in subfuncs[subfunc]:
-                if 'Package' in param:
-                    continue
-                child = funcWidget.params.child(param['name'])
-                child.setValue(param['value'])
-                child.setDefault(param['value'])
+            try:
+                if func == 'Reconstruction':
+                    add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+                else:
+                    add_function(func, subfunc)
+                funcWidget = functions[currentindex]
+                for param in subfuncs[subfunc]:
+                    if 'Package' in param:
+                        continue
+                    child = funcWidget.params.child(param['name'])
+                    child.setValue(param['value'])
+                    child.setDefault(param['value'])
+            except IndexError:
+                # TODO: make this failure more graceful
+                warnings.warn('Failed to load subfunction: ' + subfunc)
 
 def open_pipeline_file():
     pipeline_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file', os.path.expanduser('~'),
@@ -140,21 +184,15 @@ def construct_preview_pipeline():
     widget = ui.centerwidget.currentWidget().widget
     lock_function_params(True)
     params = OrderedDict()
-    init = True
+    funstack = []
     for i, func in enumerate(functions):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
         params[func.subfunc_name] = deepcopy(func.param_dict)
-        if init:
-            funstack = update_function_partial(func.partial, func.func_name, func.args_complement, widget)
-            funstack = set_input_data(funstack, widget)
-            init = False
-        else:
-            funstack = partial(update_function_partial(func.partial, func.func_name, func.args_complement, widget),
-                               funstack()) # This is evaluating each line as you feed it that is why it takes long!!! FIX IT
-
+        funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget))
     lock_function_params(False)
-    return funstack, partial(ui.centerwidget.currentWidget().widget.addPreview, params)
+
+    return funstack, widget.getsino(), partial(ui.centerwidget.currentWidget().widget.addPreview, params)
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None, ncore=None):
@@ -179,10 +217,22 @@ def set_input_data(fpartial, datawidget, data_slc=None):
     return partial(fpartial, datawidget.getsino(slc=data_slc))
 
 
-def run_pipeline_preview(funstack, callback):
+def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
+<<<<<<< .merge_file_R7EuN7
+<<<<<<< .merge_file_0mU8CO
+<<<<<<< .merge_file_zpZZBS
         runnable = threads.RunnableMethod(callback, funstack)
+        threads.worker.startRunnable(runnable)
+        # threads.queue.put(runnable)
+=======
+=======
+>>>>>>> .merge_file_qrRxeO
+=======
+>>>>>>> .merge_file_nCx5J7
+        runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
         threads.queue.put(runnable)
+>>>>>>> .merge_file_IdolKV
 
 
 def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
@@ -207,6 +257,7 @@ def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     threads.queue.put(runnable_it)
 
 
+#TODO use reduce as well
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
     write_start = sino[0]
     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
