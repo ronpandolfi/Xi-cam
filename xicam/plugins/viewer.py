@@ -3,8 +3,8 @@ from fabio import edfimage
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
-# if op_sys == 'Darwin':
-#     from Foundation import NSURL
+if op_sys == 'Darwin':
+    from Foundation import NSURL
 
 import base
 from PySide import QtGui
@@ -142,8 +142,8 @@ class plugin(base.plugin):
         self.centerwidget.widget(index).deleteLater()
 
     def getCurrentTab(self):
-        if self.centerwidget.currentWidget() is None:
-            return None
+        if self.centerwidget.currentWidget() is None: return None
+        if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
     def calibrate(self):
@@ -156,10 +156,9 @@ class plugin(base.plugin):
         self.getCurrentTab().refinecenter()
 
     def redrawcurrent(self):
-        try:
-            self.getCurrentTab().redrawimage()
-        except AttributeError:
-            print "Using hack to bypass strange qsignal behavior. Fix this!"
+        currenttab = self.getCurrentTab()
+        if currenttab: self.getCurrentTab().redrawimage()
+
 
     def remeshmode(self):
         self.getCurrentTab().redrawimage()
@@ -196,7 +195,7 @@ class plugin(base.plugin):
         if type(paths) is not list:
             paths = [paths]
 
-        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, paths=paths, operation=operation,
+        widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, src=paths, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
@@ -215,10 +214,10 @@ class plugin(base.plugin):
         return self.getCurrentTab()
 
     def replotcurrent(self):
-        self.getCurrentTab().replot()
+        if self.getCurrentTab(): self.getCurrentTab().replot()
 
     def invalidatecache(self):
-        self.getCurrentTab().dimg.invalidatecache()
+        if self.getCurrentTab(): self.getCurrentTab().dimg.invalidatecache()
 
     def togglespacegroup(self):
         if self.toolbar.actionSpaceGroup.isChecked():

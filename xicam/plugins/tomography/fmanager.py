@@ -9,6 +9,8 @@ from xicam import threads
 import ui
 import fwidgets
 import reconpkg
+import fdata
+import warnings
 
 functions = []
 recon_function = None
@@ -36,6 +38,12 @@ def clear_functions():
     functions = []
     ui.showform(ui.blankform)
 
+
+
+def add_function(function, subfunction, package=reconpkg.packages['tomopy']):
+    global functions, recon_function, currentindex
+
+    if not hasattr(package,fdata.names[subfunction]): return
 
 def add_action(function, subfunction, package=reconpkg.tomopy):
     global functions, recon_function
@@ -115,17 +123,21 @@ def load_function_pipeline(yaml_file):
     clear_functions()
     for func, subfuncs in stack.iteritems():
         for subfunc in subfuncs:
-            if func == 'Reconstruction':
-                add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
-            else:
-                add_function(func, subfunc)
-            funcWidget = functions[currentindex]
-            for param in subfuncs[subfunc]:
-                if 'Package' in param:
-                    continue
-                child = funcWidget.params.child(param['name'])
-                child.setValue(param['value'])
-                child.setDefault(param['value'])
+            try:
+                if func == 'Reconstruction':
+                    add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+                else:
+                    add_function(func, subfunc)
+                funcWidget = functions[currentindex]
+                for param in subfuncs[subfunc]:
+                    if 'Package' in param:
+                        continue
+                    child = funcWidget.params.child(param['name'])
+                    child.setValue(param['value'])
+                    child.setDefault(param['value'])
+            except IndexError:
+                # TODO: make this failure more graceful
+                warnings.warn('Failed to load subfunction: ' + subfunc)
 
 
 def open_pipeline_file():

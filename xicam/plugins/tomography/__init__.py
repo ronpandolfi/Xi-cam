@@ -50,7 +50,7 @@ class plugin(base.plugin):
         # SETUP FEATURES
         fmanager.layout = self.functionwidget.functionsList
         fmanager.load()
-        fmanager.load_function_pipeline('xicam/plugins/tomography/yaml/functionstack.yml')
+        fmanager.load_function_pipeline('yaml/tomography/functionstack.yml')
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)

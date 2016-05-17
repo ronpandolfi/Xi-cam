@@ -3,6 +3,8 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 from PySide import QtCore, QtGui
 import pyqtgraph as pg
+import spacegrp_peaks
+import numpy as np
 
 
 # TODO: Add index of refraction to interface and backend
@@ -151,17 +153,18 @@ class peak(object):
 class peakoverlay(pg.ScatterPlotItem):
     def __init__(self, peaks):
         self.peaks = peaks
-        x, y = zip(*[[p.x, p.y] for p in peaks])
-        symbols = ['s' if p.mode == 'Transmission' else 'o' for p in peaks]
-        colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in peaks]
-        super(peakoverlay, self).__init__(x, y, size=10, brush=None, pen=colors, symbol=symbols)
-        self.display_text = pg.TextItem(text='', color=(255, 255, 255), anchor=(0, 1),
-                                        fill=pg.mkBrush(255, 127, 0, 100))
-        self.display_text.hide()
+        if len(peaks):
+            x, y = zip(*[[p.x, p.y] for p in peaks])
+            symbols = ['s' if p.mode == 'Transmission' else 'o' for p in peaks]
+            colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in peaks]
+            super(peakoverlay, self).__init__(x, y, size=10, brush=None, pen=colors, symbol=symbols)
+            self.display_text = pg.TextItem(text='', color=(255, 255, 255), anchor=(0, 1),
+                                            fill=pg.mkBrush(255, 127, 0, 100))
+            self.display_text.hide()
 
-        # if parent is not None:
-        # parent.addItem(self.scatterPoints)
-        #     parent.addItem(self.display_text)
+            # if parent is not None:
+            # parent.addItem(self.scatterPoints)
+            #     parent.addItem(self.display_text)
 
     def enable(self, parent):
         self.scene().sigMouseMoved.connect(self.onMove)
@@ -207,7 +210,7 @@ class peakoverlay(pg.ScatterPlotItem):
 
 
 class spacegroupwidget(ParameterTree):
-    sigDrawSGOverlay = QtCore.Signal(peakoverlay)  # transmission, reflection
+    sigDrawSGOverlay = QtCore.Signal(peakoverlay)
 
     def __init__(self):
         super(spacegroupwidget, self).__init__()
@@ -224,9 +227,11 @@ class spacegroupwidget(ParameterTree):
 
         self.rotationxyz = VectorParameter(name='Vector (x,y,z)')
         self.rotationvectorsample = hideableGroup(name='Rotation (sample-frame vector)', children=[self.rotationxyz])
+        self.rotationvectorsample.setValue([0,0,1])
 
         self.rotationuvw = VectorParameter(name='Vector (u,v,w)')
         self.rotationvectorcrystal = hideableGroup(name='Rotation (crystal-frame vector)', children=[self.rotationuvw])
+
 
         self.rotationhkl = VectorParameter(name='Vector (h,k,l)')
         self.rotationplane = hideableGroup(name='Rotation (crystal plane)', children=[self.rotationhkl])
@@ -252,19 +257,24 @@ class spacegroupwidget(ParameterTree):
         self.crystalsystem.sigValueChanged.connect(self.crystalsystemchanged)
 
     def activelatticetype(self):
-        print self.crystalsystem.reverse[0].index(self.crystalsystem.value())
         return self.spacegroupeditors[self.crystalsystem.reverse[0].index(self.crystalsystem.value())]
 
+    def _getRotationVector(self):
+        print 'vec:',[self.rotationxyz,self.rotationuvw,self.rotationhkl][self._getRotationType()].value()
+        return [self.rotationxyz,self.rotationuvw,self.rotationhkl][self._getRotationType()].value()
+
+    def _getRotationType(self):
+        print 'type:',self.rotationstyle.reverse[0].index(self.rotationstyle.value())
+        return self.rotationstyle.reverse[0].index(self.rotationstyle.value())
 
     def drawoverlay(self):
-        import spacegrp_peaks
-        import numpy as np
+
 
         activelatticetype = self.activelatticetype()
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=np.array([0, 0, 1]), norm_type='uvw', order=2)
+                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], order=2)
         for key in peaks:
             from xicam import config
             print key + " -> " + str(peaks[key])

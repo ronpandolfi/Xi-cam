@@ -150,8 +150,10 @@ class SpotClient(NewtClient):
         :return: int, dataset size in bytes?
         """
         path = self.get_stage_path(dataset, stage)
+
         r = self.session.head(self.SPOT_URL + '/hdf/download' + path)
         head = r.headers
+        if not 'content-length' in head: return 1
         size = int(head['content-length'])
 
         return size
@@ -219,8 +221,8 @@ class SpotClient(NewtClient):
         if save_path is None:
             save_path = os.path.join(os.path.expanduser('~'), path.split('/')[-1])
 
-        file_size = float(self.get_dataset_size(dataset, stage))
         r = self.stage_tape_2_disk(dataset, stage)
+        file_size = float(self.get_dataset_size(dataset, stage))
         r = self.get(self.SPOT_URL + '/hdf/download' + path, stream=True)
 
         with open(save_path, 'wb') as f:
