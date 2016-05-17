@@ -5,14 +5,12 @@ Created on Mon Oct 19 17:22:00 2015
 @author: lbluque
 """
 
-import os
+import time
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
-from client.globus import GlobusClient, GLOBUSError
-from client.spot import SpotClient
-from client.user import AUTHError
-import time
+# Error is raised if this import is removed probably due to some circular import between xglobals and here
+from client import spot, globus
 
 
 QtCore.Signal = QtCore.Signal
@@ -95,8 +93,9 @@ class Worker(QtCore.QObject):
     def __init__(self, queue, parent=None):
         super(Worker, self).__init__(parent)
         self.queue = queue
-        self.pool = QtCore.QThreadPool(self)  # Should I use globalInstance()?
+        self.pool = QtCore.QThreadPool.globalInstance()  # Should I use globalInstance() or a seperate instance?
         self.pool.setMaxThreadCount(mp.cpu_count())
+        self._stop = False
 
     def __del__(self):
         self.queue.join()
@@ -104,16 +103,23 @@ class Worker(QtCore.QObject):
     def startRunnable(self, runnable, priority=0):
         self.pool.start(runnable, priority)
 
+    def stopWork(self):
+        self._stop = True
+
     def run(self):
-        while True:
+        while not self._stop:
             item = self.queue.get()
             # print "Worker got item {} off queue".format(type(item))
             self.startRunnable(item)
             self.queue.task_done()
-            time.sleep(1)
+            time.sleep(0.1)
 
 # Application globals
-global queue, worker, mutex
+global queue, worker, worker_thread, mutex
 queue = Queue.Queue()
 worker = Worker(queue)
 mutex = QtCore.QMutex()
+worker_thread = QtCore.QThread()
+worker.moveToThread(worker_thread)
+worker_thread.started.connect(worker.run)
+worker_thread.start()
