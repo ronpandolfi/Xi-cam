@@ -67,8 +67,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection Viewer')  # TODO: Add icons!
-        self.viewmode.addTab('Sinogram Viewer')
+        self.viewmode.addTab('Projection View')  # TODO: Add icons!
+        self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Run Pipeline')
@@ -278,8 +278,9 @@ class PreviewViewer(QtGui.QSplitter):
     def indexChanged(self, index, time):
         try:
             self.functionform.setCurrentWidget(self.previewdata[index])
-        except IndexError:
-            print 'index {} does not exist'
+        except IndexError as e:
+            print e.message
+            print 'index {} does not exist'.format(index)
 
 
 class VolumeViewer(QtGui.QWidget):

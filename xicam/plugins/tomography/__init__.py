@@ -38,27 +38,17 @@ class plugin(base.plugin):
     name = "Tomography"
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar, self.functionwidget = ui.loadUi()
+        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
+        self.functionwidget = ui.functionwidget
+
 
         super(plugin, self).__init__(*args, **kwargs)
 
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        # wire stuff up
-        # self.functionwidget.previewButton.clicked.connect(lambda: fmanager.run_pipeline_preview(*fmanager.construct_preview_pipeline()))
-        self.functionwidget.clearButton.clicked.connect(fmanager.clear_features)
-        self.functionwidget.moveUpButton.clicked.connect(
-            lambda: fmanager.swap_functions(fmanager.currentindex,
-                                            fmanager.currentindex - 1))
-        self.functionwidget.moveDownButton.clicked.connect(
-            lambda: fmanager.swap_functions(fmanager.currentindex,
-                                            fmanager.currentindex + 1))
-        self.functionwidget.loadPipelineButton.clicked.connect(fmanager.open_pipeline_file)
-        self.functionwidget.resetPipelineButton.clicked.connect(lambda: fmanager.load_function_pipeline(
-                                                        'xicam/plugins/tomography/yaml/functionstack.yml'))
         # SETUP FEATURES
-        fmanager.layout = ui.functionslist
+        fmanager.layout = self.functionwidget.functionsList
         fmanager.load()
         fmanager.load_function_pipeline('xicam/plugins/tomography/yaml/functionstack.yml')
 
@@ -85,24 +75,22 @@ class plugin(base.plugin):
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
-
         try:
             self.centerwidget.currentWidget().load()
             ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
             ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
-            ui.cor_spinBox.setValue(self.currentDataset().cor)
-            ui.cor_spinBox.valueChanged.connect(self.currentDataset().setCorValue)
+            ui.propertytable.show()
+            ui.configparams.child('Rotation Center').setValue(self.currentDataset().cor)
+            ui.configparams.child('Rotation Center').sigValueChanged.connect(self.currentDataset().setCorValue)
 
             recon = fmanager.recon_function
             if recon is not None:
-                ui.cor_spinBox.valueChanged.connect(recon.setCenterParam)
                 recon.setCenterParam(self.currentDataset().cor)
         except AttributeError as e:
             print e.message
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
-        ui.cor_spinBox.clear()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):

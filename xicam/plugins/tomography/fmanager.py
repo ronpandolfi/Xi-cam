@@ -16,7 +16,7 @@ currentindex = 0
 layout = None
 
 
-def clear_features():
+def clear_action():
     global functions
     if len(functions) == 0:
         return
@@ -24,30 +24,38 @@ def clear_features():
     value = QtGui.QMessageBox.question(None, 'Delete functions',
                                        'Are you sure you want to clear ALL functions?',
                                        (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-
     if value is QtGui.QMessageBox.Yes:
-        for feature in functions:
-            feature.deleteLater()
-            del feature
-        functions = []
-        ui.showform(ui.blankform)
+        clear_functions()
 
 
-def add_function(function, subfunction, package=reconpkg.tomopy):
-    global functions, recon_function, currentindex
+def clear_functions():
+    global functions
+    for feature in functions:
+        feature.deleteLater()
+        del feature
+    functions = []
+    ui.showform(ui.blankform)
+
+
+def add_action(function, subfunction, package=reconpkg.tomopy):
+    global functions, recon_function
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
                                            'Are you sure you need another one?'.format(function),
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-        if value is QtGui.QMessageBox.No:
-            return
+        if value is QtGui.QMessageBox.Yes:
+            add_function(function, subfunction, package=package)
 
+
+def add_function(function, subfunction, package=reconpkg.tomopy):
+    global functions, recon_function, currentindex
     currentindex = len(functions)
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
-        ui.cor_spinBox.valueChanged.connect(func.setCenterParam)
+        ui.configparams.child('Rotation Center').sigValueChanged.connect(
+            lambda: func.setCenterParam(ui.configparams.child('Rotation Center').value()))
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
@@ -105,6 +113,7 @@ def load_function_pipeline(yaml_file):
     with open(yaml_file, 'r') as f:
         stack = yamlmod.ordered_load(f)
         # stack = yamlmod.yaml.load(f)
+    clear_functions()
     for func, subfuncs in stack.iteritems():
         for subfunc in subfuncs:
             if func == 'Reconstruction':
@@ -177,6 +186,7 @@ def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
         threads.queue.put(runnable)
+
 
 def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     global functions

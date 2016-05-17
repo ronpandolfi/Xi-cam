@@ -28,7 +28,7 @@ from xicam import threads
 
 class MyMainWindow(QtGui.QMainWindow):
     def __init__(self,app):
-
+        super(MyMainWindow, self).__init__()
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
 
         import plugins
@@ -43,6 +43,7 @@ class MyMainWindow(QtGui.QMainWindow):
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
+        self.ui.closeEvent = self.closeEvent
 
 
         # STYLE
@@ -89,8 +90,13 @@ class MyMainWindow(QtGui.QMainWindow):
 
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
+        # Startuo worker thread
+        self.worker_thread = QtCore.QThread(self, objectName='workerThread')
+        threads.worker.moveToThread(self.worker_thread)
+        self.worker_thread.started.connect(threads.worker.run)
+        self.worker_thread.start()
 
-        threads.worker_thread.start()
+
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
@@ -104,8 +110,7 @@ class MyMainWindow(QtGui.QMainWindow):
         # Show UI and end app when it closes
 
     def closeEvent(self, ev):
-        print 'here'
-        threads.worker_thread.quit()
+        self.worker_thread.quit()
         ev.accept()
 
     def changetimelineoperation(self, index):

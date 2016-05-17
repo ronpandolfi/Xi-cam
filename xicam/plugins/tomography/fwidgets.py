@@ -205,8 +205,10 @@ class FuncWidget(FeatureWidget):
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
                     defaults[param.name()] = str(defaults[param.name()])
+                if defaults[param.name()] is not None:
+                    param.setValue(defaults[param.name()])
+
                 param.setDefault(defaults[param.name()])
-                param.setValue(defaults[param.name()])
 
     def allReadOnly(self, boolean):
         for param in self.params.children():
@@ -259,9 +261,7 @@ class ReconFuncWidget(FuncWidget):
         self.kwargs_complement['algorithm'] = subfunction.lower()
 
     def setCenterParam(self, value):
-        for param in self.params.children():
-            if param.name() == 'center':
-                param.setValue(value)
+        self.params.child('center').setValue(value)
 
     def updateParamsDict(self):
         self.param_dict = super(ReconFuncWidget, self).updateParamsDict()
