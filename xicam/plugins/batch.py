@@ -30,10 +30,11 @@ class plugin(base.plugin):
         self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
         self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
         self.logOption = pTypes.SimpleParameter(type='bool', name='Log scale image', value=False)
+        self.cakeOption = pTypes.SimpleParameter(type='bool', name='Cake (q/chi)', value=False)
         self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
         self.processButton = pTypes.ActionParameter(name='Process')
         # self.abortButton = pTypes.ActionParameter(name='Abort')
-        params = [self.remeshOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
+        params = [self.remeshOption, self.cakeOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
         paramgroup = Parameter.create(name='params', type='group', children=params)
         self.rightwidget.setParameters(paramgroup, showTop=False)
 
@@ -59,6 +60,11 @@ class plugin(base.plugin):
                 if not writer.writeimage(data if not self.logOption.value() else (np.log(data * (data > 0) + (data < 1))), path, suffix='_remeshed', ext=imageext):
                     break
 
+            if self.cakeOption.value():
+                data = dimg.cake
+                if not writer.writeimage(data, path, suffix='_cake', ext=imageext):
+                    break
+
             if self.integrateOption.value():
                 x, y, _ = dimg.integrate()
                 data = np.array([x, y])
@@ -78,6 +84,7 @@ class plugin(base.plugin):
                     pass  # No ROI was defined, hm...
 
             if os.path.splitext(path)[-1] != imageext:
-                writer.writeimage(dimg.data, path, ext=imageext)
+                data = dimg.data
+                writer.writeimage(data if not self.logOption.value() else (np.log(data * (data > 0) + (data < 1))), path, ext=imageext)
 
         xglobals.statusbar.showMessage('Ready...')

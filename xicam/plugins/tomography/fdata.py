@@ -1,15 +1,15 @@
 import yaml
 
-with open('xicam/plugins/tomography/yaml/functions.yml','r') as stream:
+with open('yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
 parameters = {}
 
 for file in ('tomopyparams.yml',): #, 'astraparams.yml', 'mbirparams.yml'):
-    with open('xicam/plugins/tomography/yaml/'+file ,'r') as stream:
+    with open('yaml/tomography/'+file ,'r') as stream:
         parameters.update(yaml.load(stream))
 
-with open('xicam/plugins/tomography/yaml/funcnames.yml','r') as stream:
+with open('yaml/tomography/funcnames.yml','r') as stream:
     names=yaml.load(stream)
 
 for algorithm in funcs['Reconstruction']['TomoPy']:

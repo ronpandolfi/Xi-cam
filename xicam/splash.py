@@ -13,6 +13,8 @@ class SplashScreen(QtGui.QSplashScreen):
         self.timer.stop()
         self.launchwindow()
 
+
+
     def launchwindow(self):
         if not self._launching:
             self._launching = True
