@@ -137,6 +137,9 @@ class TomoViewer(QtGui.QWidget):
         else:
             return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
 
+    def getheader(self):
+        return self.data.header
+
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 

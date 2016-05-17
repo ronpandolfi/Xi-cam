@@ -188,7 +188,9 @@ def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None,
 
     if 'Reconstruction' in name:
         angles = datawidget.data.shape[0]
-        kwargs['theta'] = reconpkg.tomopy.angles(angles)
+        start = 270 - ui.configparams.child('Recon Rotation').value()
+        end = start - ui.configparams.child('Rotation Angle').value()
+        kwargs['theta'] = reconpkg.tomopy.angles(angles, start, end)
 
     if kwargs:
         return partial(fpartial, **kwargs)
