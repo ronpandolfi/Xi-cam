@@ -140,21 +140,15 @@ def construct_preview_pipeline():
     widget = ui.centerwidget.currentWidget().widget
     lock_function_params(True)
     params = OrderedDict()
-    init = True
+    funstack = []
     for i, func in enumerate(functions):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
         params[func.subfunc_name] = deepcopy(func.param_dict)
-        if init:
-            funstack = update_function_partial(func.partial, func.func_name, func.args_complement, widget)
-            funstack = set_input_data(funstack, widget)
-            init = False
-        else:
-            funstack = partial(update_function_partial(func.partial, func.func_name, func.args_complement, widget),
-                               funstack()) # This is evaluating each line as you feed it that is why it takes long!!! FIX IT
-
+        funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget))
     lock_function_params(False)
-    return funstack, partial(ui.centerwidget.currentWidget().widget.addPreview, params)
+
+    return funstack, widget.getsino(), partial(ui.centerwidget.currentWidget().widget.addPreview, params)
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None, ncore=None):
@@ -179,11 +173,10 @@ def set_input_data(fpartial, datawidget, data_slc=None):
     return partial(fpartial, datawidget.getsino(slc=data_slc))
 
 
-def run_pipeline_preview(funstack, callback):
+def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
-        runnable = threads.RunnableMethod(callback, funstack)
+        runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
         threads.queue.put(runnable)
-
 
 def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     global functions
@@ -207,6 +200,7 @@ def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     threads.queue.put(runnable_it)
 
 
+#TODO use reduce as well
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
     write_start = sino[0]
     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1

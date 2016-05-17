@@ -135,10 +135,12 @@ class FuncWidget(FeatureWidget):
         self.subfunc_name = subfunction
         self._formpath = 'gui/guiLayer.ui'
         self._form = None
-        self._param_dict = None
         self._partial = None
         self.__function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
+        self.param_dict = {}
+        self.updateParamsDict()
+        self.setDefaults()
 
         # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
@@ -150,8 +152,6 @@ class FuncWidget(FeatureWidget):
         self.args_complement = introspect.get_arg_names(self.__function)
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
-
-        self.setDefaults()
 
         self.menu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
@@ -172,13 +172,10 @@ class FuncWidget(FeatureWidget):
             self.wireup()
         return self._form
 
-    @property
-    def param_dict(self):
-        if self._param_dict is None:
-            self._param_dict = {}
+    def updateParamsDict(self):
         for param in self.params.children():
-            self._param_dict.update({param.name(): param.value()})
-        return self._param_dict
+            self.param_dict.update({param.name(): param.value()})
+        return self.param_dict
 
     @property
     def partial(self):
@@ -191,7 +188,7 @@ class FuncWidget(FeatureWidget):
         signature = str(self.__function.__name__) + '('
         for arg in self.args_complement:
             signature += '{},'.format(arg)
-        for param, value in self.param_dict.iteritems():
+        for param, value in self.updateParamsDict.iteritems():
             signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
                 '{0}=\'{1}\','.format(param, value)
         for param, value in self.kwargs_complement.iteritems():
@@ -236,7 +233,7 @@ class FuncWidget(FeatureWidget):
                 start, end = param.opts['limits']
                 step = (end - start)/3 + 1
             elif param.value() is not None:
-                start, end, step = param.value()//2, 4*(param.value())//2, param.value()//2
+                start, end, step = param.value()/2, 4*(param.value())/2, param.value()/2
             test = TestRangeDialog(param.type(), (start, end, step))
         elif param.type() == 'list':
             test = TestListRangeDialog(param.opts['values'])
@@ -249,8 +246,8 @@ class FuncWidget(FeatureWidget):
             def f(i):
                 param.setValue(i)
                 return fmanager.construct_preview_pipeline()
-            fmanager.run_pipeline_preview(lambda: map(f, test.selectedRange()),
-                                          partial(map, lambda x: fmanager.run_pipeline_preview(*x)))
+            fmanager.run_preview_recon(lambda: map(f, test.selectedRange()),
+                                       partial(map, lambda x: fmanager.run_preview_recon(*x)))
 
 
 
@@ -266,14 +263,13 @@ class ReconFuncWidget(FuncWidget):
             if param.name() == 'center':
                 param.setValue(value)
 
-    @property
-    def param_dict(self):
-        self._param_dict = super(ReconFuncWidget, self).param_dict
+    def updateParamsDict(self):
+        self.param_dict = super(ReconFuncWidget, self).updateParamsDict()
         if self.subfunc_name == 'Gridrec':
-            filter_par = [self._param_dict['cutoff'], self._param_dict['order']]
-            self._param_dict['filter_par'] = filter_par
-        del self._param_dict['cutoff'], self._param_dict['order']
-        return self._param_dict
+            filter_par = [self.param_dict['cutoff'], self.param_dict['order']]
+            self.param_dict['filter_par'] = filter_par
+        del self.param_dict['cutoff'], self.param_dict['order']
+        return self.param_dict
 
 
 class TestRangeDialog(QtGui.QDialog):
@@ -309,9 +305,9 @@ class TestRangeDialog(QtGui.QDialog):
         self.buttonBox.rejected.connect(self.reject)
 
         if prange is not (None, None, None):
-            self.spinBox.setMaximum(3 * prange[2])
-            self.spinBox_2.setMaximum(3 * prange[2])
-            self.spinBox_3.setMaximum(prange[2])
+            self.spinBox.setMaximum(9999)  # 3 * prange[2])
+            self.spinBox_2.setMaximum(9999)  # 3 * prange[2])
+            self.spinBox_3.setMaximum(9999)  # prange[2])
 
             self.spinBox.setValue(prange[0])
             self.spinBox_2.setValue(prange[1])
