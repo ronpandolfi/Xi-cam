@@ -23,10 +23,10 @@ import pipeline
 import qdarkstyle
 import plugins
 from xicam import xglobals
-from xicam import threads
+
 
 class MyMainWindow():
-    def __init__(self,app):
+    def __init__(self, app):
 
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
 
@@ -115,8 +115,7 @@ class MyMainWindow():
     def stacktest(self):
         self.openfiles(['/tmp/20140905_191647_YL1031_.h5'])
 
-    def closeEvent(self, ev):
-        self.worker_thread.quit()
+    def closeEvent(self, ev):  # Never called???
         ev.accept()
 
     def changetimelineoperation(self, index):

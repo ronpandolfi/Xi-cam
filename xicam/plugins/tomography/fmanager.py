@@ -54,6 +54,8 @@ def add_action(function, subfunction, package=reconpkg.tomopy):
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
         if value is QtGui.QMessageBox.Yes:
             add_function(function, subfunction, package=package)
+    else:
+        add_function(function, subfunction, package=package)
 
 
 def add_function(function, subfunction, package=reconpkg.tomopy):
@@ -118,11 +120,10 @@ def lock_function_params(boolean):
 
 def load_function_pipeline(yaml_file):
     global functions, currentindex
-    with open(yaml_file, 'r') as f:
-        stack = yamlmod.ordered_load(f)
-        # stack = yamlmod.yaml.load(f)
+    with open(yaml_file, 'r') as y:
+        pipeline = yamlmod.ordered_load(y)
     clear_functions()
-    for func, subfuncs in stack.iteritems():
+    for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
                 if func == 'Reconstruction':
@@ -140,6 +141,26 @@ def load_function_pipeline(yaml_file):
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
 
+
+def create_pipeline_dict():
+    d = OrderedDict()
+    for f in functions:
+        d[f.func_name] = {f.subfunc_name: [{'name': p.name(), 'value': p.value()} for p in f.params.children()]}
+        if f.func_name == 'Reconstruction':
+            d[f.func_name][f.subfunc_name].append({'Package':f.package})
+
+    return d
+
+
+def save_function_pipeline(pipeline):
+    yaml_file = QtGui.QFileDialog.getSaveFileName(None, 'Save tomography pipeline file as', os.path.expanduser('~'),
+                                                      '*.yml', selectedFilter='*.yml')[0]
+    if yaml_file != '':
+        yaml_file = yaml_file.split('.')[0] + '.yml'
+        with open(yaml_file, 'w') as y:
+            yamlmod.ordered_dump(pipeline, y)
+
+
 def open_pipeline_file():
     pipeline_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file', os.path.expanduser('~'),
                                                       '*.yml')[0]
@@ -147,34 +168,37 @@ def open_pipeline_file():
         load_function_pipeline(pipeline_file)
 
 
-def construct_preview_pipeline():
+def pipeline_preview_action(widget, update=True, slc=None):
     global functions
 
     if len(functions) < 1:
-        return None, None
-
-    if 'Reconstruction' not in [func.func_name for func in functions]:
+        return None, None, None
+    elif 'Reconstruction' not in [func.func_name for func in functions]:
         QtGui.QMessageBox.warning(None, 'Reconstruction method required',
                                   'You have to select a reconstruction method to run a preview')
-        return None, None
+        return None, None, None
 
-    widget = ui.centerwidget.currentWidget().widget
-    lock_function_params(True)
+    return construct_preview_pipeline(widget, update=update, slc=slc)
+
+
+def construct_preview_pipeline(widget, update=True, slc=None):
+    global functions
+
+    lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
     funstack = []
     for i, func in enumerate(functions):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        params[func.subfunc_name] = deepcopy(func.param_dict)
+        params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget))
     lock_function_params(False)
 
-    return funstack, widget.getsino(), partial(ui.centerwidget.currentWidget().widget.addPreview, params)
+    return funstack, widget.getsino(slc), partial(widget.addPreview, params)
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None, ncore=None):
     kwargs = {}
-    args = ()
     for arg in argnames:
         if arg in 'flats':
             kwargs[arg] = datawidget.getflats(slc=data_slc)
@@ -185,29 +209,27 @@ def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None,
 
     if 'Reconstruction' in name:
         angles = datawidget.data.shape[0]
-        kwargs['theta'] = reconpkg.tomopy.angles(angles)
+        start = 270 - ui.configparams.child('Recon Rotation').value()
+        end = start - ui.configparams.child('Rotation Angle').value()
+        kwargs['theta'] = reconpkg.tomopy.angles(angles, start, end)
 
-    return partial(fpartial, **kwargs)
-
-
-def set_input_data(fpartial, datawidget, data_slc=None):
-    return partial(fpartial, datawidget.getsino(slc=data_slc))
+    if kwargs:
+        return partial(fpartial, **kwargs)
+    else:
+        return fpartial
 
 
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
+        runnable.lock = threads.mutex
         threads.queue.put(runnable)
 
 
-def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
+def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore):
     global functions
     lock_function_params(True)
-    # partials = [deepcopy(update_function_partial(f.partial, f.func_name, f.args_complement,
-    #                                              data_slc=(sino, proj), ncore=ncore) for f in functions)]
-    widget = ui.centerwidget.currentWidget().widget
     partials = [(f.name, deepcopy(f.partial), f.args_complement) for f in functions]
-
     lock_function_params(False)
 
     import dxchange as dx
@@ -222,7 +244,6 @@ def run_full_recon(proj, sino, out_name, out_format, nchunk, ncore):
     threads.queue.put(runnable_it)
 
 
-#TODO use reduce as well
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
     write_start = sino[0]
     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1

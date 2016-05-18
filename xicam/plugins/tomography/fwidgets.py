@@ -111,10 +111,11 @@ class FeatureWidget(QtGui.QWidget):
             ui.showform(ui.blankform)
 
     def mousePressEvent(self, *args, **kwargs):
+        super(FeatureWidget, self).mousePressEvent(*args, **kwargs)
         self.showSelf()
         self.setFocus()
         fmanager.currentindex = fmanager.functions.index(self)
-        super(FeatureWidget, self).mousePressEvent(*args, **kwargs)
+        self.previewButton.setFocus()
 
     def showSelf(self):
         ui.showform(self.form)
@@ -139,8 +140,8 @@ class FuncWidget(FeatureWidget):
         self.__function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
-        self.updateParamsDict()
         self.setDefaults()
+        self.updateParamsDict()
 
         # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self.__function)
@@ -199,29 +200,23 @@ class FuncWidget(FeatureWidget):
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
 
+    def paramdict(self, update=True):
+        if update:
+            self.updateParamsDict()
+        return self.param_dict
+
     def setDefaults(self):
         defaults = introspect.get_arg_defaults(self.__function)
         for param in self.params.children():
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
                     defaults[param.name()] = str(defaults[param.name()])
-                if defaults[param.name()] is not None:
-                    param.setValue(defaults[param.name()])
-
                 param.setDefault(defaults[param.name()])
+                param.setValue(defaults[param.name()])
 
     def allReadOnly(self, boolean):
         for param in self.params.children():
             param.setReadonly(boolean)
-
-    # def run(self, **args):
-    #     for arg in args.keys():
-    #         if arg not in self.args_complement:
-    #             raise ValueError('{} is not an argument to {}'.format(arg, self.__function.__name__))
-    #     if len(args) != len(self.args_complement):
-    #         raise ValueError('{} requires {} more arguments, {} given'.format(self.__function.__name__,
-    #                                                                           len(self.args_complement), len(args)))
-    #     return self.partial(**args)
 
     def menuActionClicked(self, pos):
         if self.form.currentItem().parent():
@@ -242,14 +237,15 @@ class FuncWidget(FeatureWidget):
         else:
             return
 
-        # TODO perhaps use a lock/mutex in the data accessing and actually run each preview in its own thread
-        # TODO do not update the param but the param_dict
         if test.exec_():
-            def f(i):
-                param.setValue(i)
-                return fmanager.construct_preview_pipeline()
-            fmanager.run_preview_recon(lambda: map(f, test.selectedRange()),
-                                       partial(map, lambda x: fmanager.run_preview_recon(*x)))
+            widget = ui.centerwidget.currentWidget().widget
+            if widget is None: return
+            p= []
+            for i in test.selectedRange():
+                self.updateParamsDict()
+                self.param_dict[param.name()] = i
+                p.append(fmanager.pipeline_preview_action(widget, update=False))
+            map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
 
@@ -259,6 +255,7 @@ class ReconFuncWidget(FuncWidget):
         self.previewButton.setCheckable(False)
         self.previewButton.setChecked(True)
         self.kwargs_complement['algorithm'] = subfunction.lower()
+        self.package = package.__name__
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -270,6 +267,36 @@ class ReconFuncWidget(FuncWidget):
             self.param_dict['filter_par'] = filter_par
         del self.param_dict['cutoff'], self.param_dict['order']
         return self.param_dict
+
+    def testParamTriggered(self):
+        param = self.form.currentItem().param
+        if param.type() == 'int' or param.type() == 'float':
+            start, end, step = None, None, None
+            if 'limits' in param.opts:
+                start, end = param.opts['limits']
+                step = (end - start) / 3 + 1
+            elif param.value() is not None:
+                start, end, step = param.value() / 2, 4 * (param.value()) / 2, param.value() / 2
+            test = TestRangeDialog(param.type(), (start, end, step))
+        elif param.type() == 'list':
+            test = TestListRangeDialog(param.opts['values'])
+        else:
+            return
+
+        if test.exec_():
+            widget = ui.centerwidget.currentWidget().widget
+            if widget is None: return
+            p = []
+            for i in test.selectedRange():
+                self.updateParamsDict()
+                if param.name() == 'cutoff':
+                    self.param_dict['filter_par'][0] = i
+                elif param.name() == 'order':
+                    self.param_dict['filter_par'][1] = i
+                else:
+                    self.param_dict[param.name()] = i
+                p.append(fmanager.pipeline_preview_action(widget, update=False))
+            map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
 class TestRangeDialog(QtGui.QDialog):

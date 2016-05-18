@@ -5,14 +5,12 @@ Created on Mon Oct 19 17:22:00 2015
 @author: lbluque
 """
 
-import os
+import time
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
-from client.globus import GlobusClient, GLOBUSError
-from client.spot import SpotClient
-from client.user import AUTHError
-import time
+# Error is raised if this import is removed probably due to some circular import between xglobals and here
+from client import spot, globus
 
 
 QtCore.Signal = QtCore.Signal
@@ -41,6 +39,7 @@ class RunnableMethod(QtCore.QRunnable):
         self.emitter = Emitter()
         self._callback_slot = callback_slot
         self._method = method
+        self.lock = None
         self.args = args
         self.kwargs = kwargs
 
@@ -53,14 +52,19 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 self._callback_slot.__name__)
         # self.emitter.sigFinished.connect(self._callback_slot)  # Connect here or in constructor?
         try:
+            if self.lock is not None: self.lock.lock()
             value = self._method(*self.args, **self.kwargs)
-            if value is None:
-                value = False
-            self.emitter.sigRetValue.emit(value)
-        except Exception, e:
-            raise e
+        except Exception:
+            raise
         finally:
-            self.emitter.sigFinished.emit()
+            if self.lock is not None: self.lock.unlock()
+
+        if value is None:
+            value = False
+
+        self.emitter.sigRetValue.emit(value)
+
+        self.emitter.sigFinished.emit()
 
 
 class RunnableIterator(RunnableMethod):
@@ -89,8 +93,9 @@ class Worker(QtCore.QObject):
     def __init__(self, queue, parent=None):
         super(Worker, self).__init__(parent)
         self.queue = queue
-        self.pool = QtCore.QThreadPool(self)  # Should I use globalInstance()?
+        self.pool = QtCore.QThreadPool.globalInstance()  # Should I use globalInstance() or a seperate instance?
         self.pool.setMaxThreadCount(mp.cpu_count())
+        self._stop = False
 
     def __del__(self):
         self.queue.join()
@@ -98,15 +103,23 @@ class Worker(QtCore.QObject):
     def startRunnable(self, runnable, priority=0):
         self.pool.start(runnable, priority)
 
+    def stopWork(self):
+        self._stop = True
+
     def run(self):
-        while True:
+        while not self._stop:
             item = self.queue.get()
-            print "Worker got item {} off queue".format(type(item))
+            # print "Worker got item {} off queue".format(type(item))
             self.startRunnable(item)
             self.queue.task_done()
-            time.sleep(1)
+            time.sleep(0.1)
 
 # Application globals
-global queue, worker
+global queue, worker, worker_thread, mutex
 queue = Queue.Queue()
 worker = Worker(queue)
+mutex = QtCore.QMutex()
+worker_thread = QtCore.QThread()
+worker.moveToThread(worker_thread)
+worker_thread.started.connect(worker.run)
+worker_thread.start()

@@ -127,8 +127,9 @@ Circular Mask:
   type: float
 - name: axis
   type: int
-  limits: [0, 2]
   default: 0
+  value: 0
+  limits: [0, 2]
 Phase Retrieval:
 - name: pixel_size
   suffix: cm

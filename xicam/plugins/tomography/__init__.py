@@ -82,6 +82,7 @@ class plugin(base.plugin):
             ui.propertytable.show()
             ui.configparams.child('Rotation Center').setValue(self.currentDataset().cor)
             ui.configparams.child('Rotation Center').sigValueChanged.connect(self.currentDataset().setCorValue)
+            ui.configparams.child('Rotation Angle').setValue(float(self.currentDataset().getheader()['arange']))
 
             recon = fmanager.recon_function
             if recon is not None:
