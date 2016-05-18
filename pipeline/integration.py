@@ -274,9 +274,14 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
 
-    xprofile = np.ma.sum(maskeddata, axis=1)
+    xprofile = np.ma.average(maskeddata, axis=1)
 
-    return range(len(xprofile)), xprofile, color, requestkey
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    qx = AI.qArray(data.shape[::-1])[AI.getFit2D()['centerY'],:]/10
+    qx[:qx.argmin()]*=-1
+
+    return qx, xprofile, color, requestkey
 
 
 def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
@@ -301,18 +306,23 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
 
-    xprofile = np.ma.sum(maskeddata, axis=0)
+    xprofile = np.ma.average(maskeddata, axis=0)
 
-    return range(len(xprofile)), xprofile, color, requestkey
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    qz = AI.qArray(data.shape[::-1])[:,AI.getFit2D()['centerX']]/10
+    qz[:qz.argmin()]*=-1
+
+    return qz, xprofile, color, requestkey
 
 
 def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
-    # if mask is None:
-    # mask = np.zeros_like(imgdata)
+    if mask is None:
+        mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
 
-    return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
+    return AI.integrate2d(imgdata.T, xres, yres, mask=1-mask.T)
 
 
 def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):

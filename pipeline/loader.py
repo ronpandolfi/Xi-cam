@@ -1145,8 +1145,8 @@ class diffimage2(object):
     def cake(self,img,mask):
         self.cachedetector()
         if not self.iscached('cake'):
-            cake, x, y = integration.cake(img, self.experiment)
-            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment)
+            cake, x, y = integration.cake(img, self.experiment,mask=mask)
+            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment, mask = mask)
             cakemask = cakemask > 0
 
             self.cache['cake'] = cake
