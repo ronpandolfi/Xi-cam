@@ -137,7 +137,7 @@ def load_function_pipeline(yaml_file):
                     child = funcWidget.params.child(param['name'])
                     child.setValue(param['value'])
                     child.setDefault(param['value'])
-            except IndexError:
+            except (IndexError,AttributeError):
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
 
