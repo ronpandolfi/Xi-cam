@@ -255,6 +255,7 @@ class ReconFuncWidget(FuncWidget):
         self.previewButton.setCheckable(False)
         self.previewButton.setChecked(True)
         self.kwargs_complement['algorithm'] = subfunction.lower()
+        self.package = package.__name__
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)

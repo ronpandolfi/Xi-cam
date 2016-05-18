@@ -54,6 +54,8 @@ def add_action(function, subfunction, package=reconpkg.tomopy):
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
         if value is QtGui.QMessageBox.Yes:
             add_function(function, subfunction, package=package)
+    else:
+        add_function(function, subfunction, package=package)
 
 
 def add_function(function, subfunction, package=reconpkg.tomopy):
@@ -118,10 +120,10 @@ def lock_function_params(boolean):
 
 def load_function_pipeline(yaml_file):
     global functions, currentindex
-    with open(yaml_file, 'r') as f:
-        stack = yamlmod.ordered_load(f)
+    with open(yaml_file, 'r') as y:
+        pipeline = yamlmod.ordered_load(y)
     clear_functions()
-    for func, subfuncs in stack.iteritems():
+    for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
                 if func == 'Reconstruction':
@@ -138,6 +140,25 @@ def load_function_pipeline(yaml_file):
             except IndexError:
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
+
+
+def create_pipeline_dict():
+    d = OrderedDict()
+    for f in functions:
+        d[f.func_name] = {f.subfunc_name: [{'name': p.name(), 'value': p.value()} for p in f.params.children()]}
+        if f.func_name == 'Reconstruction':
+            d[f.func_name][f.subfunc_name].append({'Package':f.package})
+
+    return d
+
+
+def save_function_pipeline(pipeline):
+    yaml_file = QtGui.QFileDialog.getSaveFileName(None, 'Save tomography pipeline file as', os.path.expanduser('~'),
+                                                      '*.yml', selectedFilter='*.yml')[0]
+    if yaml_file != '':
+        yaml_file = yaml_file.split('.')[0] + '.yml'
+        with open(yaml_file, 'w') as y:
+            yamlmod.ordered_dump(pipeline, y)
 
 
 def open_pipeline_file():

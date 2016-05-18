@@ -98,7 +98,7 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.preview3DViewer)
 
         self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
-        self.processViewer.sigRunClicked.connect(lambda: fmanager.run_full_recon(self))
+        self.processViewer.sigRunClicked.connect(lambda i,j,k,l,m,n: fmanager.run_full_recon(self, i,j,k,l,m,n))
         self.viewstack.addWidget(self.processViewer)
 
         #TODO Make this a stack viewer with a stack of the recon
@@ -288,6 +288,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def previewClicked(self):
         self.sigPreviewClicked.emit()
+
 
 class VolumeViewer(QtGui.QWidget):
 
@@ -612,7 +613,7 @@ class RunViewer(QtGui.QTabWidget):
         l.setSpacing(0)
 
         path, name = os.path.split(path)
-        name = 'RECON_' + name.split('.')[0]
+        name = os.path.join('RECON_' + name.split('.')[0], name.split('.')[0])
         out_path = os.path.join(path, name)
 
         # Create Local Parameter Tree
