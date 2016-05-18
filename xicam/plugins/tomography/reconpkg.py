@@ -8,6 +8,7 @@ try:
 except ImportError:
     warnings.warn('tomopy module not available')
     packages['tomopy'] = None
+    tomopy = None
 try:
     import astra
     packages['astra'] = astra
@@ -15,3 +16,4 @@ try:
 except ImportError:
     warnings.warn('astra module not available')
     packages['astra'] = None
+    astra = None
