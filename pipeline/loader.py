@@ -16,6 +16,7 @@ import scipy.ndimage
 import writer
 #import nexpy.api.nexus.tree as tree
 from xicam import debugtools, config
+from pipeline.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
 import warnings
@@ -883,7 +884,10 @@ class StackImage(object):
         self.filepath = filepath
 
         if filepath is not None:
-            self.fabimage = fabio.open(filepath)
+            if os.path.isdir(filepath):
+                self.fabimage = TiffStack(filepath)
+            else:
+                self.fabimage = fabio.open(filepath)
         elif data is not None:
             self.fabimage = data
         else:
@@ -922,7 +926,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getframe(frame).data, 3)
+        return np.rot90(self.fabimage.getframe(frame), 3)
 
     def invalidatecache(self):
         self.cache = dict()
@@ -961,7 +965,7 @@ class SinogramStack(StackImage):
         return new_obj
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getsinogram(frame).sinogram, 3)
+        return np.rot90(self.fabimage.getsinogram(frame), 3)
 
 
 class diffimage2(object):

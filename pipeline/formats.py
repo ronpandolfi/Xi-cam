@@ -1,5 +1,8 @@
+import os
 import fabio, pyFAI
 import h5py
+import tifffile
+import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
 from fabio import fabioutils
@@ -111,13 +114,15 @@ fabio.openimage.spoth5image = spoth5image
 fabioutils.FILETYPES['h5'] = ['spoth5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'spoth5')
 
+
 class bl832h5image(fabioimage):
 
     def __init__(self, data=None , header=None):
         super(bl832h5image, self).__init__(data=data, header=header)
+        self.frames = None
+        self.header = None
         self._h5 = None
         self._dgroup = None
-        self.frames = None
         self._flats = None
         self._darks = None
         self._sinogram = None
@@ -144,6 +149,7 @@ class bl832h5image(fabioimage):
             self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
         self.readheader(f)
         dfrm = self._dgroup[self.frames[frame]]
+        self.currentframe = frame
         self.data = dfrm[0]
         return self
 
@@ -175,7 +181,8 @@ class bl832h5image(fabioimage):
 
     @property
     def nframes(self):
-        return sum(map(lambda key: 'bak' not in key and 'drk' not in key, self._dgroup.keys()))
+        # return sum(map(lambda key: 'bak' not in key and 'drk' not in key, self._dgroup.keys()))
+        return len(self.frames)
 
     @nframes.setter
     def nframes(self, n):
@@ -185,7 +192,7 @@ class bl832h5image(fabioimage):
         if idx is None: idx = self.data.shape[0]//2
         self.sinogram = np.vstack([frame[0, idx] for frame in map(lambda x: self._dgroup[self.frames[x]],
                                                                   range(self.nframes))])
-        return self
+        return self.sinogram
 
     def getsinogramchunk(self, proj_slice, sino_slc):
         shape = (proj_slice.stop - proj_slice.start, sino_slc.stop - sino_slc.start, self.data.shape[1])
@@ -199,29 +206,52 @@ class bl832h5image(fabioimage):
 
     def getframe(self, frame=0):
         self.data = self._dgroup[self.frames[frame]][0]
-        return self
+        return self.data
 
     def next(self):
-        pass
+        if self.currentframe < self.__len__() - 1:
+            self.currentframe += 1
+        else:
+            raise StopIteration
+        return self.getframe(self.currentframe)
 
     def previous(self):
-        pass
+        if self.currentframe > 0:
+            self.currentframe -= 1
+            return self.getframe(self.currentframe)
+        else:
+            raise StopIteration
 
     def close(self):
         self._h5.close()
-
 
 
 fabio.openimage.bl832h5 = bl832h5image
 fabioutils.FILETYPES['h5'] = ['bl832h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 
-if __name__ == '__main__':
-    from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    arr = data.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-    print arr.shape
-    print data.darks.shape
-    print data.flats.shape
-    # imshow(data.sinogram, cmap='gray')
-    # show()
+
+class TiffStack(object):
+    def __init__(self, path, header=None):
+        super(TiffStack, self).__init__()
+        self.frames = glob.glob(os.path.join(path, '*.tiff'))
+        self.currentframe = 0
+        self.header= header
+
+    def __len__(self):
+        return len(self.frames)
+
+    def getframe(self, frame=0):
+        self.data = tifffile.imread(self.frames[frame], memmap=True)
+        return self.data
+
+
+# if __name__ == '__main__':
+#     from matplotlib.pyplot import imshow, show
+#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+#     arr = data.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+#     print arr.shape
+#     print data.darks.shape
+#     print data.flats.shape
+#     # imshow(data.sinogram, cmap='gray')
+#     # show()

@@ -187,7 +187,7 @@ def construct_preview_pipeline(widget, update=True, slc=None):
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
     funstack = []
-    for i, func in enumerate(functions):
+    for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
         params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
@@ -226,10 +226,14 @@ def run_preview_recon(funstack, initializer, callback):
         threads.queue.put(runnable)
 
 
-def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore):
+def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, update_call=None, finish_call=None):
     global functions
     lock_function_params(True)
-    partials = [(f.name, deepcopy(f.partial), f.args_complement) for f in functions]
+    partials, params = [], OrderedDict()
+    for f in functions:
+        params[f.subfunc_name] = deepcopy(f.paramdict(update=update))
+        partials.append((f.name, deepcopy(f.partial), f.args_complement))
+    # partials = [(f.name, deepcopy(f.partial), f.args_complement) for f in functions]
     lock_function_params(False)
 
     import dxchange as dx
@@ -239,9 +243,10 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore):
         print 'Only tiff support right now'
         return
 
-    runnable_it = threads.RunnableIterator(widget.processViewer.log2local, _recon_iter,
-                                           widget, partials, proj, sino, nchunk, ncore)
+    runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, nchunk, ncore)
+    runnable_it.emitter.sigFinished.connect(finish_call)
     threads.queue.put(runnable_it)
+    return params
 
 
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):

@@ -64,6 +64,8 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
+        self._recon_running = False
+        self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
@@ -98,12 +100,11 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.preview3DViewer)
 
         self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
-        self.processViewer.sigRunClicked.connect(lambda i,j,k,l,m,n: fmanager.run_full_recon(self, i,j,k,l,m,n))
+        self.processViewer.sigRunClicked.connect(self.runFullRecon)
         self.viewstack.addWidget(self.processViewer)
 
-        #TODO Make this a stack viewer with a stack of the recon
-        # self.reconstructionViewer = ReconstructionViewer(paths=paths, data=data)
-        # self.viewstack.addWidget(self.reconstructionViewer)
+        self.reconstructionViewer = QtGui.QStackedWidget()
+        self.viewstack.addWidget(self.reconstructionViewer)
 
         l = QtGui.QVBoxLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
@@ -115,8 +116,11 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
     @staticmethod
-    def loaddata(paths):
-        return loader.ProjectionStack(paths)
+    def loaddata(paths, raw=True):
+        if raw:
+            return loader.ProjectionStack(paths)
+        else:
+            return loader.StackImage(paths)
 
     def getsino(self, slc=None):
         if slc is None:
@@ -152,14 +156,69 @@ class TomoViewer(QtGui.QWidget):
     def setCorValue(self, value):
         self.cor = value
 
+    @QtCore.Slot(tuple, tuple, str, str, int, int, object)
+    def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
+        if not self._recon_running:
+            self._recon_running = True
+            self.processViewer.local_console.clear()
+            fmanager.run_full_recon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call,
+                                    self.fullReconFinished)
+        else:
+            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+                                          'Are you sure you want to start another one?',
+                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            if r is QtGui.QMessageBox.Yes:
+                QtGui.QMessageBox.information(self, 'Reconstruction request',
+                                              'Then you should wait until the first one finishes.')
+        self._recon_path = os.path.dirname(out_name)
 
-class StackViewer(pg.ImageView):
+    def fullReconFinished(self):
+        self._recon_running = False
+        self.processViewer.local_console.insertPlainText('Reconstruction complete.')
+        self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
+
+
+class ImageView(pg.ImageView):
+    """
+    Subclass of PG ImageView to correct z-slider signal behavior.
+    """
+    sigDeletePressed = QtCore.Signal()
+    def keyPressEvent(self, ev):
+        super(ImageView, self).keyPressEvent(ev)
+        if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
+            self.timeLineChanged()
+        elif ev.key() == QtCore.Qt.Key_Delete or ev.key() == QtCore.Qt.Key_Backspace:
+            self.sigDeletePressed.emit()
+
+    def timeIndex(self, slider):
+        ## Return the time and frame index indicated by a slider
+        if self.image is None:
+            return (0,0)
+
+        t = slider.value()
+
+        xv = self.tVals
+        if xv is None:
+            ind = int(t)
+        else:
+            if len(xv) < 2:
+                return (0,0)
+            totTime = xv[-1] + (xv[-1]-xv[-2])
+            inds = np.argwhere(xv <= t)
+            if len(inds) < 1:
+                return (0,t)
+            ind = inds[-1,0]
+        return ind, t
+
+
+class StackViewer(ImageView):
     """
     PG ImageView subclass to view projections or sinograms of a tomography dataset
     """
     def __init__(self, data, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
         self.data = data
+        print data
         self.ui.roiBtn.setParent(None)
         self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
@@ -262,7 +321,7 @@ class PreviewViewer(QtGui.QSplitter):
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
     def addPreview(self, image, funcdata):
-        self.previews.appendleft(image)
+        self.previews.appendleft(np.rot90(np.flipud(image), 3))
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
@@ -599,7 +658,7 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int)
+    sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
 
     def __init__(self, path, dim, parent=None):
         super(RunViewer, self).__init__(parent=parent)
@@ -648,7 +707,8 @@ class RunViewer(QtGui.QTabWidget):
         s.addWidget(w)
 
         # Text Browser for console
-        self.local_console = QtGui.QTextBrowser()
+        self.local_console = QtGui.QTextEdit() #Browser()
+        self.local_console.setReadOnly(True)
         self.local_console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
         s.addWidget(self.local_console)
 
@@ -734,7 +794,8 @@ class RunViewer(QtGui.QTabWidget):
                                 self.reconsettings.child('Output Name').value(),
                                 self.reconsettings.child('Ouput Format').value(),
                                 self.localsettings.child('Sinogram Chunks').value(),
-                                self.localsettings.child('Cores').value())
+                                self.localsettings.child('Cores').value(),
+                                self.log2local)
 
 
 class ReconstructionViewer(VolumeViewer):
@@ -850,35 +911,3 @@ class ArrayDeque(deque):
         else:
             return super(ArrayDeque, self).__getitem__(item)
 
-
-class ImageView(pg.ImageView):
-    """
-    Subclass of PG ImageView to correct z-slider signal behavior.
-    """
-    sigDeletePressed = QtCore.Signal()
-    def keyPressEvent(self, ev):
-        super(ImageView, self).keyPressEvent(ev)
-        if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
-            self.timeLineChanged()
-        elif ev.key() == QtCore.Qt.Key_Delete or ev.key() == QtCore.Qt.Key_Backspace:
-            self.sigDeletePressed.emit()
-
-    def timeIndex(self, slider):
-        ## Return the time and frame index indicated by a slider
-        if self.image is None:
-            return (0,0)
-
-        t = slider.value()
-
-        xv = self.tVals
-        if xv is None:
-            ind = int(t)
-        else:
-            if len(xv) < 2:
-                return (0,0)
-            totTime = xv[-1] + (xv[-1]-xv[-2])
-            inds = np.argwhere(xv <= t)
-            if len(inds) < 1:
-                return (0,t)
-            ind = inds[-1,0]
-        return ind, t
