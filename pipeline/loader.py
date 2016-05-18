@@ -301,7 +301,7 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
     with numpy.errstate(divide='ignore'):
         data = (d1 + d2) / (mask2 + mask1)
         data[np.isnan(data)] = 0
-    return data
+    return data, np.logical_or(mask2, mask1).astype(np.int)
 
 
 def loadthumbnail(path):
@@ -359,6 +359,7 @@ def finddetectorbyfilename(path, data=None):
 
 
 def loadpath(path):
+    # Now returns data and mask
     if '_lo_' in path or '_hi_' in path:
         try:
             if '_lo_' in path:
@@ -369,7 +370,7 @@ def loadpath(path):
         except Exception as ex:
             print 'Stitching failed: ', ex.message
 
-    return loadimage(path)
+    return loadimage(path), None
 
 
 def loadxfs(path):
@@ -462,7 +463,7 @@ class diffimage():
         if self._data is None:
             if self.filepath is not None:
                 try:
-                    self._data = loadpath(self.filepath)
+                    self._data, self.experiment.mask = loadpath(self.filepath)
                 except IOError:
                     debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
@@ -1043,7 +1044,7 @@ class diffimage2(object):
         if self._rawdata is None:
             if self.filepath is not None:
                 try:
-                    self._rawdata = loadpath(self.filepath)
+                    self._rawdata, self.experiment.mask = loadpath(self.filepath)
                 except IOError:
                     debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
@@ -1091,13 +1092,14 @@ class diffimage2(object):
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector
+                    return name, detector, 1
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
-                    detector = detector()
-                    print 'Detector found with binning: ' + name
-                    return name, detector
+                for binning in detector.BINNED_PIXEL_SIZE.keys():
+                    if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                        detector = detector()
+                        print 'Detector found with binning: ' + name
+                        return name, detector, binning
         return None, None
 
 
@@ -1327,7 +1329,8 @@ class singlefilediffimage2(diffimage2):
     def rawdata(self):
         # 'Permanently' cached
         if self._rawdata is None:
-            self._rawdata = np.rot90(loadpath(self.filepath),3)
+             rawdata, mask = loadpath(self.filepath)
+             self._rawdata, self.experiment.mask = np.rot90(rawdata,3),np.rot90(mask,3)
         return self._rawdata
 
     @property

@@ -118,7 +118,6 @@ class MyMainWindow():
     def closeEvent(self, ev):
         self.worker_thread.quit()
         ev.accept()
->>>>>>> .merge_file_GNLai1
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

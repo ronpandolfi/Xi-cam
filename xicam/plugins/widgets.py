@@ -883,8 +883,9 @@ class dimgViewer(QtGui.QWidget):
             print 'maskmax:', np.max(mask)
             invmask = 1 - mask
             self.maskimage.setImage(
-                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
-                opacity=.25)
+                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float),
+                opacity=.5)
+            self.maskimage.setLevels([0,1])
 
     # def finddetector(self):
     # # detector, mask = pipeline.loader.finddetector(self.imgdata)
@@ -1187,7 +1188,7 @@ class integrationsubwidget(pg.PlotWidget):
         self.iscleared = False
         # replot full integration
         xglobals.pool.apply_async(integrationfunction, args=(data, mask, dimg.experiment.getAI().getPyFAI(), None,
-                                                                       None, None, self.requestkey),
+                                                                       None, self.requestkey),
                                   callback=self.replotcallback)
 
         # replot roi integration
@@ -1204,44 +1205,6 @@ class integrationsubwidget(pg.PlotWidget):
                                           args=(dimg.transformdata, cut, [0, 255, 255], self.requestkey),
                                           callback=self.replotcallback)
 
-
-class qintegrationwidget(integrationsubwidget):
-    sigPlotResult = QtCore.Signal(object)
-    def __init__(self):
-        super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
-        self.requestkey = 0
-        self.iscleared = False
-
-    def replot(self,dimg,rois,imageitem):
-        self.requestkey +=1
-        self.iscleared = False
-        # replot full integration
-        if dimg.cakemode:
-            # integrate x
-            pass
-        else:
-            xglobals.pool.apply_async(integration.qintegrate, args=(dimg.transformdata,
-                                                                             dimg.transformmask,
-                                                                             dimg.experiment.getAI().getPyFAI(), None, None, None, self.requestkey),
-                                               callback=self.replotcallback)
-
-
-            # replot roi integration
-            for roi in rois:
-                if roi.isdeleting:
-                    roi.deleteLater()
-                    continue
-
-                cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
-                print 'Cut:', cut.shape
-
-                if cut is not None:
-                    xglobals.pool.apply_async(integration.qintegrate, args=(dimg, cut, [0, 255, 255]), callback=self.replotcallback)
-
-    def replotcallback(self,*args,**kwargs):
-        self.sigPlotResult.emit(*args, **kwargs)
-
     def plotresult(self, result):
 
         (x, y, color,requestkey) = result
@@ -1257,6 +1220,26 @@ class qintegrationwidget(integrationsubwidget):
 
             self.plotItem.update()
 
+
+class qintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
+    def __init__(self):
+        super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+    def replot(self,dimg,rois,imageitem):
+        # replot full integration
+        if dimg.cakemode:
+            # integrate x
+            pass
+        else:
+            data = dimg.transformdata
+            mask = dimg.transformmask
+            self.applyintegration(integration.qintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self,*args,**kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
     def movPosLine(self,qx,qz,dimg=None):
         self.posLine.setPos(np.linalg.norm([qx,qz]))
         self.posLine.show()
@@ -1269,65 +1252,57 @@ class chiintegrationwidget(integrationsubwidget):
     def __init__(self):
         super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
-        self.requestkey = 0
-        self.iscleared = False
 
     def replot(self, dimg, rois, imageitem):
-        self.requestkey += 1
-        self.iscleared = False
-        # replot full integration
-        if dimg.cakemode:
-            # integrate x
-            pass
-        else:#data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], xres=1000, yres=1000
-            xglobals.pool.apply_async(integration.chiintegratepyFAI, args=(dimg.transformdata,
-                                                                    dimg.transformmask,
-                                                                    dimg.experiment.getAI().getPyFAI(), None, None,
-                                                                    None, self.requestkey),
-                                      callback=self.replotcallback)
-
-            # replot roi integration
-            for roi in rois:
-                if roi.isdeleting:
-                    roi.deleteLater()
-                    continue
-
-                cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
-                print 'Cut:', cut.shape
-
-                if cut is not None:
-                    xglobals.pool.apply_async(integration.chiintegratepyFAI, args=(dimg.transformdata, cut, [0, 255, 255],self.requestkey),
-                                              callback=self.replotcallback)
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.chiintegratepyFAI,dimg,rois,data,mask,imageitem)
 
     def replotcallback(self, *args, **kwargs):
         self.sigPlotResult.emit(*args, **kwargs)
-
-    def plotresult(self, result):
-
-        (x, y, color, requestkey) = result
-        if requestkey == self.requestkey:
-            if not self.iscleared:
-                self.plotItem.clear()
-                self.addItem(self.posLine)
-                self.iscleared = True
-            if color is None:
-                color = [255, 255, 255]
-            curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
-            curve.setZValue(3 * 255 - sum(color))
-
-            self.plotItem.update()
 
     def movPosLine(self, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qz,qx)))
         self.posLine.show()
 
 class xintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
+
     def __init__(self):
         super(xintegrationwidget, self).__init__(axislabel=u'q<sub>x</sub> (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+
+    def replot(self, dimg, rois, imageitem):
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.xintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(qx)
+        self.posLine.show()
 
 class zintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
+
     def __init__(self):
         super(zintegrationwidget, self).__init__(axislabel=u'q<sub>z</sub> (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+    def replot(self, dimg, rois, imageitem):
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.zintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(qz)
+        self.posLine.show()
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()

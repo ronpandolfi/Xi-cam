@@ -150,7 +150,8 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], centeroverride=None, requestkey = None):
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None):
+    centeroverride = None # TODO: reimplement for remeshing
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
@@ -215,7 +216,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     return q, radialprofile, color, requestkey
 
 
-def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], requestkey = None, xres=1000, yres=1000):
+def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, xres=1000, yres=1000):
     print 'Chi integration...'
 
     AI = pyFAI.AzimuthalIntegrator()
@@ -241,9 +242,9 @@ def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 
         mask &= cut.astype(bool)
     # data *= cut
 
-    if not precaked:
-        cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
-        mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+
+    cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+    mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
 
     maskedcake = np.ma.masked_array(cake, mask=mask)
 
@@ -271,9 +272,36 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
     # data *= cut
 
 
-    maskeddata = np.ma.masked_array(data, mask=mask)
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
 
     xprofile = np.ma.sum(maskeddata, axis=1)
+
+    return range(len(xprofile)), xprofile, color, requestkey
+
+
+def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
+    print 'X integration...'
+
+    if mask is not None:
+        mask = mask.copy()
+
+    print 'image:', data.shape
+    print 'mask:', mask.shape
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+    # data *= cut
+
+
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
+
+    xprofile = np.ma.sum(maskeddata, axis=0)
 
     return range(len(xprofile)), xprofile, color, requestkey
 
@@ -307,5 +335,3 @@ def qintegrate(*args,**kwargs):
     # else:
          return radialintegratepyFAI(*args,**kwargs)
 
-def xintegrate(dimg, cut, callbackcolor):
-    return range(dimg.transformdata.shape[1]), np.sum(dimg.transformdata*cut,axis=0), callbackcolor
