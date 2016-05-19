@@ -7,6 +7,8 @@ bool remap(int nrow, int ncol, double *img, int nqp, int nqz,
 		double alphai, double k0, double sdd, int method, 
 		double *out){
 
+    for (int i = 0; i < 2; i++)
+        cen[i] /= pixel[i];
 	double sin_ai = std::sin(alphai);
 	double cos_ai = std::cos(alphai);
 	int ir, ic;
