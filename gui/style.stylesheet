@@ -14,7 +14,7 @@ QWidget {
 }
 
 QWidget {
-    border: 0px;
+
 }
 
 QHeaderView::section
@@ -63,6 +63,7 @@ QPushButton[isMode="true"]:checked {
 QPushButton[isMode="true"] {
     font-family:Zero Threes;
     font-size:20px;
+    border: 0px;
 }
 
 QListView{

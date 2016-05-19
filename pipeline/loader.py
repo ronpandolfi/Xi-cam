@@ -14,16 +14,15 @@ import re
 import time
 import scipy.ndimage
 import writer
-#import nexpy.api.nexus.tree as tree
 from xicam import debugtools, config
 from pipeline.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
 import warnings
-# try:
-#     import libtiff
-# except IOError:
-#     warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
+try:
+    import libtiff
+except IOError:
+    warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
 
 import numpy as nx
 
