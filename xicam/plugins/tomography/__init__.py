@@ -41,9 +41,6 @@ class plugin(base.plugin):
         self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
         self.functionwidget = ui.functionwidget
 
-
-        super(plugin, self).__init__(*args, **kwargs)
-
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
@@ -56,6 +53,9 @@ class plugin(base.plugin):
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
+
+        self.toolbar.connecttriggers(self.previewSlice, self.preview3D, self.fullReconstruction, self.manualCenter)
+        super(plugin, self).__init__(*args, **kwargs)
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -77,7 +77,7 @@ class plugin(base.plugin):
             tab.unload()
         try:
             self.centerwidget.currentWidget().load()
-            ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
+            ui.propertytable.setData(self.currentDataset().data.header.items())
             ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
             ui.propertytable.show()
             ui.configparams.child('Rotation Center').setValue(self.currentDataset().cor)
@@ -104,4 +104,19 @@ class plugin(base.plugin):
         self.centerwidget.setCurrentWidget(widget)
 
     def currentDataset(self):
-        return self.centerwidget.currentWidget().widget
+        try:
+            return self.centerwidget.currentWidget().widget
+        except AttributeError:
+            print 'No dataset open.'
+
+    def previewSlice(self):
+        self.currentDataset().runSlicePreview()
+
+    def preview3D(self):
+        self.currentDataset().run3DPreview()
+
+    def fullReconstruction(self):
+        self.currentDataset().fullReconstruction()
+
+    def manualCenter(self):
+        self.currentDataset().manualCenter()

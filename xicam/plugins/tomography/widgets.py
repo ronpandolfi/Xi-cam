@@ -91,9 +91,10 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
+        #TODO allow for subsampling of recons
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
-        self.previewViewer.sigPreviewClicked.connect(
-            lambda: fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self)))
+        # self.previewViewer.sigPreviewClicked.connect(
+        #     lambda: fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self)))
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
@@ -156,6 +157,12 @@ class TomoViewer(QtGui.QWidget):
     def setCorValue(self, value):
         self.cor = value
 
+    def runSlicePreview(self):
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self))
+
+    def run3DPreview(self):
+        print '3D bitch'
+
     @QtCore.Slot(tuple, tuple, str, str, int, int, object)
     def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
         if not self._recon_running:
@@ -177,12 +184,19 @@ class TomoViewer(QtGui.QWidget):
         self.processViewer.local_console.insertPlainText('Reconstruction complete.')
         self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
 
+    def manualCenter(self):
+        print 'Manual Center Stuff'
 
 class ImageView(pg.ImageView):
     """
     Subclass of PG ImageView to correct z-slider signal behavior.
     """
     sigDeletePressed = QtCore.Signal()
+
+    def buildMenu(self):
+        super(ImageView, self).buildMenu()
+        self.menu.removeAction(self.normAction)
+
     def keyPressEvent(self, ev):
         super(ImageView, self).keyPressEvent(ev)
         if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
@@ -260,7 +274,7 @@ class PreviewViewer(QtGui.QSplitter):
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
     """
-    sigPreviewClicked = QtCore.Signal()
+    # sigPreviewClicked = QtCore.Signal()
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
@@ -285,13 +299,14 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
+        self.imageview.sigDeletePressed.connect(self.removePreview)
 
-        self.runButton = QtGui.QPushButton(self.imageview)
-        self.runButton.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
+        # self.runButton = QtGui.QPushButton(self.imageview)
+        # self.runButton.setText("")
+        # icon = QtGui.QIcon()
+        # icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        # self.runButton.setIcon(icon)
+        # self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
@@ -306,9 +321,10 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
-        self.runButton.clicked.connect(self.previewClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
+
+        # self.runButton.clicked.connect(self.previewClicked)
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
@@ -345,8 +361,8 @@ class PreviewViewer(QtGui.QSplitter):
         current_data = self.previewdata[self.imageview.currentIndex]
         print current_data
 
-    def previewClicked(self):
-        self.sigPreviewClicked.emit()
+    # def previewClicked(self):
+    #     self.sigPreviewClicked.emit()
 
 
 class VolumeViewer(QtGui.QWidget):
