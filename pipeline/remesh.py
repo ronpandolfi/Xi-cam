@@ -73,7 +73,7 @@ def remesh(image, filename, geometry, alphai):
     try:
         qimg = warp_image(image, qpar, qvrt, pixel, center, alphai, k0, sdd, 0)
         return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
-    except:
+    except Exception:
 
         # find inverse map
         cosi = np.cos(alphai)

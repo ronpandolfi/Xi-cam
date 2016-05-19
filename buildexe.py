@@ -1,11 +1,14 @@
 from cx_Freeze import setup, Executable
 import sys
+from numpy.distutils.core import Extension
+import numpy as np
 # import scipy.sparse.csgraph._validation
 sys.path.append('xicam/')
 
 
 # Notes:
-# Build error with scipy? edit cx_Freeze hooks.py line 548...
+# Build error with scipy? edit cx_Freeze hooks.py line 548...http://stackoverflow.com/questions/32432887/cx-freeze-importerror-no-module-named-scipy
+# Build error with h5py? edit cx_Freeze hooks.py and comment out finder.IncludeModule('h5py.api_gen')
 # Missing ufuncs? Its fine, copy numpy's lib/libifcoremd.dll and libmmd.dll into build directory...
 # pyfits unsupported operand type? Comment those lines!...
 # Missing h5py _errors? edit cx_Freeze hooks.py for h5py...
@@ -84,10 +87,19 @@ executables = [
                shortcutDir="StartMenuFolder", )
 ]
 
+EXT = Extension(name='pipeline.cWarpImage',
+                sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
+                extra_compile_args=['-O3', '-ffast-math'],  # '-fopenmp',, '-I/opt/local/include'
+                # extra_link_args=['-fopenmp'],
+                include_dirs=[np.get_include()],
+
+                )
+
 setup(name='HipIES',
       version='1.1.0',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
       options={'build_exe': buildOptions, 'build_msi': msiOptions, 'bdist_msi': bdistmsiOptions},
+      #ext_modules=[EXT],
       executables=executables)
