@@ -19,10 +19,10 @@ from pipeline.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
 import warnings
-try:
-    import libtiff
-except IOError:
-    warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
+# try:
+#     import libtiff
+# except IOError:
+#     warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
 
 import numpy as nx
 
@@ -1069,7 +1069,7 @@ class diffimage2(object):
     def detector(self):
         if self._detector is None:
             if self.rawdata is not None:
-                name, detector = self.finddetector()
+                name, detector, binning = self.finddetector()
             else:
                 return None
 
@@ -1083,8 +1083,8 @@ class diffimage2(object):
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1 * binning)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2 * binning)
                     self.experiment.setvalue('Detector', name)
         return self._detector
 
@@ -1103,7 +1103,7 @@ class diffimage2(object):
                         detector = detector()
                         print 'Detector found with binning: ' + name
                         return name, detector, binning
-        return None, None
+        return None, None, None
 
 
     @detector.setter
@@ -1333,7 +1333,9 @@ class singlefilediffimage2(diffimage2):
         # 'Permanently' cached
         if self._rawdata is None:
              rawdata, mask = loadpath(self.filepath)
-             self._rawdata, self.experiment.mask = np.rot90(rawdata,3),np.rot90(mask,3)
+             print rawdata, mask
+             self._rawdata = np.rot90(rawdata,3)
+             if mask is not None: self.experiment.mask = np.rot90(mask,3)
         return self._rawdata
 
     @property
