@@ -12,6 +12,7 @@ from collectionsmod import UnsortableOrderedDict
 import ui
 import fdata
 import introspect
+import reconpkg
 
 
 try:
@@ -31,12 +32,12 @@ except AttributeError:
 
 
 class FeatureWidget(QtGui.QWidget):
-    def __init__(self, name=''):
+    def __init__(self, name='', parent=None):
         self.name = name
 
         self._form = None
 
-        super(FeatureWidget, self).__init__()
+        super(FeatureWidget, self).__init__(parent=parent)
 
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -96,8 +97,8 @@ class FeatureWidget(QtGui.QWidget):
         self.closeButton.clicked.connect(self.delete)
         self.horizontalLayout_2.addWidget(self.closeButton)
         self.verticalLayout.addWidget(self.frame)
-
-        self.txtName.mousePressEvent = self.mousePressEvent
+        self.txtName.sigClicked.connect(self.mouseClicked)
+        # self.txtName.mousePressEvent = self.mousePressEvent
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
@@ -111,11 +112,20 @@ class FeatureWidget(QtGui.QWidget):
             self.deleteLater()
             ui.showform(ui.blankform)
 
-    def mousePressEvent(self, *args, **kwargs):
-        super(FeatureWidget, self).mousePressEvent(*args, **kwargs)
+    def hideothers(self):
+        for item in fmanager.functions:
+            if hasattr(item, 'frame_2') and item is not self and self in fmanager.functions:
+                    item.frame_2.hide()
+
+    def mouseClicked(self):
+        print 'Pressed ', self.name
         self.showSelf()
+        self.hideothers()
         self.setFocus()
-        fmanager.currentindex = fmanager.functions.index(self)
+        try:
+            fmanager.currentindex = fmanager.functions.index(self)
+        except ValueError:
+            pass
         self.previewButton.setFocus()
 
     def showSelf(self):
@@ -127,11 +137,11 @@ class FeatureWidget(QtGui.QWidget):
 
 
 class FuncWidget(FeatureWidget):
-    def __init__(self, function, subfunction, package):
+    def __init__(self, function, subfunction, package, parent=None):
         self.name = function
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
-        super(FuncWidget, self).__init__(self.name)
+        super(FuncWidget, self).__init__(self.name, parent=parent)
 
         self.func_name = function
         self.subfunc_name = subfunction
@@ -223,7 +233,7 @@ class FuncWidget(FeatureWidget):
             param.setReadonly(boolean)
 
     def menuRequested(self):
-        print 'Beep'
+        pass
 
     def paramMenuRequested(self, pos):
         if self.form.currentItem().parent():
@@ -255,7 +265,6 @@ class FuncWidget(FeatureWidget):
             map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
-
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
         super(ReconFuncWidget, self).__init__(function, subfunction, package)
@@ -264,14 +273,54 @@ class ReconFuncWidget(FuncWidget):
         self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
 
+        self.center_detection = None
+        self.projection_angles = None
+
+        self.frame_2 = QtGui.QFrame(self)
+        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(QtGui.QFrame.Raised)
+        self.frame_2_layout = QtGui.QVBoxLayout(self.frame_2)
+        self.frame_2_layout.setContentsMargins(5, 5, 5, 5)
+        self.frame_2_layout.setSpacing(0)
+        self.verticalLayout.addWidget(self.frame_2)
+        self.frame_2.hide()
+
+        self.addInputFunction(*2 * ('Projection Angles',))
+
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
-        ui.buildfunctionmenu(self.submenu, fdata.funcs['Helper Functions'][function])
+        ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
 
+    def addInputFunction(self, func, subfunc):
+        attr = self.projection_angles if func == 'Projection Angles' else self.center_detection
+        if attr is not None:
+            value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
+                                               '{} input function already in pipeline\n'
+                                               'Do you want to replace it?'.format(func),
+                                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            if value is QtGui.QMessageBox.No:
+                return
+            else:
+                attr.deleteLater()
+        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'])
+        h = QtGui.QHBoxLayout()
+        indent = QtGui.QLabel('  -   ')
+        h.addWidget(indent)
+        h.addWidget(attr)
+        attr.destroyed.connect(indent.deleteLater)
+        self.frame_2_layout.addLayout(h)
+        if func == 'Projection Angles':
+            self.projection_angles = attr
+        else:
+            self.center_detection = attr
+
+    def mouseClicked(self):
+        super(ReconFuncWidget, self).mouseClicked()
+        self.frame_2.show()
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -413,6 +462,7 @@ class TestListRangeDialog(QtGui.QDialog):
 
 
 class ROlineEdit(QtGui.QLineEdit):
+    sigClicked = QtCore.Signal()
     def __init__(self, *args, **kwargs):
         super(ROlineEdit, self).__init__(*args, **kwargs)
         self.setReadOnly(True)
@@ -421,6 +471,10 @@ class ROlineEdit(QtGui.QLineEdit):
     def focusOutEvent(self, *args, **kwargs):
         super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
         self.setCursor(QtCore.Qt.ArrowCursor)
+
+    def mousePressEvent(self, *args, **kwargs):
+        super(ROlineEdit, self).mousePressEvent(*args, **kwargs)
+        self.sigClicked.emit()
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)

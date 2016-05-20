@@ -3,7 +3,7 @@ Functions:
   Filter: [Gaussian Filter, Median Filter, Sobel Filter]
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
-  Normalize: [Regular, Background Intensity, Nearest Flats]
+  Normalization: [Regular, Background Intensity, Nearest Flats]
   Pad: [Pad]
   Phase Retrieval: [Phase Retrieval]
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
@@ -15,7 +15,7 @@ Functions:
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]
 
-Helper Functions:
+Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]
     Projection Angles: [Projection Angles]

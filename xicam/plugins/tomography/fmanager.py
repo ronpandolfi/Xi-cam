@@ -39,23 +39,18 @@ def clear_functions():
     ui.showform(ui.blankform)
 
 
-
-def add_function(function, subfunction, package=reconpkg.packages['tomopy']):
-    global functions, recon_function, currentindex
-
-    if not hasattr(package,fdata.names[subfunction]): return
-
-def add_action(function, subfunction, package=reconpkg.tomopy):
+def add_action(function, subfunction, package=reconpkg.packages['tomopy']):
     global functions, recon_function
+    if not hasattr(package, fdata.names[subfunction]): return
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
                                            'Are you sure you need another one?'.format(function),
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-        if value is QtGui.QMessageBox.Yes:
-            add_function(function, subfunction, package=package)
-    else:
-        add_function(function, subfunction, package=package)
+        if value is QtGui.QMessageBox.No:
+            return
+
+    add_function(function, subfunction, package=package)
 
 
 def add_function(function, subfunction, package=reconpkg.tomopy):
@@ -137,7 +132,8 @@ def load_function_pipeline(yaml_file):
                     child = funcWidget.params.child(param['name'])
                     child.setValue(param['value'])
                     child.setDefault(param['value'])
-            except (IndexError,AttributeError):
+            except (IndexError, AttributeError):
+                raise
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
 

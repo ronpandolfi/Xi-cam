@@ -1,4 +1,5 @@
 import os
+from functools import partial
 import numpy as np
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
@@ -15,16 +16,6 @@ configparams = None
 paramformstack = None
 functionwidget = None
 centerwidget = None
-
-
-class funcAction(QtGui.QAction):
-    def __init__(self, func, subfunc, *args,**kwargs):
-        super(funcAction, self).__init__(*args,**kwargs)
-        self.func=func
-        self.subfunc=subfunc
-        self.triggered.connect(self.addFunction)
-    def addFunction(self):
-        fmanager.add_action(self.func, self.subfunc)
 
 
 def loadUi():
@@ -51,7 +42,7 @@ def loadUi():
                                         fmanager.currentindex + 1))
 
     addfunctionmenu = QtGui.QMenu()
-    buildfunctionmenu(addfunctionmenu, fdata.funcs['Functions'])
+    buildfunctionmenu(addfunctionmenu, fdata.funcs['Functions'], fmanager.add_action)
 
     functionwidget.addFunctionButton.setMenu(addfunctionmenu)
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -161,9 +152,9 @@ def showform(widget):
     paramformstack.setCurrentWidget(widget)
 
 
-def buildfunctionmenu(menu, fdata):
+def buildfunctionmenu(menu, fdata, actionslot):
     for func,subfuncs in fdata.iteritems():
-        if len(subfuncs)>1 or func != subfuncs[0]:
+        if len(subfuncs) > 1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             menu.addMenu(funcmenu)
             for subfunc in subfuncs:
@@ -171,13 +162,16 @@ def buildfunctionmenu(menu, fdata):
                     optsmenu = QtGui.QMenu(subfunc)
                     funcmenu.addMenu(optsmenu)
                     for opt in subfuncs[subfunc]:
-                        funcaction = funcAction(func, opt, opt, funcmenu)
+                        funcaction = QtGui.QAction(opt, funcmenu)
+                        funcaction.triggered.connect(partial(actionslot, func, opt))
                         optsmenu.addAction(funcaction)
                 else:
-                    funcaction=funcAction(func,subfunc,subfunc,funcmenu)
+                    funcaction = QtGui.QAction(subfunc, funcmenu)
+                    funcaction.triggered.connect(partial(actionslot, func, subfunc))
                     funcmenu.addAction(funcaction)
-        elif len(subfuncs)==1:
-            funcaction=funcAction(func,func,func, menu)
+        elif len(subfuncs) == 1:
+            funcaction = QtGui.QAction(func, menu)
+            funcaction.triggered.connect(partial(actionslot, func, func))
             menu.addAction(funcaction)
 
 
