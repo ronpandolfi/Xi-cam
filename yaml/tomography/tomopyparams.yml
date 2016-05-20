@@ -119,6 +119,9 @@ Regular:
 Nearest Flats:
 - name: cutoff
   type: float
+ROI:
+- name: roi
+- type: str
 Circular Mask:
 - name: ratio
   suffix: px/px
@@ -152,6 +155,15 @@ Remove Outliers:
 - name: axis
   type: int
   limits: [0, 2]
+Projection Angles:
+- name: nang
+  type: int
+- name: ang1
+  type: float
+  suffix: "\u00b0"
+- name: ang2
+  type: float
+  suffix: "\u00b0"
 ART:
   - name: center
     type: float

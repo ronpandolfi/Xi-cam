@@ -64,8 +64,8 @@ def add_function(function, subfunction, package=reconpkg.tomopy):
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
-        ui.configparams.child('Rotation Center').sigValueChanged.connect(
-            lambda: func.setCenterParam(ui.configparams.child('Rotation Center').value()))
+        # ui.configparams.child('Rotation Center').sigValueChanged.connect(
+        #     lambda: func.setCenterParam(ui.configparams.child('Rotation Center').value()))
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
@@ -209,9 +209,9 @@ def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None,
 
     if 'Reconstruction' in name:
         angles = datawidget.data.shape[0]
-        start = 270 - ui.configparams.child('Recon Rotation').value()
-        end = start - ui.configparams.child('Rotation Angle').value()
-        kwargs['theta'] = reconpkg.tomopy.angles(angles, start, end)
+        # start = 270 - ui.configparams.child('Recon Rotation').value()
+        # end = start - ui.configparams.child('Rotation Angle').value()
+        kwargs['theta'] = reconpkg.tomopy.angles(angles)
 
     if kwargs:
         return partial(fpartial, **kwargs)

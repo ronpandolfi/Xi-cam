@@ -68,6 +68,7 @@ class FeatureWidget(QtGui.QWidget):
         self.previewButton.setFlat(True)
         self.previewButton.setCheckable(True)
         self.previewButton.setChecked(True)
+        self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.previewButton.setObjectName("pushButton")
         self.horizontalLayout_2.addWidget(self.previewButton)
         self.line = QtGui.QFrame(self.frame)
@@ -154,10 +155,13 @@ class FuncWidget(FeatureWidget):
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
 
-        self.menu = QtGui.QMenu()
+        self.parammenu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
         action.triggered.connect(self.testParamTriggered)
-        self.menu.addAction(action)
+        self.parammenu.addAction(action)
+
+        self.previewButton.customContextMenuRequested.connect(self.menuRequested)
+        self.menu = QtGui.QMenu()
 
     def wireup(self):
         for param in self.params.children():
@@ -168,7 +172,7 @@ class FuncWidget(FeatureWidget):
         if self._form is None:
             self._form = ParameterTree(showHeader=False)
             self._form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            self._form.customContextMenuRequested.connect(self.menuActionClicked)
+            self._form.customContextMenuRequested.connect(self.paramMenuRequested)
             self._form.setParameters(self.params, showTop=True)
             self.wireup()
         return self._form
@@ -218,9 +222,12 @@ class FuncWidget(FeatureWidget):
         for param in self.params.children():
             param.setReadonly(boolean)
 
-    def menuActionClicked(self, pos):
+    def menuRequested(self):
+        print 'Beep'
+
+    def paramMenuRequested(self, pos):
         if self.form.currentItem().parent():
-            self.menu.exec_(self.form.mapToGlobal(pos))
+            self.parammenu.exec_(self.form.mapToGlobal(pos))
 
     def testParamTriggered(self):
         param = self.form.currentItem().param
@@ -255,7 +262,16 @@ class ReconFuncWidget(FuncWidget):
         self.previewButton.setCheckable(False)
         self.previewButton.setChecked(True)
         self.kwargs_complement['algorithm'] = subfunction.lower()
-        self.package = package.__name__
+        self.packagename = package.__name__
+
+        self.submenu = QtGui.QMenu('Input Function')
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.submenu.setIcon(icon)
+        ui.buildfunctionmenu(self.submenu, fdata.funcs['Helper Functions'][function])
+        self.menu.addMenu(self.submenu)
+        self.previewButton.customContextMenuRequested.connect(self.menuRequested)
+
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -267,6 +283,9 @@ class ReconFuncWidget(FuncWidget):
             self.param_dict['filter_par'] = filter_par
         del self.param_dict['cutoff'], self.param_dict['order']
         return self.param_dict
+
+    def menuRequested(self, pos):
+        self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
     def testParamTriggered(self):
         param = self.form.currentItem().param

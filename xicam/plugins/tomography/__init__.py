@@ -46,7 +46,7 @@ class plugin(base.plugin):
 
         # SETUP FEATURES
         fmanager.layout = self.functionwidget.functionsList
-        fmanager.load()
+        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
         fmanager.load_function_pipeline('yaml/tomography/functionstack.yml')
 
         # DRAG-DROP
@@ -80,18 +80,21 @@ class plugin(base.plugin):
             ui.propertytable.setData(self.currentDataset().data.header.items())
             ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
             ui.propertytable.show()
-            ui.configparams.child('Rotation Center').setValue(self.currentDataset().cor)
-            ui.configparams.child('Rotation Center').sigValueChanged.connect(self.currentDataset().setCorValue)
-            ui.configparams.child('Rotation Angle').setValue(float(self.currentDataset().getheader()['arange']))
+            outname = os.path.join(os.path.dirname(self.currentDataset().data.filepath),
+                                   *2*('RECON_' + os.path.split(self.currentDataset().data.filepath)[-1].split('.')[0],))
+            ui.setconfigparams(int(self.currentDataset().data.header['nslices']),
+                               int(self.currentDataset().data.header['nangles']),
+                               outname)
 
-            recon = fmanager.recon_function
-            if recon is not None:
-                recon.setCenterParam(self.currentDataset().cor)
+            # recon = fmanager.recon_function
+            # if recon is not None:
+            #     recon.setCenterParam(self.currentDataset().cor)
         except AttributeError as e:
             print e.message
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
+        ui.propertytable.hide()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):
@@ -116,7 +119,17 @@ class plugin(base.plugin):
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
-        self.currentDataset().fullReconstruction()
+        self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
+                                            ui.configparams.child('End Projection').value(),
+                                            ui.configparams.child('Step Projection').value()),
+                                           (ui.configparams.child('Start Sinogram').value(),
+                                            ui.configparams.child('End Sinogram').value(),
+                                            ui.configparams.child('Step Sinogram').value()),
+                                           ui.configparams.child('Output Name').value(),
+                                           ui.configparams.child('Ouput Format').value(),
+                                           ui.configparams.child('Sinogram Chunks').value(),
+                                           ui.configparams.child('Cores').value(),
+                                           self.currentDataset().processViewer.log2local)
 
     def manualCenter(self):
         self.currentDataset().manualCenter()

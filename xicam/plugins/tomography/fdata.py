@@ -12,8 +12,8 @@ for file in ('tomopyparams.yml',): #, 'astraparams.yml', 'mbirparams.yml'):
 with open('yaml/tomography/funcnames.yml','r') as stream:
     names=yaml.load(stream)
 
-for algorithm in funcs['Reconstruction']['TomoPy']:
+for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
     names[algorithm] = 'recon'
 
-# for algorithm in funcs['Reconstruction']['Astra']:
+# for algorithm in funcs['Functions']['Reconstruction']['Astra']:
 #     names[algorithm] = 'recon'
