@@ -4,7 +4,7 @@ from numpy.distutils.core import Extension
 import numpy as np
 # import scipy.sparse.csgraph._validation
 sys.path.append('xicam/')
-
+import zmq.libzmq
 
 # Notes:
 # Build error with scipy? edit cx_Freeze hooks.py line 548...http://stackoverflow.com/questions/32432887/cx-freeze-importerror-no-module-named-scipy
@@ -30,7 +30,7 @@ sys.path.append('xicam/')
 #       pass
 
 company_name = 'Advanced Light Source'
-product_name = 'HipIES'
+product_name = 'Xi-cam'
 
 # Dependencies are automatically detected, but it might need
 # fine tuning.
@@ -38,7 +38,7 @@ product_name = 'HipIES'
 shortcut_table = [
     ("DesktopShortcut",  # Shortcut
      "DesktopFolder",  # Directory_
-     "HipIES",  # Name
+     "Xi-cam",  # Name
      "TARGETDIR",  # Component_
      "[TARGETDIR]xicam.exe",  # Target
      None,  # Arguments
@@ -51,13 +51,13 @@ shortcut_table = [
      ),
     ("StartMenuShortcut",  # Shortcut
      "StartMenuFolder",  # Directory_
-     "HipIES",  # Name
+     "Xi-cam",  # Name
      "TARGETDIR",  # Component_
      "[TARGETDIR]xicam.exe",  # Target
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
-     'C:\\Program Files (x86)\\Hipies\\icon.ico',
+     'C:\\Program Files (x86)\\Xi-cam\\icon.ico',
      # Icon [This is bad, but I can't find a better way; would have to edit msi database builder, which I'd rather not do for now]
      None,  # IconIndex
      None,  # ShowCmd
@@ -67,11 +67,11 @@ shortcut_table = [
 
 msi_data = {'Shortcut': shortcut_table}
 
-buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon'],
-                'includes': ['PIL', 'PySide.QtXml','scipy','h5py'],  # ,'scipy.sparse.csgraph._validation'
+buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles'],
+                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['gui/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd')]}
+                'include_files': ['gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__]}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
 
@@ -83,7 +83,7 @@ bdistmsiOptions = {"data": msi_data}
 base = 'Win32GUI' if sys.platform == 'win32' else None
 
 executables = [
-    Executable('main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="HipIES",
+    Executable('main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="Xi-cam",
                shortcutDir="StartMenuFolder", )
 ]
 
@@ -95,8 +95,8 @@ EXT = Extension(name='pipeline.cWarpImage',
 
                 )
 
-setup(name='HipIES',
-      version='1.1.0',
+setup(name='Xi-cam',
+      version='1.2.3',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
