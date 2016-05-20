@@ -59,8 +59,6 @@ def add_function(function, subfunction, package=reconpkg.tomopy):
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
-        # ui.configparams.child('Rotation Center').sigValueChanged.connect(
-        #     lambda: func.setCenterParam(ui.configparams.child('Rotation Center').value()))
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
@@ -229,7 +227,6 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
     for f in functions:
         params[f.subfunc_name] = deepcopy(f.paramdict(update=update))
         partials.append((f.name, deepcopy(f.partial), f.args_complement))
-    # partials = [(f.name, deepcopy(f.partial), f.args_complement) for f in functions]
     lock_function_params(False)
 
     import dxchange as dx
@@ -254,10 +251,10 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
         start, end = i * nsino + sino[0], (i + 1) * nsino + sino[0]
         for name, partial, argnames in partials:
             partial = update_function_partial(partial, name, argnames, datawidget,
-                                              data_slc=(proj, (start, end, sino[2])), ncore=ncore)
+                                              data_slc=(slice(*proj), slice(start, end, sino[2])), ncore=ncore)
             yield 'Running {0} on sinograms {1} to {2} from {3}...\n\n'.format(name, start, end, total_sino)
             if init:
-                tomo = partial(datawidget.getsino(slc=(proj, (start, end, sino[2]))))
+                tomo = partial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
                 init = False
             elif name == 'Write to file':
                 partial(tomo, start=write_start)

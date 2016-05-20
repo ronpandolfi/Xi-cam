@@ -125,20 +125,27 @@ class TomoViewer(QtGui.QWidget):
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
-            return np.ascontiguousarray(self.data.fabimage.getsinogramchunk(proj_slice=slice(*slc[0]),
-                                                                            sino_slc=slice(*slc[1])))
+            return np.ascontiguousarray(self.data.fabimage[slc]) #.getsinogramchunk(proj_slice=slice(*slc[0]),
+                                                                            #sino_slc=slice(*slc[1])))
+
+    def getproj(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.projectionViewer.currentdata[np.newaxis, :, :])
+        else:
+            return np.ascontiguousarray(self.data.fabimage[slc]) #.getsinogramchunk(proj_slice=slice(*slc[0]),
+                                                                  #          sino_slc=slice(*slc[1])))
 
     def getflats(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.flats[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.flats[slc])
 
     def getdarks(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.darks[slc]) #slice(*slc[0]), slice(*slc[1]), :])
 
     def getheader(self):
         return self.data.header

@@ -98,7 +98,6 @@ class FeatureWidget(QtGui.QWidget):
         self.horizontalLayout_2.addWidget(self.closeButton)
         self.verticalLayout.addWidget(self.frame)
         self.txtName.sigClicked.connect(self.mouseClicked)
-        # self.txtName.mousePressEvent = self.mousePressEvent
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
@@ -118,7 +117,6 @@ class FeatureWidget(QtGui.QWidget):
                     item.frame_2.hide()
 
     def mouseClicked(self):
-        print 'Pressed ', self.name
         self.showSelf()
         self.hideothers()
         self.setFocus()
@@ -273,8 +271,9 @@ class ReconFuncWidget(FuncWidget):
         self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
 
-        self.center_detection = None
-        self.projection_angles = None
+        # Input functions
+        self.center = None
+        self.angles = None
 
         self.frame_2 = QtGui.QFrame(self)
         self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -293,10 +292,9 @@ class ReconFuncWidget(FuncWidget):
         self.submenu.setIcon(icon)
         ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
-        self.previewButton.customContextMenuRequested.connect(self.menuRequested)
 
     def addInputFunction(self, func, subfunc):
-        attr = self.projection_angles if func == 'Projection Angles' else self.center_detection
+        attr = self.angles if func == 'Projection Angles' else self.center
         if attr is not None:
             value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
                                                '{} input function already in pipeline\n'
@@ -314,9 +312,9 @@ class ReconFuncWidget(FuncWidget):
         attr.destroyed.connect(indent.deleteLater)
         self.frame_2_layout.addLayout(h)
         if func == 'Projection Angles':
-            self.projection_angles = attr
+            self.angles = attr
         else:
-            self.center_detection = attr
+            self.center = attr
 
     def mouseClicked(self):
         super(ReconFuncWidget, self).mouseClicked()
