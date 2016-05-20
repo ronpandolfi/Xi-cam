@@ -26,6 +26,7 @@ import warnings
 
 import numpy as nx
 
+import detectors # injects pyFAI with custom detectors
 import formats  # injects fabio with custom formats
 
 
@@ -523,6 +524,7 @@ class diffimage():
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+            print detector
             print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
@@ -1089,9 +1091,9 @@ class diffimage2(object):
         return self._detector
 
     def finddetector(self):
-        for name, detector in detectors.ALL_DETECTORS.iteritems():
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
             if hasattr(detector, 'MAX_SHAPE'):
-                # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+                print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
@@ -1307,12 +1309,12 @@ class diffimage2(object):
         from matplotlib import pylab as plt
         plt.imshow(img)
         plt.show()
-
-    def __getattr__(self, name):
-       if name in self.cache:
-           return self.cache[name]
-       else:
-           raise AttributeError('diffimage has no attribute: ' + name)
+    #
+    # def __getattr__(self, name):
+    #    if name in self.cache:
+    #        return self.cache[name]
+    #    else:
+    #        raise AttributeError('diffimage has no attribute: ' + name)
 
 
 # each diffimage class should implement:
