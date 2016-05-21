@@ -71,3 +71,5 @@ class PrincetonMTE(pyFAI.detectors.Detector):
 
 class _Rayonix_SX165(pyFAI.detectors.RayonixSx165):
     pass
+
+ALL_DETECTORS = pyFAI.detectors.ALL_DETECTORS

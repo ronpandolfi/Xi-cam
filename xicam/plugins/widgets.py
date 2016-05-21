@@ -71,8 +71,6 @@ class OOMTabItem(QtGui.QWidget):
 
 
 class dimgViewer(QtGui.QWidget):
-    sigPlotQIntegration = QtCore.Signal(object)
-    sigPlotChiIntegration = QtCore.Signal(object)
 
     def __init__(self, dimg=None, src=None, plotwidget=None, toolbar=None, **kwargs):
         """
@@ -177,9 +175,6 @@ class dimgViewer(QtGui.QWidget):
         # Add a placeholder image item for the mask to the viewbox
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
-
-        self.sigPlotQIntegration.connect(self.plotqintegration)
-        self.sigPlotChiIntegration.connect(self.plotchiintegration)
 
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
@@ -577,7 +572,7 @@ class dimgViewer(QtGui.QWidget):
         if self.dimg.transformdata is None:
             return
 
-        self.sigPlotQIntegration.disconnect(self.plotqintegration)
+
 
         self.findcenter(skipdraw=True)
         print 'center?:', config.activeExperiment.center
@@ -605,7 +600,7 @@ class dimgViewer(QtGui.QWidget):
 
         self.refinecenter()
         xglobals.hardresetpool()
-        self.sigPlotQIntegration.connect(self.plotqintegration)
+
         self.replot()
 
     @debugtools.timeit

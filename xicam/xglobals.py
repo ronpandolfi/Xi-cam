@@ -12,6 +12,7 @@ pool = None
 window = None
 lastroi = None
 statusbar = None
+app = None
 
 def load():
     global pool
