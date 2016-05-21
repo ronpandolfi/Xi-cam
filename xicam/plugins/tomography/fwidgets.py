@@ -146,20 +146,20 @@ class FuncWidget(FeatureWidget):
         self._formpath = 'gui/guiLayer.ui'
         self._form = None
         self._partial = None
-        self.__function = getattr(package, fdata.names[self.subfunc_name])
+        self._function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
         self.setDefaults()
         self.updateParamsDict()
 
         # Create dictionary with keys and default values that are not shown in the functions form
-        self.kwargs_complement = introspect.get_arg_defaults(self.__function)
+        self.kwargs_complement = introspect.get_arg_defaults(self._function)
         for key in self.param_dict.keys():
             if key in self.kwargs_complement:
                 del self.kwargs_complement[key]
 
         # Create a list of argument names (this will most generally be the data passed to the function)
-        self.args_complement = introspect.get_arg_names(self.__function)
+        self.args_complement = introspect.get_arg_names(self._function)
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
 
@@ -193,12 +193,16 @@ class FuncWidget(FeatureWidget):
     @property
     def partial(self):
         kwargs = dict(self.param_dict, **self.kwargs_complement)
-        self._partial = partial(self.__function, **kwargs)
+        self._partial = partial(self._function, **kwargs)
         return self._partial
 
     @property
+    def input_partials(self):
+        return None
+
+    @property
     def func_signature(self):
-        signature = str(self.__function.__name__) + '('
+        signature = str(self._function.__name__) + '('
         for arg in self.args_complement:
             signature += '{},'.format(arg)
         for param, value in self.updateParamsDict.iteritems():
@@ -218,7 +222,7 @@ class FuncWidget(FeatureWidget):
         return self.param_dict
 
     def setDefaults(self):
-        defaults = introspect.get_arg_defaults(self.__function)
+        defaults = introspect.get_arg_defaults(self._function)
         for param in self.params.children():
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
@@ -285,6 +289,7 @@ class ReconFuncWidget(FuncWidget):
         self.frame_2.hide()
 
         self.addInputFunction(*2 * ('Projection Angles',))
+        self.resetCenter()
 
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
@@ -292,6 +297,32 @@ class ReconFuncWidget(FuncWidget):
         self.submenu.setIcon(icon)
         ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
+
+    @property
+    def partial(self):
+        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        if 'center' in kwargs: del kwargs['center']
+        print kwargs
+        self._partial = partial(self._function, **kwargs)
+        return self._partial
+
+    @property
+    def input_partials(self):
+        p = []
+        if self.center.subfunc_name == 'Phase Correlation':
+            slices = ((0, None, None),(-1, None, None))
+        elif self.center.subfunc_name == 'Manual':
+            slices = None
+        else:
+            slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+
+        if self.center.subfunc_name == 'Nelder-Mead':
+            p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
+        else:
+            p.append(('center', slices, self.center.partial))
+        p.append(('theta', None, self.angles.partial))
+        return p
+
 
     def addInputFunction(self, func, subfunc):
         attr = self.angles if func == 'Projection Angles' else self.center
@@ -303,7 +334,11 @@ class ReconFuncWidget(FuncWidget):
             if value is QtGui.QMessageBox.No:
                 return
             else:
-                attr.deleteLater()
+                try:
+                    attr.deleteLater()
+                except AttributeError:
+                    pass
+
         attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'])
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
@@ -315,6 +350,12 @@ class ReconFuncWidget(FuncWidget):
             self.angles = attr
         else:
             self.center = attr
+            self.center.destroyed.connect(self.resetCenter)
+
+    def resetCenter(self):
+        self.center = lambda: 'Manual'
+        self.center.partial = lambda: self.param_dict['center']
+        self.center.subfunc_name = 'Manual'
 
     def mouseClicked(self):
         super(ReconFuncWidget, self).mouseClicked()

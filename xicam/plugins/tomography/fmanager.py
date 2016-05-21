@@ -185,13 +185,15 @@ def construct_preview_pipeline(widget, update=True, slc=None):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
         params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
-        funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget))
+        funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
+                                                input_partials=func.input_partials))
     lock_function_params(False)
 
     return funstack, widget.getsino(slc), partial(widget.addPreview, params)
 
 
-def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None, ncore=None):
+#TODO change this to take the function and then be able to update input parameters from input functions like center in the function
+def update_function_partial(fpartial, name, argnames, datawidget, input_partials = None, data_slc=None, ncore=None):
     kwargs = {}
     for arg in argnames:
         if arg in 'flats':
@@ -201,11 +203,14 @@ def update_function_partial(fpartial, name, argnames, datawidget, data_slc=None,
         if arg in 'ncore' and ncore is not None:
             kwargs[arg] = ncore
 
-    if 'Reconstruction' in name:
-        angles = datawidget.data.shape[0]
-        # start = 270 - ui.configparams.child('Recon Rotation').value()
-        # end = start - ui.configparams.child('Rotation Angle').value()
-        kwargs['theta'] = reconpkg.tomopy.angles(angles)
+    if input_partials is not None:
+        for pname, slices, ipartial in input_partials:
+            pargs = []
+            if slices is not None:
+                map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
+            print pname, [arg.shape for arg in pargs]
+            kwargs[pname] = ipartial(*pargs)
+            print kwargs, kwargs[pname]
 
     if kwargs:
         return partial(fpartial, **kwargs)
@@ -240,6 +245,7 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
     runnable_it.emitter.sigFinished.connect(finish_call)
     threads.queue.put(runnable_it)
     return params
+#TODO have current recon parameters in run console
 
 
 def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):

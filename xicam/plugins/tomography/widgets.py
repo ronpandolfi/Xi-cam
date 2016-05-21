@@ -121,19 +121,17 @@ class TomoViewer(QtGui.QWidget):
         else:
             return loader.StackImage(paths)
 
-    def getsino(self, slc=None):
+    def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
-            return np.ascontiguousarray(self.data.fabimage[slc]) #.getsinogramchunk(proj_slice=slice(*slc[0]),
-                                                                            #sino_slc=slice(*slc[1])))
+            return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getproj(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.projectionViewer.currentdata[np.newaxis, :, :])
         else:
-            return np.ascontiguousarray(self.data.fabimage[slc]) #.getsinogramchunk(proj_slice=slice(*slc[0]),
-                                                                  #          sino_slc=slice(*slc[1])))
+            return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getflats(self, slc=None):
         if slc is None:
