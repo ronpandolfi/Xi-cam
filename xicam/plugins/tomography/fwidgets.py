@@ -290,6 +290,8 @@ class ReconFuncWidget(FuncWidget):
 
         self.addInputFunction(*2 * ('Projection Angles',))
         self.resetCenter()
+        #TODO put this in yaml file of pipeline budddyrooo
+        self.addInputFunction('Center Dectecion', 'Phase Correlation')
 
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
@@ -302,13 +304,13 @@ class ReconFuncWidget(FuncWidget):
     def partial(self):
         kwargs = dict(self.param_dict, **self.kwargs_complement)
         if 'center' in kwargs: del kwargs['center']
-        print kwargs
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
     @property
     def input_partials(self):
         p = []
+
         if self.center.subfunc_name == 'Phase Correlation':
             slices = ((0, None, None),(-1, None, None))
         elif self.center.subfunc_name == 'Manual':
@@ -326,7 +328,7 @@ class ReconFuncWidget(FuncWidget):
 
     def addInputFunction(self, func, subfunc):
         attr = self.angles if func == 'Projection Angles' else self.center
-        if attr is not None:
+        if attr is not None and attr.subfunc_name != 'Manual':
             value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
                                                '{} input function already in pipeline\n'
                                                'Do you want to replace it?'.format(func),
@@ -353,6 +355,7 @@ class ReconFuncWidget(FuncWidget):
             self.center.destroyed.connect(self.resetCenter)
 
     def resetCenter(self):
+        # TODO change this. there has to be a better way. maybe have a center and manualcenter attr and resetCenter sets center to manual center
         self.center = lambda: 'Manual'
         self.center.partial = lambda: self.param_dict['center']
         self.center.subfunc_name = 'Manual'

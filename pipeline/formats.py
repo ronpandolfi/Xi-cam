@@ -218,7 +218,6 @@ class bl832h5image(fabioimage):
         shape = ((s[0][1] - s[0][0])//s[0][2],
                  (s[1][1] - s[1][0]) // s[1][2],
                  (s[2][1] - s[2][0]) // s[2][2])
-        print s
         arr = np.empty(shape, dtype=self.data.dtype)
         for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
             arr[n] = self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])]
