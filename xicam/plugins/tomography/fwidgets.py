@@ -12,6 +12,7 @@ from collectionsmod import UnsortableOrderedDict
 import ui
 import fdata
 import introspect
+import reconpkg
 
 
 try:
@@ -31,12 +32,12 @@ except AttributeError:
 
 
 class FeatureWidget(QtGui.QWidget):
-    def __init__(self, name=''):
+    def __init__(self, name='', parent=None):
         self.name = name
 
         self._form = None
 
-        super(FeatureWidget, self).__init__()
+        super(FeatureWidget, self).__init__(parent=parent)
 
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -68,6 +69,7 @@ class FeatureWidget(QtGui.QWidget):
         self.previewButton.setFlat(True)
         self.previewButton.setCheckable(True)
         self.previewButton.setChecked(True)
+        self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.previewButton.setObjectName("pushButton")
         self.horizontalLayout_2.addWidget(self.previewButton)
         self.line = QtGui.QFrame(self.frame)
@@ -95,8 +97,7 @@ class FeatureWidget(QtGui.QWidget):
         self.closeButton.clicked.connect(self.delete)
         self.horizontalLayout_2.addWidget(self.closeButton)
         self.verticalLayout.addWidget(self.frame)
-
-        self.txtName.mousePressEvent = self.mousePressEvent
+        self.txtName.sigClicked.connect(self.mouseClicked)
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
@@ -110,11 +111,19 @@ class FeatureWidget(QtGui.QWidget):
             self.deleteLater()
             ui.showform(ui.blankform)
 
-    def mousePressEvent(self, *args, **kwargs):
-        super(FeatureWidget, self).mousePressEvent(*args, **kwargs)
+    def hideothers(self):
+        for item in fmanager.functions:
+            if hasattr(item, 'frame_2') and item is not self and self in fmanager.functions:
+                    item.frame_2.hide()
+
+    def mouseClicked(self):
         self.showSelf()
+        self.hideothers()
         self.setFocus()
-        fmanager.currentindex = fmanager.functions.index(self)
+        try:
+            fmanager.currentindex = fmanager.functions.index(self)
+        except ValueError:
+            pass
         self.previewButton.setFocus()
 
     def showSelf(self):
@@ -126,38 +135,41 @@ class FeatureWidget(QtGui.QWidget):
 
 
 class FuncWidget(FeatureWidget):
-    def __init__(self, function, subfunction, package):
+    def __init__(self, function, subfunction, package, parent=None):
         self.name = function
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
-        super(FuncWidget, self).__init__(self.name)
+        super(FuncWidget, self).__init__(self.name, parent=parent)
 
         self.func_name = function
         self.subfunc_name = subfunction
         self._formpath = 'gui/guiLayer.ui'
         self._form = None
         self._partial = None
-        self.__function = getattr(package, fdata.names[self.subfunc_name])
+        self._function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
         self.setDefaults()
         self.updateParamsDict()
 
         # Create dictionary with keys and default values that are not shown in the functions form
-        self.kwargs_complement = introspect.get_arg_defaults(self.__function)
+        self.kwargs_complement = introspect.get_arg_defaults(self._function)
         for key in self.param_dict.keys():
             if key in self.kwargs_complement:
                 del self.kwargs_complement[key]
 
         # Create a list of argument names (this will most generally be the data passed to the function)
-        self.args_complement = introspect.get_arg_names(self.__function)
+        self.args_complement = introspect.get_arg_names(self._function)
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
 
-        self.menu = QtGui.QMenu()
+        self.parammenu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
         action.triggered.connect(self.testParamTriggered)
-        self.menu.addAction(action)
+        self.parammenu.addAction(action)
+
+        self.previewButton.customContextMenuRequested.connect(self.menuRequested)
+        self.menu = QtGui.QMenu()
 
     def wireup(self):
         for param in self.params.children():
@@ -168,7 +180,7 @@ class FuncWidget(FeatureWidget):
         if self._form is None:
             self._form = ParameterTree(showHeader=False)
             self._form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            self._form.customContextMenuRequested.connect(self.menuActionClicked)
+            self._form.customContextMenuRequested.connect(self.paramMenuRequested)
             self._form.setParameters(self.params, showTop=True)
             self.wireup()
         return self._form
@@ -181,12 +193,16 @@ class FuncWidget(FeatureWidget):
     @property
     def partial(self):
         kwargs = dict(self.param_dict, **self.kwargs_complement)
-        self._partial = partial(self.__function, **kwargs)
+        self._partial = partial(self._function, **kwargs)
         return self._partial
 
     @property
+    def input_partials(self):
+        return None
+
+    @property
     def func_signature(self):
-        signature = str(self.__function.__name__) + '('
+        signature = str(self._function.__name__) + '('
         for arg in self.args_complement:
             signature += '{},'.format(arg)
         for param, value in self.updateParamsDict.iteritems():
@@ -206,7 +222,7 @@ class FuncWidget(FeatureWidget):
         return self.param_dict
 
     def setDefaults(self):
-        defaults = introspect.get_arg_defaults(self.__function)
+        defaults = introspect.get_arg_defaults(self._function)
         for param in self.params.children():
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
@@ -218,9 +234,12 @@ class FuncWidget(FeatureWidget):
         for param in self.params.children():
             param.setReadonly(boolean)
 
-    def menuActionClicked(self, pos):
+    def menuRequested(self):
+        pass
+
+    def paramMenuRequested(self, pos):
         if self.form.currentItem().parent():
-            self.menu.exec_(self.form.mapToGlobal(pos))
+            self.parammenu.exec_(self.form.mapToGlobal(pos))
 
     def testParamTriggered(self):
         param = self.form.currentItem().param
@@ -248,14 +267,102 @@ class FuncWidget(FeatureWidget):
             map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
-
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
         super(ReconFuncWidget, self).__init__(function, subfunction, package)
         self.previewButton.setCheckable(False)
         self.previewButton.setChecked(True)
         self.kwargs_complement['algorithm'] = subfunction.lower()
-        self.package = package.__name__
+        self.packagename = package.__name__
+
+        # Input functions
+        self.center = None
+        self.angles = None
+
+        self.frame_2 = QtGui.QFrame(self)
+        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(QtGui.QFrame.Raised)
+        self.frame_2_layout = QtGui.QVBoxLayout(self.frame_2)
+        self.frame_2_layout.setContentsMargins(5, 5, 5, 5)
+        self.frame_2_layout.setSpacing(0)
+        self.verticalLayout.addWidget(self.frame_2)
+        self.frame_2.hide()
+
+        self.addInputFunction(*2 * ('Projection Angles',))
+        self.resetCenter()
+        #TODO put this in yaml file of pipeline budddyrooo
+        self.addInputFunction('Center Dectecion', 'Phase Correlation')
+
+        self.submenu = QtGui.QMenu('Input Function')
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.submenu.setIcon(icon)
+        ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
+        self.menu.addMenu(self.submenu)
+
+    @property
+    def partial(self):
+        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        if 'center' in kwargs: del kwargs['center']
+        self._partial = partial(self._function, **kwargs)
+        return self._partial
+
+    @property
+    def input_partials(self):
+        p = []
+
+        if self.center.subfunc_name == 'Phase Correlation':
+            slices = ((0, None, None),(-1, None, None))
+        elif self.center.subfunc_name == 'Manual':
+            slices = None
+        else:
+            slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+
+        if self.center.subfunc_name == 'Nelder-Mead':
+            p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
+        else:
+            p.append(('center', slices, self.center.partial))
+        p.append(('theta', None, self.angles.partial))
+        return p
+
+
+    def addInputFunction(self, func, subfunc):
+        attr = self.angles if func == 'Projection Angles' else self.center
+        if attr is not None and attr.subfunc_name != 'Manual':
+            value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
+                                               '{} input function already in pipeline\n'
+                                               'Do you want to replace it?'.format(func),
+                                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            if value is QtGui.QMessageBox.No:
+                return
+            else:
+                try:
+                    attr.deleteLater()
+                except AttributeError:
+                    pass
+
+        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'])
+        h = QtGui.QHBoxLayout()
+        indent = QtGui.QLabel('  -   ')
+        h.addWidget(indent)
+        h.addWidget(attr)
+        attr.destroyed.connect(indent.deleteLater)
+        self.frame_2_layout.addLayout(h)
+        if func == 'Projection Angles':
+            self.angles = attr
+        else:
+            self.center = attr
+            self.center.destroyed.connect(self.resetCenter)
+
+    def resetCenter(self):
+        # TODO change this. there has to be a better way. maybe have a center and manualcenter attr and resetCenter sets center to manual center
+        self.center = lambda: 'Manual'
+        self.center.partial = lambda: self.param_dict['center']
+        self.center.subfunc_name = 'Manual'
+
+    def mouseClicked(self):
+        super(ReconFuncWidget, self).mouseClicked()
+        self.frame_2.show()
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -267,6 +374,9 @@ class ReconFuncWidget(FuncWidget):
             self.param_dict['filter_par'] = filter_par
         del self.param_dict['cutoff'], self.param_dict['order']
         return self.param_dict
+
+    def menuRequested(self, pos):
+        self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
     def testParamTriggered(self):
         param = self.form.currentItem().param
@@ -394,6 +504,7 @@ class TestListRangeDialog(QtGui.QDialog):
 
 
 class ROlineEdit(QtGui.QLineEdit):
+    sigClicked = QtCore.Signal()
     def __init__(self, *args, **kwargs):
         super(ROlineEdit, self).__init__(*args, **kwargs)
         self.setReadOnly(True)
@@ -402,6 +513,10 @@ class ROlineEdit(QtGui.QLineEdit):
     def focusOutEvent(self, *args, **kwargs):
         super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
         self.setCursor(QtCore.Qt.ArrowCursor)
+
+    def mousePressEvent(self, *args, **kwargs):
+        super(ROlineEdit, self).mousePressEvent(*args, **kwargs)
+        self.sigClicked.emit()
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)

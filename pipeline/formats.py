@@ -181,7 +181,6 @@ class bl832h5image(fabioimage):
 
     @property
     def nframes(self):
-        # return sum(map(lambda key: 'bak' not in key and 'drk' not in key, self._dgroup.keys()))
         return len(self.frames)
 
     @nframes.setter
@@ -194,11 +193,37 @@ class bl832h5image(fabioimage):
                                                                   range(self.nframes))])
         return self.sinogram
 
-    def getsinogramchunk(self, proj_slice, sino_slc):
-        shape = (proj_slice.stop - proj_slice.start, sino_slc.stop - sino_slc.start, self.data.shape[1])
-        arr = np.empty(shape)
-        for i in range(proj_slice.start, proj_slice.stop, proj_slice.step):
-            arr[i] = self._dgroup[self.frames[i]][0, sino_slc, :]
+    def __getitem__(self, item):
+        s = []
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and isinstance(item[n], int):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+        shape = ((s[0][1] - s[0][0])//s[0][2],
+                 (s[1][1] - s[1][0]) // s[1][2],
+                 (s[2][1] - s[2][0]) // s[2][2])
+        arr = np.empty(shape, dtype=self.data.dtype)
+        for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            arr[n] = self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])]
+        if arr.shape[0] == 1:
+            arr = arr[0]
+
         return arr
 
     def __len__(self):
@@ -246,12 +271,13 @@ class TiffStack(object):
         return self.data
 
 
-# if __name__ == '__main__':
-#     from matplotlib.pyplot import imshow, show
-#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-#     arr = data.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-#     print arr.shape
-#     print data.darks.shape
-#     print data.flats.shape
-#     # imshow(data.sinogram, cmap='gray')
-#     # show()
+if __name__ == '__main__':
+    from matplotlib.pyplot import imshow, show
+    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+    arr = data.__getitem__((0,None,None))
+    print arr.shape
+    print data.darks.shape
+    print data.flats.shape
+    imshow(arr, cmap='gray')
+    show()

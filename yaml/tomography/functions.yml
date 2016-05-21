@@ -1,16 +1,21 @@
-Center Detection: [Nelder-Mead, Vo, Phase Correlation]
-Downsample: [Downsample]
-Filter: [Gaussian Filter, Median Filter, Sobel Filter]
-Negative Logarithm: [Negative Logarithm]
-Circular Mask: [Circular Mask]
-Normalize: [Regular, Background Intensity, Nearest Flats]
-Pad: [Pad]
-Phase Retrieval: [Phase Retrieval]
-Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
+Functions:
+  Downsample: [Downsample]
+  Filter: [Gaussian Filter, Median Filter, Sobel Filter]
+  Negative Logarithm: [Negative Logarithm]
+  Circular Mask: [Circular Mask]
+  Normalization: [Regular, Background Intensity, Nearest Flats]
+  Pad: [Pad]
+  Phase Retrieval: [Phase Retrieval]
+  Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
                  Astra: [], #[FP, BP, FBP, SIRT, SART, ART, CGLS, FP CUDA, BP CUDA, FBP CUDA, SIRT CUDA, SART CUDA,
                          #CGLS CUDA, EM CUDA, FP3D_CUDA, BP3D CUDA, FDK CUDA, SIRT3D CUDA, CGLS3D CUDA],
                  MBIR: []}
-Remove Outliers: [Remove Outliers]
-Ring Removal: [Polar Mean Filter]
-Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
-Upsample: [Upsample]
+  Remove Outliers: [Remove Outliers]
+  Ring Removal: [Polar Mean Filter]
+  Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
+  Upsample: [Upsample]
+
+Input Functions:
+  Reconstruction:
+    Center Detection: [Nelder-Mead, Vo, Phase Correlation]
+    Projection Angles: [Projection Angles]

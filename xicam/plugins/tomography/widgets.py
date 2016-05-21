@@ -73,8 +73,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Run Pipeline')
         self.viewmode.addTab('Reconstruction View')
+        self.viewmode.addTab('Run Console')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -91,20 +91,19 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
+        #TODO allow for subsampling of recons
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
-        self.previewViewer.sigPreviewClicked.connect(
-            lambda: fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self)))
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
-        self.processViewer.sigRunClicked.connect(self.runFullRecon)
-        self.viewstack.addWidget(self.processViewer)
-
         self.reconstructionViewer = QtGui.QStackedWidget()
         self.viewstack.addWidget(self.reconstructionViewer)
+
+        self.processViewer = RunViewer(parent=self)
+        self.processViewer.sigRunClicked.connect(self.runFullRecon)
+        self.viewstack.addWidget(self.processViewer)
 
         l = QtGui.QVBoxLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
@@ -122,24 +121,29 @@ class TomoViewer(QtGui.QWidget):
         else:
             return loader.StackImage(paths)
 
-    def getsino(self, slc=None):
+    def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
-            return np.ascontiguousarray(self.data.fabimage.getsinogramchunk(proj_slice=slice(*slc[0]),
-                                                                            sino_slc=slice(*slc[1])))
+            return np.ascontiguousarray(self.data.fabimage[slc])
+
+    def getproj(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.projectionViewer.currentdata[np.newaxis, :, :])
+        else:
+            return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getflats(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.flats[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.flats[slc])
 
     def getdarks(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.darks[slc]) #slice(*slc[0]), slice(*slc[1]), :])
 
     def getheader(self):
         return self.data.header
@@ -156,7 +160,12 @@ class TomoViewer(QtGui.QWidget):
     def setCorValue(self, value):
         self.cor = value
 
-    @QtCore.Slot(tuple, tuple, str, str, int, int, object)
+    def runSlicePreview(self):
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self))
+
+    def run3DPreview(self):
+        print '3D bitch'
+
     def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
         if not self._recon_running:
             self._recon_running = True
@@ -177,12 +186,19 @@ class TomoViewer(QtGui.QWidget):
         self.processViewer.local_console.insertPlainText('Reconstruction complete.')
         self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
 
+    def manualCenter(self):
+        print 'Manual Center Stuff'
 
 class ImageView(pg.ImageView):
     """
     Subclass of PG ImageView to correct z-slider signal behavior.
     """
     sigDeletePressed = QtCore.Signal()
+
+    def buildMenu(self):
+        super(ImageView, self).buildMenu()
+        self.menu.removeAction(self.normAction)
+
     def keyPressEvent(self, ev):
         super(ImageView, self).keyPressEvent(ev)
         if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
@@ -260,7 +276,7 @@ class PreviewViewer(QtGui.QSplitter):
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
     """
-    sigPreviewClicked = QtCore.Signal()
+    # sigPreviewClicked = QtCore.Signal()
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
@@ -285,13 +301,14 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
+        self.imageview.sigDeletePressed.connect(self.removePreview)
 
-        self.runButton = QtGui.QPushButton(self.imageview)
-        self.runButton.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
+        # self.runButton = QtGui.QPushButton(self.imageview)
+        # self.runButton.setText("")
+        # icon = QtGui.QIcon()
+        # icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        # self.runButton.setIcon(icon)
+        # self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
@@ -306,9 +323,10 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
-        self.runButton.clicked.connect(self.previewClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
+
+        # self.runButton.clicked.connect(self.previewClicked)
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
@@ -345,8 +363,8 @@ class PreviewViewer(QtGui.QSplitter):
         current_data = self.previewdata[self.imageview.currentIndex]
         print current_data
 
-    def previewClicked(self):
-        self.sigPreviewClicked.emit()
+    # def previewClicked(self):
+    #     self.sigPreviewClicked.emit()
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -660,121 +678,42 @@ class RunViewer(QtGui.QTabWidget):
 
     sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
 
-    def __init__(self, path, dim, parent=None):
+    def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
-        s = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        w = QtGui.QWidget()
-        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        w.setContentsMargins(0,0,0,0)
-        l = QtGui.QGridLayout()
-        l.setContentsMargins(0,0,0,0)
-        l.setSpacing(0)
 
-        path, name = os.path.split(path)
-        name = os.path.join('RECON_' + name.split('.')[0], name.split('.')[0])
-        out_path = os.path.join(path, name)
-
-        # Create Local Parameter Tree
-        self.localparamtree = pg.parametertree.ParameterTree(showHeader=False)
-        precon, prun, pspecs = self.setupParams(dim, out_path)
-        self.reconsettings = pg.parametertree.Parameter.create(name='Reconstruction Settings', type='group',
-                                                               children=precon)
-        self.localparamtree.setParameters(self.reconsettings, showTop=True)
-        self.localsettings = pg.parametertree.Parameter.create(name='Run Settings', type='group', children=prun)
-        self.localparamtree.addParameters(self.localsettings, showTop=True)
-        self.localspecs = pg.parametertree.Parameter.create(name='Local Specifications', type='group', children=pspecs)
-        self.localparamtree.addParameters(self.localspecs, showTop=True)
-
-        l.addWidget(self.localparamtree, 0, 0, 1, 2)
-
-        # Run and cancel push buttons
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton = QtGui.QPushButton()
-        self.runButton.setIcon(icon)
-        self.runButton.setFlat(True)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.cancelButton = QtGui.QPushButton()
-        self.cancelButton.setIcon(icon)
-        self.cancelButton.setFlat(True)
+        self.local_cancelButton = QtGui.QToolButton()
+        self.remote_cancelButton = QtGui.QToolButton()
 
-        l.addWidget(self.runButton, 1, 0, 1, 1)
-        l.addWidget(self.cancelButton, 1, 1, 1, 1)
-
-        w.setLayout(l)
-        s.addWidget(w)
-
-        # Text Browser for console
+        # Text Browser for local run console
         self.local_console = QtGui.QTextEdit() #Browser()
-        self.local_console.setReadOnly(True)
-        self.local_console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        s.addWidget(self.local_console)
+        self.local_console.setObjectName('Local')
 
-        self.addTab(s, 'Local')
-        self.addTab(QtGui.QWidget(), 'Remote')
+        # Text Brower for remote run console
+        self.remote_console = QtGui.QTextEdit()
+        self.remote_console.setObjectName('Remote')
+
+        for console, button in zip((self.local_console, self.remote_console),
+                                   (self.local_cancelButton, self.remote_cancelButton)):
+            console.setReadOnly(True)
+            console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+            button.setIcon(icon)
+            button.setIconSize(QtCore.QSize(32, 32))
+            button.setToolTip('Cancel Current Process')
+            w = QtGui.QWidget()
+            w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+            w.setContentsMargins(0,0,0,0)
+            l = QtGui.QGridLayout()
+            l.setContentsMargins(0,0,0,0)
+            l.setSpacing(0)
+            l.addWidget(console, 0, 0, 1, 2)
+            l.addWidget(button, 1, 1, 1, 1)
+            w.setLayout(l)
+            self.addTab(w, console.objectName())
 
         # Wire up buttons
-        self.runButton.clicked.connect(self.runButtonClicked)
-
-        # Wire up parameters
-        self.reconsettings.param('Browse').sigActivated.connect(
-            lambda: self.reconsettings.param('Output Name').setValue(str(QtGui.QFileDialog.getSaveFileName(self,
-                                                                  'Save reconstruction as', out_path)[0])))
-
-        sinostart = self.reconsettings.param('Start Sinogram')
-        sinoend = self.reconsettings.param('End Sinogram')
-        sinostep = self.reconsettings.param('Step Sinogram')
-        nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-        chunks = self.localsettings.param('Sinogram Chunks')
-        sinos = self.localsettings.param('Sinograms per Chunk')
-        chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-        sinoschanged = lambda: chunks.setValue(np.round((nsino() -1)/ sinos.value()) + 1,  blockSignal=chunkschanged)
-        chunks.sigValueChanged.connect(chunkschanged)
-        sinos.sigValueChanged.connect(sinoschanged)
-        sinostart.sigValueChanged.connect(chunkschanged)
-        sinoend.sigValueChanged.connect(chunkschanged)
-        sinostep.sigValueChanged.connect(chunkschanged)
-
-        chunks.setValue(1)
-
-    def setupParams(self, dim, path):
-        # Local Recon Settings
-        precon = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, 'limits':[0, dim[1]]},
-                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[1]]},
-                  {'name': 'End Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1], 'limits': [0, dim[1]]},
-                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0, 'limits': [0, dim[0]]},
-                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[0]]},
-                  {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0], 'limits': [0, dim[0]]},
-                  {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)'],
-                   'default': 'TIFF (.tiff)'},
-                  {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
-                  {'name': 'Browse', 'type': 'action'},
-                  ]
-        # Local Run Settings
-        total, available = self.memory()
-        cores = self.cores()
-        prun = [{'name': 'Cores', 'type': 'int', 'value': cores, 'default': None},
-                  {'name': 'Sinogram Chunks', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]},
-                  {'name': 'Sinograms per Chunk', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]}]
-        # Local Specifications
-        # siPrefix probably does not use base 2. Oh well memory will be an estimate
-        pspecs = [{'name': 'Total Cores', 'type': 'int', 'value': cores, 'readonly': True},
-                  {'name': 'Total Memory', 'type': 'float', 'value': total, 'suffix': 'B', 'siPrefix': True,
-                   'readonly': True},
-                  {'name': 'Available Memory', 'type': 'float', 'value': available, 'suffix': 'B', 'siPrefix': True,
-                   'readonly': True}]
-        return precon, prun, pspecs
-
-    @staticmethod
-    def memory():
-        memory = psutil.virtual_memory()
-        return memory.total, memory.available
-
-    @staticmethod
-    def cores():
-        return psutil.cpu_count()
 
     def log2local(self, msg):
         self.local_console.insertPlainText(msg)

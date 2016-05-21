@@ -10,7 +10,7 @@ import hig
 
 
 features = []
-layout = None
+functionTree = None
 
 
 def clearFeatures():
@@ -53,7 +53,7 @@ def particlecount():
 
 
 def update():
-    global layout
+    global functionTree
     assert isinstance(layout, QtGui.QVBoxLayout)
 
     for i in range(layout.count()):
@@ -75,7 +75,7 @@ def loadform(path):
 
 
 def load():
-    global features, layout
+    global features, functionTree
     layout.setAlignment(QtCore.Qt.AlignBottom)
     addSubstrate()
     addLayer()
