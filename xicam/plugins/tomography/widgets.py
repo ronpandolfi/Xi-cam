@@ -71,7 +71,7 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection View')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram View')
-        self.viewmode.addTab('Preview')
+        self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Reconstruction View')
         self.viewmode.addTab('Run Console')
@@ -285,17 +285,18 @@ class PreviewViewer(QtGui.QSplitter):
         self.dim = dim
 
         self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
-        self.previewdata = deque(maxlen=self.maxpreviews)
+        self.datatrees = deque(maxlen=self.maxpreviews)
+        self.data = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
 
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
-        self.setDefaultsButton = QtGui.QPushButton(self)
-        self.setDefaultsButton.setText("Set Pipeline Parameters")
+        self.setPipelineButton = QtGui.QPushButton(self)
+        self.setPipelineButton.setText("Set Pipeline")
         l.addWidget(self.functionform)
-        l.addWidget(self.setDefaultsButton)
+        l.addWidget(self.setPipelineButton)
         panel = QtGui.QWidget(self)
         panel.setLayout(l)
 
@@ -322,7 +323,7 @@ class PreviewViewer(QtGui.QSplitter):
         self.addWidget(self.imageview)
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
-        self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
 
@@ -331,7 +332,7 @@ class PreviewViewer(QtGui.QSplitter):
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
         try:
-            self.functionform.setCurrentWidget(self.previewdata[index])
+            self.functionform.setCurrentWidget(self.datatrees[index])
         except IndexError as e:
             print e.message
             print 'index {} does not exist'.format(index)
@@ -343,7 +344,8 @@ class PreviewViewer(QtGui.QSplitter):
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
-        self.previewdata.appendleft(functree)
+        self.data.appendleft(funcdata)
+        self.datatrees.appendleft(functree)
         self.functionform.addWidget(functree)
         self.imageview.setImage(self.previews)
         self.functionform.setCurrentWidget(functree)
@@ -351,17 +353,17 @@ class PreviewViewer(QtGui.QSplitter):
     def removePreview(self):
         if len(self.previews) > 0:
             idx = self.imageview.currentIndex
-            self.functionform.removeWidget(self.previewdata[idx])
+            self.functionform.removeWidget(self.datatrees[idx])
             del self.previews[idx]
-            del self.previewdata[idx]
+            del self.datatrees[idx]
             if len(self.previews) == 0:
                 self.imageview.clear()
             else:
                 self.imageview.setImage(self.previews)
 
     def defaultsButtonClicked(self):
-        current_data = self.previewdata[self.imageview.currentIndex]
-        print current_data
+        current_data = self.data[self.imageview.currentIndex]
+        fmanager.set_function_pipeline(current_data)
 
     # def previewClicked(self):
     #     self.sigPreviewClicked.emit()

@@ -120,21 +120,32 @@ def load_function_pipeline(yaml_file):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
+        set_function_pipeline(pipeline)
+
+
+def set_function_pipeline(pipeline):
     clear_functions()
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
                 if func == 'Reconstruction':
-                    add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+                    try:
+                        add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc]['Package']])
+                    except KeyError:
+                        add_function(func, subfunc)
                 else:
                     add_function(func, subfunc)
                 funcWidget = functions[currentindex]
-                for param in subfuncs[subfunc]:
-                    if 'Package' in param:
+                for param, value in subfuncs[subfunc].iteritems():
+                    if param == 'Package':
                         continue
-                    child = funcWidget.params.child(param['name'])
-                    child.setValue(param['value'])
-                    child.setDefault(param['value'])
+                    elif param == 'Input Functions':
+                        for ipf, sipf in value.iteritems():
+                            funcWidget.addInputFunction(ipf, list(sipf.keys())[0])
+                    else:
+                        child = funcWidget.params.child(param)
+                        child.setValue(value)
+                        child.setDefault(value)
             except (IndexError, AttributeError):
                 raise
                 # TODO: make this failure more graceful
@@ -144,10 +155,15 @@ def load_function_pipeline(yaml_file):
 def create_pipeline_dict():
     d = OrderedDict()
     for f in functions:
-        d[f.func_name] = {f.subfunc_name: [{'name': p.name(), 'value': p.value()} for p in f.params.children()]}
+        d[f.func_name] = {f.subfunc_name: {p.name() : p.value() for p in f.params.children()}}
         if f.func_name == 'Reconstruction':
-            d[f.func_name][f.subfunc_name].append({'Package':f.package})
-
+            d[f.func_name][f.subfunc_name].update({'Package':f.packagename})
+        if f.input_functions is not None:
+            d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            for ipf in f.input_functions:
+                if ipf is not None:
+                    id = {ipf.subfunc_name: {p.name() : p.value() for p in ipf.params.children()}}
+                    d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
     return d
 
 
@@ -177,7 +193,6 @@ def set_function_defaults(mdata, funcs=functions):
                     v = PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
                     if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
                         v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
-                    print v, type(v)
                     p.setValue(v)
                     p.setDefault(v)
         if f.input_functions is not None:
@@ -206,9 +221,9 @@ def construct_preview_pipeline(widget, update=True, slc=None):
     for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials))
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
     lock_function_params(False)
 
     return funstack, widget.getsino(slc), partial(widget.addPreview, params)

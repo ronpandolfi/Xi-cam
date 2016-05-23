@@ -3,6 +3,7 @@
 from PySide import QtCore, QtGui
 import numpy as np
 from functools import partial
+from copy import deepcopy
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import fmanager
 from collectionsmod import UnsortableOrderedDict
@@ -277,6 +278,8 @@ class ReconFuncWidget(FuncWidget):
         self.center = None
         self.angles = None
 
+        self.mcenter = lambda: self.param_dict['center']
+
         self.frame_2 = QtGui.QFrame(self)
         self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frame_2.setFrameShadow(QtGui.QFrame.Raised)
@@ -285,11 +288,6 @@ class ReconFuncWidget(FuncWidget):
         self.frame_2_layout.setSpacing(0)
         self.verticalLayout.addWidget(self.frame_2)
         self.frame_2.hide()
-
-        self.addInputFunction(*2 * ('Projection Angles',))
-        self.resetCenter()
-        #TODO put this in yaml file of pipeline budddyrooo
-        self.addInputFunction('Center Dectecion', 'Phase Correlation')
 
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
@@ -302,7 +300,11 @@ class ReconFuncWidget(FuncWidget):
 
     @property
     def partial(self):
-        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        d = deepcopy(self.param_dict)
+        filter_par = [d['cutoff'], d['order']]
+        d['filter_par'] = filter_par
+        del d['cutoff'], d['order']
+        kwargs = dict(d, **self.kwargs_complement)
         if 'center' in kwargs: del kwargs['center']
         self._partial = partial(self._function, **kwargs)
         return self._partial
@@ -310,19 +312,24 @@ class ReconFuncWidget(FuncWidget):
     @property
     def input_partials(self):
         p = []
-        if self.center.subfunc_name == 'Phase Correlation':
-            slices = ((0, None, None),(-1, None, None))
-        elif self.center.subfunc_name == 'Manual':
-            slices = None
+        if self.center is None:
+            p.append(('center', None, self.mcenter))
         else:
-            slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+            if self.center.subfunc_name == 'Phase Correlation':
+                slices = ((0, None, None),(-1, None, None))
+            else:
+                slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
 
-        if self.center.subfunc_name == 'Nelder-Mead':
-            p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
-        else:
-            p.append(('center', slices, self.center.partial))
+            if self.center.subfunc_name == 'Nelder-Mead':
+                p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
+            else:
+                p.append(('center', slices, self.center.partial))
         p.append(('theta', None, self.angles.partial))
         return p
+
+    def resetCenter(self):
+        self.center = None
+        self.input_functions = [self.center, self.angles]
 
     def addInputFunction(self, func, subfunc):
         attr = self.angles if func == 'Projection Angles' else self.center
@@ -351,12 +358,7 @@ class ReconFuncWidget(FuncWidget):
         else:
             self.center = attr
             self.center.destroyed.connect(self.resetCenter)
-
-    def resetCenter(self):
-        # TODO change this. there has to be a better way. maybe have a center and manualcenter attr and resetCenter sets center to manual center
-        self.center = lambda: 'Manual'
-        self.center.partial = lambda: self.param_dict['center']
-        self.center.subfunc_name = 'Manual'
+        self.input_functions = [self.center, self.angles]
 
     def mouseClicked(self):
         super(ReconFuncWidget, self).mouseClicked()
@@ -364,14 +366,6 @@ class ReconFuncWidget(FuncWidget):
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
-
-    def updateParamsDict(self):
-        self.param_dict = super(ReconFuncWidget, self).updateParamsDict()
-        if self.subfunc_name == 'Gridrec':
-            filter_par = [self.param_dict['cutoff'], self.param_dict['order']]
-            self.param_dict['filter_par'] = filter_par
-        del self.param_dict['cutoff'], self.param_dict['order']
-        return self.param_dict
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
