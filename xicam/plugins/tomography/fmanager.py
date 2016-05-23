@@ -299,12 +299,21 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
             yield 'Running {0} on sinograms {1} to {2} from {3}...\n\n'.format(name, start, end, total_sino)
             if init:
                 tomo = fpartial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
+                shape = 2*(tomo.shape[2],)
                 init = False
             elif name == 'Write to file':
                 fpartial(tomo, start=write_start)
                 write_start += tomo.shape[0]
-            elif name == 'Reconstruction' and ipartials is not None:
-                partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
+            elif name == 'Reconstruction':
+                # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+                if ipartials is not None:
+                    partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
+
+                tomo = fpartial(tomo)
+                # Make sure to crop down recon if padding was used
+                if tomo.shape[1:] != shape:
+                    npad = tomo.shape[1] - shape[1]
+                    tomo = tomo[:, npad:-npad, npad:-npad]
             else:
                 tomo = fpartial(tomo)
 

@@ -226,6 +226,7 @@ class FuncWidget(FeatureWidget):
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
                     defaults[param.name()] = str(defaults[param.name()])
+                # elif defaults[param.name()] is None:
                 param.setDefault(defaults[param.name()])
                 param.setValue(defaults[param.name()])
 
