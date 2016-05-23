@@ -114,12 +114,16 @@ class Worker(QtCore.QObject):
             self.queue.task_done()
             time.sleep(0.1)
 
+#TODO: allow threads to be compatibile with debugging
 # Application globals
-global queue, worker, worker_thread, mutex
-queue = Queue.Queue()
-worker = Worker(queue)
-mutex = QtCore.QMutex()
-worker_thread = QtCore.QThread()
-worker.moveToThread(worker_thread)
-worker_thread.started.connect(worker.run)
-worker_thread.start()
+import sys
+if not sys.gettrace():
+    print 'Loading thread queue...'
+    global queue, worker, worker_thread, mutex
+    queue = Queue.Queue()
+    worker = Worker(queue)
+    mutex = QtCore.QMutex()
+    worker_thread = QtCore.QThread()
+    worker.moveToThread(worker_thread)
+    worker_thread.started.connect(worker.run)
+    worker_thread.start()

@@ -103,7 +103,10 @@ class MyMainWindow():
         single.triggered.connect(self.singletest)
         stack=QtGui.QAction('Image stack',testmenu)
         stack.triggered.connect(self.stacktest)
-        testmenu.addActions([single,stack])
+        timeline=QtGui.QAction('Timeline',testmenu)
+        timeline.triggered.connect(self.timelinetest)
+
+        testmenu.addActions([single,stack,timeline])
         self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
@@ -114,6 +117,10 @@ class MyMainWindow():
 
     def stacktest(self):
         self.openfiles(['/tmp/20140905_191647_YL1031_.h5'])
+
+    def timelinetest(self):
+        import glob
+        self.openfiles(sorted(list(set(glob.glob('/media/mac/Users/rp/YL1031/*.edf'))-set(glob.glob('/media/mac/Users/rp/YL1031/*remeshed.edf')))))
 
     def closeEvent(self, ev):  # Never called???
         ev.accept()
