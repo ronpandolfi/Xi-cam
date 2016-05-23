@@ -12,6 +12,8 @@ import reconpkg
 import fdata
 import warnings
 
+FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
+PARAM_TYPES = {'int': int, 'float': float}
 functions = []
 recon_function = None
 currentindex = 0
@@ -90,6 +92,9 @@ def update():
     for item in functions:
         layout.addWidget(item)
 
+    w = ui.centerwidget.currentWidget()
+    if w:
+        set_function_defaults(w.widget.data.header)
 
 def load_form(path):
     guiloader = QUiLoader()
@@ -160,6 +165,23 @@ def open_pipeline_file():
                                                       '*.yml')[0]
     if pipeline_file != '':
         load_function_pipeline(pipeline_file)
+
+
+def set_function_defaults(mdata, funcs=functions):
+    global FUNCTIONS_W_METADATA_DEFAULTS, PARAM_TYPES
+    for f in funcs:
+        if f.subfunc_name in FUNCTIONS_W_METADATA_DEFAULTS:
+            for p in f.params.children():
+                if p.name() in fdata.als832defaults[f.func_name]:
+                    v = mdata[fdata.als832defaults[f.func_name][p.name()]['name']]
+                    v = PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
+                    if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
+                        v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
+                    print v, type(v)
+                    p.setValue(v)
+                    p.setDefault(v)
+        if f.input_functions is not None:
+            set_function_defaults(mdata, funcs=f.input_functions)
 
 
 def pipeline_preview_action(widget, update=True, slc=None):
@@ -270,9 +292,6 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
                 partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
             else:
                 tomo = fpartial(tomo)
-
-
-
 
 
 

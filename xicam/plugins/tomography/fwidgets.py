@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from PySide import QtCore, QtGui
-from PySide.QtUiTools import QUiLoader
 import numpy as np
 from functools import partial
-from time import sleep
-import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import fmanager
 from collectionsmod import UnsortableOrderedDict
@@ -149,6 +146,7 @@ class FuncWidget(FeatureWidget):
         self._function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
+        self.input_functions = None
         self.setDefaults()
         self.updateParamsDict()
 
@@ -192,7 +190,7 @@ class FuncWidget(FeatureWidget):
 
     @property
     def partial(self):
-        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        kwargs = dict(self.paramdict(), **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -300,6 +298,8 @@ class ReconFuncWidget(FuncWidget):
         ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
 
+        self.input_functions = [self.center, self.angles]
+
     @property
     def partial(self):
         kwargs = dict(self.param_dict, **self.kwargs_complement)
@@ -310,7 +310,6 @@ class ReconFuncWidget(FuncWidget):
     @property
     def input_partials(self):
         p = []
-
         if self.center.subfunc_name == 'Phase Correlation':
             slices = ((0, None, None),(-1, None, None))
         elif self.center.subfunc_name == 'Manual':
@@ -324,7 +323,6 @@ class ReconFuncWidget(FuncWidget):
             p.append(('center', slices, self.center.partial))
         p.append(('theta', None, self.angles.partial))
         return p
-
 
     def addInputFunction(self, func, subfunc):
         attr = self.angles if func == 'Projection Angles' else self.center

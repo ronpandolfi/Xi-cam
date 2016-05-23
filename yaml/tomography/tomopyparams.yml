@@ -12,7 +12,7 @@ Polar Mean Filter:
 - name: thresh_min
   type: float
 - name: theta_min
-  suffix: deg
+  suffix: "\u00b0"
   type: int
   limits: [0, 360]
 - name: rwidth
