@@ -254,9 +254,9 @@ class dimgViewer(QtGui.QWidget):
 
         # self.viewbox.scene().removeItem(evt)
 
-    @property
-    def isChiPlot(self):
-        return self.plotwidget.currentIndex()
+    # @property
+    # def isChiPlot(self):
+    #     return self.plotwidget.currentIndex()
 
     def mouseMoved(self, evt):
         """
@@ -412,6 +412,8 @@ class dimgViewer(QtGui.QWidget):
             self.imgview.setImage(self.dimg)
 
         self.drawcenter()
+
+        self.replot()
 
         # if not iscake and not isremesh:
         #     self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
@@ -965,21 +967,21 @@ class timelineViewer(dimgViewer):
         self.toolbar = toolbar
 
         if simg is None:
-            simg = loader.imageseries(paths=files)
+            simg = loader.loaddiffimage(files)
 
         self.simg = simg
-        dimg = simg.first()
+        #dimg = simg.first()
 
         self.operationindex = 0
 
-        super(timelineViewer, self).__init__(dimg, toolbar=toolbar)
+        super(timelineViewer, self).__init__(simg, toolbar=toolbar)
 
-        img = np.array(self.simg.thumbs)
-        img = (np.log(img * (img > 0) + (img < 1)))
+        #img = np.array(self.simg.thumbs)
+        #img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imgview.setImage(img, xvals=self.simg.xvals)
+        self.imgview.setImage(simg, xvals=self.simg.xvals)
 
-        self.imageitem.sigImageChanged.connect(self.setscale)
+        # self.imageitem.sigImageChanged.connect(self.setscale)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         # self.setvariationmode(0)
@@ -991,11 +993,11 @@ class timelineViewer(dimgViewer):
         self.viewbox.addItem(self.highresimgitem)
         self.highresimgitem.hide()
 
-        self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
-        self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
-        self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
+        # self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
 
-        self.drawframeoverlay()
+        # self.drawframeoverlay()
         self.imgview.autoRange()
 
         timelineplot = self.imgview.getRoiPlot()
@@ -1035,26 +1037,26 @@ class timelineViewer(dimgViewer):
     def plottimeline(self, t, V, color=[255, 255, 255]):
         pass
 
-    def drawframeoverlay(self):
-        self.scale = 1
-        self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
-        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
+    # def drawframeoverlay(self):
+    #     self.scale = 1
+    #     self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
+    #     self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
 
-    def updatelowresLUT(self):
+    # def updatelowresLUT(self):
+    #
+    #     self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+    #
+    # def hideoverlay(self):
+    #     self.scale = 5
 
-        self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+    # def setscale(self):
+    #     self.imageitem.resetTransform()
+    #     self.imageitem.scale(self.scale, self.scale)
 
-    def hideoverlay(self):
-        self.scale = 5
-
-    def setscale(self):
-        self.imageitem.resetTransform()
-        self.imageitem.scale(self.scale, self.scale)
-
-    def showlowres(self):
-        # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
-        # xvals=self.simg.xvals)
-        self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
+    # def showlowres(self):
+    #     # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
+    #     # xvals=self.simg.xvals)
+    #     self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
 
     def reduce(self):
         pass
@@ -1067,6 +1069,7 @@ class timelineViewer(dimgViewer):
         self.plotvariation()
 
     def rescan(self):
+        return
         self.cleartimeline()
         variationoperators.experiment = config.activeExperiment
         variation = self.simg.scan(self.operationindex)
@@ -1125,10 +1128,10 @@ class timelineViewer(dimgViewer):
             for dt in d:
                 self.timeline.plot(dt[0], dt[1])
 
-    def redrawframe(self, index, time, forcelow=False):
-        key = round(time)
-        self.dimg = self.simg.getDiffImage(key)
-        self.redrawimage(forcelow=forcelow)
+    # def redrawframe(self, index, time, forcelow=False):
+    #     key = round(time)
+    #     self.dimg = self.simg.getDiffImage(key)
+    #     self.redrawimage(forcelow=forcelow)
 
     def gotomax(self):
         pass

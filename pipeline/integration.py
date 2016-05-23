@@ -285,8 +285,7 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
 
 def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
-    print 'X integration...'
-
+    print 'Z integration...'
     if mask is not None:
         mask = mask.copy()
 
