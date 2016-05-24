@@ -107,7 +107,7 @@ class MyMainWindow():
         timeline.triggered.connect(self.timelinetest)
 
         testmenu.addActions([single,stack,timeline])
-        self.ui.menubar.addMenu(testmenu)
+        #self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
