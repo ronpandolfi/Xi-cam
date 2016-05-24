@@ -14,11 +14,20 @@ import warnings
 
 FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
 PARAM_TYPES = {'int': int, 'float': float}
+
+
 functions = []
 recon_function = None
 currentindex = 0
 layout = None
 
+cor_offset = None
+
+def static_var(varname, value):
+    def decorate(func):
+        setattr(func, varname, value)
+        return func
+    return decorate
 
 def clear_action():
     global functions
@@ -199,7 +208,7 @@ def set_function_defaults(mdata, funcs=functions):
             set_function_defaults(mdata, funcs=f.input_functions)
 
 
-def pipeline_preview_action(widget, update=True, slc=None):
+def pipeline_preview_action(widget, callback, update=True, slc=None):
     global functions
 
     if len(functions) < 1:
@@ -209,11 +218,11 @@ def pipeline_preview_action(widget, update=True, slc=None):
                                   'You have to select a reconstruction method to run a preview')
         return None, None, None
 
-    return construct_preview_pipeline(widget, update=update, slc=slc)
+    return construct_preview_pipeline(widget, callback, update=update, slc=slc)
 
 
-def construct_preview_pipeline(widget, update=True, slc=None):
-    global functions
+def construct_preview_pipeline(widget, callback, update=True, slc=None):
+    global functions, cor_offset
 
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
@@ -221,16 +230,19 @@ def construct_preview_pipeline(widget, update=True, slc=None):
     for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
+        elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
+            cor_offset = lambda x: x + func.paramdict()['npad']
+
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                                input_partials=func.input_partials))
+                                                input_partials=func.input_partials, data_slc=slc))
         params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
     lock_function_params(False)
 
-    return funstack, widget.getsino(slc), partial(widget.addPreview, params)
+    return funstack, widget.getsino(slc), partial(callback, params)
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, data_slc=None, ncore=None):
-    global recon_function
+    global recon_function, cor_offset
     kwargs = {}
     for arg in argnames:
         if arg in 'flats':
@@ -248,6 +260,9 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
             kwargs[pname] = ipartial(*pargs)
             if pname == 'center':
                 recon_function.params.child('center').setValue(kwargs[pname])
+                if cor_offset is not None:
+                    kwargs[pname] = cor_offset(kwargs[pname])
+                    cor_offset = None
 
     if kwargs:
         return partial(fpartial, **kwargs)

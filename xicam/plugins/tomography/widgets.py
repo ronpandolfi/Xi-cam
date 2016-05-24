@@ -95,7 +95,7 @@ class TomoViewer(QtGui.QWidget):
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.viewstack.addWidget(self.previewViewer)
 
-        self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
+        self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
         self.reconstructionViewer = QtGui.QStackedWidget()
@@ -151,20 +151,27 @@ class TomoViewer(QtGui.QWidget):
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 
-    def addPreview(self, params, recon):
+    def addSlicePreview(self, params, recon):
         npad = int((recon.shape[1] - self.data.shape[1])/2)
         recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
         self.previewViewer.addPreview(recon, params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
+    def add3DPreview(self, params, recon):
+        fmanager.cor_offset = None
+        self.preview3DViewer.setPreview(recon, params)
+        self.viewstack.setCurrentWidget(self.preview3DViewer)
+
     def setCorValue(self, value):
         self.cor = value
 
     def runSlicePreview(self):
-        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self))
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.addSlicePreview))
 
     def run3DPreview(self):
-        print '3D bitch'
+        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+        fmanager.cor_offset = lambda x: x/8
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
 
     def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
         if not self._recon_running:
@@ -276,7 +283,6 @@ class PreviewViewer(QtGui.QSplitter):
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
     """
-    # sigPreviewClicked = QtCore.Signal()
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
@@ -304,13 +310,6 @@ class PreviewViewer(QtGui.QSplitter):
         self.imageview.ui.roiBtn.setParent(None)
         self.imageview.sigDeletePressed.connect(self.removePreview)
 
-        # self.runButton = QtGui.QPushButton(self.imageview)
-        # self.runButton.setText("")
-        # icon = QtGui.QIcon()
-        # icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        # self.runButton.setIcon(icon)
-        # self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
-
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
         icon = QtGui.QIcon()
@@ -326,8 +325,6 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
-
-        # self.runButton.clicked.connect(self.previewClicked)
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
@@ -365,9 +362,6 @@ class PreviewViewer(QtGui.QSplitter):
         current_data = self.data[self.imageview.currentIndex]
         fmanager.set_function_pipeline(current_data)
 
-    # def previewClicked(self):
-    #     self.sigPreviewClicked.emit()
-
 
 class VolumeViewer(QtGui.QWidget):
 
@@ -385,15 +379,15 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
-        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self)
+        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
         l.addWidget(self.HistogramLUTWidget)
 
-        self.xregion = SliceWidget()
-        self.yregion = SliceWidget()
-        self.zregion = SliceWidget()
+        self.xregion = SliceWidget(parent=self)
+        self.yregion = SliceWidget(parent=self)
+        self.zregion = SliceWidget(parent=self)
         self.xregion.item.region.setRegion([0,5000])
         self.yregion.item.region.setRegion([0,5000])
         self.zregion.item.region.setRegion([0,5000])
@@ -406,7 +400,7 @@ class VolumeViewer(QtGui.QWidget):
 
         self.setLayout(l)
 
-        self.setVolume(vol=data,path=path)
+        # self.setVolume(vol=data,path=path)
 
         # self.volumeRenderWidget.export('video.mp4',fps=25,duration=10.)
         # self.writevideo()
@@ -507,7 +501,7 @@ class VolumeViewer(QtGui.QWidget):
 
 class VolumeRenderWidget(scene.SceneCanvas):
 
-    def __init__(self,vol=None,path=None,size=(800,600),show=False):
+    def __init__(self,vol=None, path=None, size=(800,600), show=False):
         super(VolumeRenderWidget, self).__init__(keys='interactive', size=size, show=show)
 
         # Prepare canvas
@@ -522,10 +516,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.setVolume(vol,path)
         self.volume=None
 
-
-
-
-
         # Create three cameras (Fly, Turntable and Arcball)
         fov = 60.
         self.cam1 = scene.cameras.FlyCamera(parent=self.view.scene, fov=fov, name='Fly')
@@ -534,7 +524,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.view.camera = self.cam2  # Select turntable at first
 
 
-    def setVolume(self,vol = None, path = None, sliceobj = None):
+    def setVolume(self, vol=None, path=None, sliceobj=None):
         print 'slice:',sliceobj
 
         if vol is None:
@@ -547,10 +537,11 @@ class VolumeRenderWidget(scene.SceneCanvas):
                 vol=loader.loadimage(path)
             else:
                 vol=loader.loadtiffstack(path)
-            self.vol=vol
 
         if vol is None:
             return
+
+        self.vol = vol
 
         if slice is not None:
             print 'preslice:',vol.shape
@@ -558,8 +549,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
             print 'postslice:',vol.shape
         else:
             slicevol=self.vol
-
-
 
         # Set whether we are emulating a 3D texture
         emulate_texture = False
@@ -575,10 +564,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
         # Translate the volume into the center of the view (axes are in strange order for unkown )
         self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2,-vol.shape[1]/2,-vol.shape[0]/2))
-
-
-
-
 
     # Implement key presses
     def on_key_press(self, event):
@@ -715,8 +700,6 @@ class RunViewer(QtGui.QTabWidget):
             w.setLayout(l)
             self.addTab(w, console.objectName())
 
-        # Wire up buttons
-
     def log2local(self, msg):
         self.local_console.insertPlainText(msg)
 
@@ -739,9 +722,39 @@ class RunViewer(QtGui.QTabWidget):
                                 self.log2local)
 
 
-class ReconstructionViewer(VolumeViewer):
+class Preview3DViewer(QtGui.QSplitter):
     def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(ReconstructionViewer, self).__init__()
+        super(Preview3DViewer, self).__init__()
+        self.setOrientation(QtCore.Qt.Horizontal)
+        l = QtGui.QVBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        self.functiontree = DataTreeWidget()
+        self.functiontree.setHeaderHidden(True)
+        self.functiontree.clear()
+        self.setPipelineButton = QtGui.QPushButton(self)
+        self.setPipelineButton.setText("Set Pipeline")
+        l.addWidget(self.functiontree)
+        l.addWidget(self.setPipelineButton)
+        panel = QtGui.QWidget(self)
+        panel.setLayout(l)
+
+        self.volumeviewer = VolumeViewer()
+
+        self.addWidget(panel)
+        self.addWidget(self.volumeviewer)
+
+        self.funcdata = None
+
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+
+    def setPreview(self, recon, funcdata):
+        self.functiontree.setData(funcdata, hideRoot=True)
+        self.funcdata = funcdata
+        self.functiontree.show()
+        self.volumeviewer.setVolume(vol=recon)
+
+    def defaultsButtonClicked(self):
+        fmanager.set_function_pipeline(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):

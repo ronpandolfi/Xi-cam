@@ -30,7 +30,7 @@ except AttributeError:
 
 
 class FeatureWidget(QtGui.QWidget):
-    def __init__(self, name='', parent=None):
+    def __init__(self, name='', checkable=True, parent=None):
         self.name = name
 
         self._form = None
@@ -62,10 +62,15 @@ class FeatureWidget(QtGui.QWidget):
         self.previewButton.setStyleSheet("margin:0 0 0 0;")
         self.previewButton.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        if checkable:
+            icon.addPixmap(QtGui.QPixmap("gui/eye_closed.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+            self.previewButton.setCheckable(True)
+        else:
+            icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.previewButton.setCheckable(False)
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
-        self.previewButton.setCheckable(True)
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.previewButton.setObjectName("pushButton")
@@ -133,11 +138,11 @@ class FeatureWidget(QtGui.QWidget):
 
 
 class FuncWidget(FeatureWidget):
-    def __init__(self, function, subfunction, package, parent=None):
+    def __init__(self, function, subfunction, package, checkable=True, parent=None):
         self.name = function
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
-        super(FuncWidget, self).__init__(self.name, parent=parent)
+        super(FuncWidget, self).__init__(self.name, checkable=checkable, parent=parent)
 
         self.func_name = function
         self.subfunc_name = subfunction
@@ -269,9 +274,8 @@ class FuncWidget(FeatureWidget):
 
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
-        super(ReconFuncWidget, self).__init__(function, subfunction, package)
-        self.previewButton.setCheckable(False)
-        self.previewButton.setChecked(True)
+        super(ReconFuncWidget, self).__init__(function, subfunction, package, checkable=False)
+
         self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
 
@@ -313,7 +317,7 @@ class ReconFuncWidget(FuncWidget):
     @property
     def input_partials(self):
         p = []
-        if self.center is None:
+        if self.center is None or not self.center.previewButton.isChecked():
             p.append(('center', None, self.mcenter))
         else:
             if self.center.subfunc_name == 'Phase Correlation':
@@ -346,8 +350,8 @@ class ReconFuncWidget(FuncWidget):
                     attr.deleteLater()
                 except AttributeError:
                     pass
-
-        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'])
+        checkable = False if func == 'Projection Angles' else True
+        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
