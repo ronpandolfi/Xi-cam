@@ -12,11 +12,29 @@ import reconpkg
 import fdata
 import warnings
 
+FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
+PARAM_TYPES = {'int': int, 'float': float}
+
+
 functions = []
 recon_function = None
 currentindex = 0
 layout = None
 
+cor_offset = lambda x: x
+cor_scale = lambda x: x
+
+def reset_cor():
+    global cor_offset, cor_scale
+    cor_offset = lambda x: x
+    cor_scale = lambda x: x
+
+
+def static_var(varname, value):
+    def decorate(func):
+        setattr(func, varname, value)
+        return func
+    return decorate
 
 def clear_action():
     global functions
@@ -90,6 +108,9 @@ def update():
     for item in functions:
         layout.addWidget(item)
 
+    w = ui.centerwidget.currentWidget()
+    if w:
+        set_function_defaults(w.widget.data.header)
 
 def load_form(path):
     guiloader = QUiLoader()
@@ -115,21 +136,32 @@ def load_function_pipeline(yaml_file):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
+        set_function_pipeline(pipeline)
+
+
+def set_function_pipeline(pipeline):
     clear_functions()
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
                 if func == 'Reconstruction':
-                    add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc][-1]['Package']])
+                    try:
+                        add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc]['Package']])
+                    except KeyError:
+                        add_function(func, subfunc)
                 else:
                     add_function(func, subfunc)
                 funcWidget = functions[currentindex]
-                for param in subfuncs[subfunc]:
-                    if 'Package' in param:
+                for param, value in subfuncs[subfunc].iteritems():
+                    if param == 'Package':
                         continue
-                    child = funcWidget.params.child(param['name'])
-                    child.setValue(param['value'])
-                    child.setDefault(param['value'])
+                    elif param == 'Input Functions':
+                        for ipf, sipf in value.iteritems():
+                            funcWidget.addInputFunction(ipf, list(sipf.keys())[0])
+                    else:
+                        child = funcWidget.params.child(param)
+                        child.setValue(value)
+                        child.setDefault(value)
             except (IndexError, AttributeError):
                 raise
                 # TODO: make this failure more graceful
@@ -139,10 +171,15 @@ def load_function_pipeline(yaml_file):
 def create_pipeline_dict():
     d = OrderedDict()
     for f in functions:
-        d[f.func_name] = {f.subfunc_name: [{'name': p.name(), 'value': p.value()} for p in f.params.children()]}
+        d[f.func_name] = {f.subfunc_name: {p.name() : p.value() for p in f.params.children()}}
         if f.func_name == 'Reconstruction':
-            d[f.func_name][f.subfunc_name].append({'Package':f.package})
-
+            d[f.func_name][f.subfunc_name].update({'Package':f.packagename})
+        if f.input_functions is not None:
+            d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            for ipf in f.input_functions:
+                if ipf is not None:
+                    id = {ipf.subfunc_name: {p.name() : p.value() for p in ipf.params.children()}}
+                    d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
     return d
 
 
@@ -162,7 +199,23 @@ def open_pipeline_file():
         load_function_pipeline(pipeline_file)
 
 
-def pipeline_preview_action(widget, update=True, slc=None):
+def set_function_defaults(mdata, funcs=functions):
+    global FUNCTIONS_W_METADATA_DEFAULTS, PARAM_TYPES
+    for f in funcs:
+        if f.subfunc_name in FUNCTIONS_W_METADATA_DEFAULTS:
+            for p in f.params.children():
+                if p.name() in fdata.als832defaults[f.func_name]:
+                    v = mdata[fdata.als832defaults[f.func_name][p.name()]['name']]
+                    v = PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
+                    if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
+                        v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
+                    p.setValue(v)
+                    p.setDefault(v)
+        if f.input_functions is not None:
+            set_function_defaults(mdata, funcs=f.input_functions)
+
+
+def pipeline_preview_action(widget, callback, update=True, slc=None):
     global functions
 
     if len(functions) < 1:
@@ -172,11 +225,11 @@ def pipeline_preview_action(widget, update=True, slc=None):
                                   'You have to select a reconstruction method to run a preview')
         return None, None, None
 
-    return construct_preview_pipeline(widget, update=update, slc=slc)
+    return construct_preview_pipeline(widget, callback, update=update, slc=slc)
 
 
-def construct_preview_pipeline(widget, update=True, slc=None):
-    global functions
+def construct_preview_pipeline(widget, callback, update=True, slc=None):
+    global functions, cor_offset, cor_scale
 
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
@@ -184,22 +237,26 @@ def construct_preview_pipeline(widget, update=True, slc=None):
     for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        params[func.subfunc_name] = deepcopy(func.paramdict(update=update))
+        elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
+            n = func.paramdict()['npad']
+            cor_offset = lambda x: cor_scale(x) + n
+
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                                input_partials=func.input_partials))
+                                                input_partials=func.input_partials, slc=slc))
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
     lock_function_params(False)
 
-    return funstack, widget.getsino(slc), partial(widget.addPreview, params)
+    return funstack, widget.getsino(slc), partial(callback, params)
 
 
-def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, data_slc=None, ncore=None):
-    global recon_function
+def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, slc=None, ncore=None):
+    global recon_function, cor_offset
     kwargs = {}
     for arg in argnames:
         if arg in 'flats':
-            kwargs[arg] = datawidget.getflats(slc=data_slc)
+            kwargs[arg] = datawidget.getflats(slc=slc)
         if arg in 'darks':
-            kwargs[arg] = datawidget.getdarks(slc=data_slc)
+            kwargs[arg] = datawidget.getdarks(slc=slc)
         if arg in 'ncore' and ncore is not None:
             kwargs[arg] = ncore
 
@@ -211,6 +268,8 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
             kwargs[pname] = ipartial(*pargs)
             if pname == 'center':
                 recon_function.params.child('center').setValue(kwargs[pname])
+                kwargs[pname] = cor_offset(kwargs[pname])
+                reset_cor()
 
     if kwargs:
         return partial(fpartial, **kwargs)
@@ -257,22 +316,28 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
         start, end = i * nsino + sino[0], (i + 1) * nsino + sino[0]
         for name, fpartial, argnames, ipartials in partials:
             fpartial = update_function_partial(fpartial, name, argnames, datawidget,
-                                              data_slc=(slice(*proj), slice(start, end, sino[2])),
-                                              ncore=ncore, input_partials=ipartials)
+                                               slc=(slice(*proj), slice(start, end, sino[2])),
+                                               ncore=ncore, input_partials=ipartials)
             yield 'Running {0} on sinograms {1} to {2} from {3}...\n\n'.format(name, start, end, total_sino)
             if init:
                 tomo = fpartial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
+                shape = 2*(tomo.shape[2],)
                 init = False
             elif name == 'Write to file':
                 fpartial(tomo, start=write_start)
                 write_start += tomo.shape[0]
-            elif name == 'Reconstruction' and ipartials is not None:
-                partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
+            elif name == 'Reconstruction':
+                # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+                if ipartials is not None:
+                    partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
+
+                tomo = fpartial(tomo)
+                # Make sure to crop down recon if padding was used
+                if tomo.shape[1:] != shape:
+                    npad = tomo.shape[1] - shape[1]
+                    tomo = tomo[:, npad:-npad, npad:-npad]
             else:
                 tomo = fpartial(tomo)
-
-
-
 
 
 

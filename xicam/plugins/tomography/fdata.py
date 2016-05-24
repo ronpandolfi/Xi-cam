@@ -17,3 +17,6 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 
 # for algorithm in funcs['Functions']['Reconstruction']['Astra']:
 #     names[algorithm] = 'recon'
+
+with open('yaml/tomography/als832functiondefaults.yml','r') as stream:
+    als832defaults = yaml.load(stream)

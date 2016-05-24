@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from PySide import QtCore, QtGui
-from PySide.QtUiTools import QUiLoader
 import numpy as np
 from functools import partial
-from time import sleep
-import pyqtgraph.parametertree.parameterTypes as pTypes
+from copy import deepcopy
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import fmanager
 from collectionsmod import UnsortableOrderedDict
@@ -32,7 +30,7 @@ except AttributeError:
 
 
 class FeatureWidget(QtGui.QWidget):
-    def __init__(self, name='', parent=None):
+    def __init__(self, name='', checkable=True, parent=None):
         self.name = name
 
         self._form = None
@@ -64,10 +62,15 @@ class FeatureWidget(QtGui.QWidget):
         self.previewButton.setStyleSheet("margin:0 0 0 0;")
         self.previewButton.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        if checkable:
+            icon.addPixmap(QtGui.QPixmap("gui/eye_closed.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+            self.previewButton.setCheckable(True)
+        else:
+            icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.previewButton.setCheckable(False)
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
-        self.previewButton.setCheckable(True)
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.previewButton.setObjectName("pushButton")
@@ -135,11 +138,11 @@ class FeatureWidget(QtGui.QWidget):
 
 
 class FuncWidget(FeatureWidget):
-    def __init__(self, function, subfunction, package, parent=None):
+    def __init__(self, function, subfunction, package, checkable=True, parent=None):
         self.name = function
         if function != subfunction:
             self.name += ' (' + subfunction + ')'
-        super(FuncWidget, self).__init__(self.name, parent=parent)
+        super(FuncWidget, self).__init__(self.name, checkable=checkable, parent=parent)
 
         self.func_name = function
         self.subfunc_name = subfunction
@@ -149,6 +152,7 @@ class FuncWidget(FeatureWidget):
         self._function = getattr(package, fdata.names[self.subfunc_name])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
+        self.input_functions = None
         self.setDefaults()
         self.updateParamsDict()
 
@@ -192,7 +196,7 @@ class FuncWidget(FeatureWidget):
 
     @property
     def partial(self):
-        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        kwargs = dict(self.paramdict(), **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -227,6 +231,7 @@ class FuncWidget(FeatureWidget):
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
                     defaults[param.name()] = str(defaults[param.name()])
+                # elif defaults[param.name()] is None:
                 param.setDefault(defaults[param.name()])
                 param.setValue(defaults[param.name()])
 
@@ -269,15 +274,16 @@ class FuncWidget(FeatureWidget):
 
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
-        super(ReconFuncWidget, self).__init__(function, subfunction, package)
-        self.previewButton.setCheckable(False)
-        self.previewButton.setChecked(True)
+        super(ReconFuncWidget, self).__init__(function, subfunction, package, checkable=False)
+
         self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
 
         # Input functions
         self.center = None
         self.angles = None
+
+        self.mcenter = lambda: self.param_dict['center']
 
         self.frame_2 = QtGui.QFrame(self)
         self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -288,11 +294,6 @@ class ReconFuncWidget(FuncWidget):
         self.verticalLayout.addWidget(self.frame_2)
         self.frame_2.hide()
 
-        self.addInputFunction(*2 * ('Projection Angles',))
-        self.resetCenter()
-        #TODO put this in yaml file of pipeline budddyrooo
-        self.addInputFunction('Center Dectecion', 'Phase Correlation')
-
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -300,9 +301,15 @@ class ReconFuncWidget(FuncWidget):
         ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
 
+        self.input_functions = [self.center, self.angles]
+
     @property
     def partial(self):
-        kwargs = dict(self.param_dict, **self.kwargs_complement)
+        d = deepcopy(self.param_dict)
+        filter_par = [d['cutoff'], d['order']]
+        d['filter_par'] = filter_par
+        del d['cutoff'], d['order']
+        kwargs = dict(d, **self.kwargs_complement)
         if 'center' in kwargs: del kwargs['center']
         self._partial = partial(self._function, **kwargs)
         return self._partial
@@ -310,21 +317,24 @@ class ReconFuncWidget(FuncWidget):
     @property
     def input_partials(self):
         p = []
-
-        if self.center.subfunc_name == 'Phase Correlation':
-            slices = ((0, None, None),(-1, None, None))
-        elif self.center.subfunc_name == 'Manual':
-            slices = None
+        if self.center is None or not self.center.previewButton.isChecked():
+            p.append(('center', None, self.mcenter))
         else:
-            slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+            if self.center.subfunc_name == 'Phase Correlation':
+                slices = ((0, None, None),(-1, None, None))
+            else:
+                slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
 
-        if self.center.subfunc_name == 'Nelder-Mead':
-            p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
-        else:
-            p.append(('center', slices, self.center.partial))
+            if self.center.subfunc_name == 'Nelder-Mead':
+                p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
+            else:
+                p.append(('center', slices, self.center.partial))
         p.append(('theta', None, self.angles.partial))
         return p
 
+    def resetCenter(self):
+        self.center = None
+        self.input_functions = [self.center, self.angles]
 
     def addInputFunction(self, func, subfunc):
         attr = self.angles if func == 'Projection Angles' else self.center
@@ -340,8 +350,8 @@ class ReconFuncWidget(FuncWidget):
                     attr.deleteLater()
                 except AttributeError:
                     pass
-
-        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'])
+        checkable = False if func == 'Projection Angles' else True
+        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
@@ -353,12 +363,7 @@ class ReconFuncWidget(FuncWidget):
         else:
             self.center = attr
             self.center.destroyed.connect(self.resetCenter)
-
-    def resetCenter(self):
-        # TODO change this. there has to be a better way. maybe have a center and manualcenter attr and resetCenter sets center to manual center
-        self.center = lambda: 'Manual'
-        self.center.partial = lambda: self.param_dict['center']
-        self.center.subfunc_name = 'Manual'
+        self.input_functions = [self.center, self.angles]
 
     def mouseClicked(self):
         super(ReconFuncWidget, self).mouseClicked()
@@ -366,14 +371,6 @@ class ReconFuncWidget(FuncWidget):
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
-
-    def updateParamsDict(self):
-        self.param_dict = super(ReconFuncWidget, self).updateParamsDict()
-        if self.subfunc_name == 'Gridrec':
-            filter_par = [self.param_dict['cutoff'], self.param_dict['order']]
-            self.param_dict['filter_par'] = filter_par
-        del self.param_dict['cutoff'], self.param_dict['order']
-        return self.param_dict
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
