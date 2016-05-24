@@ -979,7 +979,7 @@ class timelineViewer(dimgViewer):
         #img = np.array(self.simg.thumbs)
         #img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imgview.setImage(simg, xvals=self.simg.xvals)
+        self.imgview.setImage(simg)
 
         # self.imageitem.sigImageChanged.connect(self.setscale)
 
