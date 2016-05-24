@@ -217,14 +217,13 @@ class bl832h5image(fabioimage):
 
             s.append((start, stop, step))
         shape = ((s[0][1] - s[0][0])//s[0][2],
-                 (s[1][1] - s[1][0])//s[1][2],
-                 (s[2][1] - s[2][0])//s[2][2])
+                 (s[1][1] - s[1][0] - 1)//s[1][2] + 1,
+                 (s[2][1] - s[2][0] - 1)//s[2][2] + 1)
         arr = np.empty(shape, dtype=self.data.dtype)
         for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            arr[n] = np.flipud(self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])])
+            arr[n]= np.flipud(self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])])
         if arr.shape[0] == 1:
             arr = arr[0]
-
         return arr
 
     def __len__(self):
@@ -260,7 +259,7 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 class TiffStack(object):
     def __init__(self, path, header=None):
         super(TiffStack, self).__init__()
-        self.frames = glob.glob(os.path.join(path, '*.tiff'))
+        self.frames = sorted(glob.glob(os.path.join(path, '*.tiff')))
         self.currentframe = 0
         self.header= header
 

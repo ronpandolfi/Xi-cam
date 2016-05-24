@@ -151,17 +151,6 @@ class TomoViewer(QtGui.QWidget):
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 
-    def addSlicePreview(self, params, recon):
-        npad = int((recon.shape[1] - self.data.shape[1])/2)
-        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
-        self.previewViewer.addPreview(recon, params)
-        self.viewstack.setCurrentWidget(self.previewViewer)
-
-    def add3DPreview(self, params, recon):
-        fmanager.cor_offset = None
-        self.preview3DViewer.setPreview(recon, params)
-        self.viewstack.setCurrentWidget(self.preview3DViewer)
-
     def setCorValue(self, value):
         self.cor = value
 
@@ -170,7 +159,7 @@ class TomoViewer(QtGui.QWidget):
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        fmanager.cor_offset = lambda x: x/8
+        fmanager.cor_scale = lambda x: x//8
         fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
 
     def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
@@ -187,6 +176,20 @@ class TomoViewer(QtGui.QWidget):
                 QtGui.QMessageBox.information(self, 'Reconstruction request',
                                               'Then you should wait until the first one finishes.')
         self._recon_path = os.path.dirname(out_name)
+
+    def addSlicePreview(self, params, recon):
+        npad = int((recon.shape[1] - self.data.shape[1]) / 2)
+        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
+        self.previewViewer.addPreview(recon, params)
+        self.viewstack.setCurrentWidget(self.previewViewer)
+
+    def add3DPreview(self, params, recon):
+        # fmanager.reset_cor_offset()
+        pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
+        if pad > 0:
+            recon = recon[:, pad:-pad, pad:-pad]
+        self.viewstack.setCurrentWidget(self.preview3DViewer)
+        self.preview3DViewer.setPreview(recon, params)
 
     def fullReconFinished(self):
         self._recon_running = False

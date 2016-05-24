@@ -21,7 +21,14 @@ recon_function = None
 currentindex = 0
 layout = None
 
-cor_offset = None
+cor_offset = lambda x: x
+cor_scale = lambda x: x
+
+def reset_cor():
+    global cor_offset, cor_scale
+    cor_offset = lambda x: x
+    cor_scale = lambda x: x
+
 
 def static_var(varname, value):
     def decorate(func):
@@ -222,7 +229,7 @@ def pipeline_preview_action(widget, callback, update=True, slc=None):
 
 
 def construct_preview_pipeline(widget, callback, update=True, slc=None):
-    global functions, cor_offset
+    global functions, cor_offset, cor_scale
 
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
@@ -231,24 +238,25 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
         elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
-            cor_offset = lambda x: x + func.paramdict()['npad']
+            n = func.paramdict()['npad']
+            cor_offset = lambda x: cor_scale(x) + n
 
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                                input_partials=func.input_partials, data_slc=slc))
+                                                input_partials=func.input_partials, slc=slc))
         params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
     lock_function_params(False)
 
     return funstack, widget.getsino(slc), partial(callback, params)
 
 
-def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, data_slc=None, ncore=None):
+def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, slc=None, ncore=None):
     global recon_function, cor_offset
     kwargs = {}
     for arg in argnames:
         if arg in 'flats':
-            kwargs[arg] = datawidget.getflats(slc=data_slc)
+            kwargs[arg] = datawidget.getflats(slc=slc)
         if arg in 'darks':
-            kwargs[arg] = datawidget.getdarks(slc=data_slc)
+            kwargs[arg] = datawidget.getdarks(slc=slc)
         if arg in 'ncore' and ncore is not None:
             kwargs[arg] = ncore
 
@@ -260,9 +268,8 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
             kwargs[pname] = ipartial(*pargs)
             if pname == 'center':
                 recon_function.params.child('center').setValue(kwargs[pname])
-                if cor_offset is not None:
-                    kwargs[pname] = cor_offset(kwargs[pname])
-                    cor_offset = None
+                kwargs[pname] = cor_offset(kwargs[pname])
+                reset_cor()
 
     if kwargs:
         return partial(fpartial, **kwargs)
@@ -309,8 +316,8 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
         start, end = i * nsino + sino[0], (i + 1) * nsino + sino[0]
         for name, fpartial, argnames, ipartials in partials:
             fpartial = update_function_partial(fpartial, name, argnames, datawidget,
-                                              data_slc=(slice(*proj), slice(start, end, sino[2])),
-                                              ncore=ncore, input_partials=ipartials)
+                                               slc=(slice(*proj), slice(start, end, sino[2])),
+                                               ncore=ncore, input_partials=ipartials)
             yield 'Running {0} on sinograms {1} to {2} from {3}...\n\n'.format(name, start, end, total_sino)
             if init:
                 tomo = fpartial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
