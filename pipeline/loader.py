@@ -1394,8 +1394,7 @@ class multifilediffimage2(diffimage2):
         self.size = np.product(self.shape)
 
 
-    @property
-    def xvals(self):
+    def xvals(self,_):
         return numpy.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
 
     def first(self):
@@ -1435,6 +1434,7 @@ class multifilediffimage2(diffimage2):
         return self.transformdata
 
     def _getframe(self,frame=None): # keeps 3 frames in cache at most
+        print 'frame:',frame
         if frame is None: frame=self.currentframe
         if type(frame) is list: frame=frame[1].step
         self.currentframe = frame
@@ -1497,6 +1497,7 @@ class stackdiffimage2(diffimage2):
         if frame is None: frame=self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame= frame[1].step
+        frame = min(frame,len(self))
         self.currentframe = frame
         if frame not in self._framecache:
             if len(self._framecache)>2: del self._framecache[self._framecache.keys()[0]] #del the first cached item

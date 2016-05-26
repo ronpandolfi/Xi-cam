@@ -107,7 +107,7 @@ class MyMainWindow():
         timeline.triggered.connect(self.timelinetest)
 
         testmenu.addActions([single,stack,timeline])
-        self.ui.menubar.addMenu(testmenu)
+        #self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
@@ -120,7 +120,7 @@ class MyMainWindow():
 
     def timelinetest(self):
         import glob
-        self.openfiles(sorted(list(set(glob.glob('/media/mac/Users/rp/YL1031/*.edf'))-set(glob.glob('/media/mac/Users/rp/YL1031/*remeshed.edf')))))
+        self.openfiles(sorted(list(set(glob.glob('/media/mac/Users/rp/YL1031/YL1031*.edf'))-set(glob.glob('/media/mac/Users/rp/YL1031/*remeshed.edf')))))
 
     def closeEvent(self, ev):  # Never called???
         ev.accept()
