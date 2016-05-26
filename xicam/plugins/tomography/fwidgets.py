@@ -337,8 +337,8 @@ class ReconFuncWidget(FuncWidget):
         self.input_functions = [self.center, self.angles]
 
     def addInputFunction(self, func, subfunc):
-        attr = self.angles if func == 'Projection Angles' else self.center
-        if attr is not None and attr.subfunc_name != 'Manual':
+        fwidget = self.angles if func == 'Projection Angles' else self.center
+        if fwidget is not None and fwidget.subfunc_name != 'Manual':
             value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
                                                '{} input function already in pipeline\n'
                                                'Do you want to replace it?'.format(func),
@@ -347,23 +347,24 @@ class ReconFuncWidget(FuncWidget):
                 return
             else:
                 try:
-                    attr.deleteLater()
+                    fwidget.deleteLater()
                 except AttributeError:
                     pass
         checkable = False if func == 'Projection Angles' else True
-        attr = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
+        fwidget = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
-        h.addWidget(attr)
-        attr.destroyed.connect(indent.deleteLater)
+        h.addWidget(fwidget)
+        fwidget.destroyed.connect(indent.deleteLater)
         self.frame_2_layout.addLayout(h)
         if func == 'Projection Angles':
-            self.angles = attr
+            self.angles = fwidget
         else:
-            self.center = attr
+            self.center = fwidget
             self.center.destroyed.connect(self.resetCenter)
         self.input_functions = [self.center, self.angles]
+        return fwidget
 
     def mouseClicked(self):
         super(ReconFuncWidget, self).mouseClicked()

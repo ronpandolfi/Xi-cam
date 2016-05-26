@@ -594,6 +594,7 @@ class PreviewViewer(QtGui.QSplitter):
             self.functionform.removeWidget(self.datatrees[idx])
             del self.previews[idx]
             del self.datatrees[idx]
+            del self.data[idx]
             if len(self.previews) == 0:
                 self.imageview.clear()
             else:
