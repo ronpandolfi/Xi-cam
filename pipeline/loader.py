@@ -426,6 +426,8 @@ class diffimage():
         :param experiment: xicam.config.experiment
         """
 
+        warnings.warn('diffimage is deprecated. Migrate this to diffimage2')
+
         print 'Loading ' + unicode(filepath) + '...'
 
         self._data = data
@@ -989,6 +991,7 @@ class diffimage2(object):
         """
 
 
+
         print 'Loading ' + '...'
 
         self.logscale = True
@@ -1026,6 +1029,8 @@ class diffimage2(object):
         # Set experiment energy
         if 'Beamline Energy' in self.params:
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
+        elif 'mono' in self.params:
+            self.experiment.setvalue('Energy', self.params['mono'])
 
 
 
