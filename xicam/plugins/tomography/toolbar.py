@@ -94,6 +94,7 @@ class tomotoolbar(QtGui.QToolBar):
         toolbuttonCenter = QtGui.QToolButton()
         toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.actionCenter.setDefaultWidget(toolbuttonCenter)
+        self.actionCenter.setCheckable(True)
         toolbuttonCenter.setDefaultAction(self.actionCenter)
 
 
@@ -108,5 +109,5 @@ class tomotoolbar(QtGui.QToolBar):
         self.actionRun_SlicePreview.triggered.connect(slicepreview)
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
-        self.actionCenter.triggered.connect(center)
+        self.actionCenter.toggled.connect(center)
 

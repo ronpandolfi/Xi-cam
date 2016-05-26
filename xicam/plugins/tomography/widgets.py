@@ -10,13 +10,12 @@
 
 from collections import deque
 import numpy as np
-import psutil
+from functools import partial
 from PySide import QtGui, QtCore
 from vispy import scene  # , app, io
 from vispy.color import Colormap  # , BaseColormap, ColorArray
 from pipeline import loader
 import pyqtgraph as pg
-from pyqtgraph.parametertree import ParameterTree
 import imageio
 import os
 import fmanager
@@ -84,7 +83,13 @@ class TomoViewer(QtGui.QWidget):
 
         self.cor = self.data.shape[1]/2
 
-        self.projectionViewer = StackViewer(self.data, parent=self)
+        self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
+        if fmanager.recon_function is not None:
+            center_param = fmanager.recon_function.params.child('center')
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x, blockSignal=center_param.sigValueChanged))
+            # center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
@@ -196,8 +201,13 @@ class TomoViewer(QtGui.QWidget):
         self.processViewer.local_console.insertPlainText('Reconstruction complete.')
         self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
 
-    def manualCenter(self):
-        print 'Manual Center Stuff'
+    def onManualCenter(self, active):
+        if active:
+            self.projectionViewer.showCenterDetection()
+            self.viewstack.setCurrentWidget(self.projectionViewer)
+        else:
+            self.projectionViewer.hideCenterDetection()
+
 
 class ImageView(pg.ImageView):
     """
@@ -244,7 +254,6 @@ class StackViewer(ImageView):
     def __init__(self, data, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
         self.data = data
-        print data
         self.ui.roiBtn.setParent(None)
         self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
@@ -279,6 +288,235 @@ class StackViewer(ImageView):
     @property
     def currentdata(self):
         return np.rot90(self.data[self.data.currentframe]) #these rotations are very annoying
+
+    def resetImage(self):
+        self.setIndex(self.currentIndex)
+        self.updateImage()
+
+
+class ROImageOverlay(pg.ROI):
+    sigTranslated = QtCore.Signal(int)
+
+    def __init__(self, data, bg_imageItem, pos, translateSnap=True, **kwargs):
+        size = bg_imageItem.image.shape
+        super(ROImageOverlay, self).__init__(pos, translateSnap=translateSnap, size=size, pen=pg.mkPen(None), **kwargs)
+
+        self.data = data
+        self.bg_imgeItem = bg_imageItem
+        self._image_overlap = np.empty(size, dtype='float32')
+        self.currentImage = None
+        self.currentIndex = None
+        self.flipped = False
+        self.setCurrentImage(-1)
+        self.flipCurrentImage()
+        self.imageItem = pg.ImageItem(self.currentImage)
+        self.imageItem.setParentItem(self)
+        self.updateImage()
+
+    def setCurrentImage(self, idx):
+        self.currentImage = np.array(self.data[idx]).astype('float32')
+        self.currentIndex = idx
+        if self.flipped:
+            self.flipCurrentImage(toggle=False)
+
+    def flipCurrentImage(self, toggle=True):
+        self.currentImage = np.flipud(self.currentImage)
+        if toggle:
+            self.flipped = not self.flipped
+
+    @property
+    def image_overlap(self):
+        x, y = self.getOrigin()
+        if x == 0:
+            # copy the full array
+            self._image_overlap = np.array(self.bg_imgeItem.image, dtype='float32')
+        elif x < 0:
+            self._image_overlap[:-x] = self.currentImage[:-x]
+            self._image_overlap[-x:] = self.bg_imgeItem.image[:x]
+        else:
+            self._image_overlap[-x:] = self.currentImage[-x:]
+            self._image_overlap[:-x] = self.bg_imgeItem.image[x:]
+        return self._image_overlap
+
+    def getOrigin(self):
+        point = self.mapToItem(self.bg_imgeItem, QtCore.QPointF(0, 0))
+        return (point.x(), point.y())
+
+    def updateImage(self):
+        self.imageItem.setImage(self.currentImage - self.image_overlap)
+
+    def translate(self, *args, **kwargs):
+        super(ROImageOverlay, self).translate(*args, **kwargs)
+        self.updateImage()
+        self.sigTranslated.emit(self.getOrigin()[0])
+
+    def resetImage(self):
+        self.setCurrentImage(self.currentIndex)
+        self.updateImage()
+
+    def mouseDragEvent(self, ev):
+        """
+        Overload ROI.mouseDragEvent to set all vertical offsets to zero and constrain dragging to horizontal axis
+        """
+        if ev.isStart():
+            if ev.button() == QtCore.Qt.LeftButton:
+                self.setSelected(True)
+                if self.translatable:
+                    self.isMoving = True
+                    self.preMoveState = self.getState()
+                    self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
+                    self.cursorOffset[1] = 0  # constrain motion to horizontal axis
+                    self.sigRegionChangeStarted.emit(self)
+                    ev.accept()
+                else:
+                    ev.ignore()
+
+        elif ev.isFinish():
+            if self.translatable:
+                if self.isMoving:
+                    self.stateChangeFinished()
+                self.isMoving = False
+            return
+
+        if self.translatable and self.isMoving and ev.buttons() == QtCore.Qt.LeftButton:
+            snap = True if (ev.modifiers() & QtCore.Qt.ControlModifier) else None
+            newPos = self.mapToParent(ev.pos()) + self.cursorOffset
+            newPos[1] = 0  # constrain motion to horizontal axis
+            self.translate(newPos - self.pos(), snap=snap, finish=False)
+
+    def keyPressEvent(self, ev):
+        if ev.key() == QtCore.Qt.Key_Left:
+            self.translate(pg.Point((-1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Right:
+            self.translate(pg.Point((1, 0)))
+        ev.accept()
+
+
+class ProjectionViewer(QtGui.QWidget):
+    """
+    Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
+    """
+    sigCenterChanged = QtCore.Signal(int)
+
+    def __init__(self, data, view_label=None, center=None, *args, **kwargs):
+        super(ProjectionViewer, self).__init__(*args, **kwargs)
+        self.stackViewer = StackViewer(data, view_label=view_label)
+        self.imageItem = self.stackViewer.imageItem
+        self.data = self.stackViewer.data
+        self.normalized = False
+
+        self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0])
+        self.imageItem.sigImageChanged.connect(self.roi.updateImage)
+        self.stackViewer.view.addItem(self.roi)
+
+        self.stackViewer.keyPressEvent = self.keyPressEvent
+
+        self.cor_widget = QtGui.QWidget(self)
+        clabel = QtGui.QLabel('Rotation Center:')
+        clabel.setAlignment(QtCore.Qt.AlignRight)
+        plabel = QtGui.QLabel('Overlay Projection No:')
+        plabel.setAlignment(QtCore.Qt.AlignRight)
+        self.centerBox = QtGui.QTextEdit(parent=self.cor_widget)
+        self.centerBox.setReadOnly(True)
+        center = center if center is not None else data.shape[1]/2.0
+        self.centerBox.setText(str(center))
+        spinBox = QtGui.QSpinBox(parent=self.cor_widget)
+        #TODO data shape seems to be on larger than the return from slicing it with [:-1]
+        spinBox.setRange(0, data.shape[0])
+        slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
+        slider.setRange(0, data.shape[0])
+        spinBox.setValue(data.shape[0])
+        slider.setValue(data.shape[0])
+        flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
+        flipCheckBox.setChecked(True)
+        self.normCheckBox = QtGui.QCheckBox('Normalize', parent=self.cor_widget)
+        self.normCheckBox.hide() #TODO fix this
+        h = QtGui.QHBoxLayout()
+        h.setAlignment(QtCore.Qt.AlignLeft)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(clabel)
+        h.addWidget(self.centerBox)
+        h.addWidget(plabel)
+        h.addWidget(spinBox)
+        h.addWidget(flipCheckBox)
+        h.addWidget(self.normCheckBox)
+        h.addStretch(1)
+
+        self.centerBox.setFixedWidth(spinBox.width())
+        spinBox.setFixedWidth(spinBox.width())
+        self.cor_widget.setFixedHeight(60)
+        v = QtGui.QVBoxLayout(self.cor_widget)
+        v.addLayout(h)
+        v.addWidget(slider)
+
+        l = QtGui.QVBoxLayout(self)
+        l.setContentsMargins(0, 0, 0, 0)
+        l.addWidget(self.cor_widget)
+        l.addWidget(self.stackViewer)
+
+        slider.valueChanged.connect(spinBox.setValue)
+        spinBox.valueChanged.connect(self.changeOverlayProj)
+        flipCheckBox.stateChanged.connect(self.flipOverlayProj)
+        self.normCheckBox.stateChanged.connect(self.normalize)
+        self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
+        self.roi.sigTranslated.connect(self.setCenter)
+
+        self.hideCenterDetection()
+
+    def changeOverlayProj(self, idx):
+        self.roi.setCurrentImage(idx)
+        self.roi.updateImage()
+
+    def setCenter(self, x):
+        center = (self.data.shape[1] + x)/2.0
+        self.centerBox.setText(str(center))
+        self.sigCenterChanged.emit(center)
+
+    def hideCenterDetection(self):
+        self.cor_widget.hide()
+        self.roi.setVisible(False)
+
+    def showCenterDetection(self):
+        self.cor_widget.show()
+        self.roi.setVisible(True)
+
+    def updateROIFromCenter(self, center):
+        s = self.roi.getOrigin()[0]
+        self.roi.translate(pg.Point((2 * center - self.data.shape[1] - s, 0)))
+
+    def flipOverlayProj(self, val):
+        self.roi.flipCurrentImage()
+        self.roi.updateImage()
+
+    def normalize(self, val):
+        if val and not self.normalized:
+            flat = np.mean(self.data.flats)
+            dark = np.mean(self.data.darks)
+            proj = (self.imageItem.image - dark)/(flat - dark)
+            overlay = self.roi.currentImage
+            if self.roi.flipped:
+                print 'flipping'
+                overlay = np.flipud(overlay)
+            overlay = (overlay - dark)/(flat - dark)
+            if self.roi.flipped:
+                overlay = np.flipud(overlay)
+            self.roi.currentImage = overlay
+            self.roi.updateImage()
+            self.stackViewer.imageItem.setImage(proj)
+            self.stackViewer.updateImage()
+            self.normalized = True
+        elif not val and self.normalized:
+            self.stackViewer.resetImage()
+            self.roi.resetImage()
+            self.normalized = False
+            self.normCheckBox.setChecked(False)
+
+    def keyPressEvent(self, ev):
+        super(ProjectionViewer, self).keyPressEvent(ev)
+        if self.roi.isVisible():
+            self.roi.keyPressEvent(ev)
+        else:
+            super(StackViewer, self.stackViewer).keyPressEvent(ev)
 
 
 class PreviewViewer(QtGui.QSplitter):

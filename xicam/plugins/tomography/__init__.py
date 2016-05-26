@@ -73,6 +73,7 @@ class plugin(base.plugin):
         e.accept()
 
     def currentChanged(self, index):
+        self.toolbar.actionCenter.setChecked(False)
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         try:
@@ -86,10 +87,11 @@ class plugin(base.plugin):
                                int(self.currentDataset().data.header['nangles']),
                                outname)
             fmanager.set_function_defaults(self.currentDataset().data.header, funcs=fmanager.functions)
-            # recon = fmanager.recon_function
-            # if recon is not None:
-            #     recon.setCenterParam(self.currentDataset().cor)
+            recon = fmanager.recon_function
+            if recon is not None:
+                recon.setCenterParam(self.currentDataset().cor)
         except AttributeError as e:
+            raise e
             print e.message
 
     def tabCloseRequested(self, index):
@@ -131,5 +133,5 @@ class plugin(base.plugin):
                                            ui.configparams.child('Cores').value(),
                                            self.currentDataset().processViewer.log2local)
 
-    def manualCenter(self):
-        self.currentDataset().manualCenter()
+    def manualCenter(self, value):
+        self.currentDataset().onManualCenter(value)
