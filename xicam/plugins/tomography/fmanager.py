@@ -21,12 +21,12 @@ recon_function = None
 currentindex = 0
 layout = None
 
-cor_offset = lambda x: x
+cor_offset = None
 cor_scale = lambda x: x
 
 def reset_cor():
     global cor_offset, cor_scale
-    cor_offset = lambda x: x
+    cor_offset = None
     cor_scale = lambda x: x
 
 
@@ -250,7 +250,7 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
 
 
 def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, slc=None, ncore=None):
-    global recon_function, cor_offset
+    global recon_function, cor_offset, cor_scale
     kwargs = {}
     for arg in argnames:
         if arg in 'flats':
@@ -267,6 +267,8 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
                 map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
             kwargs[pname] = ipartial(*pargs)
             if pname == 'center':
+                if cor_offset is None:
+                    cor_offset = cor_scale
                 recon_function.params.child('center').setValue(kwargs[pname])
                 kwargs[pname] = cor_offset(kwargs[pname])
                 reset_cor()

@@ -86,9 +86,9 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
         if fmanager.recon_function is not None:
             center_param = fmanager.recon_function.params.child('center')
-            # self.projectionViewer.sigCenterChanged.connect(
-            #     lambda x: center_param.setValue(x, blockSignal=center_param.sigValueChanged))
-            # center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
+            self.projectionViewer.sigCenterChanged.connect(
+                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
