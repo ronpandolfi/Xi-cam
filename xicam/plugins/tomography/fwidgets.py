@@ -402,7 +402,8 @@ class ReconFuncWidget(FuncWidget):
                     self.param_dict['filter_par'][1] = i
                 else:
                     self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget, update=False))
+                p.append(fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().widget.addPreview,
+                                                          update=False))
             map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
