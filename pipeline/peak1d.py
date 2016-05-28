@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from os import listdir
 
 
-# what is even happening
+# arrgh
 
 ##### Functions that calculate things #####
 
