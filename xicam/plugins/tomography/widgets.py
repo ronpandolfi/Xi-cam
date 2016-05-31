@@ -290,20 +290,23 @@ class StackViewer(ImageView):
         return np.rot90(self.data[self.data.currentframe]) #these rotations are very annoying
 
     def resetImage(self):
+        self.setImage(self.data, autoRange=False)
         self.setIndex(self.currentIndex)
-        self.updateImage()
 
 
 class ROImageOverlay(pg.ROI):
-    sigTranslated = QtCore.Signal(int)
+    sigTranslated = QtCore.Signal(int, int)
 
-    def __init__(self, data, bg_imageItem, pos, translateSnap=True, **kwargs):
+    def __init__(self, data, bg_imageItem, pos, constrainX=False, constrainY=True, translateSnap=True, **kwargs):
         size = bg_imageItem.image.shape
         super(ROImageOverlay, self).__init__(pos, translateSnap=translateSnap, size=size, pen=pg.mkPen(None), **kwargs)
 
         self.data = data
         self.bg_imgeItem = bg_imageItem
+        self._y_constrained = constrainY
+        self._x_constrained = constrainX
         self._image_overlap = np.empty(size, dtype='float32')
+        self._mask = np.zeros(size, dtype=bool)
         self.currentImage = None
         self.currentIndex = None
         self.flipped = False
@@ -319,6 +322,12 @@ class ROImageOverlay(pg.ROI):
         if self.flipped:
             self.flipCurrentImage(toggle=False)
 
+    def constrainX(self, val):
+        self._x_constrained = val
+
+    def constrainY(self, val):
+        self._y_constrained = val
+
     def flipCurrentImage(self, toggle=True):
         self.currentImage = np.flipud(self.currentImage)
         if toggle:
@@ -326,29 +335,36 @@ class ROImageOverlay(pg.ROI):
 
     @property
     def image_overlap(self):
-        x, y = self.getOrigin()
+        self._image_overlap.fill(0)
+        x, y = self.pos()
+
         if x == 0:
-            # copy the full array
-            self._image_overlap = np.array(self.bg_imgeItem.image, dtype='float32')
+            x_slc, bg_x_slc = None, None
         elif x < 0:
-            self._image_overlap[:-x] = self.currentImage[:-x]
-            self._image_overlap[-x:] = self.bg_imgeItem.image[:x]
-        else:
-            self._image_overlap[-x:] = self.currentImage[-x:]
-            self._image_overlap[:-x] = self.bg_imgeItem.image[x:]
+            x_slc, bg_x_slc = slice(-x, None), slice(None, x)
+        elif x > 0:
+            x_slc, bg_x_slc = slice(None, -x), slice(x, None)
+
+        if y == 0:
+            y_slc, bg_y_slc = None, None
+        elif y < 0:
+            y_slc, bg_y_slc = slice(-y, None), slice(None, y)
+        elif y > 0:
+            y_slc, bg_y_slc = slice(None, -y), slice(y, None)
+
+        slc, bg_slc = (x_slc, y_slc), (bg_x_slc, bg_y_slc)
+
+        self._image_overlap[slc] = self.bg_imgeItem.image[bg_slc]
+
         return self._image_overlap
 
-    def getOrigin(self):
-        point = self.mapToItem(self.bg_imgeItem, QtCore.QPointF(0, 0))
-        return (point.x(), point.y())
-
-    def updateImage(self):
-        self.imageItem.setImage(self.currentImage - self.image_overlap)
+    def updateImage(self, autolevels=None):
+        self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
 
     def translate(self, *args, **kwargs):
         super(ROImageOverlay, self).translate(*args, **kwargs)
         self.updateImage()
-        self.sigTranslated.emit(self.getOrigin()[0])
+        self.sigTranslated.emit(*self.pos())
 
     def resetImage(self):
         self.setCurrentImage(self.currentIndex)
@@ -365,7 +381,10 @@ class ROImageOverlay(pg.ROI):
                     self.isMoving = True
                     self.preMoveState = self.getState()
                     self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
-                    self.cursorOffset[1] = 0  # constrain motion to horizontal axis
+                    # if self._y_constrained:
+                    #     self.cursorOffset[1] = 0  # constrain motion to horizontal axis
+                    # elif self._x_constrained:
+                    #     self.cursorOffset[0] = 0  # constrain motion to vertical axis
                     self.sigRegionChangeStarted.emit(self)
                     ev.accept()
                 else:
@@ -381,15 +400,19 @@ class ROImageOverlay(pg.ROI):
         if self.translatable and self.isMoving and ev.buttons() == QtCore.Qt.LeftButton:
             snap = True if (ev.modifiers() & QtCore.Qt.ControlModifier) else None
             newPos = self.mapToParent(ev.pos()) + self.cursorOffset
-            newPos[1] = 0  # constrain motion to horizontal axis
+            if self._y_constrained:
+                newPos.y = self.pos().y
+            if self._x_constrained:
+                newPos.x = self.pos().x
             self.translate(newPos - self.pos(), snap=snap, finish=False)
 
     def keyPressEvent(self, ev):
-        if ev.key() == QtCore.Qt.Key_Left:
-            self.translate(pg.Point((-1, 0)))
-        elif ev.key() == QtCore.Qt.Key_Right:
+        if ev.key() == QtCore.Qt.Key_Right:
             self.translate(pg.Point((1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Left:
+            self.translate(pg.Point((-1, 0)))
         ev.accept()
+
 
 
 class ProjectionViewer(QtGui.QWidget):
@@ -404,8 +427,11 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
+        self.flat = np.rot90(np.median(self.data.flats, axis=0), 3)
+        self.dark = np.rot90(np.median(self.data.darks, axis=0), 3)
 
         self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0])
+        # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
         self.imageItem.sigImageChanged.connect(self.roi.updateImage)
         self.stackViewer.view.addItem(self.roi)
 
@@ -414,12 +440,21 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_widget = QtGui.QWidget(self)
         clabel = QtGui.QLabel('Rotation Center:')
         clabel.setAlignment(QtCore.Qt.AlignRight)
-        plabel = QtGui.QLabel('Overlay Projection No:')
-        plabel.setAlignment(QtCore.Qt.AlignRight)
-        self.centerBox = QtGui.QTextEdit(parent=self.cor_widget)
-        self.centerBox.setReadOnly(True)
+        olabel = QtGui.QLabel('Offset:')
+        self.centerBox = QtGui.QLabel(parent=self.cor_widget)
+        originBox = QtGui.QLabel(parent=self.cor_widget)
         center = center if center is not None else data.shape[1]/2.0
         self.centerBox.setText(str(center))
+        h1 = QtGui.QHBoxLayout()
+        h1.setAlignment(QtCore.Qt.AlignLeft)
+        h1.setContentsMargins(0, 0, 0, 0)
+        h1.addWidget(clabel)
+        h1.addWidget(self.centerBox)
+        h1.addWidget(olabel)
+        h1.addWidget(originBox)
+
+        plabel = QtGui.QLabel('Overlay Projection No:')
+        plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
         #TODO data shape seems to be on larger than the return from slicing it with [:-1]
         spinBox.setRange(0, data.shape[0])
@@ -429,24 +464,27 @@ class ProjectionViewer(QtGui.QWidget):
         slider.setValue(data.shape[0])
         flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
         flipCheckBox.setChecked(True)
+        constrainYCheckBox = QtGui.QCheckBox('Constrain Y', parent=self.cor_widget)
+        constrainYCheckBox.setChecked(True)
+        constrainXCheckBox = QtGui.QCheckBox('Constrain X', parent=self.cor_widget)
+        constrainXCheckBox.setChecked(False)
         self.normCheckBox = QtGui.QCheckBox('Normalize', parent=self.cor_widget)
-        self.normCheckBox.hide() #TODO fix this
-        h = QtGui.QHBoxLayout()
-        h.setAlignment(QtCore.Qt.AlignLeft)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.addWidget(clabel)
-        h.addWidget(self.centerBox)
-        h.addWidget(plabel)
-        h.addWidget(spinBox)
-        h.addWidget(flipCheckBox)
-        h.addWidget(self.normCheckBox)
-        h.addStretch(1)
+        h2 = QtGui.QHBoxLayout()
+        h2.setAlignment(QtCore.Qt.AlignLeft)
+        h2.setContentsMargins(0, 0, 0, 0)
+        h2.addWidget(plabel)
+        h2.addWidget(spinBox)
+        h2.addWidget(flipCheckBox)
+        h2.addWidget(constrainXCheckBox)
+        h2.addWidget(constrainYCheckBox)
+        h2.addWidget(self.normCheckBox)
+        h2.addStretch(1)
 
         self.centerBox.setFixedWidth(spinBox.width())
         spinBox.setFixedWidth(spinBox.width())
-        self.cor_widget.setFixedHeight(60)
         v = QtGui.QVBoxLayout(self.cor_widget)
-        v.addLayout(h)
+        v.addLayout(h1)
+        v.addLayout(h2)
         v.addWidget(slider)
 
         l = QtGui.QVBoxLayout(self)
@@ -455,11 +493,16 @@ class ProjectionViewer(QtGui.QWidget):
         l.addWidget(self.stackViewer)
 
         slider.valueChanged.connect(spinBox.setValue)
+        slider.valueChanged.connect(self.stackViewer.resetImage)
+        slider.valueChanged.connect(lambda x: self.normCheckBox.setChecked(False))
         spinBox.valueChanged.connect(self.changeOverlayProj)
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
+        constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
+        constrainXCheckBox.stateChanged.connect(lambda v: self.roi.constrainX(v))
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.roi.sigTranslated.connect(self.setCenter)
+        self.roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
 
         self.hideCenterDetection()
 
@@ -467,7 +510,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi.setCurrentImage(idx)
         self.roi.updateImage()
 
-    def setCenter(self, x):
+    def setCenter(self, x, y):
         center = (self.data.shape[1] + x)/2.0
         self.centerBox.setText(str(center))
         self.sigCenterChanged.emit(center)
@@ -481,7 +524,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi.setVisible(True)
 
     def updateROIFromCenter(self, center):
-        s = self.roi.getOrigin()[0]
+        s = self.roi.pos()[0]
         self.roi.translate(pg.Point((2 * center - self.data.shape[1] - s, 0)))
 
     def flipOverlayProj(self, val):
@@ -490,19 +533,17 @@ class ProjectionViewer(QtGui.QWidget):
 
     def normalize(self, val):
         if val and not self.normalized:
-            flat = np.mean(self.data.flats)
-            dark = np.mean(self.data.darks)
-            proj = (self.imageItem.image - dark)/(flat - dark)
+            proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
             overlay = self.roi.currentImage
             if self.roi.flipped:
-                print 'flipping'
                 overlay = np.flipud(overlay)
-            overlay = (overlay - dark)/(flat - dark)
+            overlay = (overlay - self.dark)/(self.flat - self.dark)
             if self.roi.flipped:
                 overlay = np.flipud(overlay)
             self.roi.currentImage = overlay
-            self.roi.updateImage()
-            self.stackViewer.imageItem.setImage(proj)
+            self.roi.updateImage(autolevels=True)
+            self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
+            # self.stackViewer.getHistogramWidget().setImageItem(self.stackViewer.imageItem)
             self.stackViewer.updateImage()
             self.normalized = True
         elif not val and self.normalized:
@@ -517,6 +558,7 @@ class ProjectionViewer(QtGui.QWidget):
             self.roi.keyPressEvent(ev)
         else:
             super(StackViewer, self.stackViewer).keyPressEvent(ev)
+        ev.accept()
 
 
 class PreviewViewer(QtGui.QSplitter):
