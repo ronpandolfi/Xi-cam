@@ -8,6 +8,11 @@ Stripe Removal:
     wname: db5
     sigma: 4
     pad: True
+Pad:
+  Pad:
+    axis: 2
+    mode: edge
+    npad: 531
 Reconstruction:
   Gridrec:
     cutoff: 0.25
