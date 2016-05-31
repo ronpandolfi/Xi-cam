@@ -11,10 +11,10 @@ def local_maxima_detector(y):
     '''
     Finds local maxima in ordered data y.
 
-    :param y: 1d numpy array, ideally float dtype
+    :param y: 1d numpy float array
     :return maxima: 1d numpy bool array
 
-    maxima is True at a local maximum, False otherwise.
+    *maxima* is *True* at a local maximum, *False* otherwise.
 
     This function makes no attempt to reject spurious maxima of various sorts.
     That task is left to other functions.
@@ -33,12 +33,12 @@ def local_maxima_detector(y):
 
 def local_minima_detector(y):
     '''
-    Finds local minima in ordered data y.
+    Finds local minima in ordered data *y*.
 
-    :param y: 1d numpy array, ideally float dtype
+    :param y: 1d numpy float array
     :return minima: 1d numpy bool array
 
-    minima is True at a local minimum, False otherwise.
+    *minima* is *True* at a local minimum, *False* otherwise.
 
     This function makes no attempt to reject spurious minima of various sorts.
     That task is left to other functions.
@@ -96,11 +96,11 @@ def isolate_outliers(y, n):
     :param n: int
     :return normals, high_outliers, low_outliers: 1d numpy bool array x3
 
-    y is assumed to be primarily normally distributed data.  Order of y is irrelevant.
-    n is the number of standard deviations that is the cutoff for 'normal';
-    in general this should be determined based on the size of y,
+    *y* is assumed to be primarily normally distributed data.  Order of *y* is irrelevant.
+    *n* is the number of standard deviations that is the cutoff for 'normal';
+    in general this should be determined based on the size of *y*,
     but a value of 4 or 5 is good for most cases (<10,000 data points).
-    Determination of an appropriate value of n is left to the user.
+    Determination of an appropriate value of *n* is left to the user.
     '''
     normals = np.ones(y.size, bool)
     old_high_outliers = np.zeros(y.size, bool)
@@ -128,15 +128,15 @@ def find_zeros(y):
     :param y: 1d numpy float array
     :return zeros: 1d numpy bool array
 
-    y is ordered data.
+    *y* is ordered data.
     The discrete nature of arrays means that zero crossings generally happen between pixels,
     rather than on a specific unambiguous pixel.
     I arbitrarily chose to identify the pixel just before a zero crossing,
     i.e. with lower index number, rather than just after.
-    zeros is a boolean array with value True for pixels
-    just before y crosses from positive to negative
-    and just before y crosses from negative to positive,
-    False otherwise.
+    *zeros* is a boolean array with value *True* for pixels
+    just before *y* crosses from positive to negative
+    and just before *y* crosses from negative to positive,
+    *False* otherwise.
     '''
     positive = np.greater(y, 0)
     negative = np.less(y, 0)
@@ -150,6 +150,55 @@ def find_zeros(y):
     return zeros
 
 
+def shift_stack(y, n1, n2):
+    '''
+    Creates a stack of index-shifted versions of y.
+
+    :param y: 1d numpy float array
+    :param n1: int
+    :param n2: int
+    :return local_neighborhood: 2d numpy float array
+    :return element_exists: 2d numpy bool array
+
+    Creates shifted versions of the input *y*,
+    with shifts up to and including *n1* spaces downward in index
+    and up to and including *n2* spaces upwards.
+    The shifted versions are stacked together as *local_neighborhood*, like this
+    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
+    [4 5 6 7 ... 15 __ __ __ __]
+    [3 4 5 6 ... 14 15 __ __ __]
+    [2 3 4 5 ... 13 14 15 __ __]
+    [1 2 3 4 ... 12 13 14 15 __]
+    [0 1 2 3 ... 11 12 13 14 15]
+    [_ 0 1 2 ... 10 11 12 13 14]
+    [_ _ 0 1 ...  9 10 11 12 13]
+    with a corresponding mask array, *element_exists*,
+    indicating whether an element holds information or not, like this
+    [1 1 1 1 ...  1  0  0  0  0]
+    [1 1 1 1 ...  1  1  0  0  0]
+    [1 1 1 1 ...  1  1  1  0  0]
+    [1 1 1 1 ...  1  1  1  1  0]
+    [1 1 1 1 ...  1  1  1  1  1]
+    [0 1 1 1 ...  1  1  1  1  1]
+    [0 0 1 1 ...  1  1  1  1  1]
+    '''
+    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
+    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
+    for ii in range(n1 + n2 + 1):
+        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
+        jj = ii - n1
+        if jj < 0:
+            local_neighborhood[ii, :jj] = y[-jj:]
+            element_exists[ii, :jj] = True
+        elif jj == 0:
+            local_neighborhood[ii, :] = y[:]
+            element_exists[ii, :] = True
+        else:
+            local_neighborhood[ii, jj:] = y[:-jj]
+            element_exists[ii, jj:] = True
+    return local_neighborhood, element_exists
+
+
 def calc_running_local_variance(y, n):
     '''
     Calculates the variance of pixel group, n to each side.
@@ -158,9 +207,9 @@ def calc_running_local_variance(y, n):
     :param n: int
     :return running_local_variance: 1d numpy float array
 
-    y is ordered data.
+    *y* is ordered data.
     Creates shifted versions of the input y and stacks them together, like this
-    (shown for a y of length 16 and n = 2)
+    (shown for a *y* of length 16 and *n = 2*)
     [2 3 4 5 ... 15 __ __]
     [1 2 3 4 ... 14 15 __]
     [0 1 2 3 ... 13 14 15]
@@ -206,8 +255,8 @@ def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
     :return slope, offset: 1d numpy float arrays
 
     x and y together are ordered data,
-    where x is the independent variable
-    and y is the dependent variable.
+    where x is the independent variable (coordinate)
+    and y is the dependent variable (value).
     low_anchor_indices indicate the start-points of a line segment
     and high_anchor_indices indicate the end-points of the same.
     The solution given is not fitted and does not account for data values between the end-points.
@@ -222,25 +271,30 @@ def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
     return slope, offset
 
 
-def nested_boolean_indexing(truth_1, truth_2):
+def nested_boolean_indexing(boolean_slice_1, boolean_slice_2):
     '''
     Finds one array that slices like two input boolean arrays.
 
-    :param truth_1: 1d numpy bool array
-    :param truth_2: 1d numpy bool array
+    :param boolean_slice_1: 1d numpy bool array
+    :param boolean_slice_2: 1d numpy bool array
     :return ultimate_truth: 1d numpy bool array
 
+    'Advanced indexing' in numpy returns, or sometimes returns,
+    a copy instead of a view of the array being sliced.  I'm not 100% on the rules.
+    This is my workaround for a case where a copy is definitely returned:
+    when you slice like (some_array[boolean_slice_1])[boolean_slice_2].
+    Problematic when you are attempting to change specific elements of some_array.
     Finds a boolean array ultimate_truth such that
-    (some_array[truth_1])[truth_2] = some_array[ultimate_truth]
-    and corresponding integer array indices_ultimate such that
-    (some_array[truth_1])[truth_2] = some_array[indices_ultimate]
+    (some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_truth]
+    and corresponding integer array ultimate_indices such that
+    (some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_indices]
     '''
-    indices = np.arange(truth_1.size, dtype=int)
-    indices_1 = indices[truth_1]
-    indices_ultimate = indices_1[truth_2]
-    ultimate_truth = np.zeros(truth_1.size, dtype=bool)
-    ultimate_truth[indices_ultimate] = True
-    return ultimate_truth, indices_ultimate
+    indices = np.arange(boolean_slice_1.size, dtype=int)
+    indices_1 = indices[boolean_slice_1]
+    ultimate_indices = indices_1[boolean_slice_2]
+    ultimate_truth = np.zeros(boolean_slice_1.size, dtype=bool)
+    ultimate_truth[ultimate_indices] = True
+    return ultimate_truth, ultimate_indices
 
 
 def integer_index_to_boolean(int_index, size):
@@ -250,6 +304,10 @@ def integer_index_to_boolean(int_index, size):
     :param int_index: 1d numpy integer array
     :param size: integer
     :return bool_index: 1d numpy boolean array
+
+    Finds an array *bool_index* such that
+    *some_array[bool_index] = some_array[int_index]*
+    for any some_array possessing *size* elements.
     '''
     bool_index = np.zeros(size, dtype=bool)
     bool_index[int_index] = True
@@ -262,6 +320,9 @@ def boolean_index_to_integer(bool_index):
 
     :param bool_index: 1d numpy boolean array
     :return int_index: 1d numpy integer array
+
+    Finds an array *int_index* such that
+    *some_array[int_index] = some_array[bool_index]*.
     '''
     int_index = np.arange(bool_index.size, dtype=int)
     int_index = int_index[bool_index]
