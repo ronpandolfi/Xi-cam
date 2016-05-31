@@ -3,8 +3,6 @@ from matplotlib import pyplot as plt
 from os import listdir
 
 
-# is it working now?
-
 ##### Functions that calculate things #####
 
 def local_maxima_detector(y):
@@ -150,100 +148,6 @@ def find_zeros(y):
     return zeros
 
 
-def shift_stack(y, n1, n2):
-    '''
-    Creates a stack of index-shifted versions of y.
-
-    :param y: 1d numpy float array
-    :param n1: int
-    :param n2: int
-    :return local_neighborhood: 2d numpy float array
-    :return element_exists: 2d numpy bool array
-
-    Creates shifted versions of the input *y*,
-    with shifts up to and including *n1* spaces downward in index
-    and up to and including *n2* spaces upwards.
-    The shifted versions are stacked together as *local_neighborhood*, like this
-    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
-    [4 5 6 7 ... 15 __ __ __ __]
-    [3 4 5 6 ... 14 15 __ __ __]
-    [2 3 4 5 ... 13 14 15 __ __]
-    [1 2 3 4 ... 12 13 14 15 __]
-    [0 1 2 3 ... 11 12 13 14 15]
-    [_ 0 1 2 ... 10 11 12 13 14]
-    [_ _ 0 1 ...  9 10 11 12 13]
-    with a corresponding mask array, *element_exists*,
-    indicating whether an element holds information or not, like this
-    [1 1 1 1 ...  1  0  0  0  0]
-    [1 1 1 1 ...  1  1  0  0  0]
-    [1 1 1 1 ...  1  1  1  0  0]
-    [1 1 1 1 ...  1  1  1  1  0]
-    [1 1 1 1 ...  1  1  1  1  1]
-    [0 1 1 1 ...  1  1  1  1  1]
-    [0 0 1 1 ...  1  1  1  1  1]
-    '''
-    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
-    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
-    for ii in range(n1 + n2 + 1):
-        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
-        jj = ii - n1
-        if jj < 0:
-            local_neighborhood[ii, :jj] = y[-jj:]
-            element_exists[ii, :jj] = True
-        elif jj == 0:
-            local_neighborhood[ii, :] = y[:]
-            element_exists[ii, :] = True
-        else:
-            local_neighborhood[ii, jj:] = y[:-jj]
-            element_exists[ii, jj:] = True
-    return local_neighborhood, element_exists
-
-
-def calc_running_local_variance(y, n):
-    '''
-    Calculates the variance of pixel group, n to each side.
-
-    :param y: 1d numpy float array
-    :param n: int
-    :return running_local_variance: 1d numpy float array
-
-    *y* is ordered data.
-    Creates shifted versions of the input y and stacks them together, like this
-    (shown for a *y* of length 16 and *n = 2*)
-    [2 3 4 5 ... 15 __ __]
-    [1 2 3 4 ... 14 15 __]
-    [0 1 2 3 ... 13 14 15]
-    [_ 0 1 2 ... 12 13 14]
-    [_ _ 0 1 ... 11 12 13]
-    with a corresponding array indicating whether an element holds information or not, like this
-    [1 1 1 1 ... 1  0  0]
-    [1 1 1 1 ... 1  1  0]
-    [1 1 1 1 ... 1  1  1]
-    [0 1 1 1 ... 1  1  1]
-    [0 0 1 1 ... 1  1  1]
-    then takes the mean and variance of the elements of each column that exist.
-    '''
-    local_neighborhood = np.zeros(((2 * n + 1), y.size), dtype=float)
-    element_exists = np.zeros(((2 * n + 1), y.size), dtype=bool)
-    for ii in range(2 * n + 1):
-        # ii ranges from 0 to 2n; jj ranges from -n to n
-        jj = ii - n
-        if jj < 0:
-            local_neighborhood[ii, :jj] = y[-jj:]
-            element_exists[ii, :jj] = True
-        elif jj == 0:
-            local_neighborhood[ii, :] = y[:]
-            element_exists[ii, :] = True
-        else:
-            local_neighborhood[ii, jj:] = y[:-jj]
-            element_exists[ii, jj:] = True
-    running_local_sum = (local_neighborhood * element_exists).sum(axis=0)
-    running_local_mean = running_local_sum / (element_exists.sum(axis=0))
-    local_diffs = (local_neighborhood - running_local_mean) * element_exists
-    running_local_variance = (local_diffs ** 2).sum(axis=0) / (element_exists.sum(axis=0) - 1)
-    return running_local_variance
-
-
 def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
     '''
     Finds parameters of a line connecting two points.
@@ -254,11 +158,11 @@ def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
     :param high_anchor_indices: 1d numpy int array
     :return slope, offset: 1d numpy float arrays
 
-    x and y together are ordered data,
-    where x is the independent variable (coordinate)
-    and y is the dependent variable (value).
-    low_anchor_indices indicate the start-points of a line segment
-    and high_anchor_indices indicate the end-points of the same.
+    *x* and *y* are paired, ordered data,
+    where *x* is the independent variable (coordinate)
+    and *y* is the dependent variable (value).
+    *low_anchor_indices* indicate the start-points of a line segment
+    and *high_anchor_indices* indicate the end-points of the same.
     The solution given is not fitted and does not account for data values between the end-points.
     It is simply a description of the line connecting those end-points.
     '''
@@ -282,12 +186,12 @@ def nested_boolean_indexing(boolean_slice_1, boolean_slice_2):
     'Advanced indexing' in numpy returns, or sometimes returns,
     a copy instead of a view of the array being sliced.  I'm not 100% on the rules.
     This is my workaround for a case where a copy is definitely returned:
-    when you slice like (some_array[boolean_slice_1])[boolean_slice_2].
+    when you slice like *(some_array[boolean_slice_1])[boolean_slice_2]*.
     Problematic when you are attempting to change specific elements of some_array.
     Finds a boolean array ultimate_truth such that
-    (some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_truth]
+    *(some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_truth]*
     and corresponding integer array ultimate_indices such that
-    (some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_indices]
+    *(some_array[boolean_slice_1])[boolean_slice_2] = some_array[ultimate_indices]*
     '''
     indices = np.arange(boolean_slice_1.size, dtype=int)
     indices_1 = indices[boolean_slice_1]
@@ -338,10 +242,10 @@ def find_low_variance(local_variance, noise_factor):
     :return low_variance: 1d numpy bool array
 
     Permitted values of noise_factor are between 0 and 1, inclusive.
-    For noise_factor = 0, the variance_cutoff is median_variance.
-    For noise_factor = 1, the variance_cutoff is mean_variance.
-    For values between 0 and 1, the variance_cutoff scales logarithmically between the two boundaries.
-    Returns a boolean array with True for low-variance pixels, False otherwise.
+    For *noise_factor = 0*, the *variance_cutoff* is *median_variance*.
+    For *noise_factor = 1*, the *variance_cutoff* is *mean_variance*.
+    For values between 0 and 1, the *variance_cutoff* scales logarithmically between the two boundaries.
+    Returns a boolean array with *True* for low-variance pixels, *False* otherwise.
     '''
     median_variance = np.median(local_variance)
     mean_variance = local_variance.mean()
@@ -358,8 +262,10 @@ def sufficiently_separated_curv_zeros(feature_index, curv_zeros):
     :param curv_zeros: 1d numpy bool array
     :return curv_zeros_two_before, curv_zeros_two_after: 1d numpy bool arrays
 
-    Returns candidate curv_zeros preceding feature_index, except the one immediately before, as curv_zeros_two_before.
-    Returns candidate curv_zeros following feature_index, except the one immediately after, as curv_zeros_two_after.
+    Returns candidate *curv_zeros* preceding *feature_index*,
+    except the one immediately before, as *curv_zeros_two_before*.
+    Returns candidate *curv_zeros* following *feature_index*,
+    except the one immediately after, as *curv_zeros_two_after*.
     '''
     num_datapoints = curv_zeros.size
     indices = np.arange(num_datapoints, dtype=int)
@@ -379,12 +285,12 @@ def find_alternate_high_bound(curv_zeros_before_allowed, num_datapoints):
     :param num_datapoints: int
     :return high_bound: int
 
-    This function is called when there are no permissible high_bound values
+    This function is called when there are no permissible *high_bound* values
     that are actually higher than the feature you are trying to model.
     Instead of having one bound higher than the feature and one bound lower,
     and interpolating between them, two "bounds" both lower than the feature are found,
     and a linear relationship is extrapolated from their positions.
-    Other than their x-value relative to the feature,
+    Other than their *x*-value relative to the feature,
     they satisfy the same requirements as ordinary bounding points.
     '''
     indices = np.arange(num_datapoints, dtype=int)
@@ -403,12 +309,12 @@ def find_alternate_low_bound(curv_zeros_after_allowed, num_datapoints):
     :param num_datapoints: int
     :return high_bound: int
 
-    This function is called when there are no permissible low_bound values
+    This function is called when there are no permissible *low_bound* values
     that are actually lower than the feature you are trying to model.
     Instead of having one bound higher than the feature and one bound lower,
     and interpolating between them, two "bounds" both higher than the feature are found,
     and a linear relationship is extrapolated from their positions.
-    Other than their x-value relative to the feature,
+    Other than their *x*-value relative to the feature,
     they satisfy the same requirements as ordinary bounding points.
     '''
     indices = np.arange(num_datapoints, dtype=int)
@@ -428,13 +334,13 @@ def pick_slope_anchors(local_variance, gaussian_feature_indices, curv_zeros, noi
     :param noise_factor: float
     :return suggested_low_bound_indices, suggested_high_bound_indices: 1d numpy int arrays
 
-    local_variance is a running local variance of some ordered data.
-    gaussian_feature_indices are indices of centroids of additive gaussian features.
-    noise_factor is a float between zero and one, inclusive.
-    Lower values of noise_factor are more strict.  See find_low_variance() for further documentation.
+    *local_variance* is a running local variance of some ordered data.
+    *gaussian_feature_indices* are indices of centroids of additive gaussian features.
+    *noise_factor* is a float between zero and one, inclusive.
+    Lower values of *noise_factor* are more strict.  See *find_low_variance()* for further documentation.
     On my very nice (low-noise) test data a value of zero works well.
-    Some data may need a larger value.
-    suggested_low_bound_indices and suggested_high_bound_indices
+    Some data may need a larger value, or different provisions altogether.
+    *suggested_low_bound_indices* and *suggested_high_bound_indices*
     are the start and end points for a linear background fit for each feature.
     '''
     num_datapoints = local_variance.size
@@ -490,15 +396,15 @@ def gauss_guess(x, y, curvature, low_anchor_indices, high_anchor_indices, featur
     :param feature_indices: 1d numpy int array
     :return slope, offset, intensity, sigma: 1d numpy float arrays
 
-    x and y together are ordered data,
-    where x is the independent variable
-    and y is the dependent variable.
-    curvature is the second derivative of y with respect to x.
-    low_anchor_indices indicate the start-points of a data segment about a feature
-    and high_anchor_indices indicate the end-points of the same.
-    At the anchor indices, y should be close to its background behavior,
+    *x* and *y* are paired, ordered data,
+    where *x* is the independent variable
+    and *y* is the dependent variable.
+    *curvature* is the second derivative of *y* with respect to *x*.
+    *low_anchor_indices* indicate the start-points of a data segment about a feature
+    and *high_anchor_indices* indicate the end-points of the same.
+    At the anchor indices, *y* should be close to its background behavior,
     i.e. not dominated by the gaussian feature.
-    feature_indices indicate the locations of the features themselves.
+    *feature_indices* indicate the locations of the features themselves.
     The solution given is not fitted; it is a first estimate to be used in fitting.
     '''
     number_features = low_anchor_indices.size
@@ -757,6 +663,95 @@ def batch_demo():
 
 
 ##### WIP functions #####
+
+
+
+def shift_stack(y, n1, n2):
+    '''
+    Creates a stack of index-shifted versions of y.
+
+    :param y: 1d numpy float array
+    :param n1: int
+    :param n2: int
+    :return local_neighborhood: 2d numpy float array
+    :return element_exists: 2d numpy bool array
+
+    Creates shifted versions of the input *y*,
+    with shifts up to and including *n1* spaces downward in index
+    and up to and including *n2* spaces upwards.
+    The shifted versions are stacked together as *local_neighborhood*, like this
+    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
+    [4 5 6 7 ... 15 __ __ __ __]
+    [3 4 5 6 ... 14 15 __ __ __]
+    [2 3 4 5 ... 13 14 15 __ __]
+    [1 2 3 4 ... 12 13 14 15 __]
+    [0 1 2 3 ... 11 12 13 14 15]
+    [_ 0 1 2 ... 10 11 12 13 14]
+    [_ _ 0 1 ...  9 10 11 12 13]
+    with a corresponding mask array, *element_exists*,
+    indicating whether an element holds information or not, like this
+    [1 1 1 1 ...  1  0  0  0  0]
+    [1 1 1 1 ...  1  1  0  0  0]
+    [1 1 1 1 ...  1  1  1  0  0]
+    [1 1 1 1 ...  1  1  1  1  0]
+    [1 1 1 1 ...  1  1  1  1  1]
+    [0 1 1 1 ...  1  1  1  1  1]
+    [0 0 1 1 ...  1  1  1  1  1]
+    '''
+    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
+    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
+    for ii in range(n1 + n2 + 1):
+        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
+        jj = ii - n1
+        if jj < 0:
+            local_neighborhood[ii, :jj] = y[-jj:]
+            element_exists[ii, :jj] = True
+        elif jj == 0:
+            local_neighborhood[ii, :] = y[:]
+            element_exists[ii, :] = True
+        else:
+            local_neighborhood[ii, jj:] = y[:-jj]
+            element_exists[ii, jj:] = True
+    return local_neighborhood, element_exists
+
+
+def masked_mean_2d_axis_0(y2d, mask2d):
+    sum = (y2d * mask2d).sum(axis=0)
+    num_elements = mask2d.sum(axis=0)
+    mean = sum / num_elements
+    return mean
+
+
+def masked_variance_2d_axis_0(y2d, mask2d):
+    mean = masked_mean_2d_axis_0(y2d, mask2d)
+    difference = (y2d - mean) * mask2d
+    num_elements = mask2d.sum(axis=0)
+    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
+    return variance
+
+
+def calc_running_local_variance(y, n):
+    '''
+    Calculates the variance of pixel group, n to each side.
+
+    :param y: 1d numpy float array
+    :param n: int
+    :return running_local_variance: 1d numpy float array
+
+    *y* is ordered data.
+    *shift_stack()* creates shifted versions of the input y and stacks them together,
+    producing data *local_neighborhood* and mask *element_exists*.
+    See *shift_stack()* for further documentation.
+    then takes the mean and variance of the elements of each column that exist.
+    '''
+    local_neighborhood, element_exists = shift_stack(y, n, n)
+    running_local_sum = (local_neighborhood * element_exists).sum(axis=0)
+    running_local_mean = running_local_sum / (element_exists.sum(axis=0))
+    local_diffs = (local_neighborhood - running_local_mean) * element_exists
+    running_local_variance = (local_diffs ** 2).sum(axis=0) / (element_exists.sum(axis=0) - 1)
+    return running_local_variance
+
+
 
 
 def process_demo_1():
