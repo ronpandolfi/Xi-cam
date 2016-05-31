@@ -165,7 +165,7 @@ def set_function_pipeline(pipeline, setdefaults=False):
                         child.setValue(value)
                         if setdefaults: child.setDefault(value)
             except (IndexError, AttributeError):
-                raise
+                #raise
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
 
