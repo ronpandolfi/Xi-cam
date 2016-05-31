@@ -233,6 +233,117 @@ def boolean_index_to_integer(bool_index):
     return int_index
 
 
+def shift_stack(y, n1, n2):
+    '''
+    Creates a stack of index-shifted versions of y.
+
+    :param y: 1d numpy float array
+    :param n1: int
+    :param n2: int
+    :return local_neighborhood: 2d numpy float array
+    :return element_exists: 2d numpy bool array
+
+    Creates shifted versions of the input *y*,
+    with shifts up to and including *n1* spaces downward in index
+    and up to and including *n2* spaces upwards.
+    The shifted versions are stacked together as *local_neighborhood*, like this
+    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
+    [4 5 6 7 ... 15 __ __ __ __]
+    [3 4 5 6 ... 14 15 __ __ __]
+    [2 3 4 5 ... 13 14 15 __ __]
+    [1 2 3 4 ... 12 13 14 15 __]
+    [0 1 2 3 ... 11 12 13 14 15]
+    [_ 0 1 2 ... 10 11 12 13 14]
+    [_ _ 0 1 ...  9 10 11 12 13]
+    with a corresponding mask array, *element_exists*,
+    indicating whether an element holds information or not, like this
+    [1 1 1 1 ...  1  0  0  0  0]
+    [1 1 1 1 ...  1  1  0  0  0]
+    [1 1 1 1 ...  1  1  1  0  0]
+    [1 1 1 1 ...  1  1  1  1  0]
+    [1 1 1 1 ...  1  1  1  1  1]
+    [0 1 1 1 ...  1  1  1  1  1]
+    [0 0 1 1 ...  1  1  1  1  1]
+    '''
+    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
+    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
+    for ii in range(n1 + n2 + 1):
+        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
+        jj = ii - n1
+        if jj < 0:
+            local_neighborhood[ii, :jj] = y[-jj:]
+            element_exists[ii, :jj] = True
+        elif jj == 0:
+            local_neighborhood[ii, :] = y[:]
+            element_exists[ii, :] = True
+        else:
+            local_neighborhood[ii, jj:] = y[:-jj]
+            element_exists[ii, jj:] = True
+    return local_neighborhood, element_exists
+
+
+def masked_mean_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the mean of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return mean: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least one valid element;
+    otherwise the mean along axis 0 is not defined.
+    Returns *mean*, the mean of *y2d* along axis 0.
+    '''
+    sum = (y2d * mask2d).sum(axis=0)
+    num_elements = mask2d.sum(axis=0)
+    mean = sum / num_elements
+    return mean
+
+
+def masked_variance_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the variance of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return variance: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least two valid elements;
+    otherwise the variance along axis 0 is not defined.
+    Returns *variance*, the variance of *y2d* along axis 0.
+    '''
+    mean = masked_mean_2d_axis_0(y2d, mask2d)
+    difference = (y2d - mean) * mask2d
+    num_elements = mask2d.sum(axis=0)
+    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
+    return variance
+
+
+def calc_running_local_variance(y, n):
+    '''
+    Calculates the variance of pixel group, n to each side.
+
+    :param y: 1d numpy float array
+    :param n: int
+    :return running_local_variance: 1d numpy float array
+
+    *y* is ordered data.
+    *n* is the number of pixels to each side included in the running variance.
+    *n* should not be smaller than 1, and *n* usually should be much smaller than the size of *y*.
+    *shift_stack()* creates shifted versions of the input y and stacks them together;
+    *masked_variance_2d_axis_0()* finds the variance along axis 0, i.e. along each column.
+    See *shift_stack()* and *masked_variance_2d_axis_0()* for further documentation.
+    '''
+    # local_neighborhood is shifted, concatenated data; element_exists is its mask
+    local_neighborhood, element_exists = shift_stack(y, n, n)
+    running_local_variance = masked_variance_2d_axis_0(local_neighborhood, element_exists)
+    return running_local_variance
+
+
 def find_low_variance(local_variance, noise_factor):
     '''
     Finds areas with low variance; smaller noise_factor is more strict.
@@ -586,7 +697,6 @@ def figure_naive_gauss_guess(x, y, low_bound_indices, high_bound_indices, featur
             high_x = centroid + 5 * sigma[ii]
             low_x = centroid - 5 * sigma[ii]
             segment = (np.greater(high_x, x) & np.less(low_x, x))
-            print 'segment size, sum', segment.size, segment.sum()
             x_segment = x[segment]
             model_segment = (linear_model + gauss_model)[segment]
         # Mark as bad (red) if intensity < 0, good (cyan) otherwise
@@ -611,6 +721,7 @@ def batch_demo():
 
     # Quick 'n' dirty scrub of file_list by file name
     for ii in file_list:
+        ii = str(ii)
         if (~ii.startswith('Sample') | ~ii.endswith('_1D.csv')):
             print 'Script wants to remove item %s from list of files to import...' % ii
             if ~ii.startswith('Sample'):
@@ -665,96 +776,8 @@ def batch_demo():
 ##### WIP functions #####
 
 
-
-def shift_stack(y, n1, n2):
-    '''
-    Creates a stack of index-shifted versions of y.
-
-    :param y: 1d numpy float array
-    :param n1: int
-    :param n2: int
-    :return local_neighborhood: 2d numpy float array
-    :return element_exists: 2d numpy bool array
-
-    Creates shifted versions of the input *y*,
-    with shifts up to and including *n1* spaces downward in index
-    and up to and including *n2* spaces upwards.
-    The shifted versions are stacked together as *local_neighborhood*, like this
-    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
-    [4 5 6 7 ... 15 __ __ __ __]
-    [3 4 5 6 ... 14 15 __ __ __]
-    [2 3 4 5 ... 13 14 15 __ __]
-    [1 2 3 4 ... 12 13 14 15 __]
-    [0 1 2 3 ... 11 12 13 14 15]
-    [_ 0 1 2 ... 10 11 12 13 14]
-    [_ _ 0 1 ...  9 10 11 12 13]
-    with a corresponding mask array, *element_exists*,
-    indicating whether an element holds information or not, like this
-    [1 1 1 1 ...  1  0  0  0  0]
-    [1 1 1 1 ...  1  1  0  0  0]
-    [1 1 1 1 ...  1  1  1  0  0]
-    [1 1 1 1 ...  1  1  1  1  0]
-    [1 1 1 1 ...  1  1  1  1  1]
-    [0 1 1 1 ...  1  1  1  1  1]
-    [0 0 1 1 ...  1  1  1  1  1]
-    '''
-    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
-    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
-    for ii in range(n1 + n2 + 1):
-        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
-        jj = ii - n1
-        if jj < 0:
-            local_neighborhood[ii, :jj] = y[-jj:]
-            element_exists[ii, :jj] = True
-        elif jj == 0:
-            local_neighborhood[ii, :] = y[:]
-            element_exists[ii, :] = True
-        else:
-            local_neighborhood[ii, jj:] = y[:-jj]
-            element_exists[ii, jj:] = True
-    return local_neighborhood, element_exists
-
-
-def masked_mean_2d_axis_0(y2d, mask2d):
-    sum = (y2d * mask2d).sum(axis=0)
-    num_elements = mask2d.sum(axis=0)
-    mean = sum / num_elements
-    return mean
-
-
-def masked_variance_2d_axis_0(y2d, mask2d):
-    mean = masked_mean_2d_axis_0(y2d, mask2d)
-    difference = (y2d - mean) * mask2d
-    num_elements = mask2d.sum(axis=0)
-    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
-    return variance
-
-
-def calc_running_local_variance(y, n):
-    '''
-    Calculates the variance of pixel group, n to each side.
-
-    :param y: 1d numpy float array
-    :param n: int
-    :return running_local_variance: 1d numpy float array
-
-    *y* is ordered data.
-    *shift_stack()* creates shifted versions of the input y and stacks them together,
-    producing data *local_neighborhood* and mask *element_exists*.
-    See *shift_stack()* for further documentation.
-    then takes the mean and variance of the elements of each column that exist.
-    '''
-    local_neighborhood, element_exists = shift_stack(y, n, n)
-    running_local_sum = (local_neighborhood * element_exists).sum(axis=0)
-    running_local_mean = running_local_sum / (element_exists.sum(axis=0))
-    local_diffs = (local_neighborhood - running_local_mean) * element_exists
-    running_local_variance = (local_diffs ** 2).sum(axis=0) / (element_exists.sum(axis=0) - 1)
-    return running_local_variance
-
-
-
-
 def process_demo_1():
+    out_folder = 'process_demo_1_figures/'
     # Data intake
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
     file1 = 'Sample2_30x30_t60_0069_1D.csv'
@@ -769,39 +792,49 @@ def process_demo_1():
     # Local maxima
     maxima = local_maxima_detector(y)
     print 'Initially detected %i local maxima.' % maxima.sum()
-    figure_initial_maxima(x, y, maxima)
+    fig, ax = figure_initial_maxima(x, y, maxima)
+    plt.savefig(out_folder + 'initial_maxima.pdf')
+    #    plt.savefig(out_folder + '.pdf')
 
     # Curvature
     curvature = noiseless_curvature(x, y)
     normed_curv = curvature / (real_max(curvature) - real_min(curvature))
     curvature_legit = ~np.isnan(curvature)
     curv_minima = local_minima_detector(curvature)
-    figure_maxima_curvature(x, y, maxima, normed_curv, curvature_legit)
+    fig, ax = figure_maxima_curvature(x, y, maxima, normed_curv, curvature_legit)
+    plt.savefig(out_folder + 'maxima_curvature.pdf')
 
     # Maxima vs curvature minima
     exclusive_curv_minima = curv_minima & (~maxima)
     exclusive_maxima = maxima & (~curv_minima)
     max_and_curvmin = maxima & curv_minima
-    figure_curv_vs_max(x, y, exclusive_maxima, exclusive_curv_minima, max_and_curvmin, normed_curv, curvature_legit)
-    figure_curv_minima(x, y, curv_minima)
-    figure_curv_minima_curvature(x, y, curv_minima, normed_curv, curvature_legit)
+    fig, ax = figure_curv_vs_max(x, y, exclusive_maxima, exclusive_curv_minima, max_and_curvmin, normed_curv,
+                                 curvature_legit)
+    plt.savefig(out_folder + 'curv_vs_max.pdf')
+    fig, ax = figure_curv_minima(x, y, curv_minima)
+    plt.savefig(out_folder + 'curv_minima.pdf')
+    fig, ax = figure_curv_minima_curvature(x, y, curv_minima, normed_curv, curvature_legit)
+    plt.savefig(out_folder + 'curv_minima_curvature.pdf')
 
     # Classifying curvature minima
     normals, high_outliers, low_outliers = isolate_outliers(curvature[curv_minima & curvature_legit], 4)
     print 'Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
         low_outliers.sum(), normals.sum(), high_outliers.sum())
-    figure_curv_minima_classified(x, y, curv_minima, high_outliers, normals, low_outliers, normed_curv)
+    fig, ax = figure_curv_minima_classified(x, y, curv_minima, high_outliers, normals, low_outliers, normed_curv)
+    plt.savefig(out_folder + 'curv_minima_classified.pdf')
 
     # Curvature zeros
     curv_zeros = find_zeros(curvature)
-    figure_curv_zeros(x, y, curv_zeros, normed_curv)
+    fig, ax = figure_curv_zeros(x, y, curv_zeros, normed_curv)
+    plt.savefig(out_folder + 'curv_zeros.pdf')
 
     # Classifying curvature zeros
     running_local_variance = calc_running_local_variance(y, 2)
     mean_variance = running_local_variance.mean()
     median_variance = np.median(running_local_variance)
     print 'The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance)
-    figure_running_variance(x, y, curv_zeros, running_local_variance)
+    fig, ax = figure_running_variance(x, y, curv_zeros, running_local_variance)
+    plt.savefig(out_folder + 'running_variance.pdf')
 
     indices = np.arange(y.size, dtype=int)
     curv_minima_indices = indices[curv_minima]
@@ -813,26 +846,29 @@ def process_demo_1():
     likely_gaussian_feature_clipped = np.zeros(y.size, dtype=bool)
     likely_gaussian_feature_clipped[likely_gaussian_feature_indices_clipped] = True
 
-    suggested_low_bound_indices, suggested_high_bound_indices \
-        = pick_slope_anchors_mid_data(running_local_variance, likely_gaussian_feature_indices_clipped, curv_zeros, 0)
-    figure_slope_anchors_clipped(x, y, suggested_low_bound_indices,
+    suggested_low_bound_indices, suggested_high_bound_indices, no_good_background, extrapolated_background \
+        = pick_slope_anchors(running_local_variance, likely_gaussian_feature_indices_clipped, curv_zeros, 0)
+    fig, ax = figure_slope_anchors_clipped(x, y, suggested_low_bound_indices,
                                  suggested_high_bound_indices, likely_gaussian_feature_indices_clipped)
+    plt.savefig(out_folder + 'slope_anchors_clipped.pdf')
 
     slope, offset, intensity, sigma = gauss_guess(x, y, curvature, suggested_low_bound_indices,
                                                   suggested_high_bound_indices, likely_gaussian_feature_indices_clipped)
-    figure_naive_gauss_guess(x, y, suggested_low_bound_indices, suggested_high_bound_indices,
-                             likely_gaussian_feature_indices_clipped, slope, offset, intensity, sigma)
-
+    fig, ax = figure_naive_gauss_guess(x, y, suggested_low_bound_indices, suggested_high_bound_indices,
+                                       likely_gaussian_feature_indices_clipped, slope, offset, intensity, sigma)
+    plt.savefig(out_folder + 'naive_gauss_guess.pdf')
 
 process_demo_1()
 
 
 ##### Run scripts, optional #####
 
+
 # process_demo_1()
 # batch_demo()
 
-##### Not-yet-started and not-yet-used functions #####
+
+##### Not-yet-started and/or not-yet-used functions #####
 
 
 def endpoint_curvature_cheat(curvature):
