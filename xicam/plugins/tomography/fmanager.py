@@ -81,6 +81,7 @@ def add_function(function, subfunction, package=reconpkg.tomopy):
         func = fwidgets.FuncWidget(function, subfunction, package)
     functions.append(func)
     update()
+    return func
 
 
 def remove_function(index):
@@ -132,37 +133,39 @@ def lock_function_params(boolean):
         func.allReadOnly(boolean)
 
 
-def load_function_pipeline(yaml_file):
+def load_function_pipeline(yaml_file, setdefaults=False):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
-        set_function_pipeline(pipeline)
+        set_function_pipeline(pipeline, setdefaults=setdefaults)
 
 
-def set_function_pipeline(pipeline):
+def set_function_pipeline(pipeline, setdefaults=False):
     clear_functions()
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
                 if func == 'Reconstruction':
                     try:
-                        add_function(func, subfunc, package=reconpkg.packages[subfuncs[subfunc]['Package']])
+                        funcWidget = add_function(func, subfunc,
+                                                  package=reconpkg.packages[subfuncs[subfunc]['Package']])
                     except KeyError:
-                        add_function(func, subfunc)
+                        funcWidget = add_function(func, subfunc)
                 else:
-                    add_function(func, subfunc)
-                funcWidget = functions[currentindex]
+                    funcWidget = add_function(func, subfunc)
                 for param, value in subfuncs[subfunc].iteritems():
                     if param == 'Package':
                         continue
                     elif param == 'Input Functions':
-                        for ipf, sipf in value.iteritems():
-                            funcWidget.addInputFunction(ipf, list(sipf.keys())[0])
+                        for ipf, sipfs in value.iteritems():
+                            ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
+                            [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
                     else:
                         child = funcWidget.params.child(param)
                         child.setValue(value)
-                        child.setDefault(value)
+                        if setdefaults: child.setDefault(value)
             except (IndexError, AttributeError):
+                #raise
                 # TODO: make this failure more graceful
                 warnings.warn('Failed to load subfunction: ' + subfunc)
 
@@ -239,12 +242,15 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
         elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
             n = func.paramdict()['npad']
             cor_offset = lambda x: cor_scale(x) + n
-
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials, slc=slc))
-        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
+        if func.input_functions is not None:
+            params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
+                                                                            deepcopy(infunc.paramdict(update=update))}
+                                                                            for infunc in func.input_functions
+                                                                            if infunc is not None}
     lock_function_params(False)
-
     return funstack, widget.getsino(slc), partial(callback, params)
 
 

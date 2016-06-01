@@ -47,7 +47,7 @@ class plugin(base.plugin):
         # SETUP FEATURES
         fmanager.layout = self.functionwidget.functionsList
         self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
-        fmanager.load_function_pipeline('yaml/tomography/functionstack.yml')
+        fmanager.load_function_pipeline('yaml/tomography/functionstack.yml', setdefaults=True)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
