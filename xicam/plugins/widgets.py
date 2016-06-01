@@ -1485,6 +1485,46 @@ class fileTreeWidget(QtGui.QTreeView):
         self.show()
 
 
+class frameproptable(pg.TableWidget):
+    """
+    Widget for displaying hierarchical python data structures
+    (eg, nested dicts, lists, and arrays), adapted from pyqtgraph datatree.
+    """
+
+    def __init__(self, parent=None, data=None):
+        super(frameproptable, self).__init__(parent)
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setData(data)
+        self.setColumnCount(2)
+        self.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.horizontalHeader().setStretchLastSection(True)
+        self.verticalHeader().hide()
+        self.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding,QtGui.QSizePolicy.MinimumExpanding)
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+
+        useAsMenu = QtGui.QMenu(u'Use as...',parent=self.contextMenu)
+        useAsMenu.addAction('Beam Energy').triggered.connect(self.useAsEnergy)
+        self.contextMenu.addMenu(useAsMenu)
+
+    def setData(self,data):
+        if data is None:
+            self.setVisible(False)
+            return
+        data=data.items()
+        self.setHidden(len(data) == 0)
+        super(frameproptable, self).setData(data)
+
+    def sizeHint(self):
+        return QtCore.QSize(self.parent().width(),self.parent().height()/2)
+
+    def useAsEnergy(self):
+        print self.getSelectedKey()
+
+    def getSelectedKey(self):
+        return self.item(self.selectedIndexes()[0].row(),0).value
+
+
 def pixel2q(x, y, experiment):
     # SWITCH TO PYFAI GEOMETRY
 

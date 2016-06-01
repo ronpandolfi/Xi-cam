@@ -257,16 +257,16 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 
     if 'Detector Vertical' in paras1 and 'Detector Vertical' in paras2 and \
                     'Detector Horizontal' in paras1 and 'Detector Horizontal' in paras2:
-        positionY1 = float(paras1['Detector Vertical'])
-        positionY2 = float(paras2['Detector Vertical'])
-        positionX1 = float(paras1['Detector Horizontal'])
-        positionX2 = float(paras2['Detector Horizontal'])
+        positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
+        positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
+        positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
+        positionX2 = float(paras2[config.activeExperiment.mapHeader('Detector Horizontal')])
 
     I1 = 1
     I2 = 1
-    if 'I1 AI' in paras1 and 'I1 AI' in paras2:
-        I1 = float(paras1['I1 AI'])
-        I2 = float(paras2['I1 AI'])
+    if config.activeExperiment.mapHeader('I1 AI') in paras1 and config.activeExperiment.mapHeader('I1 AI') in paras2:
+        I1 = float(paras1[config.activeExperiment.mapHeader('I1 AI')])
+        I2 = float(paras2[config.activeExperiment.mapHeader('I1 AI')])
 
 
     deltaX = round((positionX2 - positionX1) / 0.172)

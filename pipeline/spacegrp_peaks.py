@@ -220,7 +220,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     # Rotation axis
     e_z = np.array([0, 0, 1], dtype=float)
     e_r = np.cross(e_norm, e_z)
-    e_r /= norm(e_r)
+    e_r /= (norm(e_r) if norm(e_r) != 0 else 1)
 
     # Angle of rotation
     theta = np.arccos(np.dot(e_z, e_norm))

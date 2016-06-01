@@ -11,7 +11,8 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import xglobals
-from pipeline import loader
+from pipeline import loader,pathtools
+
 
 NERSC_SYSTEMS = ['cori', 'edison']
 
@@ -31,7 +32,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = os.path.expanduser('~')
+        self.path = pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()

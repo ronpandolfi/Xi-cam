@@ -227,14 +227,15 @@ class spacegroupwidget(ParameterTree):
 
         self.rotationxyz = VectorParameter(name='Vector (x,y,z)')
         self.rotationvectorsample = hideableGroup(name='Rotation (sample-frame vector)', children=[self.rotationxyz])
-        self.rotationvectorsample.setValue([0,0,1])
+        self.rotationxyz.setValue([0,0,1])
 
         self.rotationuvw = VectorParameter(name='Vector (u,v,w)')
         self.rotationvectorcrystal = hideableGroup(name='Rotation (crystal-frame vector)', children=[self.rotationuvw])
-
+        self.rotationuvw.setValue([0,0,1])
 
         self.rotationhkl = VectorParameter(name='Vector (h,k,l)')
         self.rotationplane = hideableGroup(name='Rotation (crystal plane)', children=[self.rotationhkl])
+        self.rotationhkl.setValue([0,0,1])
 
         self.spacegroupeditors = [triclinicparameter(), monoclinicparameter(), orthorhombicparameter(),
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]

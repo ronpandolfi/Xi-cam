@@ -187,7 +187,7 @@ class plugin(base.plugin):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
-        self.imagePropModel.widgetchanged()
+        self.propertytable.setData(self.currentImage().dimg.headers)
 
 
     def openfiles(self, paths=None, operation=None, operationname=None):

@@ -8,6 +8,7 @@ from pyqtgraph.parametertree import Parameter
 import numpy as np
 
 
+
 class PyFAIGeometry(pyFAI.geometry.Geometry):
     def set_fit2d(self,
                   wavelength,
@@ -68,6 +69,12 @@ class experiment(Parameter):
             # Load the experiment from file
             with open(path, 'r') as f:
                 self.config = pickle.load(f)
+
+        self.headermap = {'Beam Energy':'Beam Energy',
+                          'Sample Alpha Stage':'Sample Alpha Stage',
+                          'Detector Vertical':'Detector Vertical',
+                          'Detector Horizontal':'Detector Horizontal',
+                          'I1 AI':'I1 AI'}
 
     # Make the mask accessible as a property
     @property
@@ -192,6 +199,11 @@ class experiment(Parameter):
         return (self.getvalue('Pixel Size X') > 0) and (self.getvalue('Pixel Size Y') > 0) and (
             self.getvalue('Detector Distance') > 0)
 
+    def setHeaderMap(self,xikey,headerkey):
+        self.headermap[xikey]=headerkey
+
+    def mapHeader(self,xikey):
+        return self.headermap[xikey]
 
 activeExperiment = experiment()
 
