@@ -61,7 +61,7 @@ def loadUi():
     saveaction.setIcon(icon)
     refreshaction = QtGui.QAction(filefuncmenu)
     refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
-                                                           'yaml/tomography/functionstack.yml'))
+                                                           'yaml/tomography/default_pipeline.yml'))
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     refreshaction.setIcon(icon)

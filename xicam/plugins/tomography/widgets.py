@@ -81,13 +81,15 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-        self.cor = self.data.shape[1]/2
+        self.cor = float(self.data.shape[1])/2.0
 
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
         if fmanager.recon_function is not None:
             center_param = fmanager.recon_function.params.child('center')
-            self.projectionViewer.sigCenterChanged.connect(
-                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
+            # manual center widget, but this limits the center options to a resolution of 0.5
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
@@ -265,6 +267,8 @@ class StackViewer(ImageView):
         self.view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
         self.view_spinBox.setRange(0, data.shape[0] - 1)
+        self.view_spinBox.setKeyboardTracking(False)
+
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.view_label)
@@ -419,7 +423,7 @@ class ProjectionViewer(QtGui.QWidget):
     """
     Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
     """
-    sigCenterChanged = QtCore.Signal(int)
+    sigCenterChanged = QtCore.Signal(float)
 
     def __init__(self, data, view_label=None, center=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)

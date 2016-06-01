@@ -242,9 +242,9 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
         elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
             n = func.paramdict()['npad']
             cor_offset = lambda x: cor_scale(x) + n
-        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials, slc=slc))
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
         if func.input_functions is not None:
             params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
                                                                             deepcopy(infunc.paramdict(update=update))}

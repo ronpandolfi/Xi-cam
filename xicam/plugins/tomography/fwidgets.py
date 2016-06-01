@@ -189,9 +189,12 @@ class FuncWidget(FeatureWidget):
             self.wireup()
         return self._form
 
-    def updateParamsDict(self):
+    def updateParamsDict(self): #TODO WHY IS MY CENTER BEING CAST TO AN INTEGER!!!!!!
         for param in self.params.children():
-            self.param_dict.update({param.name(): param.value()})
+            value, vtype = param.value(), eval(param.type())
+            # if not isinstance(param.value(), vtype) and value is not None and vtype is not list: # Why do I need to take care of pg Parameter types???
+            #     value = vtype(value)
+            self.param_dict.update({param.name(): value})
         return self.param_dict
 
     @property
@@ -403,7 +406,8 @@ class ReconFuncWidget(FuncWidget):
                     self.param_dict['filter_par'][1] = i
                 else:
                     self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().widget.addPreview,
+                p.append(fmanager.pipeline_preview_action(widget,
+                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
                                                           update=False))
             map(lambda p: fmanager.run_preview_recon(*p), p)
 
