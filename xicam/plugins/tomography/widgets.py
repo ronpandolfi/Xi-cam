@@ -84,13 +84,16 @@ class TomoViewer(QtGui.QWidget):
         self.cor = float(self.data.shape[1])/2.0
 
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
+        self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         if fmanager.recon_function is not None:
             center_param = fmanager.recon_function.params.child('center')
             # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
             # manual center widget, but this limits the center options to a resolution of 0.5
             # self.projectionViewer.sigCenterChanged.connect(
             #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
+            self.projectionViewer.setCenterButton.clicked.connect(
+                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
@@ -385,10 +388,6 @@ class ROImageOverlay(pg.ROI):
                     self.isMoving = True
                     self.preMoveState = self.getState()
                     self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
-                    # if self._y_constrained:
-                    #     self.cursorOffset[1] = 0  # constrain motion to horizontal axis
-                    # elif self._x_constrained:
-                    #     self.cursorOffset[0] = 0  # constrain motion to vertical axis
                     self.sigRegionChangeStarted.emit(self)
                     ev.accept()
                 else:
@@ -415,6 +414,10 @@ class ROImageOverlay(pg.ROI):
             self.translate(pg.Point((1, 0)))
         elif ev.key() == QtCore.Qt.Key_Left:
             self.translate(pg.Point((-1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Up:
+            self.translate(pg.Point((0, 1)))
+        elif ev.key() == QtCore.Qt.Key_Down:
+            self.translate(pg.Point((0, -1)))
         ev.accept()
 
 
@@ -438,6 +441,9 @@ class ProjectionViewer(QtGui.QWidget):
         # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
         self.imageItem.sigImageChanged.connect(self.roi.updateImage)
         self.stackViewer.view.addItem(self.roi)
+        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
+
+        self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
 
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
@@ -445,15 +451,19 @@ class ProjectionViewer(QtGui.QWidget):
         clabel = QtGui.QLabel('Rotation Center:')
         clabel.setAlignment(QtCore.Qt.AlignRight)
         olabel = QtGui.QLabel('Offset:')
-        self.centerBox = QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox.setDecimals(1)
+        self.setCenterButton = QtGui.QPushButton('Set in Pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
+        originBox.setText('x={}   y={}'.format(0, 0))
         center = center if center is not None else data.shape[1]/2.0
-        self.centerBox.setText(str(center))
+        self.centerBox.setValue(center) #setText(str(center))
         h1 = QtGui.QHBoxLayout()
         h1.setAlignment(QtCore.Qt.AlignLeft)
         h1.setContentsMargins(0, 0, 0, 0)
         h1.addWidget(clabel)
         h1.addWidget(self.centerBox)
+        h1.addWidget(self.setCenterButton)
         h1.addWidget(olabel)
         h1.addWidget(originBox)
 
@@ -484,14 +494,13 @@ class ProjectionViewer(QtGui.QWidget):
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
 
-        self.centerBox.setFixedWidth(spinBox.width())
         spinBox.setFixedWidth(spinBox.width())
         v = QtGui.QVBoxLayout(self.cor_widget)
         v.addLayout(h1)
         v.addLayout(h2)
         v.addWidget(slider)
 
-        l = QtGui.QVBoxLayout(self)
+        l = QtGui.QGridLayout(self) # VBoxLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
@@ -516,15 +525,17 @@ class ProjectionViewer(QtGui.QWidget):
 
     def setCenter(self, x, y):
         center = (self.data.shape[1] + x)/2.0
-        self.centerBox.setText(str(center))
+        self.centerBox.setValue(center) # setText(str(center))
         self.sigCenterChanged.emit(center)
 
     def hideCenterDetection(self):
         self.cor_widget.hide()
+        self.roi_histogram.hide()
         self.roi.setVisible(False)
 
     def showCenterDetection(self):
         self.cor_widget.show()
+        self.roi_histogram.show()
         self.roi.setVisible(True)
 
     def updateROIFromCenter(self, center):
@@ -547,7 +558,6 @@ class ProjectionViewer(QtGui.QWidget):
             self.roi.currentImage = overlay
             self.roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
-            # self.stackViewer.getHistogramWidget().setImageItem(self.stackViewer.imageItem)
             self.stackViewer.updateImage()
             self.normalized = True
         elif not val and self.normalized:
@@ -587,7 +597,7 @@ class PreviewViewer(QtGui.QSplitter):
         l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
         self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set Pipeline")
+        self.setPipelineButton.setText("Set As Pipeline")
         l.addWidget(self.functionform)
         l.addWidget(self.setPipelineButton)
         panel = QtGui.QWidget(self)
