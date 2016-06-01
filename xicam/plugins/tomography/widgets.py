@@ -216,9 +216,20 @@ class TomoViewer(QtGui.QWidget):
 
 class ImageView(pg.ImageView):
     """
-    Subclass of PG ImageView to correct z-slider signal behavior.
+    Subclass of PG ImageView to correct z-slider signal behavior, and add coordinate label.
     """
     sigDeletePressed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(ImageView, self).__init__(*args, **kwargs)
+        self.scene.sigMouseMoved.connect(self.mouseMoved)
+
+        self.coordsLabel = QtGui.QLabel(' ', parent=self)
+        self.coordsLabel.setMinimumHeight(16)
+        self.layout().addWidget(self.coordsLabel)
+        self.coordsLabel.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%)")
+
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -250,6 +261,20 @@ class ImageView(pg.ImageView):
                 return (0,t)
             ind = inds[-1,0]
         return ind, t
+
+    def mouseMoved(self, ev):
+        pos = ev
+        viewBox = self.imageItem.getViewBox()
+        try:
+            if viewBox.sceneBoundingRect().contains(pos):
+                mousePoint = viewBox.mapSceneToView(pos)
+                x, y = map(int, (mousePoint.x(), mousePoint.y()))
+                if (0 < x < self.imageItem.image.shape[0]) & (0 <  y < self.imageItem.image.shape[1]):  # within bounds
+                    self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x={0},"
+                                             u"   <span style=''>y={1}</span>,   <span style=''>I={2}</span>"\
+                                             .format(x, y, self.imageItem.image[x, y]))
+        except AttributeError:
+            pass
 
 
 class StackViewer(ImageView):
