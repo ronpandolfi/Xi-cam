@@ -241,8 +241,8 @@ class spacegroupwidget(ParameterTree):
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]
         self.rotations = [self.rotationvectorsample, self.rotationvectorcrystal, self.rotationplane]
 
-        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=1.)
-        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=1.)
+        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=2.236E-06)
+        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=-1.8790E-09)
         self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.beta, self.gamma])
 
         self.redrawsg = pTypes.ActionParameter(name='Overlay space group')
@@ -272,10 +272,13 @@ class spacegroupwidget(ParameterTree):
 
 
         activelatticetype = self.activelatticetype()
+        SG = self.spacegroupparameter.value()
+        refbeta = self.beta.value()
+        refgamma = self.gamma.value()
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], order=2)
+                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refgamma=refgamma,refbeta=refbeta,order=2,unitcell=None,space_grp=SG)
         for key in peaks:
             from xicam import config
             print key + " -> " + str(peaks[key])
@@ -473,6 +476,7 @@ cubicspacegroupnames = ['P23', 'F23', 'I23', u'P2₁3', u'I2₁3', 'Pm-3', 'Pn-3
                         'F432', u'F4₁32', 'I432', u'P4₃32', u'P4₁32', u'I4₁32', 'P-43m', 'F-43m', 'I-43m', 'P-43n',
                         'F-43c', 'I-43d',
                         'Pm-3m', 'Pn-3n', 'Pm-3n', 'Pn-3m', 'Fm-3m', 'Fm-3c', 'Fd-3m', 'Fd-3c', 'Im-3m', 'Ia-3d']
-spacegroupnames = [triclinicspacegroupnames, monoclinicspacegroupnames, orhorhombicspacegroupnames,
-                   tetragonalspacegroupnames, trigonalspacegroupnames, hexagonalspacegroupnames, cubicspacegroupnames]
+import sgexclusions
+spacegroupnames = [sgexclusions.Triclinic.conditions.keys(), sgexclusions.Monoclinic.conditions.keys(), sgexclusions.Orthorhombic.conditions.keys(),
+                   sgexclusions.Tetragonal.conditions.keys(), sgexclusions.Trigonal.conditions.keys(), sgexclusions.Hexagonal.conditions.keys(), sgexclusions.Cubic.conditions.keys()]
 spacegrouptypes = ['Triclinic', 'Monoclinic', 'Orthorhombic', 'Tetragonal', 'Trigonal', 'Hexagonal', 'Cubic']

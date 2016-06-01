@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 from numpy.linalg import norm
 from scipy.optimize import root
+import sgexclusions
 
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
@@ -147,7 +148,7 @@ def jacobian(x, G, alphai, k):
         return jac
 
 def reflection_condtion(hkl, unitcell, space_grp):
-    if space_grp is None and unitcell is None:
+    if unitcell is None:
         return True
     tot = 0.
     c = -2 * np.pi * np.complex(0, 1)
@@ -188,7 +189,7 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
     return pixels.astype(int)
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
-               norm_type="uvw", wavelen=0.123984e-9, order=3, unitcell=None, space_grp=None):
+               norm_type="uvw", wavelen=0.123984e-9, refgamma=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
 
     if alpha is not None: alpha = np.deg2rad(alpha)
@@ -234,14 +235,15 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     c = V[:, 2]
     RV = reciprocalvectors(a, b, c)
 
-    nu = 1 - np.complex(2.236E-06, -1.8790E-09)
+    nu = 1 - np.complex(refgamma,refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
     alphai = np.deg2rad(0.2)
     k = 2 * np.pi / wavelen
     peaks = dict()
     for hkl in HKL:
         if hkl[2] < 0: continue
-        if (reflection_condtion(hkl, space_grp, unitcell)):
+        if not sgexclusions.check(hkl,space_grp): continue
+        if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
             transmission = [np.NaN, np.NaN]
             reflection = [np.NaN, np.NaN]
