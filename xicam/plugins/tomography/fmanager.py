@@ -239,15 +239,22 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        elif func.func_name == 'Pad' and func.paramdict()['axis'] == 2:
-            n = func.paramdict()['npad']
+        elif func.func_name == 'Pad' and func.getParamDict(update=update)['axis'] == 2:
+            n = func.getParamDict()['npad']
             cor_offset = lambda x: cor_scale(x) + n
+        elif func.func_name == 'Downsample' and func.getParamDict(update=update)['axis'] == 2:
+            s = func.getParamDict(update=update)['level']
+            cor_scale = lambda x: x/2**s
+        elif func.func_name == 'Upsample' and func.getParamDict()['axis'] == 2:
+            s = func.getParamDict(update=update)['level']
+            cor_scale = lambda x: x*2**s
+
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials, slc=slc))
-        params[func.func_name] = {func.subfunc_name: deepcopy(func.paramdict(update=update))}
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
         if func.input_functions is not None:
             params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
-                                                                            deepcopy(infunc.paramdict(update=update))}
+                                                                            deepcopy(infunc.getParamDict(update=update))}
                                                                             for infunc in func.input_functions
                                                                             if infunc is not None}
     lock_function_params(False)
@@ -296,7 +303,7 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
     lock_function_params(True)
     partials, params = [], OrderedDict()
     for f in functions:
-        params[f.subfunc_name] = deepcopy(f.paramdict(update=update))
+        params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
 

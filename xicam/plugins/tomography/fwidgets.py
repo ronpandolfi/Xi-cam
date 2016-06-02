@@ -199,7 +199,7 @@ class FuncWidget(FeatureWidget):
 
     @property
     def partial(self):
-        kwargs = dict(self.paramdict(), **self.kwargs_complement)
+        kwargs = dict(self.getParamDict(), **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -223,7 +223,7 @@ class FuncWidget(FeatureWidget):
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
 
-    def paramdict(self, update=True):
+    def getParamDict(self, update=True):
         if update:
             self.updateParamsDict()
         return self.param_dict
@@ -375,6 +375,7 @@ class ReconFuncWidget(FuncWidget):
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
+        self.params.child('center').setDefault(value)
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))

@@ -188,9 +188,21 @@ class TomoViewer(QtGui.QWidget):
         self._recon_path = os.path.dirname(out_name)
 
     def addSlicePreview(self, params, recon):
-        npad = int((recon.shape[1] - self.data.shape[1]) / 2)
-        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
-        self.previewViewer.addPreview(recon, params)
+        # if recon.shape[1] > self.data.shape[1]:
+        #     QtGui.QMessageBox.information(self, 'Padding or Upsampling in Reconstruction',
+        #                                   'The current preview reconstruction is larger than the expected {0}x{0} '
+        #                                   'pixels. \n The reconstructed image will be cropped to fit the preview '
+        #                                   'window'.format(self.data.shape[1]))
+        #     npad = int((recon.shape[1] - self.data.shape[1]) / 2)
+        #     recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
+        # elif recon.shape[1] < self.data.shape[1]:
+        #     QtGui.QMessageBox.information(self, 'Cropping or Downsampling in Reconstruction',
+        #                                   'The current preview reconstruction is smaller than the expected {0}x{0} '
+        #                                   'pixels.\n The reconstructed image will be padded with zeros to fit the'
+        #                                   ' preview window'.format(self.data.shape[1]))
+        #     pad = int(self.data.shape[1] - recon.shape[1])/2
+        #     recon = np.pad(recon, ((0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)[0]
+        self.previewViewer.addPreview(recon[0], params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
@@ -1166,16 +1178,16 @@ class ArrayDeque(deque):
         return np.min(min(self, key=lambda x:np.min(x)))
 
     def append(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        if self.dtype is not None and arr.dtype != self.dtype:
             raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).append(arr)
 
     def appendleft(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        if self.dtype is not None and arr.dtype != self.dtype:
             raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).appendleft(arr)
 
