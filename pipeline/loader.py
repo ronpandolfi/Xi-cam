@@ -513,7 +513,7 @@ class diffimage():
     def detector(self):
         if self._detector is None:
             if self.data is not None:
-                name, detector, binning = self.finddetector()
+                name, detector = self.finddetector()
             else:
                 return None
 
@@ -527,8 +527,8 @@ class diffimage():
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1*binning)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2*binning)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                     self.experiment.setvalue('Detector', detector.name)
         return self._detector
 
@@ -541,14 +541,15 @@ class diffimage():
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector, 1
+                    return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
                         print 'Detector found with binning: ' + name
-                        return name, detector, binning
+                        detector.set_binning(binning)
+                        return name, detector
         return None, None
         raise ValueError('Detector could not be identified!')
 
@@ -1069,7 +1070,7 @@ class diffimage2(object):
     def detector(self):
         if self._detector is None:
             if self.rawdata is not None:
-                name, detector, binning = self.finddetector()
+                name, detector = self.finddetector()
             else:
                 return None
 
@@ -1083,8 +1084,8 @@ class diffimage2(object):
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1 * binning)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2 * binning)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
                     self.experiment.setvalue('Detector', detector.name)
         return self._detector
 
@@ -1095,14 +1096,15 @@ class diffimage2(object):
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector, 1
+                    return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
                         print 'Detector found with binning: ' + name
-                        return name, detector, binning
+                        detector.set_binning(binning)
+                        return name, detector
         return None, None, None
 
 

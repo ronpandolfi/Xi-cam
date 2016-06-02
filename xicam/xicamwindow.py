@@ -23,6 +23,7 @@ import pipeline
 import qdarkstyle
 import plugins
 from xicam import xglobals
+import numpy as np
 
 
 class MyMainWindow():
@@ -99,14 +100,11 @@ class MyMainWindow():
         # self.updatepreprocessing()
         ##
         testmenu = QtGui.QMenu('Testing')
-        single=QtGui.QAction('Single frame',testmenu)
-        single.triggered.connect(self.singletest)
-        stack=QtGui.QAction('Image stack',testmenu)
-        stack.triggered.connect(self.stacktest)
-        timeline=QtGui.QAction('Timeline',testmenu)
-        timeline.triggered.connect(self.timelinetest)
+        testmenu.addAction('Single frame').triggered.connect(self.singletest)
+        testmenu.addAction('Image stack').triggered.connect(self.stacktest)
+        testmenu.addAction('Timeline').triggered.connect(self.timelinetest)
+        testmenu.addAction('Tilt').triggered.connect(self.tilttest)
 
-        testmenu.addActions([single,stack,timeline])
         self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
@@ -121,6 +119,16 @@ class MyMainWindow():
     def timelinetest(self):
         import glob
         self.openfiles(sorted(list(set(glob.glob('/media/mac/Users/rp/YL1031/YL1031*.edf'))-set(glob.glob('/media/mac/Users/rp/YL1031/*remeshed.edf')))))
+
+    def tilttest(self):
+        config.activeExperiment.setvalue('Detector Distance',2.46269726489*79*.001)
+        config.activeExperiment.setvalue('Detector Rotation',4.69729438873 * 360./(2.*np.pi)-180.)
+        config.activeExperiment.setvalue('Detector Tilt',0.503226642865/(2.*np.pi)*360.)
+        config.activeExperiment.setvalue('Wavelength',0.97621599151)
+        config.activeExperiment.setvalue('Center X',969.878684978)
+        config.activeExperiment.setvalue('Center Y',2048-2237.93277884)
+        self.openfiles(['/home/rp/Downloads/lab6_041016_rct5_0001.tif'])
+
 
     def closeEvent(self, ev):  # Never called???
         ev.accept()

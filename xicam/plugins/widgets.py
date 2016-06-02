@@ -13,6 +13,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, reg
 from xicam import dialogs
 from xicam import xglobals
 import scipy
+from pipeline import variation
 
 
 class OOMTabItem(QtGui.QWidget):
@@ -1069,25 +1070,31 @@ class timelineViewer(dimgViewer):
         self.plotvariation()
 
     def rescan(self):
-        return
+        #return
         self.cleartimeline()
         variationoperators.experiment = config.activeExperiment
-        variation = self.simg.scan(self.operationindex)
-        self.plotvariation(variation)
 
-        for roi in self.viewbox.addedItems:
-            # try:
-            if hasattr(roi, 'isdeleting'):
-                if not roi.isdeleting:
-                    roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem)
-                    variation = self.simg.scan(self.operationindex, roi)
-                    self.plotvariation(variation, [0, 255, 255])
+        xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
-                else:
-                    self.viewbox.removeItem(roi)
-                    # except Exception as ex:
-                    # print 'Warning: error displaying ROI variation.'
-                    #    print ex.message
+        # variation = self.simg.scan(self.operationindex)
+        # self.plotvariation(variation)
+
+        # for roi in self.viewbox.addedItems:
+        #     # try:
+        #     if hasattr(roi, 'isdeleting'):
+        #         if not roi.isdeleting:
+        #             roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem)
+        #             variation = self.simg.scan(self.operationindex, roi)
+        #             self.plotvariation(variation, [0, 255, 255])
+        #
+        #         else:
+        #             self.viewbox.removeItem(roi)
+        #             # except Exception as ex:
+        #             # print 'Warning: error displaying ROI variation.'
+        #             #    print ex.message
+
+    def testreceive(self,*args,**kwargs):
+        print 'Received:',args, kwargs
 
     def setvariationmode(self, index):
         print 'operationset:', index

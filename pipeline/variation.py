@@ -6,7 +6,10 @@ import variationoperators
 
 
 
-
+def scanvariation(filepaths):
+    simg = loader.multifilediffimage2(filepaths)
+    for t in range(len(simg)):
+        variationoperators.chisquared(simg,t,None)
 
 
 
