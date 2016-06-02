@@ -230,8 +230,21 @@ def pipeline_preview_action(widget, callback, update=True, slc=None):
     return construct_preview_pipeline(widget, callback, update=update, slc=slc)
 
 
+def correct_center(func):
+    global cor_offset, cor_scale
+    if func.func_name == 'Pad' and func.getParamDict(update=update)['axis'] == 2:
+        n = func.getParamDict()['npad']
+        cor_offset = lambda x: cor_scale(x) + n
+    elif func.func_name == 'Downsample' and func.getParamDict(update=update)['axis'] == 2:
+        s = func.getParamDict(update=update)['level']
+        cor_scale = lambda x: x / 2 ** s
+    elif func.func_name == 'Upsample' and func.getParamDict()['axis'] == 2:
+        s = func.getParamDict(update=update)['level']
+        cor_scale = lambda x: x * 2 ** s
+
+
 def construct_preview_pipeline(widget, callback, update=True, slc=None):
-    global functions, cor_offset, cor_scale
+    global functions
 
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
@@ -239,16 +252,8 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     for func in functions:
         if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
             continue
-        elif func.func_name == 'Pad' and func.getParamDict(update=update)['axis'] == 2:
-            n = func.getParamDict()['npad']
-            cor_offset = lambda x: cor_scale(x) + n
-        elif func.func_name == 'Downsample' and func.getParamDict(update=update)['axis'] == 2:
-            s = func.getParamDict(update=update)['level']
-            cor_scale = lambda x: x/2**s
-        elif func.func_name == 'Upsample' and func.getParamDict()['axis'] == 2:
-            s = func.getParamDict(update=update)['level']
-            cor_scale = lambda x: x*2**s
-
+        elif func.func_name in ('Pad', 'Downsample', 'Upsample'):
+            correct_center(func)
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials, slc=slc))
         params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
@@ -303,6 +308,11 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
     lock_function_params(True)
     partials, params = [], OrderedDict()
     for f in functions:
+        if not f.previewButton.isChecked() and f.func_name != 'Reconstruction':
+            continue
+        elif f.func_name in ('Pad', 'Downsample', 'Upsample'):
+            correct_center(f)
+
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
