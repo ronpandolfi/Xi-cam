@@ -146,16 +146,24 @@ class experiment(Parameter):
         :rtype : pyFAI.AzimuthalIntegrator
         """
         # print(self.getDetector().MAX_SHAPE)
-        AI = pyFAI.AzimuthalIntegrator(dist=self.getvalue('Detector Distance'),
-                                       poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
-                                       poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       pixel1=self.getvalue('Pixel Size Y'),
-                                       pixel2=self.getvalue('Pixel Size X'),
-                                       detector=self.getDetector(),
+        AI = pyFAI.AzimuthalIntegrator(
                                        wavelength=self.getvalue('Wavelength'))
+        #                                dist=self.getvalue('Detector Distance'),
+        #                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+        #                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+        #                                rot1=0,
+        #                                rot2=0,
+        #                                rot3=0,
+        #                                pixel1=self.getvalue('Pixel Size Y'),
+        #                                pixel2=self.getvalue('Pixel Size X'),
+        #                                detector=self.getDetector(),
+        AI.setFit2D(self.getvalue('Detector Distance')*1000.,
+                    self.getvalue('Center X'),
+                    self.getvalue('Center Y'),
+                    self.getvalue('Detector Tilt'),
+                    360.-self.getvalue('Detector Rotation'),
+                    self.getvalue('Pixel Size Y')*1.e6,
+                    self.getvalue('Pixel Size X')*1.e6)
         #print AI
         return AI
 
@@ -174,6 +182,14 @@ class experiment(Parameter):
                                 pixel2=self.getvalue('Pixel Size X'),
                                 detector=self.getDetector(),
                                 wavelength=self.getvalue('Wavelength'))
+        # geo = PyFAIGeometry(wavelength=self.getvalue('Wavelength'))
+        # geo.setFit2D(self.getvalue('Detector Distance'),
+        #             self.getvalue('Center Y'),
+        #             self.getvalue('Center X'),
+        #             self.getvalue('Detector Tilt'),
+        #             360.-self.getvalue('Detector Rotation'),
+        #             self.getvalue('Pixel Size Y')*1.e6,
+        #             self.getvalue('Pixel Size X')*1.e6)
         # print AI
 
         return geo
