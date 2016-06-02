@@ -714,6 +714,89 @@ def figure_naive_gauss_guess(x, y, low_bound_indices, high_bound_indices, featur
 ##### Complex script functions #####
 
 
+def process_demo_1():
+    out_folder = 'process_demo_1_figures/'
+    # Data intake
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
+    file1 = 'Sample2_30x30_t60_0069_1D.csv'
+    data1 = np.genfromtxt(data_folder + file1, delimiter=',')
+    (length, width) = data1.shape  # (1096, 2)
+    # The data is for some reason doubled.  Quick 2-line fix.
+    length = length / 2
+    data1 = data1[0:length, :]
+    x = data1[:, 0]
+    y = data1[:, 1]
+
+    # Local maxima
+    maxima = local_maxima_detector(y)
+    print 'Initially detected %i local maxima.' % maxima.sum()
+    fig, ax = figure_initial_maxima(x, y, maxima)
+    plt.savefig(out_folder + 'initial_maxima.pdf')
+    #    plt.savefig(out_folder + '.pdf')
+
+    # Curvature
+    curvature = noiseless_curvature(x, y)
+    normed_curv = curvature / (real_max(curvature) - real_min(curvature))
+    curvature_legit = ~np.isnan(curvature)
+    curv_minima = local_minima_detector(curvature)
+    fig, ax = figure_maxima_curvature(x, y, maxima, normed_curv, curvature_legit)
+    plt.savefig(out_folder + 'maxima_curvature.pdf')
+
+    # Maxima vs curvature minima
+    exclusive_curv_minima = curv_minima & (~maxima)
+    exclusive_maxima = maxima & (~curv_minima)
+    max_and_curvmin = maxima & curv_minima
+    fig, ax = figure_curv_vs_max(x, y, exclusive_maxima, exclusive_curv_minima, max_and_curvmin, normed_curv,
+                                 curvature_legit)
+    plt.savefig(out_folder + 'curv_vs_max.pdf')
+    fig, ax = figure_curv_minima(x, y, curv_minima)
+    plt.savefig(out_folder + 'curv_minima.pdf')
+    fig, ax = figure_curv_minima_curvature(x, y, curv_minima, normed_curv, curvature_legit)
+    plt.savefig(out_folder + 'curv_minima_curvature.pdf')
+
+    # Classifying curvature minima
+    normals, high_outliers, low_outliers = isolate_outliers(curvature[curv_minima & curvature_legit], 4)
+    print 'Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
+        low_outliers.sum(), normals.sum(), high_outliers.sum())
+    fig, ax = figure_curv_minima_classified(x, y, curv_minima, high_outliers, normals, low_outliers, normed_curv)
+    plt.savefig(out_folder + 'curv_minima_classified.pdf')
+
+    # Curvature zeros
+    curv_zeros = find_zeros(curvature)
+    fig, ax = figure_curv_zeros(x, y, curv_zeros, normed_curv)
+    plt.savefig(out_folder + 'curv_zeros.pdf')
+
+    # Classifying curvature zeros
+    running_local_variance = calc_running_local_variance(y, 2)
+    mean_variance = running_local_variance.mean()
+    median_variance = np.median(running_local_variance)
+    print 'The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance)
+    fig, ax = figure_running_variance(x, y, curv_zeros, running_local_variance)
+    plt.savefig(out_folder + 'running_variance.pdf')
+
+    indices = np.arange(y.size, dtype=int)
+    curv_minima_indices = indices[curv_minima]
+    likely_gaussian_feature_indices = curv_minima_indices[low_outliers]
+    likely_gaussian_features = np.zeros(y.size, dtype=bool)
+    likely_gaussian_features[likely_gaussian_feature_indices] = True
+
+    likely_gaussian_feature_indices_clipped = likely_gaussian_feature_indices[1:-1]
+    likely_gaussian_feature_clipped = np.zeros(y.size, dtype=bool)
+    likely_gaussian_feature_clipped[likely_gaussian_feature_indices_clipped] = True
+
+    suggested_low_bound_indices, suggested_high_bound_indices, no_good_background, extrapolated_background \
+        = pick_slope_anchors(running_local_variance, likely_gaussian_feature_indices_clipped, curv_zeros, 0)
+    fig, ax = figure_slope_anchors_clipped(x, y, suggested_low_bound_indices,
+                                           suggested_high_bound_indices, likely_gaussian_feature_indices_clipped)
+    plt.savefig(out_folder + 'slope_anchors_clipped.pdf')
+
+    slope, offset, intensity, sigma = gauss_guess(x, y, curvature, suggested_low_bound_indices,
+                                                  suggested_high_bound_indices, likely_gaussian_feature_indices_clipped)
+    fig, ax = figure_naive_gauss_guess(x, y, suggested_low_bound_indices, suggested_high_bound_indices,
+                                       likely_gaussian_feature_indices_clipped, slope, offset, intensity, sigma)
+    plt.savefig(out_folder + 'naive_gauss_guess.pdf')
+
+
 def batch_demo():
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
     file_list = listdir(data_folder)
@@ -776,8 +859,109 @@ def batch_demo():
 ##### WIP functions #####
 
 
-def process_demo_1():
-    out_folder = 'process_demo_1_figures/'
+def smoother(y):
+    pass
+
+
+def binner(y, nbins, npix):
+    pass
+
+
+def convolution_smoother(y, kernel):
+    pass
+
+
+def mean_smoother(y, n):
+    pass
+
+
+def median_smoother(y, n):
+    pass
+
+
+def edge_preserving_smoothing(y, mysteries):
+    pass
+
+
+def curvature_from_quadratic_approximation(x, y, n):
+    a, b, c = local_quadratic_approximation(x, y, n)
+    curvature = 2 * a
+    return curvature
+
+
+def local_quadratic_approximation(x, y, n):
+    x_stacked = shift_stack(x, n, n)
+    y_stacked = shift_stack(y, n, n)
+    a, b, c = quadratic_approximation(x_stacked, y_stacked)
+    return a, b, c
+
+
+def quadratic_approximation(x, y):
+    return a, b, c
+
+
+def pseudo_voigt(x, x0, gamma, sigma):
+    fwhm_gauss = 2 * (2 * np.log(2)) ** 0.5 * sigma
+    fwhm_lorentz = 2 * gamma
+    # Approximation to the FWHM of the Voigt distribution, accurate to 0.02%, taken from Wikipedia
+    fwhm_voigt = 0.5346 * fwhm_lorentz + (0.2166 * fwhm_lorentz ** 2 + fwhm_gauss ** 2) ** 0.5
+    # Formula for a good pseudo-Voigt approximation, accurate to 1%, taken from Wikipedia
+    # *f* and *eta* are constants used in that approximation
+    f = (fwhm_gauss ** 5 + 2.69269 * fwhm_gauss ** 4 * fwhm_lorentz + 2.42843 * fwhm_gauss ** 3 * fwhm_lorentz ** 2
+         + 4.47163 * fwhm_gauss ** 2 * fwhm_lorentz ** 3 + 0.07842 * fwhm_gauss * fwhm_lorentz ** 4 + fwhm_lorentz ** 5) ** 0.2
+    eta = 1.36603 * (fwhm_lorentz / f) - 0.47719 * (fwhm_lorentz / f) ** 2 + 0.11116 * (fwhm_lorentz / f) ** 3
+    gauss_profile = gaussian(x, x0, sigma)
+    lorentz_profile = lorentzian(x, x0, gamma)
+    pseudo_voigt_profile = eta * lorentz_profile + (1 - eta) * gauss_profile
+    return pseudo_voigt_profile, fwhm_voigt
+
+
+def lorentzian(x, x0, gamma):
+    pass
+
+
+def gaussian(x, x0, sigma):
+    pass
+
+
+def departure_from_linear(y, n):
+    pass
+
+
+def departure_from_model(y, model):
+    pass
+
+
+def collect_metrics(x, y):
+    pass
+
+
+def discriminator():
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
+    file_list = listdir(data_folder)
+
+    #    metrics = np.zeros(stuff, stuffy stuff)
+    for ii in file_list:
+        print "Reading file %s." % ii
+        #        name_string = ii[6:-7]
+        # Data intake
+        data = np.genfromtxt(data_folder + ii, delimiter=',')
+        (length, width) = data.shape  # (1096, 2)
+        # The data is for some reason doubled.  Quick 2-line fix.
+        length = length / 2
+        data = data[0:length, :]
+        x = data[:, 0]
+        y = data[:, 1]
+        #        name_location_string = out_dir + ii[:-7] + '_'
+        metrics_ii = collect_metrics(x, y)
+
+
+# amorphous_labels = np.array([])
+#    broad_base_labels = np.array([])
+
+
+def process_demo_2():
+    out_folder = 'process_demo_2_figures/'
     # Data intake
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
     file1 = 'Sample2_30x30_t60_0069_1D.csv'
@@ -858,7 +1042,7 @@ def process_demo_1():
                                        likely_gaussian_feature_indices_clipped, slope, offset, intensity, sigma)
     plt.savefig(out_folder + 'naive_gauss_guess.pdf')
 
-process_demo_1()
+process_demo_2()
 
 
 ##### Run scripts, optional #####
@@ -866,7 +1050,7 @@ process_demo_1()
 
 # process_demo_1()
 # batch_demo()
-
+# process_demo_2()
 
 ##### Not-yet-started and/or not-yet-used functions #####
 
