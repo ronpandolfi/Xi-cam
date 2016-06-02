@@ -81,14 +81,19 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-        self.cor = self.data.shape[1]/2
+        self.cor = float(self.data.shape[1])/2.0
 
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
+        self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         if fmanager.recon_function is not None:
             center_param = fmanager.recon_function.params.child('center')
-            self.projectionViewer.sigCenterChanged.connect(
-                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setText(str(v)))
+            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
+            # manual center widget, but this limits the center options to a resolution of 0.5
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.setCenterButton.clicked.connect(
+                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
@@ -183,9 +188,21 @@ class TomoViewer(QtGui.QWidget):
         self._recon_path = os.path.dirname(out_name)
 
     def addSlicePreview(self, params, recon):
-        npad = int((recon.shape[1] - self.data.shape[1]) / 2)
-        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
-        self.previewViewer.addPreview(recon, params)
+        # if recon.shape[1] > self.data.shape[1]:
+        #     QtGui.QMessageBox.information(self, 'Padding or Upsampling in Reconstruction',
+        #                                   'The current preview reconstruction is larger than the expected {0}x{0} '
+        #                                   'pixels. \n The reconstructed image will be cropped to fit the preview '
+        #                                   'window'.format(self.data.shape[1]))
+        #     npad = int((recon.shape[1] - self.data.shape[1]) / 2)
+        #     recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
+        # elif recon.shape[1] < self.data.shape[1]:
+        #     QtGui.QMessageBox.information(self, 'Cropping or Downsampling in Reconstruction',
+        #                                   'The current preview reconstruction is smaller than the expected {0}x{0} '
+        #                                   'pixels.\n The reconstructed image will be padded with zeros to fit the'
+        #                                   ' preview window'.format(self.data.shape[1]))
+        #     pad = int(self.data.shape[1] - recon.shape[1])/2
+        #     recon = np.pad(recon, ((0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)[0]
+        self.previewViewer.addPreview(recon[0], params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
@@ -211,9 +228,20 @@ class TomoViewer(QtGui.QWidget):
 
 class ImageView(pg.ImageView):
     """
-    Subclass of PG ImageView to correct z-slider signal behavior.
+    Subclass of PG ImageView to correct z-slider signal behavior, and add coordinate label.
     """
     sigDeletePressed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(ImageView, self).__init__(*args, **kwargs)
+        self.scene.sigMouseMoved.connect(self.mouseMoved)
+
+        self.coordsLabel = QtGui.QLabel(' ', parent=self)
+        self.coordsLabel.setMinimumHeight(16)
+        self.layout().addWidget(self.coordsLabel)
+        self.coordsLabel.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%)")
+
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -246,6 +274,20 @@ class ImageView(pg.ImageView):
             ind = inds[-1,0]
         return ind, t
 
+    def mouseMoved(self, ev):
+        pos = ev
+        viewBox = self.imageItem.getViewBox()
+        try:
+            if viewBox.sceneBoundingRect().contains(pos):
+                mousePoint = viewBox.mapSceneToView(pos)
+                x, y = map(int, (mousePoint.x(), mousePoint.y()))
+                if (0 < x < self.imageItem.image.shape[0]) & (0 <  y < self.imageItem.image.shape[1]):  # within bounds
+                    self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x={0},"
+                                             u"   <span style=''>y={1}</span>,   <span style=''>I={2}</span>"\
+                                             .format(x, y, self.imageItem.image[x, y]))
+        except AttributeError:
+            pass
+
 
 class StackViewer(ImageView):
     """
@@ -265,6 +307,8 @@ class StackViewer(ImageView):
         self.view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
         self.view_spinBox.setRange(0, data.shape[0] - 1)
+        self.view_spinBox.setKeyboardTracking(False)
+
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.view_label)
@@ -381,10 +425,6 @@ class ROImageOverlay(pg.ROI):
                     self.isMoving = True
                     self.preMoveState = self.getState()
                     self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
-                    # if self._y_constrained:
-                    #     self.cursorOffset[1] = 0  # constrain motion to horizontal axis
-                    # elif self._x_constrained:
-                    #     self.cursorOffset[0] = 0  # constrain motion to vertical axis
                     self.sigRegionChangeStarted.emit(self)
                     ev.accept()
                 else:
@@ -411,6 +451,10 @@ class ROImageOverlay(pg.ROI):
             self.translate(pg.Point((1, 0)))
         elif ev.key() == QtCore.Qt.Key_Left:
             self.translate(pg.Point((-1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Up:
+            self.translate(pg.Point((0, 1)))
+        elif ev.key() == QtCore.Qt.Key_Down:
+            self.translate(pg.Point((0, -1)))
         ev.accept()
 
 
@@ -419,7 +463,7 @@ class ProjectionViewer(QtGui.QWidget):
     """
     Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
     """
-    sigCenterChanged = QtCore.Signal(int)
+    sigCenterChanged = QtCore.Signal(float)
 
     def __init__(self, data, view_label=None, center=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
@@ -434,6 +478,9 @@ class ProjectionViewer(QtGui.QWidget):
         # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
         self.imageItem.sigImageChanged.connect(self.roi.updateImage)
         self.stackViewer.view.addItem(self.roi)
+        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
+
+        self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
 
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
@@ -441,15 +488,19 @@ class ProjectionViewer(QtGui.QWidget):
         clabel = QtGui.QLabel('Rotation Center:')
         clabel.setAlignment(QtCore.Qt.AlignRight)
         olabel = QtGui.QLabel('Offset:')
-        self.centerBox = QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox.setDecimals(1)
+        self.setCenterButton = QtGui.QPushButton('Set in Pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
+        originBox.setText('x={}   y={}'.format(0, 0))
         center = center if center is not None else data.shape[1]/2.0
-        self.centerBox.setText(str(center))
+        self.centerBox.setValue(center) #setText(str(center))
         h1 = QtGui.QHBoxLayout()
         h1.setAlignment(QtCore.Qt.AlignLeft)
         h1.setContentsMargins(0, 0, 0, 0)
         h1.addWidget(clabel)
         h1.addWidget(self.centerBox)
+        h1.addWidget(self.setCenterButton)
         h1.addWidget(olabel)
         h1.addWidget(originBox)
 
@@ -480,14 +531,13 @@ class ProjectionViewer(QtGui.QWidget):
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
 
-        self.centerBox.setFixedWidth(spinBox.width())
         spinBox.setFixedWidth(spinBox.width())
         v = QtGui.QVBoxLayout(self.cor_widget)
         v.addLayout(h1)
         v.addLayout(h2)
         v.addWidget(slider)
 
-        l = QtGui.QVBoxLayout(self)
+        l = QtGui.QGridLayout(self) # VBoxLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
@@ -512,15 +562,17 @@ class ProjectionViewer(QtGui.QWidget):
 
     def setCenter(self, x, y):
         center = (self.data.shape[1] + x)/2.0
-        self.centerBox.setText(str(center))
+        self.centerBox.setValue(center) # setText(str(center))
         self.sigCenterChanged.emit(center)
 
     def hideCenterDetection(self):
         self.cor_widget.hide()
+        self.roi_histogram.hide()
         self.roi.setVisible(False)
 
     def showCenterDetection(self):
         self.cor_widget.show()
+        self.roi_histogram.show()
         self.roi.setVisible(True)
 
     def updateROIFromCenter(self, center):
@@ -543,7 +595,6 @@ class ProjectionViewer(QtGui.QWidget):
             self.roi.currentImage = overlay
             self.roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
-            # self.stackViewer.getHistogramWidget().setImageItem(self.stackViewer.imageItem)
             self.stackViewer.updateImage()
             self.normalized = True
         elif not val and self.normalized:
@@ -583,7 +634,7 @@ class PreviewViewer(QtGui.QSplitter):
         l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
         self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set Pipeline")
+        self.setPipelineButton.setText("Set As Pipeline")
         l.addWidget(self.functionform)
         l.addWidget(self.setPipelineButton)
         panel = QtGui.QWidget(self)
@@ -1127,16 +1178,16 @@ class ArrayDeque(deque):
         return np.min(min(self, key=lambda x:np.min(x)))
 
     def append(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        if self.dtype is not None and arr.dtype != self.dtype:
             raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).append(arr)
 
     def appendleft(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        if self.dtype is not None and arr.dtype != self.dtype:
             raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).appendleft(arr)
 

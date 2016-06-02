@@ -189,14 +189,17 @@ class FuncWidget(FeatureWidget):
             self.wireup()
         return self._form
 
-    def updateParamsDict(self):
+    def updateParamsDict(self): #TODO WHY IS MY CENTER BEING CAST TO AN INTEGER!!!!!!
         for param in self.params.children():
-            self.param_dict.update({param.name(): param.value()})
+            value, vtype = param.value(), eval(param.type())
+            # if not isinstance(param.value(), vtype) and value is not None and vtype is not list: # Why do I need to take care of pg Parameter types???
+            #     value = vtype(value)
+            self.param_dict.update({param.name(): value})
         return self.param_dict
 
     @property
     def partial(self):
-        kwargs = dict(self.paramdict(), **self.kwargs_complement)
+        kwargs = dict(self.getParamDict(), **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -220,7 +223,7 @@ class FuncWidget(FeatureWidget):
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
 
-    def paramdict(self, update=True):
+    def getParamDict(self, update=True):
         if update:
             self.updateParamsDict()
         return self.param_dict
@@ -372,6 +375,7 @@ class ReconFuncWidget(FuncWidget):
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
+        self.params.child('center').setDefault(value)
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
@@ -403,7 +407,8 @@ class ReconFuncWidget(FuncWidget):
                     self.param_dict['filter_par'][1] = i
                 else:
                     self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().widget.addPreview,
+                p.append(fmanager.pipeline_preview_action(widget,
+                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
                                                           update=False))
             map(lambda p: fmanager.run_preview_recon(*p), p)
 

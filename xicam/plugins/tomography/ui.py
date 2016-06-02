@@ -49,22 +49,19 @@ def loadUi():
     functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
     filefuncmenu = QtGui.QMenu()
-    openaction = QtGui.QAction(filefuncmenu)
-    openaction.triggered.connect(fmanager.open_pipeline_file)
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/open_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    openaction.setIcon(icon)
-    saveaction = QtGui.QAction(filefuncmenu)
-    saveaction.triggered.connect(lambda :fmanager.save_function_pipeline(fmanager.create_pipeline_dict()))
+    openaction = QtGui.QAction(icon, 'Open', filefuncmenu,)
+    openaction.triggered.connect(fmanager.open_pipeline_file)
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/save.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    saveaction.setIcon(icon)
-    refreshaction = QtGui.QAction(filefuncmenu)
-    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
-                                                           'yaml/tomography/functionstack.yml'))
+    saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
+    saveaction.triggered.connect(lambda :fmanager.save_function_pipeline(fmanager.create_pipeline_dict()))
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    refreshaction.setIcon(icon)
+    refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
+    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
+                                                           'yaml/tomography/default_pipeline.yml'))
     filefuncmenu.addActions([openaction, saveaction, refreshaction])
 
     functionwidget.fileButton.setMenu(filefuncmenu)
@@ -89,10 +86,7 @@ def loadUi():
 
     configtree = pt.ParameterTree()
     configtree.setMinimumHeight(230)
-    # params = [{'name': 'Rotation Center', 'type': 'float', 'value': 0, 'default': 0, 'suffix':'px'},
-    #           {'name': 'Rotation Angle', 'type': 'float', 'value':0, 'default': 0, 'suffix':u'\u00b0'},
-    #           {'name': 'Recon Rotation', 'type': 'float', 'value': 0, 'default': 0, 'suffix': u'\u00b0'},
-    #           {'name': 'Notes', 'type': 'text', 'value': ''}]
+
     params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
               {'name': 'End Sinogram', 'type': 'int'},
               {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
