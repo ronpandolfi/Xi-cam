@@ -35,3 +35,6 @@ Circular Mask:
     ratio: 1.0
     val: 0
     axis: 0
+Write:
+  Tiff Stack:
+    digit: 4

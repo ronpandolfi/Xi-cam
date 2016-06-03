@@ -93,19 +93,19 @@ def loadUi():
               {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
               {'name': 'End Projection', 'type': 'int'},
               {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-              {'name': 'Ouput Format', 'type': 'list', 'values': ['TIFF (.tiff)'], 'default': 'TIFF (.tiff)'},
-              {'name': 'Output Name', 'type': 'str'},
-              {'name': 'Browse', 'type': 'action'},
+              # {'name': 'Ouput Format', 'type': 'list', 'values': ['TIFF (.tiff)'], 'default': 'TIFF (.tiff)'},
+              # {'name': 'Output Name', 'type': 'str'},
+              # {'name': 'Browse', 'type': 'action'},
               {'name': 'Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(), 'limits':[1, cpu_count()]},
               {'name': 'Sinogram Chunks', 'type': 'int', 'value': 1},
               {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 0}]
 
     configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
     configtree.setParameters(configparams, showTop=False)
-    configparams.param('Browse').sigActivated.connect(
-        lambda: configparams.param('Output Name').setValue(
-            str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
-                                                  configparams.param('Output Name').value())[0])))
+    # configparams.param('Browse').sigActivated.connect(
+    #     lambda: configparams.param('Output Name').setValue(
+    #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
+    #                                               configparams.param('Output Name').value())[0])))
 
     sinostart = configparams.param('Start Sinogram')
     sinoend = configparams.param('End Sinogram')
@@ -169,7 +169,7 @@ def buildfunctionmenu(menu, fdata, actionslot):
             menu.addAction(funcaction)
 
 
-def setconfigparams(sino, proj, outname):
+def setconfigparams(sino, proj):
     configparams.child('End Sinogram').setValue(sino)
     configparams.child('End Sinogram').setLimits([0, sino])
     configparams.child('Start Sinogram').setLimits([0, sino])
@@ -178,5 +178,5 @@ def setconfigparams(sino, proj, outname):
     configparams.child('End Projection').setLimits([0, proj])
     configparams.child('Start Projection').setLimits([0, proj])
     configparams.child('Step Projection').setLimits([0, proj])
-    configparams.child('Output Name').setValue(outname)
+    # configparams.child('Output Name').setValue(outname)
 

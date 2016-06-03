@@ -30,28 +30,6 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
-"""
-Example volume rendering
-
-Controls:
-
-* 1  - toggle camera between first person (fly), regular 3D (turntable) and
-       arcball
-* 2  - toggle between volume rendering methods
-* 3  - toggle between stent-CT / brain-MRI image
-* 4  - toggle between colormaps
-* 0  - reset cameras
-* [] - decrease/increase isosurface threshold
-
-With fly camera:
-
-* WASD or arrow keys - move around
-* SPACE - brake
-* FC - move up-down
-* IJKL or mouse - look around
-"""
-
-
 class TomoViewer(QtGui.QWidget):
     """
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
@@ -101,14 +79,13 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        #TODO allow for subsampling of recons
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.reconstructionViewer = QtGui.QStackedWidget()
+        self.reconstructionViewer = ReconstructionViewer(parent=self)
         self.viewstack.addWidget(self.reconstructionViewer)
 
         self.processViewer = RunViewer(parent=self)
@@ -172,11 +149,11 @@ class TomoViewer(QtGui.QWidget):
         fmanager.cor_scale = lambda x: x//8
         fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
 
-    def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
+    def runFullRecon(self, proj, sino, nchunk, ncore, update_call):
         if not self._recon_running:
             self._recon_running = True
             self.processViewer.local_console.clear()
-            fmanager.run_full_recon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call,
+            fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call,
                                     self.fullReconFinished)
         else:
             r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
@@ -185,28 +162,12 @@ class TomoViewer(QtGui.QWidget):
             if r is QtGui.QMessageBox.Yes:
                 QtGui.QMessageBox.information(self, 'Reconstruction request',
                                               'Then you should wait until the first one finishes.')
-        self._recon_path = os.path.dirname(out_name)
 
     def addSlicePreview(self, params, recon):
-        # if recon.shape[1] > self.data.shape[1]:
-        #     QtGui.QMessageBox.information(self, 'Padding or Upsampling in Reconstruction',
-        #                                   'The current preview reconstruction is larger than the expected {0}x{0} '
-        #                                   'pixels. \n The reconstructed image will be cropped to fit the preview '
-        #                                   'window'.format(self.data.shape[1]))
-        #     npad = int((recon.shape[1] - self.data.shape[1]) / 2)
-        #     recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
-        # elif recon.shape[1] < self.data.shape[1]:
-        #     QtGui.QMessageBox.information(self, 'Cropping or Downsampling in Reconstruction',
-        #                                   'The current preview reconstruction is smaller than the expected {0}x{0} '
-        #                                   'pixels.\n The reconstructed image will be padded with zeros to fit the'
-        #                                   ' preview window'.format(self.data.shape[1]))
-        #     pad = int(self.data.shape[1] - recon.shape[1])/2
-        #     recon = np.pad(recon, ((0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)[0]
         self.previewViewer.addPreview(recon[0], params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
-        # fmanager.reset_cor_offset()
         pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
         if pad > 0:
             recon = recon[:, pad:-pad, pad:-pad]
@@ -216,7 +177,7 @@ class TomoViewer(QtGui.QWidget):
     def fullReconFinished(self):
         self._recon_running = False
         self.processViewer.local_console.insertPlainText('Reconstruction complete.')
-        self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
+        # self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
 
     def onManualCenter(self, active):
         if active:
@@ -293,21 +254,19 @@ class StackViewer(ImageView):
     """
     PG ImageView subclass to view projections or sinograms of a tomography dataset
     """
-    def __init__(self, data, view_label=None, *args, **kwargs):
+    def __init__(self, data=None, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
-        self.data = data
-        self.ui.roiBtn.setParent(None)
-        self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
-        self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
-        self.getImageItem().setAutoDownsample(True)
-        self.autoLevels()
+
+        # self.getImageItem().setAutoDownsample(True)
         self.getView().invertY(False)
 
         self.view_label = QtGui.QLabel(self)
         self.view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
-        self.view_spinBox.setRange(0, data.shape[0] - 1)
         self.view_spinBox.setKeyboardTracking(False)
+
+        if data is not None:
+            self.setData(data)
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
@@ -318,9 +277,18 @@ class StackViewer(ImageView):
         w.setLayout(l)
         self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
         self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
+        self.ui.menuBtn.setParent(None)
+        self.ui.roiBtn.setParent(None)
 
         self.sigTimeChanged.connect(self.indexChanged)
         self.view_spinBox.valueChanged.connect(self.setCurrentIndex)
+
+    def setData(self, data):
+        self.data = data
+        self.setImage(self.data)
+        self.autoLevels()
+        self.view_spinBox.setRange(0, self.data.shape[0] - 1)
+        self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
 
     def indexChanged(self, ind, time):
         self.view_spinBox.setValue(ind)
@@ -519,6 +487,8 @@ class ProjectionViewer(QtGui.QWidget):
         constrainYCheckBox.setChecked(True)
         constrainXCheckBox = QtGui.QCheckBox('Constrain X', parent=self.cor_widget)
         constrainXCheckBox.setChecked(False)
+        rotateCheckBox = QtGui.QCheckBox('Enable Rotation', parent=self.cor_widget)
+        rotateCheckBox.setChecked(False)
         self.normCheckBox = QtGui.QCheckBox('Normalize', parent=self.cor_widget)
         h2 = QtGui.QHBoxLayout()
         h2.setAlignment(QtCore.Qt.AlignLeft)
@@ -528,6 +498,7 @@ class ProjectionViewer(QtGui.QWidget):
         h2.addWidget(flipCheckBox)
         h2.addWidget(constrainXCheckBox)
         h2.addWidget(constrainYCheckBox)
+        # h2.addWidget(rotateCheckBox) # This needs to be implemented correctly
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
 
@@ -548,6 +519,7 @@ class ProjectionViewer(QtGui.QWidget):
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
         constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
         constrainXCheckBox.stateChanged.connect(lambda v: self.roi.constrainX(v))
+        rotateCheckBox.stateChanged.connect(self.addRotateHandle)
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.roi.sigTranslated.connect(self.setCenter)
@@ -583,6 +555,12 @@ class ProjectionViewer(QtGui.QWidget):
     def flipOverlayProj(self, val):
         self.roi.flipCurrentImage()
         self.roi.updateImage()
+
+    def addRotateHandle(self, val):
+        if val:
+            self.addRotateHandle.handle = self.roi.addRotateHandle([0,1], [0.2, 0.2])
+        else:
+            self.roi.removeHandle(self.addRotateHandle.handle)
 
     def normalize(self, val):
         if val and not self.normalized:
@@ -697,6 +675,55 @@ class PreviewViewer(QtGui.QSplitter):
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
         fmanager.set_function_pipeline(current_data)
+
+
+class ReconstructionViewer(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(ReconstructionViewer, self).__init__(parent=parent)
+        self.stack_viewer = StackViewer()
+        self.path_edit = QtGui.QLineEdit(parent=self)
+        self.path_edit.setReadOnly(True)
+        self.browse_button = QtGui.QPushButton(parent=self)
+        self.browse_button.setText('Select Reconstruction')
+
+        layout = QtGui.QGridLayout(self)
+        layout.addWidget(self.path_edit, 0, 0, 1, 1)
+        layout.addWidget(self.browse_button, 0, 1, 1, 1)
+        layout.addWidget(self.stack_viewer, 1, 0, 2, 2)
+
+        self.browse_button.clicked.connect(self.openDataset)
+
+    def openDataset(self):
+        path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
+        if path is not None:
+            if len(path) > 1:
+                path = os.path.split(path[0])[0]
+            else:
+                path = path[0]
+            data = loader.StackImage(path)
+            self.stack_viewer.setData(data)
+            self.path_edit.setText(path)
+
+"""
+Example volume rendering
+
+Controls:
+
+* 1  - toggle camera between first person (fly), regular 3D (turntable) and
+       arcball
+* 2  - toggle between volume rendering methods
+* 3  - toggle between stent-CT / brain-MRI image
+* 4  - toggle between colormaps
+* 0  - reset cameras
+* [] - decrease/increase isosurface threshold
+
+With fly camera:
+
+* WASD or arrow keys - move around
+* SPACE - brake
+* FC - move up-down
+* IJKL or mouse - look around
+"""
 
 
 class VolumeViewer(QtGui.QWidget):

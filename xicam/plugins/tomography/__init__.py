@@ -27,7 +27,6 @@ from xicam.plugins import base
 from PySide import QtUiTools
 import fmanager
 from pyqtgraph.parametertree import ParameterTree
-from xicam import models
 import ui
 
 
@@ -78,21 +77,21 @@ class plugin(base.plugin):
             tab.unload()
         try:
             self.centerwidget.currentWidget().load()
-            ui.propertytable.setData(self.currentDataset().data.header.items())
-            ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
-            ui.propertytable.show()
-            outname = os.path.join(os.path.dirname(self.currentDataset().data.filepath),
-                                   *2*('RECON_' + os.path.split(self.currentDataset().data.filepath)[-1].split('.')[0],))
-            ui.setconfigparams(int(self.currentDataset().data.header['nslices']),
-                               int(self.currentDataset().data.header['nangles']),
-                               outname)
-            fmanager.set_function_defaults(self.currentDataset().data.header, funcs=fmanager.functions)
-            recon = fmanager.recon_function
-            if recon is not None:
-                recon.setCenterParam(self.currentDataset().cor)
+            self.setPipelineValues(self.currentDataset())
         except AttributeError as e:
-            raise e
             print e.message
+
+    def setPipelineValues(self, widget):
+        ui.propertytable.setData(widget.data.header.items())
+        ui.propertytable.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        ui.propertytable.show()
+        ui.setconfigparams(int(widget.data.header['nslices']),
+                           int(widget.data.header['nangles']))
+                           # outname)
+        fmanager.set_function_defaults(widget.data.header, funcs=fmanager.functions)
+        recon = fmanager.recon_function
+        if recon is not None:
+            recon.setCenterParam(self.currentDataset().cor)
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
@@ -127,8 +126,6 @@ class plugin(base.plugin):
                                            (ui.configparams.child('Start Sinogram').value(),
                                             ui.configparams.child('End Sinogram').value(),
                                             ui.configparams.child('Step Sinogram').value()),
-                                           ui.configparams.child('Output Name').value(),
-                                           ui.configparams.child('Ouput Format').value(),
                                            ui.configparams.child('Sinogram Chunks').value(),
                                            ui.configparams.child('Cores').value(),
                                            self.currentDataset().processViewer.log2local)

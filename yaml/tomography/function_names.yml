@@ -66,6 +66,20 @@ Projection Angles:
 - angles
 - tomopy
 
+# Data Exchange Functions
+Tiff Stack:
+- write_tiff_stack
+- dxchange
+Numpy Array:
+- write_npy
+- dxchange
+Data Exchange:
+- write_dxf
+- dxchange
+Write HDF5:
+- write_hdf5
+- dxchange
+
 # Xi-Cam functions
 Crop:
 - crop

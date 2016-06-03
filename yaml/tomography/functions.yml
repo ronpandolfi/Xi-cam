@@ -15,7 +15,8 @@ Functions:
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]
   Crop: [Crop]
-  Convert Data: [Convert Data]
+  Convert Data Type: [Convert Data Type]
+  Write: [Tiff Stack] #, Numpy Array, Data Exchange, Write HDF5]
 Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]
