@@ -544,7 +544,6 @@ class ProjectionViewer(QtGui.QWidget):
 
         slider.valueChanged.connect(spinBox.setValue)
         slider.valueChanged.connect(self.stackViewer.resetImage)
-        slider.valueChanged.connect(lambda x: self.normCheckBox.setChecked(False))
         spinBox.valueChanged.connect(self.changeOverlayProj)
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
         constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
@@ -557,6 +556,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.hideCenterDetection()
 
     def changeOverlayProj(self, idx):
+        self.normCheckBox.setChecked(False)
         self.roi.setCurrentImage(idx)
         self.roi.updateImage()
 
@@ -566,6 +566,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.sigCenterChanged.emit(center)
 
     def hideCenterDetection(self):
+        self.normalize(False)
         self.cor_widget.hide()
         self.roi_histogram.hide()
         self.roi.setVisible(False)
@@ -1144,10 +1145,10 @@ class ArrayDeque(deque):
         self._dtype = dtype
 
         if arraylist:
-            if False in [np.array_equal(arraylist[0].shape, array.shape) for array in arraylist[1:]]:
-                raise ValueError('All arrays in arraylist must have the same dimensions')
-            elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
-                raise ValueError('All arrays in arraylist must have the same data type')
+            # if False in [np.array_equal(arraylist[0].shape, array.shape) for array in arraylist[1:]]:
+            #     raise ValueError('All arrays in arraylist must have the same dimensions')
+            # elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
+            #     raise ValueError('All arrays in arraylist must have the same data type')
             map(self._shape.append, arraylist[0].shape)
         elif arrayshape:
             map(self._shape.append, arrayshape)
@@ -1180,15 +1181,15 @@ class ArrayDeque(deque):
     def append(self, arr):
         # if arr.shape != tuple(self.shape[1:]):
         #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        if self.dtype is not None and arr.dtype != self.dtype:
-            raise ValueError('Array must be of type {}'.format(self.dtype))
+        # if self.dtype is not None and arr.dtype != self.dtype:
+        #     raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).append(arr)
 
     def appendleft(self, arr):
         # if arr.shape != tuple(self.shape[1:]):
         #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        if self.dtype is not None and arr.dtype != self.dtype:
-            raise ValueError('Array must be of type {}'.format(self.dtype))
+        # if self.dtype is not None and arr.dtype != self.dtype:
+        #     raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).appendleft(arr)
 
     def __getitem__(self, item):

@@ -11,6 +11,8 @@ import fwidgets
 import reconpkg
 import fdata
 import warnings
+# imports for xicam functions exposed in pipeline
+import pipelinefunctions
 
 FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
 PARAM_TYPES = {'int': int, 'float': float}
@@ -57,9 +59,8 @@ def clear_functions():
     ui.showform(ui.blankform)
 
 
-def add_action(function, subfunction, package=reconpkg.packages['tomopy']):
+def add_action(function, subfunction):
     global functions, recon_function
-    if not hasattr(package, fdata.names[subfunction]): return
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
@@ -68,11 +69,19 @@ def add_action(function, subfunction, package=reconpkg.packages['tomopy']):
         if value is QtGui.QMessageBox.No:
             return
 
-    add_function(function, subfunction, package=package)
+    add_function(function, subfunction)
 
 
-def add_function(function, subfunction, package=reconpkg.tomopy):
+def add_function(function, subfunction):
     global functions, recon_function, currentindex
+    try:
+        package = reconpkg.packages[fdata.names[subfunction][1]]
+    except KeyError:
+        package = eval(fdata.names[subfunction][1])
+    if not hasattr(package, fdata.names[subfunction][0]):
+        warnings.warn('{0} function not available in {1}'.format(subfunction, package))
+        return
+
     currentindex = len(functions)
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
@@ -145,14 +154,13 @@ def set_function_pipeline(pipeline, setdefaults=False):
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
-                if func == 'Reconstruction':
-                    try:
-                        funcWidget = add_function(func, subfunc,
-                                                  package=reconpkg.packages[subfuncs[subfunc]['Package']])
-                    except KeyError:
-                        funcWidget = add_function(func, subfunc)
-                else:
-                    funcWidget = add_function(func, subfunc)
+                # if func == 'Reconstruction':
+                #     try:
+                #         funcWidget = add_function(func, subfunc)
+                #     except KeyError:
+                #         funcWidget = add_function(func, subfunc)
+                # else:
+                funcWidget = add_function(func, subfunc)
                 for param, value in subfuncs[subfunc].iteritems():
                     if param == 'Package':
                         continue
@@ -323,7 +331,6 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
     else:
         print 'Only tiff support right now'
         return
-
     runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, nchunk, ncore)
     runnable_it.emitter.sigFinished.connect(finish_call)
     threads.queue.put(runnable_it)
@@ -357,9 +364,9 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
 
                 tomo = fpartial(tomo)
                 # Make sure to crop down recon if padding was used
-                if tomo.shape[1:] != shape:
-                    npad = tomo.shape[1] - shape[1]
-                    tomo = tomo[:, npad:-npad, npad:-npad]
+                # if tomo.shape[1:] != shape:
+                #     npad = tomo.shape[1] - shape[1]
+                #     tomo = tomo[:, npad:-npad, npad:-npad]
             else:
                 tomo = fpartial(tomo)
 

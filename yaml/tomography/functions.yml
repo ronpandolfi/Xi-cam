@@ -14,7 +14,8 @@ Functions:
   Ring Removal: [Polar Mean Filter]
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]
-
+  Crop: [Crop]
+  Convert Data: [Convert Data]
 Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]
