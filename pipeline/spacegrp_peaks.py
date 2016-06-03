@@ -188,6 +188,44 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
     pixels[:,1] = py
     return pixels.astype(int)
 
+class peak(object):
+    def __init__(self, mode):
+        self.mode = mode # either 'Transmission' or 'Reflection'
+        self.hkl = None
+        self.x = None
+        self.y = None
+        self.twotheta = None
+        self.alphaf = None
+        self.qpar = None
+        self.qvrt = None
+
+    def position(self, center, sdd, pixels):
+        tan_2t = np.tan(self.twotheta)
+        tan_al = np.tan(self.alphaf)
+        x= tan_2t * sdd
+        self.x = sdd * tan_2t / pixels + center[0]
+        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels + center[1]
+        
+    def isAt(self, pos):
+        return int(self.x) == pos.x() and int(self.y) == pos.y():
+
+    def __str__(self):
+        s = u"Peak type: {}\n".format(self.mode)
+        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
+        if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
+        if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
+        if self.qpar is not None: s += u"q: {}".format(self.qpar)
+        if self.qvrt is not None: s += u"q: {}".format(self.qvrt)
+        return s
+
+def qvalues(twotheta, alphaf, alphai, wavelen):
+    k = 2 * np.pi / wavelen
+    qx = k * (np.cos(alphaf) * np.cos(twotheta) - np.cos(alphai))
+    qy = k * np.cos(alphaf) * np.sin(twotheta)
+    qz = k * np.sin(alphaf) + np.sin(alphai)
+    return np.sqrt(qx**2 + qy**2), qz
+
+
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984e-9, refgamma=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
@@ -239,50 +277,37 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     HKL = itertools.product(range(-order, order + 1), repeat=3)
     alphai = np.deg2rad(0.2)
     k = 2 * np.pi / wavelen
-    peaks = dict()
+    peaks = list()
     for hkl in HKL:
         if hkl[2] < 0: continue
         if not sgexclusions.check(hkl,space_grp): continue
         if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
-            transmission = [np.NaN, np.NaN]
-            reflection = [np.NaN, np.NaN]
             al_t, al_r = alpha_exit(G, alphai, nu, k)
+
             if al_t > 0:
                 th = theta_exit(G, alphai, al_t, k)
-                transmission = [th, al_t]
+                transmission = peak('Transmission')
+                transmission.hkl = hkl
+                transmission.twotheta = th
+                transmission.alphaf = al_t
+                qp, qv = qvalues(th, al_t, alphai, wavelen)
+                transmission.qpar = qp
+                transmission.qvrt = qv
+                peaks.append(transmission)
+
             if al_r > 0:
                 th = theta_exit(G, alphai, al_r, k)
-                reflection = [th, al_r]
-            key = '{0}{1}{2}'.format(hkl[0], hkl[1], hkl[2])
-            peaks[key] = (transmission, reflection)
+                reflection = Peak('Reflection') 
+                reflection.hkl = hkl
+                reflection.twotheta = th
+                reflection.alphaf = al_r
+                qp, qv = qvalues(th, al_r, alphai, wavelen)
+                reflection.qpar = qp
+                reflection.qvrt = qv
+                peaks.append(reflection)
 
-    # TODO: return a list of peak objects (see below) instead of dict of tuples
     return peaks
-
-class peak(object):
-    def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
-        self.mode = mode # either 'Transmission' or 'Reflection'
-        self.hkl = hkl
-        self.x = x
-        self.y = y
-        self.twotheta = twotheta
-        self.alphaf = alphaf
-        self.q = q
-
-    def isAt(self, pos):
-
-        if self.x == pos.x() and self.y == pos.y():
-            return True
-        return False
-
-    def __str__(self):
-        s = u"Peak type: {}\n".format(self.mode)
-        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
-        if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
-        if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.q is not None: s += u"q: {}".format(self.q)
-        return s
 
 
 if __name__ == '__main__':
