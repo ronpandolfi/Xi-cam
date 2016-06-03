@@ -569,12 +569,14 @@ class Hexagonal(SGClass):
                               ])
 
     def getcolumn(self,m):
-        mh,mk,mi,ml = m
-        if arezeros(1,1,1,0,m):
+        mh,mk,ml = m
+        mi = -(mh+mk)
+        hexm = (mh,mk,mi,ml)
+        if arezeros(1,1,1,0,hexm):
             column = 2
         elif mh==mk and mi==-2*mh:          # TODO: What rules apply to hexagonal 1111
             column = 1
-        elif arezeros(0,0,1,0,m) and mh==-mk:
+        elif arezeros(0,0,1,0,hexm) and mh==-mk:
             column = 0
         else:
             column = None

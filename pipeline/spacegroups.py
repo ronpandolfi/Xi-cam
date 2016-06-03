@@ -127,7 +127,7 @@ class VectorParameter(Parameter):
 
 class peak(object):
     def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
-        self.mode = mode
+        self.mode = mode # either 'Transmission' or 'Reflection'
         self.hkl = hkl
         self.x = x
         self.y = y

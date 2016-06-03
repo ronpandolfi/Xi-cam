@@ -1105,7 +1105,7 @@ class diffimage2(object):
                         print 'Detector found with binning: ' + name
                         detector.set_binning(binning)
                         return name, detector
-        return None, None, None
+        return None, None
 
 
     @detector.setter

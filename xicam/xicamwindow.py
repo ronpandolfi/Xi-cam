@@ -24,6 +24,7 @@ import qdarkstyle
 import plugins
 from xicam import xglobals
 import numpy as np
+from pipeline import msg
 
 
 class MyMainWindow():
@@ -69,8 +70,9 @@ class MyMainWindow():
         self.ui.actionExport_Image.triggered.connect(self.exportimage)
 
         # Grab status bar
-        self.ui.statusbar.showMessage('Ready...')
-        xglobals.statusbar = self.ui.statusbar
+        msg.statusbar = self.ui.statusbar
+        msg.showMessage('Ready...')
+        xglobals.statusbar = self.ui.statusbar # TODO: Deprecate this by replacing all statusbar calls with msg module
 
 
         # PLUG-INS
@@ -124,7 +126,7 @@ class MyMainWindow():
         config.activeExperiment.setvalue('Detector Distance',2.46269726489*79*.001)
         config.activeExperiment.setvalue('Detector Rotation',4.69729438873 * 360./(2.*np.pi)-180.)
         config.activeExperiment.setvalue('Detector Tilt',0.503226642865/(2.*np.pi)*360.)
-        config.activeExperiment.setvalue('Wavelength',0.97621599151)
+        config.activeExperiment.setvalue('Wavelength',0.97621599151*1.e-10)
         config.activeExperiment.setvalue('Center X',969.878684978)
         config.activeExperiment.setvalue('Center Y',2048-2237.93277884)
         self.openfiles(['/home/rp/Downloads/lab6_041016_rct5_0001.tif'])

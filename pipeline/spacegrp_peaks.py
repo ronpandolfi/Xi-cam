@@ -256,7 +256,33 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                 reflection = [th, al_r]
             key = '{0}{1}{2}'.format(hkl[0], hkl[1], hkl[2])
             peaks[key] = (transmission, reflection)
+
+    # TODO: return a list of peak objects (see below) instead of dict of tuples
     return peaks
+
+class peak(object):
+    def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
+        self.mode = mode # either 'Transmission' or 'Reflection'
+        self.hkl = hkl
+        self.x = x
+        self.y = y
+        self.twotheta = twotheta
+        self.alphaf = alphaf
+        self.q = q
+
+    def isAt(self, pos):
+
+        if self.x == pos.x() and self.y == pos.y():
+            return True
+        return False
+
+    def __str__(self):
+        s = u"Peak type: {}\n".format(self.mode)
+        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
+        if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
+        if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
+        if self.q is not None: s += u"q: {}".format(self.q)
+        return s
 
 
 if __name__ == '__main__':
