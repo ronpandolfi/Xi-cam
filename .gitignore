@@ -2,3 +2,4 @@
 *.edf
 *.nxs
 .idea/
+*pyc
