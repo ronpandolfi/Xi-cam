@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+# --coding: utf-8 --
 import itertools
 import numpy as np
 from numpy.linalg import norm
@@ -199,6 +199,7 @@ class peak(object):
         self.qpar = None
         self.qvrt = None
 
+
     def position(self, center, sdd, pixels):
         tan_2t = np.tan(self.twotheta)
         tan_al = np.tan(self.alphaf)
@@ -207,15 +208,16 @@ class peak(object):
         self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels + center[1]
         
     def isAt(self, pos):
-        return int(self.x) == pos.x() and int(self.y) == pos.y():
+        if np.isnan(self.twotheta): return False
+        return int(self.x) == int(pos.x()) and int(self.y) == int(pos.y())
 
     def __str__(self):
         s = u"Peak type: {}\n".format(self.mode)
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"q: {}".format(self.qpar)
-        if self.qvrt is not None: s += u"q: {}".format(self.qvrt)
+        if self.qpar is not None: s += u"q<sub>∥</sub>: {}\n".format(self.qpar)
+        if self.qvrt is not None: s += u"q<sub>z</sub>: {}".format(self.qvrt)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -298,7 +300,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
             if al_r > 0:
                 th = theta_exit(G, alphai, al_r, k)
-                reflection = Peak('Reflection') 
+                reflection = peak('Reflection')
                 reflection.hkl = hkl
                 reflection.twotheta = th
                 reflection.alphaf = al_r
