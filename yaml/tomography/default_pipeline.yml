@@ -24,8 +24,17 @@ Reconstruction:
         Projection Angles: {}
       Center Detection:
         Phase Correlation: {}
+Crop:
+  Crop:
+    p11: 531
+    p12: 3091
+    p21: 531
+    p22: 3091
 Circular Mask:
   Circular Mask:
     ratio: 1.0
     val: 0
     axis: 0
+Write:
+  Tiff Stack:
+    digit: 4

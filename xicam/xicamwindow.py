@@ -24,6 +24,7 @@ import qdarkstyle
 import plugins
 from xicam import xglobals
 import numpy as np
+from pipeline import msg
 
 
 class MyMainWindow():
@@ -69,8 +70,9 @@ class MyMainWindow():
         self.ui.actionExport_Image.triggered.connect(self.exportimage)
 
         # Grab status bar
-        self.ui.statusbar.showMessage('Ready...')
-        xglobals.statusbar = self.ui.statusbar
+        msg.statusbar = self.ui.statusbar
+        msg.showMessage('Ready...')
+        xglobals.statusbar = self.ui.statusbar # TODO: Deprecate this by replacing all statusbar calls with msg module
 
 
         # PLUG-INS

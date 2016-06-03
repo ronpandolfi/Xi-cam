@@ -12,6 +12,10 @@ import reconpkg
 import fdata
 import warnings
 
+# imports for functions exposed in pipeline
+import pipelinefunctions
+import dxchange
+
 FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
 PARAM_TYPES = {'int': int, 'float': float}
 
@@ -21,6 +25,7 @@ recon_function = None
 currentindex = 0
 layout = None
 
+# Center of Rotation correction functions (corrects for padding and upsampling/downsampling)
 cor_offset = None
 cor_scale = lambda x: x
 
@@ -57,9 +62,8 @@ def clear_functions():
     ui.showform(ui.blankform)
 
 
-def add_action(function, subfunction, package=reconpkg.packages['tomopy']):
+def add_action(function, subfunction):
     global functions, recon_function
-    if not hasattr(package, fdata.names[subfunction]): return
     if function in [func.func_name for func in functions]:
         value = QtGui.QMessageBox.question(None, 'Adding duplicate function',
                                            '{} function already in pipeline.\n'
@@ -68,11 +72,19 @@ def add_action(function, subfunction, package=reconpkg.packages['tomopy']):
         if value is QtGui.QMessageBox.No:
             return
 
-    add_function(function, subfunction, package=package)
+    add_function(function, subfunction)
 
 
-def add_function(function, subfunction, package=reconpkg.tomopy):
+def add_function(function, subfunction):
     global functions, recon_function, currentindex
+    try:
+        package = reconpkg.packages[fdata.names[subfunction][1]]
+    except KeyError:
+        package = eval(fdata.names[subfunction][1])
+    if not hasattr(package, fdata.names[subfunction][0]):
+        warnings.warn('{0} function not available in {1}'.format(subfunction, package))
+        return
+
     currentindex = len(functions)
     if function == 'Reconstruction':
         func = fwidgets.ReconFuncWidget(function, subfunction, package)
@@ -122,11 +134,6 @@ def load_form(path):
     return form
 
 
-def load():
-    global functions, layout
-    layout.setAlignment(QtCore.Qt.AlignBottom)
-
-
 def lock_function_params(boolean):
     global functions
     for func in functions:
@@ -145,14 +152,7 @@ def set_function_pipeline(pipeline, setdefaults=False):
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             try:
-                if func == 'Reconstruction':
-                    try:
-                        funcWidget = add_function(func, subfunc,
-                                                  package=reconpkg.packages[subfuncs[subfunc]['Package']])
-                    except KeyError:
-                        funcWidget = add_function(func, subfunc)
-                else:
-                    funcWidget = add_function(func, subfunc)
+                funcWidget = add_function(func, subfunc)
                 for param, value in subfuncs[subfunc].iteritems():
                     if param == 'Package':
                         continue
@@ -213,6 +213,10 @@ def set_function_defaults(mdata, funcs=functions):
                         v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
                     p.setValue(v)
                     p.setDefault(v)
+        elif f.func_name == 'Write':
+            outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
+            f.params.child('fname').setValue(outname)
+
         if f.input_functions is not None:
             set_function_defaults(mdata, funcs=f.input_functions)
 
@@ -242,7 +246,7 @@ def correct_center(func):
         s = func.getParamDict(update=update)['level']
         cor_scale = lambda x: x * 2 ** s
 
-
+#TODO FIX COR IN RECONS WITH CHUNKING BUDDY
 def construct_preview_pipeline(widget, callback, update=True, slc=None):
     global functions
 
@@ -250,7 +254,7 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     params = OrderedDict()
     funstack = []
     for func in functions:
-        if not func.previewButton.isChecked() and func.func_name != 'Reconstruction':
+        if (not func.previewButton.isChecked() and func.func_name != 'Reconstruction') or func.func_name == 'Write':
             continue
         elif func.func_name in ('Pad', 'Downsample', 'Upsample'):
             correct_center(func)
@@ -288,7 +292,6 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
                     cor_offset = cor_scale
                 recon_function.params.child('center').setValue(kwargs[pname])
                 kwargs[pname] = cor_offset(kwargs[pname])
-                reset_cor()
 
     if kwargs:
         return partial(fpartial, **kwargs)
@@ -301,9 +304,10 @@ def run_preview_recon(funstack, initializer, callback):
         runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
         runnable.lock = threads.mutex
         threads.queue.put(runnable)
+        reset_cor()
 
 
-def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, update_call=None, finish_call=None):
+def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_call=None):
     global functions
     lock_function_params(True)
     partials, params = [], OrderedDict()
@@ -316,14 +320,6 @@ def run_full_recon(widget, proj, sino, out_name, out_format, nchunk, ncore, upda
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
-
-    import dxchange as dx
-    if out_format == 'TIFF (.tiff)':
-        partials.append(('Write to file', partial(dx.write_tiff_stack, fname=out_name), [], None))
-    else:
-        print 'Only tiff support right now'
-        return
-
     runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, nchunk, ncore)
     runnable_it.emitter.sigFinished.connect(finish_call)
     threads.queue.put(runnable_it)
@@ -342,26 +338,23 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
             fpartial = update_function_partial(fpartial, name, argnames, datawidget,
                                                slc=(slice(*proj), slice(start, end, sino[2])),
                                                ncore=ncore, input_partials=ipartials)
-            yield 'Running {0} on sinograms {1} to {2} from {3}...\n\n'.format(name, start, end, total_sino)
+            yield 'Running {0} on slices {1} to {2} from a total of {3} slices...\n\n'.format(name, start,
+                                                                                              end, total_sino)
             if init:
                 tomo = fpartial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
                 shape = 2*(tomo.shape[2],)
                 init = False
-            elif name == 'Write to file':
+            elif 'Write' in name:
                 fpartial(tomo, start=write_start)
                 write_start += tomo.shape[0]
-            elif name == 'Reconstruction':
+            elif 'Reconstruction' in name:
                 # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
                 if ipartials is not None:
-                    partials[partials.index([name, fpartial, argnames, ipartials])][3] = None
-
+                    ind = next((i for i, names in enumerate(partials) if name in names), None)
+                    partials[ind][1], partials[ind][3] = fpartial, None
                 tomo = fpartial(tomo)
-                # Make sure to crop down recon if padding was used
-                if tomo.shape[1:] != shape:
-                    npad = tomo.shape[1] - shape[1]
-                    tomo = tomo[:, npad:-npad, npad:-npad]
             else:
                 tomo = fpartial(tomo)
 
-
+    reset_cor()
 

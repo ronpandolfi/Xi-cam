@@ -149,7 +149,7 @@ class FuncWidget(FeatureWidget):
         self._formpath = 'gui/guiLayer.ui'
         self._form = None
         self._partial = None
-        self._function = getattr(package, fdata.names[self.subfunc_name])
+        self._function = getattr(package, fdata.names[self.subfunc_name][0])
         self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
         self.input_functions = None
