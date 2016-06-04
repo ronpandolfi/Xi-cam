@@ -27,9 +27,9 @@ Reconstruction:
 Crop:
   Crop:
     p11: 531
-    p12: 3091
+    p12: 531
     p21: 531
-    p22: 3091
+    p22: 531
 Circular Mask:
   Circular Mask:
     ratio: 1.0

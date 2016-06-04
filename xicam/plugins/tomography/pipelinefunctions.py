@@ -18,7 +18,7 @@ def crop(arr, p11, p12, p21, p22, axis=0):
         if n == axis:
             slc.append(slice(None))
         else:
-            slc.append(slice(pts.pop(0), pts.pop(0)))
+            slc.append(slice(pts.pop(0), -pts.pop(0)))
     return arr[slc]
 
 

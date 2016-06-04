@@ -154,9 +154,10 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
-        pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
-        if pad > 0:
-            recon = recon[:, pad:-pad, pad:-pad]
+        # pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
+        # if pad > 0:
+        #     recon = recon[:, pad:-pad, pad:-pad]
+        recon = np.flipud(recon)
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
 
@@ -634,7 +635,6 @@ class PreviewViewer(QtGui.QSplitter):
         try:
             self.functionform.setCurrentWidget(self.datatrees[index])
         except IndexError as e:
-            print e.message
             print 'index {} does not exist'.format(index)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
@@ -690,7 +690,7 @@ class ReconstructionViewer(QtGui.QWidget):
             data = loader.StackImage(path)
             self.stack_viewer.setData(data)
             if isinstance(path, list):
-                path = os.path.split(path)[0]
+                path = os.path.split(path[0])[0]
             self.path_edit.setText(path)
 
 

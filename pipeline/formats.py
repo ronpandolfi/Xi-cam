@@ -190,7 +190,7 @@ class bl832h5image(fabioimage):
 
     def getsinogram(self, idx=None):
         if idx is None: idx = self.data.shape[0]//2
-        self.sinogram = np.vstack([frame[0, -idx] for frame in map(lambda x: self._dgroup[self.frames[x]],
+        self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
                                                                   range(self.nframes))])
         return self.sinogram
 
@@ -221,7 +221,7 @@ class bl832h5image(fabioimage):
                  (s[2][1] - s[2][0] - 1)//s[2][2] + 1)
         arr = np.empty(shape, dtype=self.data.dtype)
         for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            arr[n]= np.flipud(self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])])
+            arr[n]= self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])]
         if arr.shape[0] == 1:
             arr = arr[0]
         return arr
@@ -259,7 +259,7 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 class TiffStack(object):
     def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
-        if len(paths) > 1:
+        if isinstance(paths, list):
             self.frames = paths
         elif os.path.isdir(paths):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
@@ -270,17 +270,22 @@ class TiffStack(object):
         return len(self.frames)
 
     def getframe(self, frame=0):
+        print self.frames[frame]
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
 
+    def close(self):
+        pass
 
+
+# Testing
 if __name__ == '__main__':
     from matplotlib.pyplot import imshow, show
     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
     # arr = data.__getitem__(slc)
-    arr = data.getsinogram(800)
+    arr = data.getsinogram(100)
     # print sorted(data.frames, reverse=True)
     # print data.darks.shape
     # print data.flats.shape

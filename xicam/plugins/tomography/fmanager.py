@@ -246,9 +246,10 @@ def correct_center(func):
         s = func.getParamDict(update=update)['level']
         cor_scale = lambda x: x * 2 ** s
 
+
 #TODO FIX COR IN RECONS WITH CHUNKING BUDDY
 def construct_preview_pipeline(widget, callback, update=True, slc=None):
-    global functions
+    global functions, cor_scale
 
     lock_function_params(True)  # you probably do not need this anymore
     params = OrderedDict()
@@ -256,14 +257,17 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     for func in functions:
         if (not func.previewButton.isChecked() and func.func_name != 'Reconstruction') or func.func_name == 'Write':
             continue
+        # Correct center of rotation
         elif func.func_name in ('Pad', 'Downsample', 'Upsample'):
             correct_center(func)
+
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
                                                 input_partials=func.input_partials, slc=slc))
         params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
         if func.input_functions is not None:
             params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
-                                                                            deepcopy(infunc.getParamDict(update=update))}
+                                                                            deepcopy(infunc.getParamDict(update=update))
+                                                                                               }
                                                                             for infunc in func.input_functions
                                                                             if infunc is not None}
     lock_function_params(False)
