@@ -189,17 +189,14 @@ class FuncWidget(FeatureWidget):
             self.wireup()
         return self._form
 
-    def updateParamsDict(self): #TODO WHY IS MY CENTER BEING CAST TO AN INTEGER!!!!!!
+    def updateParamsDict(self):
         for param in self.params.children():
-            value, vtype = param.value(), eval(param.type())
-            # if not isinstance(param.value(), vtype) and value is not None and vtype is not list: # Why do I need to take care of pg Parameter types???
-            #     value = vtype(value)
-            self.param_dict.update({param.name(): value})
+            self.param_dict.update({param.name(): param.value()})
         return self.param_dict
 
     @property
     def partial(self):
-        kwargs = dict(self.getParamDict(), **self.kwargs_complement)
+        kwargs = dict(self.param_dict, **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -255,9 +252,9 @@ class FuncWidget(FeatureWidget):
             start, end, step = None, None, None
             if 'limits' in param.opts:
                 start, end = param.opts['limits']
-                step = (end - start)/3 + 1
+                step = (end - start) / 3 + 1
             elif param.value() is not None:
-                start, end, step = param.value()/2, 4*(param.value())/2, param.value()/2
+                start, end, step = param.value() / 2, 4 * (param.value()) / 2, param.value() / 2
             test = TestRangeDialog(param.type(), (start, end, step))
         elif param.type() == 'list':
             test = TestListRangeDialog(param.opts['values'])
@@ -267,11 +264,13 @@ class FuncWidget(FeatureWidget):
         if test.exec_():
             widget = ui.centerwidget.currentWidget().widget
             if widget is None: return
-            p= []
+            p = []
             for i in test.selectedRange():
                 self.updateParamsDict()
                 self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget, update=False))
+                p.append(fmanager.pipeline_preview_action(widget,
+                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
+                                                          update=False))
             map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
@@ -379,38 +378,6 @@ class ReconFuncWidget(FuncWidget):
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
-
-    def testParamTriggered(self):
-        param = self.form.currentItem().param
-        if param.type() == 'int' or param.type() == 'float':
-            start, end, step = None, None, None
-            if 'limits' in param.opts:
-                start, end = param.opts['limits']
-                step = (end - start) / 3 + 1
-            elif param.value() is not None:
-                start, end, step = param.value() / 2, 4 * (param.value()) / 2, param.value() / 2
-            test = TestRangeDialog(param.type(), (start, end, step))
-        elif param.type() == 'list':
-            test = TestListRangeDialog(param.opts['values'])
-        else:
-            return
-
-        if test.exec_():
-            widget = ui.centerwidget.currentWidget().widget
-            if widget is None: return
-            p = []
-            for i in test.selectedRange():
-                self.updateParamsDict()
-                if param.name() == 'cutoff':
-                    self.param_dict['filter_par'][0] = i
-                elif param.name() == 'order':
-                    self.param_dict['filter_par'][1] = i
-                else:
-                    self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget,
-                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
-                                                          update=False))
-            map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
 class TestRangeDialog(QtGui.QDialog):

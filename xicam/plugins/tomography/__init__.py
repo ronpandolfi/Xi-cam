@@ -90,8 +90,8 @@ class plugin(base.plugin):
         ui.propertytable.show()
         ui.setconfigparams(int(widget.data.header['nslices']),
                            int(widget.data.header['nangles']))
-                           # outname)
         fmanager.set_function_defaults(widget.data.header, funcs=fmanager.functions)
+        fmanager.update_function_parameters(funcs=fmanager.functions)
         recon = fmanager.recon_function
         if recon is not None:
             recon.setCenterParam(self.currentDataset().cor)

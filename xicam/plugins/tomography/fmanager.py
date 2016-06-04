@@ -201,7 +201,7 @@ def open_pipeline_file():
         load_function_pipeline(pipeline_file)
 
 
-def set_function_defaults(mdata, funcs=functions):
+def set_function_defaults(mdata, funcs):
     global FUNCTIONS_W_METADATA_DEFAULTS, PARAM_TYPES
     for f in funcs:
         if f.subfunc_name in FUNCTIONS_W_METADATA_DEFAULTS:
@@ -211,14 +211,21 @@ def set_function_defaults(mdata, funcs=functions):
                     v = PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
                     if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
                         v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
-                    p.setValue(v)
                     p.setDefault(v)
+                    p.setValue(v)
         elif f.func_name == 'Write':
             outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
             f.params.child('fname').setValue(outname)
 
         if f.input_functions is not None:
             set_function_defaults(mdata, funcs=f.input_functions)
+
+
+def update_function_parameters(funcs):
+    for f in funcs:
+        f.updateParamsDict()
+        if f.input_functions is not None:
+            update_function_parameters(funcs=f.input_functions)
 
 
 def pipeline_preview_action(widget, callback, update=True, slc=None):
@@ -247,7 +254,6 @@ def correct_center(func):
         cor_scale = lambda x: x * 2 ** s
 
 
-#TODO FIX COR IN RECONS WITH CHUNKING BUDDY
 def construct_preview_pipeline(widget, callback, update=True, slc=None):
     global functions, cor_scale
 
@@ -284,7 +290,6 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
             kwargs[arg] = datawidget.getdarks(slc=slc)
         if arg in 'ncore' and ncore is not None:
             kwargs[arg] = ncore
-
     if input_partials is not None:
         for pname, slices, ipartial in input_partials:
             pargs = []
