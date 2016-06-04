@@ -257,9 +257,12 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 
 
 class TiffStack(object):
-    def __init__(self, path, header=None):
+    def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
-        self.frames = sorted(glob.glob(os.path.join(path, '*.tiff')))
+        if len(paths) > 1:
+            self.frames = paths
+        elif os.path.isdir(paths):
+            self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
         self.header= header
 

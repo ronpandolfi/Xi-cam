@@ -39,7 +39,7 @@ class plugin(base.plugin):
 
         self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
         self.functionwidget = ui.functionwidget
-
+        self.console = self.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
@@ -55,6 +55,8 @@ class plugin(base.plugin):
 
         self.toolbar.connecttriggers(self.previewSlice, self.preview3D, self.fullReconstruction, self.manualCenter)
         super(plugin, self).__init__(*args, **kwargs)
+
+        self._recon_running = False
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -77,6 +79,7 @@ class plugin(base.plugin):
             tab.unload()
         try:
             self.centerwidget.currentWidget().load()
+            self.currentDataset().sigReconFinished.connect(self.fullReconstructionFinished)
             self.setPipelineValues(self.currentDataset())
         except AttributeError as e:
             print e.message
@@ -120,15 +123,30 @@ class plugin(base.plugin):
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
-        self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
-                                            ui.configparams.child('End Projection').value(),
-                                            ui.configparams.child('Step Projection').value()),
-                                           (ui.configparams.child('Start Sinogram').value(),
-                                            ui.configparams.child('End Sinogram').value(),
-                                            ui.configparams.child('Step Sinogram').value()),
-                                           ui.configparams.child('Sinogram Chunks').value(),
-                                           ui.configparams.child('Cores').value(),
-                                           self.currentDataset().processViewer.log2local)
+        if not self._recon_running:
+            self._recon_running = True
+            self.console.local_console.clear()
+            self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
+                                                ui.configparams.child('End Projection').value(),
+                                                ui.configparams.child('Step Projection').value()),
+                                               (ui.configparams.child('Start Sinogram').value(),
+                                                ui.configparams.child('End Sinogram').value(),
+                                                ui.configparams.child('Step Sinogram').value()),
+                                               ui.configparams.child('Sinogram Chunks').value(),
+                                               ui.configparams.child('Cores').value(),
+                                               self.console.log2local)
+
+        else:
+            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+                                                                          'Are you sure you want to start another one?',
+                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            if r is QtGui.QMessageBox.Yes:
+                QtGui.QMessageBox.information(self, 'Reconstruction request',
+                                              'Then you should wait until the first one finishes.')
+
+    def fullReconstructionFinished(self):
+        self.console.log2local('Reconstruction complete.')
+        self._recon_running = False
 
     def manualCenter(self, value):
         self.currentDataset().onManualCenter(value)

@@ -897,7 +897,9 @@ class StackImage(object):
         self.filepath = filepath
 
         if filepath is not None:
-            if os.path.isdir(filepath):
+            if isinstance(filepath, list):
+                self.fabimage = TiffStack(filepath)
+            elif os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)

@@ -34,6 +34,9 @@ class TomoViewer(QtGui.QWidget):
     """
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
     """
+
+    sigReconFinished = QtCore.Signal()
+
     def __init__(self, paths=None, data=None, *args, **kwargs):
 
         if paths is None and data is None:
@@ -41,7 +44,6 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
-        self._recon_running = False
         self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
 
@@ -51,7 +53,6 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.addTab('Reconstruction View')
-        self.viewmode.addTab('Run Console')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -88,15 +89,11 @@ class TomoViewer(QtGui.QWidget):
         self.reconstructionViewer = ReconstructionViewer(parent=self)
         self.viewstack.addWidget(self.reconstructionViewer)
 
-        self.processViewer = RunViewer(parent=self)
-        self.processViewer.sigRunClicked.connect(self.runFullRecon)
-        self.viewstack.addWidget(self.processViewer)
-
-        l = QtGui.QVBoxLayout(self)
-        l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(self.viewstack)
-        l.addWidget(self.viewmode)
-        self.setLayout(l)
+        v = QtGui.QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.addWidget(self.viewstack)
+        v.addWidget(self.viewmode)
+        self.setLayout(v)
 
         self.viewmode.currentChanged.connect(self.currentChanged)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
@@ -150,18 +147,7 @@ class TomoViewer(QtGui.QWidget):
         fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
 
     def runFullRecon(self, proj, sino, nchunk, ncore, update_call):
-        if not self._recon_running:
-            self._recon_running = True
-            self.processViewer.local_console.clear()
-            fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call,
-                                    self.fullReconFinished)
-        else:
-            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-                                          'Are you sure you want to start another one?',
-                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if r is QtGui.QMessageBox.Yes:
-                QtGui.QMessageBox.information(self, 'Reconstruction request',
-                                              'Then you should wait until the first one finishes.')
+        fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call, self.fullReconFinished)
 
     def addSlicePreview(self, params, recon):
         self.previewViewer.addPreview(recon[0], params)
@@ -175,9 +161,13 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.setPreview(recon, params)
 
     def fullReconFinished(self):
-        self._recon_running = False
-        self.processViewer.local_console.insertPlainText('Reconstruction complete.')
-        # self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
+        self.sigReconFinished.emit()
+        path = fmanager.get_output_path()
+        # if not extension was given assume it is a tiff directory.
+        if '.' not in path:
+            path = os.path.split(path)[0]
+        self.reconstructionViewer.openDataset(path=path)
+        self.viewstack.setCurrentWidget(self.reconstructionViewer)
 
     def onManualCenter(self, active):
         if active:
@@ -693,16 +683,16 @@ class ReconstructionViewer(QtGui.QWidget):
 
         self.browse_button.clicked.connect(self.openDataset)
 
-    def openDataset(self):
-        path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
-        if path is not None:
-            if len(path) > 1:
-                path = os.path.split(path[0])[0]
-            else:
-                path = path[0]
+    def openDataset(self, path=None):
+        if path is None:
+            path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
+        if path:
             data = loader.StackImage(path)
             self.stack_viewer.setData(data)
+            if isinstance(path, list):
+                path = os.path.split(path)[0]
             self.path_edit.setText(path)
+
 
 """
 Example volume rendering
@@ -1026,7 +1016,7 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
+    # sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
 
     def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
@@ -1050,7 +1040,8 @@ class RunViewer(QtGui.QTabWidget):
             console.setReadOnly(True)
             console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
             button.setIcon(icon)
-            button.setIconSize(QtCore.QSize(32, 32))
+            button.setIconSize(QtCore.QSize(24, 24))
+            button.setFixedSize(32, 32)
             button.setToolTip('Cancel Current Process')
             w = QtGui.QWidget()
             w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
@@ -1058,8 +1049,8 @@ class RunViewer(QtGui.QTabWidget):
             l = QtGui.QGridLayout()
             l.setContentsMargins(0,0,0,0)
             l.setSpacing(0)
-            l.addWidget(console, 0, 0, 1, 2)
-            l.addWidget(button, 1, 1, 1, 1)
+            l.addWidget(console, 0, 0, 2, 2)
+            l.addWidget(button, 1, 2, 1, 1)
             w.setLayout(l)
             self.addTab(w, console.objectName())
 

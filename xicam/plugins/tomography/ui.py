@@ -9,6 +9,7 @@ from pyqtgraph import parametertree as pt
 import toolbar as ttoolbar
 import fdata
 import fmanager
+import widgets
 
 blankform = None
 propertytable = None
@@ -16,10 +17,11 @@ configparams = None
 paramformstack = None
 functionwidget = None
 centerwidget = None
+bottomwidget = None
 
 
 def loadUi():
-    global blankform, propertytable, configparams, functionwidget, paramformstack, centerwidget
+    global blankform, propertytable, configparams, functionwidget, paramformstack, centerwidget, bottomwidget
 
     toolbar = ttoolbar.tomotoolbar()
 
@@ -28,7 +30,7 @@ def loadUi():
     centerwidget.setDocumentMode(True)
     centerwidget.setTabsClosable(True)
 
-    bottomwidget = None
+    bottomwidget = widgets.RunViewer()
 
     # Load the gui from file
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')

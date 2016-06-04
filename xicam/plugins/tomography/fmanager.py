@@ -358,3 +358,8 @@ def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
 
     reset_cor()
 
+
+def get_output_path():
+    global functions
+    write_funcs = [f for f in functions if f.func_name == 'Write']
+    return write_funcs[-1].params.child('fname').value()
