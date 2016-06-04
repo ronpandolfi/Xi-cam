@@ -5,6 +5,7 @@ from PySide import QtCore, QtGui
 import pyqtgraph as pg
 import spacegrp_peaks
 import numpy as np
+from xicam import config
 
 
 # TODO: Add index of refraction to interface and backend
@@ -279,18 +280,24 @@ class spacegroupwidget(ParameterTree):
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refgamma=refgamma,refbeta=refbeta,order=2,unitcell=None,space_grp=SG)
-        for key in peaks:
-            from xicam import config
-            print key + " -> " + str(peaks[key])
+        for peak in peaks:
+            print unicode(peak)
+
+
+        #     print key + " -> " + str(peaks[key])
             center = config.activeExperiment.center
             sdd = config.activeExperiment.getvalue('Detector Distance')
-            pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
-            peaks[key] = pixels
+            pixelsize = config.activeExperiment.getvalue('Pixel Size X')
+            peak.position(center,sdd,pixelsize)
+            print 'x:',peak.x
+            print 'y:',peak.y
+        #     pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
+        #     peaks[key] = pixels
 
-        peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
-                 not np.any(peaks[p] < -100000)] + \
-                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if
-                 not np.any(peaks[p] < -100000)]
+        # peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
+        #          not np.any(peaks[p] < -100000)] + \
+        #         [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if
+        #          not np.any(peaks[p] < -100000)]
 
         self.sigDrawSGOverlay.emit(peakoverlay(peaks))
         # self.sigDrawSGOverlay.emit(peakoverlay(
