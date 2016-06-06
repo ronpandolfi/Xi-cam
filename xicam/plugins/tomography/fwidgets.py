@@ -307,6 +307,7 @@ class ReconFuncWidget(FuncWidget):
 
     @property
     def partial(self):
+        #TODO fix filter_par not being used
         d = deepcopy(self.param_dict)
         filter_par = [d['cutoff'], d['order']]
         d['filter_par'] = filter_par
