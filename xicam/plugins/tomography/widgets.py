@@ -233,10 +233,13 @@ class ImageView(pg.ImageView):
             if viewBox.sceneBoundingRect().contains(pos):
                 mousePoint = viewBox.mapSceneToView(pos)
                 x, y = map(int, (mousePoint.x(), mousePoint.y()))
-                if (0 < x < self.imageItem.image.shape[0]) & (0 <  y < self.imageItem.image.shape[1]):  # within bounds
+                if (0 <= x < self.imageItem.image.shape[0]) & (0 <= y < self.imageItem.image.shape[1]):  # within bounds
                     self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x={0},"
                                              u"   <span style=''>y={1}</span>,   <span style=''>I={2}</span>"\
                                              .format(x, y, self.imageItem.image[x, y]))
+                else:
+                    self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x= ,"
+                                             u"   <span style=''>y= </span>,   <span style=''>I= </span>")
         except AttributeError:
             pass
 
@@ -249,7 +252,6 @@ class StackViewer(ImageView):
         super(StackViewer, self).__init__(*args, **kwargs)
 
         # self.getImageItem().setAutoDownsample(True)
-        self.getView().invertY(False)
 
         self.view_label = QtGui.QLabel(self)
         self.view_label.setText('No: ')
@@ -290,7 +292,7 @@ class StackViewer(ImageView):
 
     @property
     def currentdata(self):
-        return np.rot90(self.data[self.data.currentframe]) #these rotations are very annoying
+        return self.data[self.data.currentframe].transpose()  # Maybe we need to transpose this
 
     def resetImage(self):
         self.setImage(self.data, autoRange=False)
@@ -430,8 +432,8 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
-        self.flat = np.rot90(np.median(self.data.flats, axis=0), 3)
-        self.dark = np.rot90(np.median(self.data.darks, axis=0), 3)
+        self.flat = np.median(self.data.flats, axis=0).transpose()
+        self.dark = np.median(self.data.darks, axis=0).transpose()
 
         self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0])
         # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
@@ -478,8 +480,8 @@ class ProjectionViewer(QtGui.QWidget):
         constrainYCheckBox.setChecked(True)
         constrainXCheckBox = QtGui.QCheckBox('Constrain X', parent=self.cor_widget)
         constrainXCheckBox.setChecked(False)
-        rotateCheckBox = QtGui.QCheckBox('Enable Rotation', parent=self.cor_widget)
-        rotateCheckBox.setChecked(False)
+        # rotateCheckBox = QtGui.QCheckBox('Enable Rotation', parent=self.cor_widget)
+        # rotateCheckBox.setChecked(False)
         self.normCheckBox = QtGui.QCheckBox('Normalize', parent=self.cor_widget)
         h2 = QtGui.QHBoxLayout()
         h2.setAlignment(QtCore.Qt.AlignLeft)
@@ -510,7 +512,7 @@ class ProjectionViewer(QtGui.QWidget):
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
         constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
         constrainXCheckBox.stateChanged.connect(lambda v: self.roi.constrainX(v))
-        rotateCheckBox.stateChanged.connect(self.addRotateHandle)
+        # rotateCheckBox.stateChanged.connect(self.addRotateHandle)
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.roi.sigTranslated.connect(self.setCenter)
@@ -612,7 +614,7 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
-        self.imageview.sigDeletePressed.connect(self.removePreview)
+        self.imageview.ui.roiBtn.setParent(None)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
@@ -640,7 +642,7 @@ class PreviewViewer(QtGui.QSplitter):
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
     def addPreview(self, image, funcdata):
-        self.previews.appendleft(np.rot90(np.flipud(image), 3))
+        self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
