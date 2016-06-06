@@ -939,7 +939,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getframe(frame), 3)
+        return self.fabimage.getframe(frame).transpose()
 
     def invalidatecache(self):
         self.cache = dict()
@@ -978,7 +978,7 @@ class SinogramStack(StackImage):
         return new_obj
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getsinogram(frame), 3)
+        return self.fabimage.getsinogram(frame).transpose()
 
 
 class diffimage2(object):
