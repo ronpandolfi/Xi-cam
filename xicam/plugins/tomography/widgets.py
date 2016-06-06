@@ -612,7 +612,7 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
-        self.imageview.sigDeletePressed.connect(self.removePreview)
+        self.imageview.ui.roiBtn.setParent(None)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
