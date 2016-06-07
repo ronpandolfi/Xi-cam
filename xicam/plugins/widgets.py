@@ -536,9 +536,9 @@ class dimgViewer(QtGui.QWidget):
         # self.replot()
 
     def removecosmics(self):
-        c = cosmics.cosmicsimage(self.dimg.data)
+        c = cosmics.cosmicsimage(self.dimg.rawdata)
         c.run(maxiter=4)
-        config.activeExperiment.addtomask(c.mask)
+        config.activeExperiment.addtomask(1-c.mask)
         # self.maskoverlay()
 
     @debugtools.timeit

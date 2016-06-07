@@ -216,8 +216,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"q<sub>∥</sub>: {}\n".format(self.qpar)
-        if self.qvrt is not None: s += u"q<sub>z</sub>: {}".format(self.qvrt)
+        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar)
+        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
