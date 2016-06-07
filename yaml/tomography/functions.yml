@@ -4,19 +4,20 @@ Functions:
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
   Normalization: [Regular, Background Intensity, Nearest Flats]
-  Pad: [Pad]
+  Padding: [Padding]
   Phase Retrieval: [Phase Retrieval]
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
                  Astra: [], #[FP, BP, FBP, SIRT, SART, ART, CGLS, FP CUDA, BP CUDA, FBP CUDA, SIRT CUDA, SART CUDA,
                          #CGLS CUDA, EM CUDA, FP3D_CUDA, BP3D CUDA, FDK CUDA, SIRT3D CUDA, CGLS3D CUDA],
                  MBIR: []}
-  Outlier Removal: [Remove Outliers]
+  Outlier Removal: [Remove Outliers, Remove NAN]
   Ring Removal: [Polar Mean Filter]
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]
   Crop: [Crop]
   Convert Data Type: [Convert Data Type]
   Write: [Tiff Stack] #, Numpy Array, Data Exchange, Write HDF5]
+  Array Operation: [Array Operation]
 Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]

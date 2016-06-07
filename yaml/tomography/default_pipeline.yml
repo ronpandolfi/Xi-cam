@@ -8,8 +8,8 @@ Stripe Removal:
     wname: db5
     sigma: 4
     pad: True
-Pad:
-  Pad:
+Padding:
+  Padding:
     axis: 2
     mode: edge
     npad: 531
@@ -30,6 +30,9 @@ Crop:
     p12: 531
     p21: 531
     p22: 531
+Array Operation:
+  Array Operation:
+    operation: divide
 Circular Mask:
   Circular Mask:
     ratio: 1.0

@@ -23,3 +23,13 @@ Convert Data:
   type: float
 - name: max
   type: float
+Array Operation:
+- name: value
+  type: int
+- name: operation
+  type: list
+  values:
+  - add
+  - subtract
+  - multiply
+  - divide

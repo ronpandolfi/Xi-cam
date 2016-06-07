@@ -49,6 +49,19 @@ def convert_data(arr, min=None, max=None, dtype='uint8'):
     return np.array(arr, dtype=np.dtype(dtype))
 
 
+def array_operation(arr, value, operation='divide'):
+    if operation not in ('add', 'subtract', 'multiply', 'divide'):
+        raise ValueError('Operation {} is not a valid array operation'.format(operation))
+    elif operation == 'add':
+        return arr + value
+    elif operation == 'subtract':
+        return arr - value
+    elif operation == 'multiply':
+        return arr*value
+    elif operation == 'divide':
+        return arr/value
+
+
 if __name__ == '__main__':
     import tomopy
     from matplotlib.pyplot import imshow, show, figure

@@ -836,6 +836,7 @@ class VolumeViewer(QtGui.QWidget):
                 bins = 500
 
         kwds['bins'] = bins
+        print kwds
         hist = np.histogram(stepData, **kwds)
 
         return hist[1][:-1], hist[0]
