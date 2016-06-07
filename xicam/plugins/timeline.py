@@ -3,7 +3,10 @@ import platform
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
 if op_sys == 'Darwin':
-    from Foundation import NSURL
+    try:
+        from Foundation import NSURL
+    except ImportError:
+        print 'NSURL not found. Drag and drop may not work correctly'
 
 
 import base

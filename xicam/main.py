@@ -4,6 +4,7 @@ import sys
 from PySide import QtGui, QtCore
 
 from xicam import xglobals
+
 from xicam.splash import SplashScreen
 import xicam
 

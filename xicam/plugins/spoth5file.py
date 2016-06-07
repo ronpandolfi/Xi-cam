@@ -127,7 +127,7 @@ class plugin(viewer.plugin):
             high_header = {'Detector Vertical': 6.88, 'Detector Horizontal': 0}
             low_data = h5.getImage()
             high_data = h5.getHighImage()
-            data = loader.loadstichted(None, None, low_data, high_data, low_header, high_header)
+            data = loader.loadstitched(None, None, low_data, high_data, low_header, high_header)
             self.opendata(data)
 
 

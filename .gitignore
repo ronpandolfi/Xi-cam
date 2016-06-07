@@ -2,4 +2,6 @@
 *.edf
 *.nxs
 .idea/
-*pyc
+*.pyc
+*.csv
+*.tif

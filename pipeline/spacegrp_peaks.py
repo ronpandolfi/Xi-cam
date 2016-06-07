@@ -1,9 +1,10 @@
 #! /usr/bin/env python
-
+# --coding: utf-8 --
 import itertools
 import numpy as np
 from numpy.linalg import norm
 from scipy.optimize import root
+import sgexclusions
 
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
@@ -147,7 +148,7 @@ def jacobian(x, G, alphai, k):
         return jac
 
 def reflection_condtion(hkl, unitcell, space_grp):
-    if space_grp is None and unitcell is None:
+    if unitcell is None:
         return True
     tot = 0.
     c = -2 * np.pi * np.complex(0, 1)
@@ -187,8 +188,48 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
     pixels[:,1] = py
     return pixels.astype(int)
 
+class peak(object):
+    def __init__(self, mode):
+        self.mode = mode # either 'Transmission' or 'Reflection'
+        self.hkl = None
+        self.x = None
+        self.y = None
+        self.twotheta = None
+        self.alphaf = None
+        self.qpar = None
+        self.qvrt = None
+
+
+    def position(self, center, sdd, pixels):
+        tan_2t = np.tan(self.twotheta)
+        tan_al = np.tan(self.alphaf)
+        x= tan_2t * sdd
+        self.x = sdd * tan_2t / pixels + center[0]
+        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels + center[1]
+        
+    def isAt(self, pos):
+        if np.isnan(self.twotheta): return False
+        return int(self.x) == int(pos.x()) and int(self.y) == int(pos.y())
+
+    def __str__(self):
+        s = u"Peak type: {}\n".format(self.mode)
+        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
+        if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
+        if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
+        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar)
+        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt)
+        return s
+
+def qvalues(twotheta, alphaf, alphai, wavelen):
+    k = 2 * np.pi / wavelen
+    qx = k * (np.cos(alphaf) * np.cos(twotheta) - np.cos(alphai))
+    qy = k * np.cos(alphaf) * np.sin(twotheta)
+    qz = k * np.sin(alphaf) + np.sin(alphai)
+    return np.sqrt(qx**2 + qy**2), qz
+
+
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
-               norm_type="uvw", wavelen=0.123984e-9, order=3, unitcell=None, space_grp=None):
+               norm_type="uvw", wavelen=0.123984e-9, refgamma=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
 
     if alpha is not None: alpha = np.deg2rad(alpha)
@@ -220,7 +261,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     # Rotation axis
     e_z = np.array([0, 0, 1], dtype=float)
     e_r = np.cross(e_norm, e_z)
-    e_r /= norm(e_r)
+    e_r /= (norm(e_r) if norm(e_r) != 0 else 1)
 
     # Angle of rotation
     theta = np.arccos(np.dot(e_z, e_norm))
@@ -234,26 +275,40 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     c = V[:, 2]
     RV = reciprocalvectors(a, b, c)
 
-    nu = 1 - np.complex(2.236E-06, -1.8790E-09)
+    nu = 1 - np.complex(refgamma,refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
     alphai = np.deg2rad(0.2)
     k = 2 * np.pi / wavelen
-    peaks = dict()
+    peaks = list()
     for hkl in HKL:
         if hkl[2] < 0: continue
-        if (reflection_condtion(hkl, space_grp, unitcell)):
+        if not sgexclusions.check(hkl,space_grp): continue
+        if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
-            transmission = [np.NaN, np.NaN]
-            reflection = [np.NaN, np.NaN]
             al_t, al_r = alpha_exit(G, alphai, nu, k)
+
             if al_t > 0:
                 th = theta_exit(G, alphai, al_t, k)
-                transmission = [th, al_t]
+                transmission = peak('Transmission')
+                transmission.hkl = hkl
+                transmission.twotheta = th
+                transmission.alphaf = al_t
+                qp, qv = qvalues(th, al_t, alphai, wavelen)
+                transmission.qpar = qp
+                transmission.qvrt = qv
+                peaks.append(transmission)
+
             if al_r > 0:
                 th = theta_exit(G, alphai, al_r, k)
-                reflection = [th, al_r]
-            key = '{0}{1}{2}'.format(hkl[0], hkl[1], hkl[2])
-            peaks[key] = (transmission, reflection)
+                reflection = peak('Reflection')
+                reflection.hkl = hkl
+                reflection.twotheta = th
+                reflection.alphaf = al_r
+                qp, qv = qvalues(th, al_r, alphai, wavelen)
+                reflection.qpar = qp
+                reflection.qvrt = qv
+                peaks.append(reflection)
+
     return peaks
 
 
