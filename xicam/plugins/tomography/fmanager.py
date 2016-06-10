@@ -11,7 +11,6 @@ import fdata
 import fwidgets
 import reconpkg
 import ui
-import xicam.plugins.tomography.fdata
 import yamlmod
 from xicam import threads
 
@@ -121,7 +120,7 @@ def update():
 
     w = ui.centerwidget.currentWidget()
     if w:
-        set_function_defaults(w.widget.data.header)
+        set_function_defaults(w.widget.data.header, functions)
 
 def load_form(path):
     guiloader = QUiLoader()
@@ -203,11 +202,12 @@ def set_function_defaults(mdata, funcs):
     for f in funcs:
         if f.subfunc_name in fdata.als832defaults:
             for p in f.params.children():
-                if p.name() in fdata.als832defaults[f.func_name]:
-                    v = mdata[fdata.als832defaults[f.func_name][p.name()]['name']]
-                    v = xicam.plugins.tomography.fdata.PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
-                    if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
-                        v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
+                if p.name() in fdata.als832defaults[f.subfunc_name]:
+                    v = mdata[fdata.als832defaults[f.subfunc_name][p.name()]['name']]
+                    t = fdata.PARAM_TYPES[fdata.als832defaults[f.subfunc_name][p.name()]['type']]
+                    v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
+                    if 'conversion' in fdata.als832defaults[f.subfunc_name][p.name()]:
+                        v *= fdata.als832defaults[f.subfunc_name][p.name()]['conversion']
                     p.setDefault(v)
                     p.setValue(v)
         elif f.func_name == 'Write':
@@ -264,9 +264,13 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
         elif func.func_name in ('Padding', 'Downsample', 'Upsample'):
             correct_center(func)
 
-        funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                                input_partials=func.input_partials, slc=slc))
         params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
+        p = update_function_partial(func.partial, func.func_name, func.args_complement, widget,
+                                    param_dict=params[func.func_name][func.subfunc_name],
+                                    input_partials=func.input_partials, slc=slc)
+        funstack.append(p)
+        # params[func.func_name][func.subfunc_name].update({k: v for k, v in p.keywords.items()
+        #                                                   if k in params[func.func_name][func.subfunc_name]})
         if func.input_functions is not None:
             params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
                                                                             deepcopy(infunc.getParamDict(update=update))
@@ -277,7 +281,8 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     return funstack, widget.getsino(slc), partial(callback, params)
 
 
-def update_function_partial(fpartial, name, argnames, datawidget, input_partials=None, slc=None, ncore=None):
+def update_function_partial(fpartial, name, argnames, datawidget, param_dict=None, input_partials=None, slc=None,
+                            ncore=None):
     global recon_function, cor_offset, cor_scale
     kwargs = {}
     for arg in argnames:
@@ -293,6 +298,8 @@ def update_function_partial(fpartial, name, argnames, datawidget, input_partials
             if slices is not None:
                 map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
             kwargs[pname] = ipartial(*pargs)
+            if param_dict is not None:
+                param_dict[pname] = kwargs[pname]
             if pname == 'center':
                 if cor_offset is None:
                     cor_offset = cor_scale

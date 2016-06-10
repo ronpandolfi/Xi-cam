@@ -1,6 +1,12 @@
 import numpy as np
-import skimage as skg
-from skimage.exposure import rescale_intensity
+# from skimage.exposure import rescale_intensity
+
+DTYPE_RANGE = {'uint8': (0, 255),
+               'uint16': (0, 65535),
+               'int8': (-128, 127),
+               'int16': (-32768, 32767),
+               'float32': (-1, 1),
+               'float64': (-1, 1)}
 
 def crop(arr, p11, p12, p21, p22, axis=0):
     """
@@ -23,32 +29,36 @@ def crop(arr, p11, p12, p21, p22, axis=0):
     return arr[slc]
 
 
-def convert_data(arr, min=None, max=None, dtype='uint8'):
+def convert_data(arr, imin=None, imax=None, dtype='uint8'):
     """
     Convert an image or 3D array to another datatype
     :param arr: ndarray, data array
     :param dtype: dataype keyword
-    :param min,
-    :param max,
+    :param imin,
+    :param imax,
     :return: ndarry, converted to dtype
     """
 
-    allowed_dtypes = ('uint8', 'uint16', 'int16', 'float32', 'float64')
+    allowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')
     if dtype not in allowed_dtypes:
         raise ValueError('dtype keyword {0} not in allowed keywords {1}'.format(dtype, allowed_dtypes))
 
     # Determine range to cast values
-    if min is None:
-        min = np.amin(arr)
-    if max is None:
-        max = np.amax(arr)
+    if imin is None:
+        imin = np.min(arr)
+    if imax is None:
+        imax = np.max(arr)
 
-    in_range = (min, max)
+    # Determine range of new dtype
+    omin, omax = DTYPE_RANGE[dtype]
+    omin = 0 if imin >= 0 else omin
+
+    # rescale pixel intensity values
+    arr = np.clip(arr, imin, imax)
+    arr = np.array(((arr - imin) / float(imax - imin))* (omax - omin) + omin, dtype=arr.dtype)
+    # arr = rescale_intensity(arr, in_range=in_range, out_range=dtype)
+
     # Cast data to specified type
-    arr = rescale_intensity(arr, in_range=in_range, out_range=dtype)
-    if dtype == 'uint8':
-        return skg.img_as_int(arr)
-
     return np.array(arr, dtype=np.dtype(dtype))
 
 
@@ -69,7 +79,7 @@ if __name__ == '__main__':
     import tomopy
     from matplotlib.pyplot import imshow, show, figure
     d = tomopy.read_als_832h5('/home/lbluque/TestDatasetsLocal/dleucopodia.h5', ind_tomo=(500, 501, 502, 503))
-    c = convert_data(d[0], min=0, max=0)
+    c = convert_data(d[0], imin=0, imax=0)
     print d[0].dtype
     print c.dtype
     figure(0)

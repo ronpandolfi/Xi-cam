@@ -30,6 +30,6 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 #     names[algorithm] = 'recon'
 
 # Load dictionary with function parameters to be retrieved from metadatas
-with open('yaml/tomography/bl832_function_defaults.yml','r') as stream:
+with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
 

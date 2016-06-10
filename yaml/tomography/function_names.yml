@@ -87,7 +87,7 @@ Write HDF5:
 Crop:
 - crop
 - pipelinefunctions
-Convert Data:
+Convert Data Type:
 - convert_data
 - pipelinefunctions
 Array Operation:
