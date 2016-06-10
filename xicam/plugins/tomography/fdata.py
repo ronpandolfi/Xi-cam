@@ -1,5 +1,7 @@
 import yaml
 
+PARAM_TYPES = {'int': int, 'float': float}
+
 # Load yaml with names of all available functions in pipeline
 with open('yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
@@ -27,6 +29,7 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 # for algorithm in funcs['Functions']['Reconstruction']['Astra']:
 #     names[algorithm] = 'recon'
 
-# Load the default pipeline file
+# Load dictionary with function parameters to be retrieved from metadatas
 with open('yaml/tomography/bl832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
+

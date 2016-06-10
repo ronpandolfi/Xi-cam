@@ -1,24 +1,22 @@
-from PySide.QtUiTools import QUiLoader
-from PySide import QtGui, QtCore
 import os
+import warnings
 from collections import OrderedDict
-from functools import partial
 from copy import deepcopy
-import yamlmod
-from xicam import threads
-import ui
+from functools import partial
+
+from PySide import QtGui, QtCore
+from PySide.QtUiTools import QUiLoader
+
+import fdata
 import fwidgets
 import reconpkg
-import fdata
-import warnings
+import ui
+import xicam.plugins.tomography.fdata
+import yamlmod
+from xicam import threads
 
 # imports for functions exposed in pipeline
-import pipelinefunctions
-import dxchange
-
-FUNCTIONS_W_METADATA_DEFAULTS = ['Projection Angles', 'Phase Retrieval', 'Polar Mean Filter']
-PARAM_TYPES = {'int': int, 'float': float}
-
+import pipelinefunctions, dxchange
 
 functions = []
 recon_function = None
@@ -202,13 +200,12 @@ def open_pipeline_file():
 
 
 def set_function_defaults(mdata, funcs):
-    global FUNCTIONS_W_METADATA_DEFAULTS, PARAM_TYPES
     for f in funcs:
-        if f.subfunc_name in FUNCTIONS_W_METADATA_DEFAULTS:
+        if f.subfunc_name in fdata.als832defaults:
             for p in f.params.children():
                 if p.name() in fdata.als832defaults[f.func_name]:
                     v = mdata[fdata.als832defaults[f.func_name][p.name()]['name']]
-                    v = PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
+                    v = xicam.plugins.tomography.fdata.PARAM_TYPES[fdata.als832defaults[f.func_name][p.name()]['type']](v)
                     if 'conversion' in fdata.als832defaults[f.func_name][p.name()]:
                         v *= fdata.als832defaults[f.func_name][p.name()]['conversion']
                     p.setDefault(v)
@@ -243,7 +240,7 @@ def pipeline_preview_action(widget, callback, update=True, slc=None):
 
 def correct_center(func):
     global cor_offset, cor_scale
-    if func.func_name == 'Pad' and func.getParamDict(update=update)['axis'] == 2:
+    if func.func_name == 'Padding' and func.getParamDict(update=update)['axis'] == 2:
         n = func.getParamDict()['npad']
         cor_offset = lambda x: cor_scale(x) + n
     elif func.func_name == 'Downsample' and func.getParamDict(update=update)['axis'] == 2:
@@ -264,7 +261,7 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
         if (not func.previewButton.isChecked() and func.func_name != 'Reconstruction') or func.func_name == 'Write':
             continue
         # Correct center of rotation
-        elif func.func_name in ('Pad', 'Downsample', 'Upsample'):
+        elif func.func_name in ('Padding', 'Downsample', 'Upsample'):
             correct_center(func)
 
         funstack.append(update_function_partial(func.partial, func.func_name, func.args_complement, widget,
@@ -323,7 +320,7 @@ def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_c
     for f in functions:
         if not f.previewButton.isChecked() and f.func_name != 'Reconstruction':
             continue
-        elif f.func_name in ('Pad', 'Downsample', 'Upsample'):
+        elif f.func_name in ('Padding', 'Downsample', 'Upsample'):
             correct_center(f)
 
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))

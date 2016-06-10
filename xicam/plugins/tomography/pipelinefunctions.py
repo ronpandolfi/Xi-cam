@@ -1,4 +1,5 @@
 import numpy as np
+import skimage as skg
 from skimage.exposure import rescale_intensity
 
 def crop(arr, p11, p12, p21, p22, axis=0):
@@ -43,9 +44,11 @@ def convert_data(arr, min=None, max=None, dtype='uint8'):
         max = np.amax(arr)
 
     in_range = (min, max)
-    print in_range
     # Cast data to specified type
     arr = rescale_intensity(arr, in_range=in_range, out_range=dtype)
+    if dtype == 'uint8':
+        return skg.img_as_int(arr)
+
     return np.array(arr, dtype=np.dtype(dtype))
 
 
