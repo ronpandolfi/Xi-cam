@@ -13,6 +13,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, reg
 from xicam import dialogs
 from xicam import xglobals
 import scipy
+from pipeline import variation
+
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -58,7 +60,6 @@ class OOMTabItem(QtGui.QWidget):
             self.sigLoaded.emit()
             print 'Loaded:', self.itemclass
 
-
     def unload(self):
         """
         orphan the tab widget and queue them for deletion. Mwahahaha.
@@ -71,11 +72,8 @@ class OOMTabItem(QtGui.QWidget):
 
 
 class dimgViewer(QtGui.QWidget):
-    sigPlotQIntegration = QtCore.Signal(object)
-    sigPlotChiIntegration = QtCore.Signal(object)
 
-
-    def __init__(self, dimg=None, paths=None, plotwidget=None, toolbar=None, **kwargs):
+    def __init__(self, dimg=None, src=None, plotwidget=None, toolbar=None, **kwargs):
         """
         A tab containing an imageview. Also manages functionality connected to a specific tab (masking/integration)
         :param imgdata:
@@ -90,17 +88,10 @@ class dimgViewer(QtGui.QWidget):
         self.plotwidget = plotwidget
         self.toolbar = toolbar
 
-        if type(paths) not in [list, None]:
-            paths = [paths]
-
-        self.paths = paths
-
-        # Save image data and the experiment
-        self.dimg = dimg
-
-        if len(paths) == 1 and paths[0] is not None:
-            self.dimg = loader.diffimage(filepath=paths[0])
-
+        if dimg is not None:
+            self.dimg = dimg
+        else:
+            self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
         self.imgview = ImageView(self)
@@ -120,7 +111,6 @@ class dimgViewer(QtGui.QWidget):
         self.imgview.getHistogramWidget().item.vb.menu.addAction(reset)
         reset.triggered.connect(self.resetLUT)
 
-
         # self.imgview.getHistogramWidget().plot.setLogMode(True,False)
 
 
@@ -128,7 +118,6 @@ class dimgViewer(QtGui.QWidget):
 
         if self.plotwidget is not None:
             self.plotwidget.sigReplot.connect(self.replot)
-
 
         # cross hair
         linepen = pg.mkPen('#FFA500')
@@ -138,8 +127,6 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(False)
         self.viewbox.addItem(self.vLine, ignoreBounds=True)
         self.viewbox.addItem(self.hLine, ignoreBounds=True)
-
-
 
         # Add a thin border to the image so it is visible on black background
         self.imageitem.border = pg.mkPen('w')
@@ -183,24 +170,21 @@ class dimgViewer(QtGui.QWidget):
         # menu = self.viewbox.menu
         # self.actionLogIntensity = QAction('Log Intensity', menu, checkable=True)
         # self.actionLogIntensity.triggered.connect(self.logintensity)
-        #menu.addAction(self.actionLogIntensity)
-        #self.imgview.buildMenu()
+        # menu.addAction(self.actionLogIntensity)
+        # self.imgview.buildMenu()
 
         # Add a placeholder image item for the mask to the viewbox
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
 
-        self.sigPlotQIntegration.connect(self.plotqintegration)
-        self.sigPlotChiIntegration.connect(self.plotchiintegration)
-
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
         # self.viewbox.addItem(self.arc)
-        #print self.dimg.data
-        #print self.imageitem
+        # print self.dimg.data
+        # print self.imageitem
 
 
-        #self.viewbox.addItem(pg.SpiralROI((0,0),1))
+        # self.viewbox.addItem(pg.SpiralROI((0,0),1))
 
         try:
             energy = self.dimg.headers['Beamline Energy']
@@ -214,10 +198,10 @@ class dimgViewer(QtGui.QWidget):
 
         # Cache radial integration
         if self.dimg is not None:
-            if self.dimg.data is not None:
+            if self.dimg.rawdata is not None:
                 self.redrawimage()
 
-                #self.q, self.radialprofile = self.dimg.radialintegrate
+                # self.q, self.radialprofile = self.dimg.radialintegrate
 
                 # Force cache the detector
                 # _ = self.dimg.detector
@@ -244,13 +228,13 @@ class dimgViewer(QtGui.QWidget):
 
         print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
-        Lmax = np.nanmax(self.dimg.data)
+        Lmax = np.nanmax(self.dimg.rawdata)
 
         if self.toolbar.actionLog_Intensity.isChecked():
             self.imgview.getHistogramWidget().item.setLevels(
-                np.log(max(np.nanmin(self.dimg.data * (self.dimg.data > 0)), 1)), np.log(Lmax))
+                np.log(max(np.nanmin(self.dimg.rawdata * (self.dimg.rawdata > 0)), 1)), np.log(Lmax))
         else:
-            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.data), 0), Lmax)
+            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.rawdata), 0), Lmax)
         print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
 
     def cacheLUT(self):
@@ -271,9 +255,9 @@ class dimgViewer(QtGui.QWidget):
 
         # self.viewbox.scene().removeItem(evt)
 
-    @property
-    def isChiPlot(self):
-        return self.plotwidget.currentIndex()
+    # @property
+    # def isChiPlot(self):
+    #     return self.plotwidget.currentIndex()
 
     def mouseMoved(self, evt):
         """
@@ -291,15 +275,7 @@ class dimgViewer(QtGui.QWidget):
                     x = mousePoint.x()
                     y = mousePoint.y()
 
-                    iscake = self.toolbar.actionCake.isChecked()
-                    isremesh = self.toolbar.actionRemeshing.isChecked()
-
-                    if iscake:
-                        data = self.dimg.cake
-                    elif isremesh:
-                        data = self.dimg.remesh
-                    else:
-                        data = self.dimg.data
+                    data = self.dimg.transformdata
 
                     # if iscake:
                     # q = pixel2cake(x, y, self.dimg)
@@ -308,7 +284,7 @@ class dimgViewer(QtGui.QWidget):
                     # return
                     # else:
                     #     q = pixel2q(x, y, self.dimg.experiment)
-                    #print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
+                    # print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                              u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
@@ -326,11 +302,12 @@ class dimgViewer(QtGui.QWidget):
                                                  360. / (2 * np.pi) * np.arctan2(self.getq(x, y, 'z'),
                                                                                  self.getq(x, y, 'parallel'))))
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
-                    #y - self.dimg.experiment.center[1]) ** 2)))
-                    #,  r=%0.1f
-                    if hasattr(self.plotwidget, 'qintegration'):
-                        self.plotwidget.qintegration.qLine.setPos(self.getq(mousePoint.x(), mousePoint.y()))
-                        self.plotwidget.qintegration.qLine.show()
+                    # y - self.dimg.experiment.center[1]) ** 2)))
+                    # ,  r=%0.1f
+
+                    self.plotwidget.movPosLine(self.getq(mousePoint.x(), mousePoint.y(),mode='parallel'),
+                                               self.getq(mousePoint.x(), mousePoint.y(), mode='z'))
+
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
@@ -346,8 +323,7 @@ class dimgViewer(QtGui.QWidget):
             else:
                 self.coordslabel.setText(u"<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
                 if hasattr(self.plotwidget, 'qintegration'):
-                    self.plotwidget.qintegration.qLine.hide()
-
+                    self.plotwidget.qintegration.posLine.hide()
 
     def getq(self, x, y, mode=None):  # This is a mess...rewrite it sometime
         iscake = self.toolbar.actionCake.isChecked()
@@ -402,7 +378,7 @@ class dimgViewer(QtGui.QWidget):
         self.vLine.setVisible(False)
         # self.coordslabel.setVisible(False)
         if hasattr(self.plotwidget, 'qintegration'):
-            self.plotwidget.qintegration.qLine.setVisible(False)
+            self.plotwidget.qintegration.posLine.setVisible(False)
 
     def enterEvent(self, evt):
         """
@@ -411,107 +387,37 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(True)
         self.vLine.setVisible(True)
         if hasattr(self.plotwidget, 'qintegration'):
-            self.plotwidget.qintegration.qLine.setVisible(True)
-
-
-    def redrawimageLowRes(self):
-        self.redrawimage(forcelow=True)
-
+            self.plotwidget.qintegration.posLine.setVisible(True)
 
     def redrawimage(self, returnimg=False):
         """
         redraws the diffraction image, checking drawing modes (log, symmetry, mask, cake)
         """
-        toolbar = self.toolbar
 
-        img = self.dimg.data
-        scale = 1
-
-        islogintensity = toolbar.actionLog_Intensity.isChecked()
-        isradialsymmetry = toolbar.actionRadial_Symmetry.isChecked()
-        ismirrorsymmetry = toolbar.actionMirror_Symmetry.isChecked()
-        ismaskshown = toolbar.actionShow_Mask.isChecked()
-        iscake = toolbar.actionCake.isChecked()
-        isremesh = toolbar.actionRemeshing.isChecked()
-        # img = self.dimg.data.copy()
-        # if forcelow:
-        # img = self.dimg.thumbnail.copy()
-        # scale = 10
-        # else:
+        self.dimg.cakemode = self.iscake
+        self.dimg.remeshmode = self.isremesh
+        self.dimg.radialsymmetrymode = self.isradialsymmetry
+        self.dimg.mirrorsymmetrymode = self.ismirrorsymmetry
+        self.dimg.logscale = self.islogintensity
 
 
-
-
-        if isradialsymmetry:
-            centerx = config.activeExperiment.center[0]
-            centery = config.activeExperiment.center[1]
-            symimg = np.rot90(img.copy(), 2)
-            # imtest(symimg)
-            xshift = -(img.shape[0] - 2 * centerx)
-            yshift = -(img.shape[1] - 2 * centery)
-            symimg = np.roll(symimg, int(xshift), axis=0)
-            symimg = np.roll(symimg, int(yshift), axis=1)
-            # imtest(symimg)
-            marginmask = config.activeExperiment.mask
-            #imtest(marginmask)
-
-            x, y = np.indices(img.shape)
-            padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-            # imtest(padmask)
-            #imtest(symimg * padmask * (1 - marginmask))
-            img = img * marginmask + symimg * padmask * (1 - marginmask)
-
-        elif ismirrorsymmetry:
-            centery = config.activeExperiment.getvalue('Center Y')
-            symimg = np.fliplr(img.copy())
-            #imtest(symimg)
-            yshift = -(img.shape[1] - 2 * centery)
-            symimg = np.roll(symimg, int(yshift), axis=1)
-            #imtest(symimg)
-            marginmask = 1 - config.activeExperiment.mask
-            #imtest(marginmask)
-
-            x, y = np.indices(img.shape)
-            padmask = ((yshift < y) & (y < (yshift + img.shape[1])))
-            # imtest(padmask)
-            #imtest(symimg * padmask * (1 - marginmask))
-            img = img * marginmask + symimg * padmask * (1 - marginmask)
-
-        mask = config.activeExperiment.mask
-
-        if self.iscake:
-            img = self.dimg.cake
-            # print self.dimg.cakeqx
-            #print self.dimg.cakeqy
-
-        elif self.isremesh:
-            img = self.dimg.remesh
-            # print self.dimg.remeshqx
-            #print self.dimg.remeshqy
-
-        if self.iscake:
-            if self.centerplot is not None:
-                self.centerplot.clear()
-        else:
-            self.drawcenter()
 
         if self.ismaskshown:
             self.maskoverlay()
         else:
             self.maskimage.clear()
 
-        # When the log intensity button toggles, switch the log scaling on the image
-        if islogintensity:
-            img = (np.log(img * (img > 0) + (img < 1)))
-
         if returnimg:
-            return img
+            return self.dimg
         else:
-            self.imageitem.setImage(img, scale=scale)
+            self.imgview.setImage(self.dimg)
 
-        if not iscake and not isremesh:
-            self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.data.shape[0], self.dimg.data.shape[1]))
+        self.drawcenter()
 
+        self.replot()
+
+        # if not iscake and not isremesh:
+        #     self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
 
     def getcenter(self):
         if self.isremesh:
@@ -550,14 +456,12 @@ class dimgViewer(QtGui.QWidget):
 
     def arccut(self):
 
-
         arc = ROI.ArcROI(self.getcenter(), 500)
         arc.sigRegionChangeFinished.connect(self.replot)
         self.viewbox.addItem(arc)
         self.replot()
         arc.sigRemoveRequested.connect(self.removeROI)
-        xglobals.lastroi = (arc,self.imageitem)
-
+        xglobals.lastroi = (arc, self.imageitem)
 
     def linecut(self):
         """
@@ -569,12 +473,12 @@ class dimgViewer(QtGui.QWidget):
         # if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
         region = ROI.LineROI(
             self.getcenter(),
-            [self.getcenter()[0], -self.dimg.data.shape[0]], 5, removable=True)
+            [self.getcenter()[0], -self.dimg.transformdata.shape[0]], 5, removable=True)
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
         region.sigRegionChangeFinished.connect(self.replot)
-        xglobals.lastroi = (region,self.imageitem)
+        xglobals.lastroi = (region, self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         # self.region = None
@@ -590,7 +494,7 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in verticalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.data.shape[1]],
+                                      bounds=[0, self.dimg.transformdata.shape[1]],
                                       values=[self.getcenter()[0] - 10,
                                               10 + self.getcenter()[0]])
         for line in region.lines:
@@ -599,7 +503,7 @@ class dimgViewer(QtGui.QWidget):
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
-        xglobals.lastroi = (region,self.imageitem)
+        xglobals.lastroi = (region, self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
@@ -615,7 +519,7 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in horizontalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.data.shape[0]],
+                                      bounds=[0, self.dimg.transformdata.shape[0]],
                                       values=[10 - self.getcenter()[1],
                                               10 + self.getcenter()[1]])
         for line in region.lines:
@@ -624,21 +528,17 @@ class dimgViewer(QtGui.QWidget):
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
 
-        if self.iscake:
-            self.plotwidget.plotTabs.setCurrentIndex(1)
-
         self.replot()
-        xglobals.lastroi = (region,self.imageitem)
+        xglobals.lastroi = (region, self.imageitem)
         # else:
         # #self.viewbox.removeItem(self.region)
         #     self.region = None
         # self.replot()
 
-
     def removecosmics(self):
-        c = cosmics.cosmicsimage(self.dimg.data)
+        c = cosmics.cosmicsimage(self.dimg.rawdata)
         c.run(maxiter=4)
-        config.activeExperiment.addtomask(c.mask)
+        config.activeExperiment.addtomask(1-c.mask)
         # self.maskoverlay()
 
     @debugtools.timeit
@@ -662,7 +562,7 @@ class dimgViewer(QtGui.QWidget):
 
 
         for item in self.viewbox.addedItems:
-            #print item
+            # print item
             if issubclass(type(item), ROI.ArcROI):
                 print 'Moving ArcROI:', item
 
@@ -672,10 +572,10 @@ class dimgViewer(QtGui.QWidget):
 
     @debugtools.timeit
     def calibrate(self):
-        if self.dimg.data is None:
+        if self.dimg.transformdata is None:
             return
 
-        self.sigPlotQIntegration.disconnect(self.plotqintegration)
+
 
         self.findcenter(skipdraw=True)
         print 'center?:', config.activeExperiment.center
@@ -703,7 +603,7 @@ class dimgViewer(QtGui.QWidget):
 
         self.refinecenter()
         xglobals.hardresetpool()
-        self.sigPlotQIntegration.connect(self.plotqintegration)
+
         self.replot()
 
     @debugtools.timeit
@@ -715,257 +615,186 @@ class dimgViewer(QtGui.QWidget):
         config.activeExperiment.center = cen
         self.drawcenter()
 
+    def getROIs(self):
+        return [roi for roi in self.viewbox.addedItems if hasattr(roi, 'isdeleting') and not roi.isdeleting]
+
     def replot(self):
+        self.plotwidget.widget(self.plotwidget.currentIndex()).replot(self.dimg,self.getROIs(),self.imageitem)
+        # if self.plotwidget.currentIndex() == 0:
+        #     self.plotwidget.qintegration.clear()
+        #
+        #     # self.replotprimary()
+        #     self.plotwidget.qintegration.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        #     self.plotwidget.qintegration.qLine.setVisible(False)
+        #     self.plotwidget.qintegration.addItem(self.plotwidget.qintegration.qLine)
+        #     self.replotq()
+        # elif self.plotwidget.currentIndex() == 1:
+        #     self.plotwidget.chiintegration.clear()
+        #     self.plotwidget.chiintegration.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        #     self.plotwidget.chiintegration.chiLine.setVisible(False)
+        #     self.plotwidget.chiintegration.addItem(self.plotwidget.chiintegration.chiLine)
+        #     self.replotchi()
 
-
-        if self.plotwidget.currentIndex() == 0:
-            self.plotwidget.qintegration.clear()
-
-            # self.replotprimary()
-            self.plotwidget.qintegration.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-            self.plotwidget.qintegration.qLine.setVisible(False)
-            self.plotwidget.qintegration.addItem(self.plotwidget.qintegration.qLine)
-            self.replotq()
-        elif self.plotwidget.currentIndex() == 1:
-            self.plotwidget.chiintegration.clear()
-            self.plotwidget.chiintegration.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-            self.plotwidget.chiintegration.chiLine.setVisible(False)
-            self.plotwidget.chiintegration.addItem(self.plotwidget.chiintegration.chiLine)
-            self.replotchi()
-
-    def replotchi(self):
-        if not config.activeExperiment.iscalibrated:
-            return None
-
-        cut = None
-
-        # if self.toolbar.actionMultiPlot.isChecked():
-        # for tab in self.parent().centerwidget.findChildren(OOMTabItem):
-        # if self.parent().centerwidget.currentWidget() is not tab:
-        #             tab.replotassecondary()
-
-        if self.iscake:
-            data = self.dimg.cake
-        elif self.isremesh:
-            data = self.dimg.remesh
-        else:
-            data = self.dimg.data
-
-        ai = config.activeExperiment.getAI().getPyFAI()
-        xglobals.pool.apply_async(integration.chiintegratepyFAI,
-                                 args=(self.dimg.data, self.dimg.mask, ai, self.iscake ),
-                                 callback=self.chiintegrationrelay)
-        # pipeline.integration.chiintegratepyFAI(self.dimg.data, self.dimg.mask, ai, precaked=self.iscake)
-
-        for roi in self.viewbox.addedItems:
-            try:
-                if hasattr(roi, 'isdeleting'):
-                    if not roi.isdeleting:
-                        print type(roi)
-                        cut = None
-                        if issubclass(type(roi), pg.ROI) or issubclass(type(roi), pg.LinearRegionItem):
-                            cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
-                            print 'Cut:', cut.shape
-
-
-
-
-
-
-
-                        # elif type(roi) is pg.LineSegmentROI:
-                        #
-                        #
-                        # cut = self.region.getArrayRegion(data, self.imageitem)
-                        #
-                        #     x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
-                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
-                        #                     cut.__len__())
-                        #     y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
-                        #                     self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
-                        #                     cut.__len__())
-                        #
-                        #     q = pixel2q(x, y, self.dimg.experiment)
-                        #     qmiddle = q.argmin()
-                        #     leftq = -q[0:qmiddle]
-                        #     rightq = q[qmiddle:]
-                        #
-                        #     if leftq.__len__() > 1: self.parentwindow.qintegration.plot(leftq, cut[:qmiddle])
-                        #     if rightq.__len__() > 1: self.parentwindow.qintegration.plot(rightq, cut[qmiddle:])
-
-                        # elif type(roi) is ROI.LinearRegionItem:
-                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
-                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
-                        #
-                        #     else:
-                        #         print debugtools.frustration()
-
-                        if cut is not None:
-                            if self.iscake:
-
-                                ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
-                                chi = self.dimg.cakeqy
-                                I = np.ma.average(ma, axis=1)
-                                I = np.trim_zeros(I, 'b')
-                                chi = chi[:len(I)]
-                                I = np.trim_zeros(I, 'f')
-                                chi = chi[-len(I):]
-                                self.plotchiintegration([chi, I, [0, 255, 255]])
-                            else:
-
-                                ai = config.activeExperiment.getAI().getPyFAI()
-                                self.pool.apply_async(integration.chiintegratepyFAI,
-                                                      args=(self.dimg.data, self.dimg.mask, ai, self.iscake, cut,
-                                                            [0, 255, 255]),
-                                                      callback=self.chiintegrationrelay)
-
-
-
-                    else:
-                        self.viewbox.removeItem(roi)
-            except Exception as ex:
-                print 'Warning: error displaying ROI integration.'
-                print ex.message
-
-    def replotq(self):
-        if not config.activeExperiment.iscalibrated:
-            return None
-
-        cut = None
-
-        # if self.toolbar.actionMultiPlot.isChecked():
-        # for tabtracker in self.parent().findChildren(OOMTabItem):
-        # if self.parent().findChild(QtGui.QTabWidget, 'tabWidget').currentWidget() is not tabtracker:
-        #             tabtracker.replotassecondary()
-
-        if self.iscake:
-            data = self.dimg.cake
-        elif self.isremesh:
-            data = self.dimg.remesh
-        else:
-            data = self.dimg.data
-        ai = config.activeExperiment.getAI().getPyFAI()
-        print 'centeroverride:', [c * config.activeExperiment.getvalue('Pixel Size X') for c in
-                                  self.getcenter()[::-1]]
-        print self.getcenter()
-
-        xglobals.pool.apply_async(integration.radialintegratepyFAI,
-                                 args=((self.dimg.data if not self.isremesh else data),
-                                       (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
-                                       [c * config.activeExperiment.getvalue('Pixel Size X') for c in
-                                        self.getcenter()[::-1]]),
-                                 callback=self.qintegrationrelay)
-
-        for roi in self.viewbox.addedItems:
-            try:
-                if hasattr(roi, 'isdeleting'):
-                    if not roi.isdeleting:
-                        print type(roi)
-                        cut = None
-                        if issubclass(type(roi), pg.ROI) or issubclass(type(roi), pg.LinearRegionItem):
-
-                            cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
-                            print 'Cut:', cut.shape
-
-
-
-
-
-
-
-                        elif type(roi) is pg.LineSegmentROI:
-
-
-                            cut = self.region.getArrayRegion(data, self.imageitem)
-
-                            x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
-                                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
-                                            cut.__len__())
-                            y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
-                                            self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
-                                            cut.__len__())
-
-                            q = pixel2q(x, y, self.dimg.experiment)
-                            qmiddle = q.argmin()
-                            leftq = -q[0:qmiddle]
-                            rightq = q[qmiddle:]
-
-                            if leftq.__len__() > 1: self.plotwidget.qintegration.plot(leftq, cut[:qmiddle])
-                            if rightq.__len__() > 1: self.plotwidget.qintegration.plot(rightq, cut[qmiddle:])
-
-                        # elif type(roi) is ROI.LinearRegionItem:
-                        #     if roi.orientation is pg.LinearRegionItem.Horizontal:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[:, regionbounds[0]:regionbounds[1]] = 1
-                        #     elif roi.orientation is pg.LinearRegionItem.Vertical:
-                        #         regionbounds = roi.getRegion()
-                        #         cut = np.zeros_like(data)
-                        #         cut[regionbounds[0]:regionbounds[1], :] = 1
-                        #
-                        #     else:
-                        #         print debugtools.frustration()
-
-                        if cut is not None:
-                            if self.iscake:
-
-                                ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
-                                q = self.dimg.cakeqx / 10.
-                                I = np.ma.average(ma, axis=0)
-                                I = np.trim_zeros(I, 'b')
-                                q = q[:len(I)]
-                                I = np.trim_zeros(I, 'f')
-                                q = q[-len(I):]
-                                self.plotqintegration([q, I, [0, 255, 255]])
-                            else:
-
-                                ai = config.activeExperiment.getAI().getPyFAI()
-                                xglobals.pool.apply_async(integration.radialintegratepyFAI, args=(
-                                    (self.dimg.data if not self.isremesh else data),
-                                    (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, cut,
-                                    [0, 255, 255], [c * config.activeExperiment.getvalue('Pixel Size X') for c in
-                                                    self.getcenter()[::-1]]),
-                                                         callback=self.qintegrationrelay)
-
-
-                    else:
-                        self.viewbox.removeItem(roi)
-            except Exception as ex:
-                print 'Warning: error displaying ROI integration.'
-                print ex.message
-
-    def qintegrationrelay(self, *args, **kwargs):
-        self.sigPlotQIntegration.emit(*args, **kwargs)
-
-
-    def plotqintegration(self, result):
-        (q, radialprofile, color) = result
-        if color is None:
-            color = [255, 255, 255]
-        # cyan:[0, 255, 255]
-        curve = self.plotwidget.qintegration.plot(q, radialprofile, pen=pg.mkPen(color=color))
-        curve.setZValue(3 * 255 - sum(color))
-        self.plotwidget.qintegration.update()
-
-    def chiintegrationrelay(self, *args, **kwargs):
-        print args
-        self.sigPlotChiIntegration.emit(*args, **kwargs)
-
-    def plotchiintegration(self, result):
-        (chi, chiprofile, color) = result
-        if color is None:
-            color = [255, 255, 255]
-        # cyan:[0, 255, 255]
-        curve = self.plotwidget.chiintegration.plot(chi, chiprofile, pen=pg.mkPen(color=color))
-        curve.setZValue(3 * 255 - sum(color))
-        self.plotwidget.chiintegration.update()
-
+    # def replotchi(self):
+    #     if not config.activeExperiment.iscalibrated:
+    #         return None
+    #
+    #     cut = None
+    #
+    #
+    #
+    #     data = self.dimg.transformdata
+    #
+    #     ai = config.activeExperiment.getAI().getPyFAI()
+    #     xglobals.pool.apply_async(integration.chiintegratepyFAI,
+    #                               args=(self.dimg.data, self.dimg.mask, ai, self.iscake),
+    #                               callback=self.chiintegrationrelay)
+    #     # pipeline.integration.chiintegratepyFAI(self.dimg.data, self.dimg.mask, ai, precaked=self.iscake)
+    #
+    #     for roi in self.viewbox.addedItems:
+    #         # try:
+    #             if hasattr(roi, 'isdeleting'):
+    #                 if not roi.isdeleting:
+    #                     print type(roi)
+    #                     cut = None
+    #                     if issubclass(type(roi), pg.ROI) or issubclass(type(roi), pg.LinearRegionItem):
+    #                         cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+    #                         print 'Cut:', cut.shape
+    #
+    #
+    #                     if cut is not None:
+    #                         if self.iscake:
+    #
+    #                             ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
+    #                             chi = self.dimg.cakeqy
+    #                             I = np.ma.average(ma, axis=1)
+    #                             I = np.trim_zeros(I, 'b')
+    #                             chi = chi[:len(I)]
+    #                             I = np.trim_zeros(I, 'f')
+    #                             chi = chi[-len(I):]
+    #                             self.plotchiintegration([chi, I, [0, 255, 255]])
+    #                         else:
+    #
+    #                             ai = config.activeExperiment.getAI().getPyFAI()
+    #                             self.pool.apply_async(integration.chiintegratepyFAI,
+    #                                                   args=(self.dimg.transformdata, self.dimg.mask, ai, self.iscake, cut,
+    #                                                         [0, 255, 255]),
+    #                                                   callback=self.chiintegrationrelay)
+    #
+    #
+    #
+    #                 else:
+    #                     self.viewbox.removeItem(roi)
+    #
+    # def replotq(self):
+    #     if not config.activeExperiment.iscalibrated:
+    #         return None
+    #
+    #     cut = None
+    #
+    #     data = self.dimg.transformdata
+    #
+    #     ai = config.activeExperiment.getAI().getPyFAI()
+    #     print 'centeroverride:', [c * config.activeExperiment.getvalue('Pixel Size X') for c in
+    #                               self.getcenter()[::-1]]
+    #     print self.getcenter()
+    #
+    #     xglobals.pool.apply_async(integration.radialintegratepyFAI,
+    #                               args=((self.dimg.transformdata),
+    #                                     (self.dimg.mask if not self.isremesh else self.dimg.remeshmask), ai, None, None,
+    #                                     [c * config.activeExperiment.getvalue('Pixel Size X') for c in
+    #                                      self.getcenter()[::-1]]),
+    #                               callback=self.qintegrationrelay)
+    #
+    #     for roi in self.viewbox.addedItems:
+    #         # try:
+    #             if hasattr(roi, 'isdeleting'):
+    #                 if not roi.isdeleting:
+    #                     print type(roi)
+    #                     cut = None
+    #                     if issubclass(type(roi), pg.ROI) or issubclass(type(roi), pg.LinearRegionItem):
+    #
+    #                         cut = (roi.getArrayRegion(np.ones_like(data), self.imageitem)).T
+    #                         print 'Cut:', cut.shape
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #                     elif type(roi) is pg.LineSegmentROI:
+    #
+    #                         cut = self.region.getArrayRegion(data, self.imageitem)
+    #
+    #                         x = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).x(),
+    #                                         self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).x(),
+    #                                         cut.__len__())
+    #                         y = np.linspace(self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(0)[1]).y(),
+    #                                         self.viewbox.mapSceneToView(self.region.getSceneHandlePositions(1)[1]).y(),
+    #                                         cut.__len__())
+    #
+    #                         q = pixel2q(x, y, self.dimg.experiment)
+    #                         qmiddle = q.argmin()
+    #                         leftq = -q[0:qmiddle]
+    #                         rightq = q[qmiddle:]
+    #
+    #                         if leftq.__len__() > 1: self.plotwidget.qintegration.plot(leftq, cut[:qmiddle])
+    #                         if rightq.__len__() > 1: self.plotwidget.qintegration.plot(rightq, cut[qmiddle:])
+    #
+    #
+    #                     if cut is not None:
+    #                         if self.iscake:
+    #
+    #                             ma = np.ma.masked_array(data, mask=1 - (cut * self.dimg.cakemask))
+    #                             q = self.dimg.cakeqx / 10.
+    #                             I = np.ma.average(ma, axis=0)
+    #                             I = np.trim_zeros(I, 'b')
+    #                             q = q[:len(I)]
+    #                             I = np.trim_zeros(I, 'f')
+    #                             q = q[-len(I):]
+    #                             self.plotqintegration([q, I, [0, 255, 255]])
+    #                         else:
+    #
+    #                             ai = config.activeExperiment.getAI().getPyFAI()
+    #                             xglobals.pool.apply_async(integration.radialintegratepyFAI, args=(
+    #                                 (self.dimg.transformdata),
+    #                                 (self.dimg.mask), ai, cut, #if not self.isremesh else self.dimg.remeshmask
+    #                                 [0, 255, 255], [c * config.activeExperiment.getvalue('Pixel Size X') for c in
+    #                                                 self.getcenter()[::-1]]),
+    #                                                       callback=self.qintegrationrelay)
+    #
+    #
+    #                 else:
+    #                     self.viewbox.removeItem(roi)
+    #         # except Exception as ex:
+    #         #     print 'Warning: error displaying ROI integration.'
+    #         #     print ex.message
+    #
+    # def qintegrationrelay(self, *args, **kwargs):
+    #     self.sigPlotQIntegration.emit(*args, **kwargs)
+    #
+    # def plotqintegration(self, result):
+    #     (q, radialprofile, color) = result
+    #     if color is None:
+    #         color = [255, 255, 255]
+    #     # cyan:[0, 255, 255]
+    #     curve = self.plotwidget.qintegration.plot(q, radialprofile, pen=pg.mkPen(color=color))
+    #     curve.setZValue(3 * 255 - sum(color))
+    #     self.plotwidget.qintegration.update()
+    #
+    # def chiintegrationrelay(self, *args, **kwargs):
+    #     print args
+    #     self.sigPlotChiIntegration.emit(*args, **kwargs)
+    #
+    # def plotchiintegration(self, result):
+    #     (chi, chiprofile, color) = result
+    #     if color is None:
+    #         color = [255, 255, 255]
+    #     # cyan:[0, 255, 255]
+    #     curve = self.plotwidget.chiintegration.plot(chi, chiprofile, pen=pg.mkPen(color=color))
+    #     curve.setZValue(3 * 255 - sum(color))
+    #     self.plotwidget.chiintegration.update()
 
     def polymask(self):
         maskroi = None
@@ -1000,7 +829,7 @@ class dimgViewer(QtGui.QWidget):
         else:  # If the mask is completed
 
             # Get the region of the image that was selected; unforunately the region is trimmed
-            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.data), self.imageitem,
+            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.transformdata), self.imageitem,
                                                      returnMappedCoords=True)  # levels=(0, arr.max()
             # print maskedarea.shape
 
@@ -1015,7 +844,7 @@ class dimgViewer(QtGui.QWidget):
             # Pad the mask so it has the same shape as the image
             maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
             maskedarea = np.pad(maskedarea, (
-                (0, self.dimg.data.shape[0] - maskedarea.shape[0]), (0, self.dimg.data.shape[1] - maskedarea.shape[1])),
+                (0, self.dimg.transformdata.shape[0] - maskedarea.shape[0]), (0, self.dimg.transformdata.shape[1] - maskedarea.shape[1])),
                                 mode='constant')
 
             # Add the masked area to the active mask
@@ -1034,7 +863,6 @@ class dimgViewer(QtGui.QWidget):
             # Redo the integration
             self.replot()
 
-
     def maskoverlay(self):
         if self.iscake:
             mask = self.dimg.cakemask
@@ -1050,9 +878,9 @@ class dimgViewer(QtGui.QWidget):
             print 'maskmax:', np.max(mask)
             invmask = 1 - mask
             self.maskimage.setImage(
-                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.int),
-                opacity=.25)
-
+                np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float),
+                opacity=.5)
+            self.maskimage.setLevels([0,1])
 
     # def finddetector(self):
     # # detector, mask = pipeline.loader.finddetector(self.imgdata)
@@ -1104,7 +932,7 @@ class dimgViewer(QtGui.QWidget):
             lowerleft = [max(int(c), 0) for c in self.captureROI.pos()]
             topright = [max(int(s + p), 0) for s, p in zip(self.captureROI.size(), self.captureROI.pos())]
 
-            dataregion = self.dimg.data[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
+            dataregion = self.dimg.rawdata[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             maskregion = self.dimg.mask[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             guesspath = self.paths[0]
 
@@ -1118,7 +946,6 @@ class dimgViewer(QtGui.QWidget):
 
             # Remove the ROI
             self.viewbox.removeItem(self.captureROI)
-
 
     def clearsgoverlays(self):
         for item in self.viewbox.addedItems:
@@ -1141,21 +968,21 @@ class timelineViewer(dimgViewer):
         self.toolbar = toolbar
 
         if simg is None:
-            simg = loader.imageseries(paths=files)
+            simg = loader.loaddiffimage(files)
 
         self.simg = simg
-        dimg = simg.first()
+        #dimg = simg.first()
 
         self.operationindex = 0
 
-        super(timelineViewer, self).__init__(dimg, toolbar=toolbar)
+        super(timelineViewer, self).__init__(simg, toolbar=toolbar)
 
-        img = np.array(self.simg.thumbs)
-        img = (np.log(img * (img > 0) + (img < 1)))
+        #img = np.array(self.simg.thumbs)
+        #img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imgview.setImage(img, xvals=self.simg.xvals)
+        self.imgview.setImage(simg)
 
-        self.imageitem.sigImageChanged.connect(self.setscale)
+        # self.imageitem.sigImageChanged.connect(self.setscale)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         # self.setvariationmode(0)
@@ -1167,11 +994,11 @@ class timelineViewer(dimgViewer):
         self.viewbox.addItem(self.highresimgitem)
         self.highresimgitem.hide()
 
-        self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
-        self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
-        self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
+        # self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
 
-        self.drawframeoverlay()
+        # self.drawframeoverlay()
         self.imgview.autoRange()
 
         timelineplot = self.imgview.getRoiPlot()
@@ -1192,12 +1019,11 @@ class timelineViewer(dimgViewer):
         operationcombo.currentIndexChanged.connect(self.setvariationmode)
         opwidgetaction = QtGui.QWidgetAction(menu)
         opwidgetaction.setDefaultWidget(operationcombo)
-        #need to connect it
+        # need to connect it
         menu.addAction(opwidgetaction)
 
-
         # self.imgview.getHistogramWidget().item.setImageItem(self.highresimgitem)
-        #self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
+        # self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.updatelowresLUT)
 
 
         self.rescan()
@@ -1212,29 +1038,26 @@ class timelineViewer(dimgViewer):
     def plottimeline(self, t, V, color=[255, 255, 255]):
         pass
 
-    def drawframeoverlay(self):
-        self.scale = 1
-        self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
-        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
+    # def drawframeoverlay(self):
+    #     self.scale = 1
+    #     self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
+    #     self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
 
+    # def updatelowresLUT(self):
+    #
+    #     self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+    #
+    # def hideoverlay(self):
+    #     self.scale = 5
 
-    def updatelowresLUT(self):
+    # def setscale(self):
+    #     self.imageitem.resetTransform()
+    #     self.imageitem.scale(self.scale, self.scale)
 
-        self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
-
-
-    def hideoverlay(self):
-        self.scale = 5
-
-    def setscale(self):
-        self.imageitem.resetTransform()
-        self.imageitem.scale(self.scale, self.scale)
-
-    def showlowres(self):
-        # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
-        # xvals=self.simg.xvals)
-        self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
-
+    # def showlowres(self):
+    #     # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
+    #     # xvals=self.simg.xvals)
+    #     self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
 
     def reduce(self):
         pass
@@ -1247,24 +1070,31 @@ class timelineViewer(dimgViewer):
         self.plotvariation()
 
     def rescan(self):
+        #return
         self.cleartimeline()
         variationoperators.experiment = config.activeExperiment
-        variation = self.simg.scan(self.operationindex)
-        self.plotvariation(variation)
 
-        for roi in self.viewbox.addedItems:
-            # try:
-            if hasattr(roi, 'isdeleting'):
-                if not roi.isdeleting:
-                    roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem)
-                    variation = self.simg.scan(self.operationindex, roi)
-                    self.plotvariation(variation, [0, 255, 255])
+        xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
-                else:
-                    self.viewbox.removeItem(roi)
-                    # except Exception as ex:
-                    # print 'Warning: error displaying ROI variation.'
-                    #    print ex.message
+        # variation = self.simg.scan(self.operationindex)
+        # self.plotvariation(variation)
+
+        # for roi in self.viewbox.addedItems:
+        #     # try:
+        #     if hasattr(roi, 'isdeleting'):
+        #         if not roi.isdeleting:
+        #             roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem)
+        #             variation = self.simg.scan(self.operationindex, roi)
+        #             self.plotvariation(variation, [0, 255, 255])
+        #
+        #         else:
+        #             self.viewbox.removeItem(roi)
+        #             # except Exception as ex:
+        #             # print 'Warning: error displaying ROI variation.'
+        #             #    print ex.message
+
+    def testreceive(self,*args,**kwargs):
+        print 'Received:',args, kwargs
 
     def setvariationmode(self, index):
         print 'operationset:', index
@@ -1305,10 +1135,10 @@ class timelineViewer(dimgViewer):
             for dt in d:
                 self.timeline.plot(dt[0], dt[1])
 
-    def redrawframe(self, index, time, forcelow=False):
-        key = round(time)
-        self.dimg = self.simg.getDiffImage(key)
-        self.redrawimage(forcelow=forcelow)
+    # def redrawframe(self, index, time, forcelow=False):
+    #     key = round(time)
+    #     self.dimg = self.simg.getDiffImage(key)
+    #     self.redrawimage(forcelow=forcelow)
 
     def gotomax(self):
         pass
@@ -1326,29 +1156,155 @@ class integrationwidget(QtGui.QTabWidget):
         self.setTabPosition(self.West)
         self.qintegration = qintegrationwidget()
         self.chiintegration = chiintegrationwidget()
+        self.xintegration = xintegrationwidget()
+        self.zintegration = zintegrationwidget()
         self.addTab(self.qintegration, u'q')
         self.addTab(self.chiintegration, u'χ')
+        self.addTab(self.xintegration, u'x')
+        self.addTab(self.zintegration, u'z')
         self.currentChanged.connect(self.sigReplot)
 
+    def movPosLine(self,*args,**kwargs):
+        self.widget(self.currentIndex()).movPosLine(*args,**kwargs)
 
-class qintegrationwidget(pg.PlotWidget):
+class integrationsubwidget(pg.PlotWidget):
+    def __init__(self,axislabel):
+        super(integrationsubwidget, self).__init__()
+        self.setLabel('bottom', axislabel, '')
+        self.posLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
+        self.posLine.setVisible(False)
+        self.addItem(self.posLine)
+
+        self.iscleared = True
+        self.requestkey = 0
+
+
+    def replot(self,dimg,rois,imageitem):
+        pass
+
+    def replotcallback(self):
+        pass
+
+    def applyintegration(self,integrationfunction,dimg,rois,data,mask,imageitem):
+        self.requestkey += 1
+        self.iscleared = False
+        # replot full integration
+        xglobals.pool.apply_async(integrationfunction, args=(data, mask, dimg.experiment.getAI().getPyFAI(), None,
+                                                                       None, self.requestkey),
+                                  callback=self.replotcallback)
+
+        # replot roi integration
+        for roi in rois:
+            if roi.isdeleting:
+                roi.deleteLater()
+                continue
+
+            cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+            print 'Cut:', cut.shape
+
+            if cut is not None:
+                xglobals.pool.apply_async(integrationfunction,
+                                          args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey),
+                                          callback=self.replotcallback)
+
+    def plotresult(self, result):
+
+        (x, y, color,requestkey) = result
+        if requestkey == self.requestkey:
+            if not self.iscleared:
+                self.plotItem.clear()
+                self.addItem(self.posLine)
+                self.iscleared = True
+            if color is None:
+                color = [255, 255, 255]
+            curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
+            curve.setZValue(3 * 255 - sum(color))
+
+            self.plotItem.update()
+
+
+class qintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
     def __init__(self):
-        super(qintegrationwidget, self).__init__()
-        self.setLabel('bottom', u'q (\u212B\u207B\u00B9)', '')
-        self.qLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-        self.qLine.setVisible(False)
-        self.addItem(self.qLine)
+        super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+    def replot(self,dimg,rois,imageitem):
+        # replot full integration
+        if dimg.cakemode:
+            # integrate x
+            pass
+        else:
+            data = dimg.transformdata
+            mask = dimg.transformmask
+            self.applyintegration(integration.qintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self,*args,**kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self,qx,qz,dimg=None):
+        self.posLine.setPos(np.linalg.norm([qx,qz]))
+        self.posLine.show()
 
 
-class chiintegrationwidget(pg.PlotWidget):
+class chiintegrationwidget(integrationsubwidget):
+
+    sigPlotResult = QtCore.Signal(object)
+
     def __init__(self):
-        super(chiintegrationwidget, self).__init__()
-        # self.chiintegration = chiintegrationwidget.getPlotItem()
-        self.setLabel('bottom', u'χ (Degrees)')
-        self.chiLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#FFA500'))
-        self.chiLine.setVisible(False)
-        self.addItem(self.chiLine)
+        super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
+        self.sigPlotResult.connect(self.plotresult)
 
+    def replot(self, dimg, rois, imageitem):
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.chiintegratepyFAI,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(np.rad2deg(np.arctan2(qz,qx)))
+        self.posLine.show()
+
+class xintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
+
+    def __init__(self):
+        super(xintegrationwidget, self).__init__(axislabel=u'q<sub>x</sub> (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+
+    def replot(self, dimg, rois, imageitem):
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.xintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(qx)
+        self.posLine.show()
+
+class zintegrationwidget(integrationsubwidget):
+    sigPlotResult = QtCore.Signal(object)
+
+    def __init__(self):
+        super(zintegrationwidget, self).__init__(axislabel=u'q<sub>z</sub> (\u212B\u207B\u00B9)')
+        self.sigPlotResult.connect(self.plotresult)
+
+    def replot(self, dimg, rois, imageitem):
+        data = dimg.transformdata
+        mask = dimg.transformmask
+        self.applyintegration(integration.zintegrate,dimg,rois,data,mask,imageitem)
+
+    def replotcallback(self, *args, **kwargs):
+        self.sigPlotResult.emit(*args, **kwargs)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(qz)
+        self.posLine.show()
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
@@ -1365,6 +1321,7 @@ class ImageView(pg.ImageView):
 
 
 from scipy.signal import fftconvolve
+
 
 class fxsviewer(ImageView):
     def __init__(self, paths=None, **kwargs):
@@ -1387,7 +1344,12 @@ class fxsviewer(ImageView):
         self.setImage(avg)
 
 
-
+class xasviewer(pg.PlotWidget):
+    def __init__(self, paths, *args, **kwargs):
+        super(xasviewer, self).__init__(*args, **kwargs)
+        for path in paths:
+            for i in range(2, 16):
+                self.plot(loader.loadxfs(path)[:, 2], loader.loadxfs(path)[:, i], pen=(i, 16))
 
 
 class pluginModeWidget(QtGui.QWidget):
@@ -1450,14 +1412,13 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
         self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
 
-
     def loaditem(self, current, previous):
 
         try:
             path = self.model.filePath(current)
             if os.path.isfile(path):
                 self.imgdata = loader.loadimage(path)
-                self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)),3),
                                         autoLevels=True)
         except TypeError:
             self.imageitem.clear()
@@ -1518,7 +1479,6 @@ class fileTreeWidget(QtGui.QTreeView):
         else:
             print('Error on index (what is that?):', index)
 
-
     def treerefresh(self, path=None):
         """
         Refresh the file tree, or switch directories and refresh
@@ -1531,6 +1491,45 @@ class fileTreeWidget(QtGui.QTreeView):
         self.setRootIndex(self.filetreemodel.index(root.absolutePath()))
         self.show()
 
+
+class frameproptable(pg.TableWidget):
+    """
+    Widget for displaying hierarchical python data structures
+    (eg, nested dicts, lists, and arrays), adapted from pyqtgraph datatree.
+    """
+
+    def __init__(self, parent=None, data=None):
+        super(frameproptable, self).__init__(parent)
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setData(data)
+        self.setColumnCount(2)
+        self.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.horizontalHeader().setStretchLastSection(True)
+        self.verticalHeader().hide()
+        self.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding,QtGui.QSizePolicy.MinimumExpanding)
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+
+        useAsMenu = QtGui.QMenu(u'Use as...',parent=self.contextMenu)
+        useAsMenu.addAction('Beam Energy').triggered.connect(self.useAsEnergy)
+        self.contextMenu.addMenu(useAsMenu)
+
+    def setData(self,data):
+        if data is None:
+            self.setVisible(False)
+            return
+        data=data.items()
+        self.setHidden(len(data) == 0)
+        super(frameproptable, self).setData(data)
+
+    def sizeHint(self):
+        return QtCore.QSize(self.parent().width(),self.parent().height()/2)
+
+    def useAsEnergy(self):
+        print self.getSelectedKey()
+
+    def getSelectedKey(self):
+        return self.item(self.selectedIndexes()[0].row(),0).value
 
 
 def pixel2q(x, y, experiment):

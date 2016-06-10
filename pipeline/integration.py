@@ -89,10 +89,10 @@ def pixel_2Dintegrate(dimg, mask=None):
 
     if mask is None:
         print("No mask defined, creating temporary empty mask.")
-        mask = np.zeros_like(dimg.data)
+        mask = np.zeros_like(dimg.rawdata)
 
     # mask data
-    data = dimg.data * (1 - mask)
+    data = dimg.transformdata * (1 - mask)
 
     # calculate data radial profile
     x, y = np.indices(data.shape)
@@ -150,7 +150,8 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], centeroverride=None):
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None):
+    centeroverride = None # TODO: reimplement for remeshing
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
@@ -212,10 +213,10 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
     q = q[:len(radialprofile)] / 10.0
 
-    return q, radialprofile, color
+    return q, radialprofile, color, requestkey
 
 
-def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 255, 255], xres=1000, yres=1000):
+def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, xres=1000, yres=1000):
     print 'Chi integration...'
 
     AI = pyFAI.AzimuthalIntegrator()
@@ -241,24 +242,86 @@ def chiintegratepyFAI(data, mask, AIdict, precaked=False, cut=None, color=[255, 
         mask &= cut.astype(bool)
     # data *= cut
 
-    if not precaked:
-        cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
-        mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+
+    cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
+    mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method='lut_ocl')
 
     maskedcake = np.ma.masked_array(cake, mask=mask)
 
     chiprofile = np.ma.average(maskedcake, axis=1)
 
-    return chi, chiprofile, color
+    return chi, chiprofile, color, requestkey
+
+def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
+    print 'X integration...'
+
+    if mask is not None:
+        mask = mask.copy()
+
+    print 'image:', data.shape
+    print 'mask:', mask.shape
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+    # data *= cut
+
+
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
+
+    xprofile = np.ma.average(maskeddata, axis=1)
+
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    qx = AI.qArray(data.shape[::-1])[AI.getFit2D()['centerY'],:]/10
+    qx[:qx.argmin()]*=-1
+
+    return qx, xprofile, color, requestkey
+
+
+def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
+    print 'Z integration...'
+    if mask is not None:
+        mask = mask.copy()
+
+    print 'image:', data.shape
+    print 'mask:', mask.shape
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+    # data *= cut
+
+
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
+
+    xprofile = np.ma.average(maskeddata, axis=0)
+
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    qz = AI.qArray(data.shape[::-1])[:,AI.getFit2D()['centerX']]/10
+    qz[:qz.argmin()]*=-1
+
+    return qz, xprofile, color, requestkey
 
 
 def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
-    # if mask is None:
-    # mask = np.zeros_like(imgdata)
+    if mask is None:
+        mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
     """:type : pyFAI.AzimuthalIntegrator"""
 
-    return AI.integrate2d(imgdata.T, xres, yres, mask=mask)
+    return AI.integrate2d(imgdata.T, xres, yres, mask=1-mask.T)
 
 
 def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):
@@ -274,3 +337,10 @@ def GetArc(Imagedata, center, radius1, radius2, angle1, angle2):
 
     mask = np.flipud(mask)
     return mask * Imagedata
+
+def qintegrate(*args,**kwargs):
+    # if dimg.cakemode:
+    #     return xintegrate(dimg.cake, cut, callbackcolor)
+    # else:
+         return radialintegratepyFAI(*args,**kwargs)
+

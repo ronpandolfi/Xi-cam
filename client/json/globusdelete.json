@@ -1,0 +1,19 @@
+{
+  "submission_id": "", 
+  "endpoint": "", 
+  "recursive": false, 
+  "DATA_TYPE": "delete", 
+  "interpret_globs": false, 
+  "label": "", 
+  "length": 2, 
+  "notify_on_succeeded": false, 
+  "ignore_missing": false, 
+  "notify_on_failed": true, 
+  "DATA": [
+    {
+      "path": "", 
+      "DATA_TYPE": "delete_item"
+    }
+  ], 
+  "notify_on_inactive": true
+}

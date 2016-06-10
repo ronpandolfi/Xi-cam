@@ -1,0 +1,25 @@
+Crop:
+- name: p11
+  type: int
+- name: p12
+  type: int
+- name: p21
+  type: int
+- name: p22
+  type: int
+- name: axis
+  type: int
+  limits: [0, 2]
+Convert Data:
+- name: dtype
+  type: list
+  values:
+  - uint8
+  - uint16
+  - int16
+  - float32
+  - float64
+- name: min
+  type: float
+- name: max
+  type: float
