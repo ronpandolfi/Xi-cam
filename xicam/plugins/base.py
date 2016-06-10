@@ -19,13 +19,17 @@ l.setSpacing(0)
 fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
-loginwidget = login.LoginDialog()
+loginwidget = login.LoginDialog()           # TODO: Integrate loginwidget into explorer
 loginwidget.loginClicked.connect(partial(xglobals.login, xglobals.spot_client))
-#loginwidget.logoutClicked.connect(loginwidget.hide)
+loginwidget.logoutClicked.connect(loginwidget.hide)
 loginwidget.logoutClicked.connect(fileexplorer.removeTabs)
 loginwidget.logoutClicked.connect(fileexplorer.enableActions)
 loginwidget.logoutClicked.connect(lambda: xglobals.logout(xglobals.spot_client, loginwidget.logoutSuccessful))
 loginwidget.sigLoggedIn.connect(xglobals.client_callback)
+
+fileexplorer.sigLoginRequest.connect(loginwidget.show)
+fileexplorer.sigLoginSuccess.connect(loginwidget.ui.user_box.setFocus)
+fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
 
 l.addWidget(loginwidget)
 l.addWidget(fileexplorer)
@@ -86,13 +90,13 @@ class plugin(QtCore.QObject):
             config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
             l.addWidget(configtree)
 
-            propertytable = QtGui.QTableView()
-            self.imagePropModel = models.imagePropModel(self.currentImage, propertytable)
-            propertytable.verticalHeader().hide()
-            propertytable.horizontalHeader().hide()
-            propertytable.setModel(self.imagePropModel)
-            propertytable.horizontalHeader().setStretchLastSection(True)
-            l.addWidget(propertytable)
+            self.propertytable = widgets.frameproptable()
+            #
+            # propertytable.verticalHeader().hide()
+            # propertytable.horizontalHeader().hide()
+
+            # propertytable.horizontalHeader().setStretchLastSection(True)
+            l.addWidget(self.propertytable)
             w.setLayout(l)
             self.rightwidget = w
 

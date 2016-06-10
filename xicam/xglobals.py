@@ -12,6 +12,7 @@ pool = None
 window = None
 lastroi = None
 statusbar = None
+app = None
 
 def load():
     global pool
@@ -30,6 +31,7 @@ def hardresetpool():
 spot_client = client.spot.SpotClient()
 globus_client = client.globus.GlobusClient()
 login_callback = None
+client_callback = None
 
 
 def client_callback(*args, **kwargs):
@@ -45,7 +47,7 @@ def login_exeption_handle(func, *args, **kwargs):
     return(handled_func)
 
 
-def load_spot(callback_func=client_callback, *callback_args, **callback_kwargs):
+def load_spot(callback_func, *callback_args, **callback_kwargs):
     global spot_client, client_callback
     if not spot_client.logged_in:
         client_callback = partial(callback_func, *callback_args, **callback_kwargs)
@@ -53,19 +55,17 @@ def load_spot(callback_func=client_callback, *callback_args, **callback_kwargs):
     return spot_client
 
 
-def login(client, credentials):
+def login(client_obj, credentials):
     usr, pwd = map(str, credentials)
     global client_callback, login_callback
-    if not spot_client.logged_in:
-        runnable = threads.RunnableMethod(client_callback, client.login, usr, pwd)
+    if not client_obj.logged_in:
+        runnable = threads.RunnableMethod(client_callback, client_obj.login, usr, pwd)
         threads.queue.put(runnable)
-        threads.worker_thread.start()
 
 
-def logout(client, callback):
-    runnable = threads.RunnableMethod(callback, client.logout)
+def logout(client_obj, callback):
+    runnable = threads.RunnableMethod(callback, client_obj.logout)
     threads.queue.put(runnable)
-    threads.worker_thread.start()
 
 
 class NotLoggedInError(Exception):

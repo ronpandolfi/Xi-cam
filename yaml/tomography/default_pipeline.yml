@@ -1,0 +1,43 @@
+Normalization:
+  Regular: {}
+Negative Logarithm:
+  Negative Logarithm: {}
+Stripe Removal:
+  Fourier-Wavelet:
+    level: 8
+    wname: db5
+    sigma: 4
+    pad: True
+Padding:
+  Padding:
+    axis: 2
+    mode: edge
+    npad: 531
+Reconstruction:
+  Gridrec:
+    cutoff: 0.25
+    order: 2
+    filter_name: butterworth
+    Package: tomopy
+    Input Functions:
+      Projection Angles:
+        Projection Angles: {}
+      Center Detection:
+        Phase Correlation: {}
+Crop:
+  Crop:
+    p11: 531
+    p12: 531
+    p21: 531
+    p22: 531
+Array Operation:
+  Array Operation:
+    operation: divide
+Circular Mask:
+  Circular Mask:
+    ratio: 1.0
+    val: 0
+    axis: 0
+Write:
+  Tiff Stack:
+    digit: 4

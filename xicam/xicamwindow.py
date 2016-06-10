@@ -16,8 +16,6 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-
-
 import config
 import watcher
 import daemon
@@ -25,15 +23,16 @@ import pipeline
 import qdarkstyle
 import plugins
 from xicam import xglobals
+import numpy as np
+from pipeline import msg
 
 
 class MyMainWindow():
-    def __init__(self,app):
+    def __init__(self, app):
 
         QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
 
         import plugins
-
 
         self._pool = None
         # Load the gui from file
@@ -44,6 +43,7 @@ class MyMainWindow():
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
+        self.ui.closeEvent = self.closeEvent
 
 
         # STYLE
@@ -70,24 +70,27 @@ class MyMainWindow():
         self.ui.actionExport_Image.triggered.connect(self.exportimage)
 
         # Grab status bar
-        self.ui.statusbar.showMessage('Ready...')
-        xglobals.statusbar = self.ui.statusbar
+        msg.statusbar = self.ui.statusbar
+        msg.showMessage('Ready...')
+        xglobals.statusbar = self.ui.statusbar # TODO: Deprecate this by replacing all statusbar calls with msg module
 
 
         # PLUG-INS
+
         placeholders = [self.ui.viewmode, self.ui.sidemode, self.ui.bottommode, self.ui.toolbarmode, self.ui.leftmode]
 
         plugins.initplugins(placeholders)
 
         plugins.plugins['MOTD'].instance.activate()
 
-        plugins.base.filetree.sigOpenFiles.connect(self.openfiles)
+        plugins.base.fileexplorer.sigOpenFiles.connect(self.openfiles)
         plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.openActionTriggered)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
         self.ui.modemenu.addWidget(pluginmode)
 
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
+
 
 
         # TESTING
@@ -98,9 +101,39 @@ class MyMainWindow():
         #self.calibrate()
         # self.updatepreprocessing()
         ##
+        testmenu = QtGui.QMenu('Testing')
+        testmenu.addAction('Single frame').triggered.connect(self.singletest)
+        testmenu.addAction('Image stack').triggered.connect(self.stacktest)
+        testmenu.addAction('Timeline').triggered.connect(self.timelinetest)
+        testmenu.addAction('Tilt').triggered.connect(self.tilttest)
+
+        self.ui.menubar.addMenu(testmenu)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
+
+    def singletest(self):
+        self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
+
+    def stacktest(self):
+        self.openfiles(['/tmp/20140905_191647_YL1031_.h5'])
+
+    def timelinetest(self):
+        import glob
+        self.openfiles(sorted(list(set(glob.glob('/media/mac/Users/rp/YL1031/YL1031*.edf'))-set(glob.glob('/media/mac/Users/rp/YL1031/*remeshed.edf')))))
+
+    def tilttest(self):
+        config.activeExperiment.setvalue('Detector Distance',2.46269726489*79*.001)
+        config.activeExperiment.setvalue('Detector Rotation',4.69729438873 * 360./(2.*np.pi)-180.)
+        config.activeExperiment.setvalue('Detector Tilt',0.503226642865/(2.*np.pi)*360.)
+        config.activeExperiment.setvalue('Wavelength',0.97621599151*1.e-10)
+        config.activeExperiment.setvalue('Center X',969.878684978)
+        config.activeExperiment.setvalue('Center Y',2048-2237.93277884)
+        self.openfiles(['/home/rp/Downloads/lab6_041016_rct5_0001.tif'])
+
+
+    def closeEvent(self, ev):  # Never called???
+        ev.accept()
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

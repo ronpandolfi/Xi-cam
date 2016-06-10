@@ -173,7 +173,7 @@ class GlobusClient(User):
         else:
             raise GLOBUSError('%s could not be activated' % endpoint)
 
-    def transfer_file(self, src_endpoint, src_path, dst_enpoint, dst_path):
+    def transfer_file(self, src_endpoint, src_path, dst_enpoint, dst_path=None):
         """
         Make a file transfer submission to globus
 
@@ -184,6 +184,9 @@ class GlobusClient(User):
         :return: json dict, globus response
         """
         self.check_login()
+
+        if dst_path is None:
+            dst_path = os.path.join(os.path.expanduser('~'), os.path.split(src_path)[-1])
 
         for endpoint in (src_endpoint, dst_enpoint):
             if not self.is_endpoint_active(endpoint):
@@ -273,7 +276,7 @@ class GlobusClient(User):
         return status
 
 
-    def transfer_generator(self, src_endpoint, src_path, dst_enpoint, dst_path):
+    def transfer_generator(self, src_endpoint, src_path, dst_enpoint, dst_path=None):
         """
         Sumbits a globus transfer task and yields the fraction downloaded
 
@@ -285,6 +288,8 @@ class GlobusClient(User):
         """
 
         self.check_login()
+        if dst_path is None:
+            dst_path = os.path.join(os.path.expanduser('~'), os.path.split(src_path)[-1])
 
         size = self.get_file_size(src_path, src_endpoint)
         r = self.transfer_file(src_endpoint, src_path, dst_enpoint, dst_path)

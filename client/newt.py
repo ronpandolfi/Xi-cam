@@ -20,7 +20,8 @@ class NewtClient(User):
         self.home_dir = None
 
     def __del__(self):
-        self.logout()
+        if self.logged_in:
+            self.logout()
         super(NewtClient, self).__del__()
 
     def login(self, username, password):
@@ -257,24 +258,22 @@ class NewtClient(User):
 
         return response
 
-    def download_file(self, path, system,  fpath, fname=None):
+    def download_file(self, path, system, save_path=None):
         """
         Download a file on a NERSC system. (<100 MB or it will not work)
         :param path: str, file path on NERSC
         :param system: str, NERSC system
-        :param fpath: str, file path to save file locally
-        :param fname: str, name to save file locally. If none name on NERSC is used
+        :param save_path: str, path and name to save file locally. If None name on NERSC is used and save in home directory
         :return:
         """
         self.check_login()
 
-        if fname is None:
-            fname = path.split('/')[-1]
+        if save_path is None:
+            save_path = os.path.join(os.path.expanduser('~'), os.path.split(path)[-1])
 
-        file_name = join(fpath, fname)
         r = self.get(self.BASE_URL + '/file/' + system + '/' +  path + '?view=read', stream=True)
 
-        with open(file_name, 'wb') as f:
+        with open(save_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=64*1024):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
@@ -283,29 +282,26 @@ class NewtClient(User):
 
         return
 
-    def download_file_generator(self, path, system, fpath, fname=None,
-                                   chunk_size=64*1024):
+    def download_file_generator(self, path, system, save_path=None, chunk_size=64*1024):
         """
         Download a dataset as a generator (yields the fraction downloaded)
         Useful to know the status of a download (for gui purposes)
 
         :param path: str, file path on NERSC
         :param system: str, NERSC system
-        :param fpath: str, file path to save file locally
-        :param fname: str, name to save file locally. If none name on NERSC is used
+        :param save_path: str, path and name to save file locally. If None name on NERSC is used and save in home directory
         :param chunk_size:
         :return:
         """
         self.check_login()
 
-        if fname is None:
-            fname = path.split('/')[-1]
+        if save_path is None:
+            save_path = os.path.join(os.path.expanduser('~'), os.path.split(path)[-1])
 
         file_size = float(self.get_file_size(path, system))
-        file_name = join(fpath, fname)
         r = self.get(self.BASE_URL + '/file/' + system + '/' + path + '?view=read', stream=True)
 
-        with open(file_name, 'wb') as f:
+        with open(save_path, 'wb') as f:
             downloaded = 0.0
             for chunk in r.iter_content(chunk_size=chunk_size):
                 if chunk:  # filter out keep-alive new chunks

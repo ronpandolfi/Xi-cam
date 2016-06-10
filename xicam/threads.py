@@ -5,14 +5,12 @@ Created on Mon Oct 19 17:22:00 2015
 @author: lbluque
 """
 
-import os
+import time
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
-from client.globus import GlobusClient, GLOBUSError
-from client.spot import SpotClient
-from client.user import AUTHError
-import time
+# Error is raised if this import is removed probably due to some circular import between xglobals and here
+from client import spot, globus
 
 
 QtCore.Signal = QtCore.Signal
@@ -41,11 +39,12 @@ class RunnableMethod(QtCore.QRunnable):
         self.emitter = Emitter()
         self._callback_slot = callback_slot
         self._method = method
+        self.lock = None
         self.args = args
         self.kwargs = kwargs
 
         if callback_slot is not None:
-            self.emitter.sigRetValue.connect(self._callback_slot,  QtCore.Qt.QueuedConnection)
+            self.emitter.sigRetValue.connect(self._callback_slot, QtCore.Qt.QueuedConnection)
 
     def run(self):
         # print 'Started {0} in thread {1}, will emit back to {2}'.format(self._method.__name__,
@@ -53,15 +52,18 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 self._callback_slot.__name__)
         # self.emitter.sigFinished.connect(self._callback_slot)  # Connect here or in constructor?
         try:
+            if self.lock is not None: self.lock.lock()
             value = self._method(*self.args, **self.kwargs)
-            if value is None:
-                value = False
-            self.emitter.sigRetValue.emit(value)
-        except Exception, e:
-            raise e
-        #     value = e
-        # finally:
-        #     self.emitter.sigFinished.emit(value)
+        except Exception:
+            raise
+        finally:
+            if self.lock is not None: self.lock.unlock()
+
+        if value is None:
+            value = False
+
+        self.emitter.sigRetValue.emit(value)
+
         self.emitter.sigFinished.emit()
 
 
@@ -91,8 +93,9 @@ class Worker(QtCore.QObject):
     def __init__(self, queue, parent=None):
         super(Worker, self).__init__(parent)
         self.queue = queue
-        self.pool = QtCore.QThreadPool(self)  # Should I use globalInstance()?
+        self.pool = QtCore.QThreadPool.globalInstance()  # Should I use globalInstance() or a seperate instance?
         self.pool.setMaxThreadCount(mp.cpu_count())
+        self._stop = False
 
     def __del__(self):
         self.queue.join()
@@ -100,18 +103,27 @@ class Worker(QtCore.QObject):
     def startRunnable(self, runnable, priority=0):
         self.pool.start(runnable, priority)
 
+    def stopWork(self):
+        self._stop = True
+
     def run(self):
-        while True:
+        while not self._stop:
             item = self.queue.get()
-            print "Worker got item {} off queue".format(type(item))
+            # print "Worker got item {} off queue".format(type(item))
             self.startRunnable(item)
             self.queue.task_done()
-            time.sleep(.3)
+            time.sleep(0.1)
 
+#TODO: allow threads to be compatibile with debugging
 # Application globals
-global queue, worker
-queue = Queue.Queue()
-worker = Worker(queue)
-worker_thread = QtCore.QThread(objectName='workerThread')
-worker.moveToThread(worker_thread)
-worker_thread.started.connect(worker.run)
+import sys
+if not sys.gettrace():
+    print 'Loading thread queue...'
+    global queue, worker, worker_thread, mutex
+    queue = Queue.Queue()
+    worker = Worker(queue)
+    mutex = QtCore.QMutex()
+    worker_thread = QtCore.QThread()
+    worker.moveToThread(worker_thread)
+    worker_thread.started.connect(worker.run)
+    worker_thread.start()

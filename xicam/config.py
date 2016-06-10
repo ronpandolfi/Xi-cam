@@ -1,10 +1,12 @@
+# --coding: utf-8 --
 import pickle
 import pyFAI
 from pyFAI import geometry
-import __builtin__
+
 
 from pyqtgraph.parametertree import Parameter
 import numpy as np
+
 
 
 class PyFAIGeometry(pyFAI.geometry.Geometry):
@@ -43,6 +45,10 @@ class experiment(Parameter):
                       {'name': 'Center Y', 'type': 'float', 'value': 0, 'suffix': ' px'},
                       {'name': 'Detector Distance', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-3},
+                      {'name': 'Detector Tilt', 'type': 'float', 'value': 0, 'siPrefix': False, 'suffix': u'°',
+                       'step': 1e-1},
+                      {'name': 'Detector Rotation', 'type': 'float', 'value': 0, 'siPrefix': False, 'suffix': u'°',
+                       'step': 1e-1},
                       {'name': 'Energy', 'type': 'float', 'value': 10000, 'siPrefix': True, 'suffix': 'eV'},
                       {'name': 'Wavelength', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm'},
                       # {'name': 'View Mask', 'type': 'action'},
@@ -63,6 +69,12 @@ class experiment(Parameter):
             # Load the experiment from file
             with open(path, 'r') as f:
                 self.config = pickle.load(f)
+
+        self.headermap = {'Beam Energy':'Beam Energy',
+                          'Sample Alpha Stage':'Sample Alpha Stage',
+                          'Detector Vertical':'Detector Vertical',
+                          'Detector Horizontal':'Detector Horizontal',
+                          'I1 AI':'I1 AI'}
 
     # Make the mask accessible as a property
     @property
@@ -134,16 +146,24 @@ class experiment(Parameter):
         :rtype : pyFAI.AzimuthalIntegrator
         """
         # print(self.getDetector().MAX_SHAPE)
-        AI = pyFAI.AzimuthalIntegrator(dist=self.getvalue('Detector Distance'),
-                                       poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
-                                       poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       pixel1=self.getvalue('Pixel Size Y'),
-                                       pixel2=self.getvalue('Pixel Size X'),
-                                       detector=self.getDetector(),
+        AI = pyFAI.AzimuthalIntegrator(
                                        wavelength=self.getvalue('Wavelength'))
+        #                                dist=self.getvalue('Detector Distance'),
+        #                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+        #                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+        #                                rot1=0,
+        #                                rot2=0,
+        #                                rot3=0,
+        #                                pixel1=self.getvalue('Pixel Size Y'),
+        #                                pixel2=self.getvalue('Pixel Size X'),
+        #                                detector=self.getDetector(),
+        AI.setFit2D(self.getvalue('Detector Distance')*1000.,
+                    self.getvalue('Center X'),
+                    self.getvalue('Center Y'),
+                    self.getvalue('Detector Tilt'),
+                    360.-self.getvalue('Detector Rotation'),
+                    self.getvalue('Pixel Size Y')*1.e6,
+                    self.getvalue('Pixel Size X')*1.e6)
         #print AI
         return AI
 
@@ -162,14 +182,22 @@ class experiment(Parameter):
                                 pixel2=self.getvalue('Pixel Size X'),
                                 detector=self.getDetector(),
                                 wavelength=self.getvalue('Wavelength'))
+        # geo = PyFAIGeometry(wavelength=self.getvalue('Wavelength'))
+        # geo.setFit2D(self.getvalue('Detector Distance'),
+        #             self.getvalue('Center Y'),
+        #             self.getvalue('Center X'),
+        #             self.getvalue('Detector Tilt'),
+        #             360.-self.getvalue('Detector Rotation'),
+        #             self.getvalue('Pixel Size Y')*1.e6,
+        #             self.getvalue('Pixel Size X')*1.e6)
         # print AI
 
         return geo
 
     def getDetector(self):
         key = self.getvalue('Detector')
-        if key in detectors.ALL_DETECTORS:
-            return detectors.ALL_DETECTORS[self.getvalue('Detector')]()
+        if key in pyFAI.detectors.ALL_DETECTORS:
+            return pyFAI.detectors.ALL_DETECTORS[self.getvalue('Detector')]()
 
     def edit(self):
         pass
@@ -187,6 +215,11 @@ class experiment(Parameter):
         return (self.getvalue('Pixel Size X') > 0) and (self.getvalue('Pixel Size Y') > 0) and (
             self.getvalue('Detector Distance') > 0)
 
+    def setHeaderMap(self,xikey,headerkey):
+        self.headermap[xikey]=headerkey
+
+    def mapHeader(self,xikey):
+        return self.headermap[xikey]
 
 activeExperiment = experiment()
 
