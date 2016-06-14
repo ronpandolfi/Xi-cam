@@ -264,14 +264,12 @@ class FuncWidget(FeatureWidget):
         if test.exec_():
             widget = ui.centerwidget.currentWidget().widget
             if widget is None: return
-            p = []
             for i in test.selectedRange():
                 self.updateParamsDict()
                 self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget,
+                fmanager.run_preview_recon(*fmanager.pipeline_preview_action(widget,
                                                           ui.centerwidget.currentWidget().widget.addSlicePreview,
                                                           update=False))
-            map(lambda p: fmanager.run_preview_recon(*p), p)
 
 
 class ReconFuncWidget(FuncWidget):
@@ -307,11 +305,8 @@ class ReconFuncWidget(FuncWidget):
 
     @property
     def partial(self):
-        #TODO fix filter_par not being used
         d = deepcopy(self.param_dict)
-        filter_par = [d['cutoff'], d['order']]
-        d['filter_par'] = filter_par
-        del d['cutoff'], d['order']
+        d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
         kwargs = dict(d, **self.kwargs_complement)
         if 'center' in kwargs: del kwargs['center']
         self._partial = partial(self._function, **kwargs)
@@ -339,7 +334,7 @@ class ReconFuncWidget(FuncWidget):
         self.center = None
         self.input_functions = [self.center, self.angles]
 
-    def addInputFunction(self, func, subfunc):
+    def addInputFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
         fwidget = self.angles if func == 'Projection Angles' else self.center
         if fwidget is not None and fwidget.subfunc_name != 'Manual':
             value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
@@ -354,7 +349,7 @@ class ReconFuncWidget(FuncWidget):
                 except AttributeError:
                     pass
         checkable = False if func == 'Projection Angles' else True
-        fwidget = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
+        fwidget = FuncWidget(func, subfunc, package=package, checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)

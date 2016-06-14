@@ -307,7 +307,8 @@ def update_function_partial(fpartial, name, argnames, datawidget, param_dict=Non
                 kwargs[pname] = cor_offset(kwargs[pname])
 
     if kwargs:
-        return partial(fpartial, **kwargs)
+        fpartial.keywords.update(kwargs)
+        return partial(fpartial.func, *fpartial.args, **fpartial.keywords)
     else:
         return fpartial
 
