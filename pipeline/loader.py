@@ -45,10 +45,6 @@ def loadimage(path):
 
     data = None
     try:
-        if ':' in path:
-            print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
-            print 'Note: fabio 0.3.0 may have fixed this; check back later'
-            path='HACK:'+path
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
             if ext == '.gb':
@@ -1021,7 +1017,7 @@ class diffimage2(object):
         self.cachecheck = None
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.filepaths)
 
     def updateexperiment(self):
         # Force cache the detector
@@ -1441,7 +1437,7 @@ class multifilediffimage2(diffimage2):
         return self.transformdata
 
     def _getframe(self,frame=None): # keeps 3 frames in cache at most
-        print 'frame:',frame
+        #print 'frame:',frame
         if frame is None: frame=self.currentframe
         if type(frame) is list: frame=frame[1].step
         self.currentframe = frame
@@ -1449,6 +1445,18 @@ class multifilediffimage2(diffimage2):
             if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
             self._framecache[frame]=np.rot90(loadimage(self.filepaths[frame]),3)
         return self._framecache[frame]
+
+    def calcVariation(self, i, operationindex, roi):
+        if roi is None:
+            roi = 1
+        if i == 0:
+            return None  # Prevent wrap-around with first variation
+
+        try:
+            return variation.variationoperators.operations.values()[operationindex](self, i, roi)
+        except IndexError as ex:
+            print 'Skipping index:', i
+        return None
 
     def __getitem__(self, item):
         return self._getframe(item)

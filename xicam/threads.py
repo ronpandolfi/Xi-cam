@@ -79,9 +79,13 @@ class RunnableIterator(RunnableMethod):
         # print 'Started {0} in thread {1}, will update to {2}'.format(self._method.__name__,
         #                                                              QtCore.QThread.currentThread(),
         #                                                              self._callback_slot.__name__)
-        for status in self._method(*self.args, **self.kwargs):
-            self.emitter.sigRetValue.emit(status)
-
+        try:
+            for status in self._method(*self.args, **self.kwargs):
+                if status is None:
+                    status = False
+                self.emitter.sigRetValue.emit(status)
+        except Exception as ex:
+            print 'Error:',ex.message,ex.args
         self.emitter.sigFinished.emit()
 
 
