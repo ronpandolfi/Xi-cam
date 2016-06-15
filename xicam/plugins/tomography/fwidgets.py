@@ -268,8 +268,7 @@ class FuncWidget(FeatureWidget):
                 self.updateParamsDict()
                 self.param_dict[param.name()] = i
                 fmanager.run_preview_recon(*fmanager.pipeline_preview_action(widget,
-                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
-                                                          update=False))
+                                           ui.centerwidget.currentWidget().widget.addSlicePreview, update=False))
 
 
 class ReconFuncWidget(FuncWidget):

@@ -150,7 +150,7 @@ class TomoViewer(QtGui.QWidget):
         fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call, self.fullReconFinished)
 
     def addSlicePreview(self, params, recon):
-        self.previewViewer.addPreview(recon[0], params)
+        self.previewViewer.addPreview(np.rot90(recon[0],1), params)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
