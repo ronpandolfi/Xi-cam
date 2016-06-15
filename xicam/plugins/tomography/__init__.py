@@ -126,14 +126,17 @@ class plugin(base.plugin):
         if not self._recon_running:
             self._recon_running = True
             self.console.local_console.clear()
+            start = ui.configparams.child('Start Sinogram').value()
+            end = ui.configparams.child('End Sinogram').value()
+            step =  ui.configparams.child('Step Sinogram').value()
+            chunks = ((end - start) // step - 1) // ui.configparams.child('Sinograms/Chunk').value() + 1
+            print chunks
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),
-                                               (ui.configparams.child('Start Sinogram').value(),
-                                                ui.configparams.child('End Sinogram').value(),
-                                                ui.configparams.child('Step Sinogram').value()),
-                                               ui.configparams.child('Sinogram Chunks').value(),
-                                               ui.configparams.child('Cores').value(),
+                                               (start, end, step),
+                                               chunks,
+                                               ui.configparams.child('CPU Cores').value(),
                                                self.console.log2local)
 
         else:

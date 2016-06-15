@@ -20,8 +20,6 @@ Reconstruction:
     filter_name: butterworth
     Package: tomopy
     Input Functions:
-      Projection Angles:
-        Projection Angles: {}
       Center Detection:
         Phase Correlation: {}
 Crop:

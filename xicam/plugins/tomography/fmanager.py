@@ -148,23 +148,19 @@ def set_function_pipeline(pipeline, setdefaults=False):
     clear_functions()
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
-            try:
-                funcWidget = add_function(func, subfunc)
-                for param, value in subfuncs[subfunc].iteritems():
-                    if param == 'Package':
-                        continue
-                    elif param == 'Input Functions':
-                        for ipf, sipfs in value.iteritems():
-                            ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
-                            [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
-                    else:
-                        child = funcWidget.params.child(param)
-                        child.setValue(value)
-                        if setdefaults: child.setDefault(value)
-            except (IndexError, AttributeError):
-                #raise
-                # TODO: make this failure more graceful
-                warnings.warn('Failed to load subfunction: ' + subfunc)
+            funcWidget = add_function(func, subfunc)
+            for param, value in subfuncs[subfunc].iteritems():
+                if param == 'Package':
+                    continue
+                elif param == 'Input Functions':
+                    for ipf, sipfs in value.iteritems():
+                        print 'setting input func', ipf, sipfs
+                        ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
+                        [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                else:
+                    child = funcWidget.params.child(param)
+                    child.setValue(value)
+                    if setdefaults: child.setDefault(value)
 
 
 def create_pipeline_dict():
@@ -200,6 +196,8 @@ def open_pipeline_file():
 
 def set_function_defaults(mdata, funcs):
     for f in funcs:
+        if f is None:
+            continue
         if f.subfunc_name in fdata.als832defaults:
             for p in f.params.children():
                 if p.name() in fdata.als832defaults[f.subfunc_name]:

@@ -301,6 +301,7 @@ class ReconFuncWidget(FuncWidget):
         self.menu.addMenu(self.submenu)
 
         self.input_functions = [self.center, self.angles]
+        self.addInputFunction('Projection Angles', 'Projection Angles', package=reconpkg.packages['tomopy'])
 
     @property
     def partial(self):

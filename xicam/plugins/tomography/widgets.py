@@ -666,6 +666,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
+        print 'Default data ', current_data
         fmanager.set_function_pipeline(current_data)
 
 

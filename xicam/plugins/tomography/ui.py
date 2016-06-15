@@ -98,9 +98,9 @@ def loadUi():
               # {'name': 'Ouput Format', 'type': 'list', 'values': ['TIFF (.tiff)'], 'default': 'TIFF (.tiff)'},
               # {'name': 'Output Name', 'type': 'str'},
               # {'name': 'Browse', 'type': 'action'},
-              {'name': 'Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(), 'limits':[1, cpu_count()]},
-              {'name': 'Sinogram Chunks', 'type': 'int', 'value': 1},
-              {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 0}]
+              {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
+              {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
+               'limits':[1, cpu_count()]}]
 
     configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
     configtree.setParameters(configparams, showTop=False)
@@ -109,20 +109,19 @@ def loadUi():
     #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
     #                                               configparams.param('Output Name').value())[0])))
 
-    sinostart = configparams.param('Start Sinogram')
-    sinoend = configparams.param('End Sinogram')
-    sinostep = configparams.param('Step Sinogram')
-    nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-    chunks = configparams.param('Sinogram Chunks')
-    sinos = configparams.param('Sinograms/Chunk')
-    chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-    sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
-    chunks.sigValueChanged.connect(chunkschanged)
-    sinos.sigValueChanged.connect(sinoschanged)
-    sinostart.sigValueChanged.connect(chunkschanged)
-    sinoend.sigValueChanged.connect(chunkschanged)
-    sinostep.sigValueChanged.connect(chunkschanged)
-    chunks.setValue(1)
+    # sinostart = configparams.param('Start Sinogram')
+    # sinoend = configparams.param('End Sinogram')
+    # sinostep = configparams.param('Step Sinogram')
+    # nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
+    # sinos = configparams.param('Sinograms/Chunk')
+    # chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
+    # sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
+    # chunks.sigValueChanged.connect(chunkschanged)
+    # sinos.sigValueChanged.connect(sinoschanged)
+    # sinostart.sigValueChanged.connect(chunkschanged)
+    # sinoend.sigValueChanged.connect(chunkschanged)
+    # sinostep.sigValueChanged.connect(chunkschanged)
+    # chunks.setValue(1)
 
     rightwidget.addWidget(configtree)
 

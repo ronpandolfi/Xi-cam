@@ -38,3 +38,4 @@ Array Operation:
   value:
     name: pxsize
     type: float
+    conversion: 0.1
