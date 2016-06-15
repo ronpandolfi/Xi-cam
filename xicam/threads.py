@@ -43,6 +43,8 @@ class RunnableMethod(QtCore.QRunnable):
         self.args = args
         self.kwargs = kwargs
 
+        self.setAutoDelete(True)
+
         if callback_slot is not None:
             self.emitter.sigRetValue.connect(self._callback_slot, QtCore.Qt.QueuedConnection)
 
@@ -54,8 +56,8 @@ class RunnableMethod(QtCore.QRunnable):
         try:
             if self.lock is not None: self.lock.lock()
             value = self._method(*self.args, **self.kwargs)
-        except Exception:
-            raise
+        except Exception as ex:
+            print 'Error: ', ex.message, ex.args
         finally:
             if self.lock is not None: self.lock.unlock()
 
@@ -63,7 +65,6 @@ class RunnableMethod(QtCore.QRunnable):
             value = False
 
         self.emitter.sigRetValue.emit(value)
-
         self.emitter.sigFinished.emit()
 
 
@@ -73,19 +74,29 @@ class RunnableIterator(RunnableMethod):
     """
 
     def __init__(self, callback_slot, generator, *args, **kwargs):
+        self._interrupt = False
         super(RunnableIterator, self).__init__(callback_slot, generator, *args, **kwargs)
+
+    def interrupt(self):
+        self._interrupt = True
 
     def run(self):
         # print 'Started {0} in thread {1}, will update to {2}'.format(self._method.__name__,
         #                                                              QtCore.QThread.currentThread(),
         #                                                              self._callback_slot.__name__)
         try:
+            if self.lock is not None: self.lock.lock()
             for status in self._method(*self.args, **self.kwargs):
+                if self._interrupt:
+                    break
                 if status is None:
                     status = False
                 self.emitter.sigRetValue.emit(status)
         except Exception as ex:
-            print 'Error:',ex.message,ex.args
+            print 'Error: ', ex.message,ex.args
+        finally:
+            if self.lock is not None: self.lock.unlock()
+
         self.emitter.sigFinished.emit()
 
 

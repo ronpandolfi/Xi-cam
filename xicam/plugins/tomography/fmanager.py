@@ -316,7 +316,7 @@ def run_preview_recon(funstack, initializer, callback):
         reset_cor()
 
 
-def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_call=None):
+def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_call=None, interrupt_signal=None):
     global functions
     lock_function_params(True)
     partials, params = [], OrderedDict()
@@ -331,6 +331,8 @@ def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_c
     lock_function_params(False)
     runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, nchunk, ncore)
     runnable_it.emitter.sigFinished.connect(finish_call)
+    if interrupt_signal is not None:
+        interrupt_signal.connect(runnable_it.interrupt)
     threads.queue.put(runnable_it)
     return params
 #TODO have current recon parameters in run console or in recon view...

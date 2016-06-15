@@ -105,7 +105,7 @@ class TomoViewer(QtGui.QWidget):
         else:
             return loader.StackImage(paths)
 
-    def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
+    def getsino(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
@@ -127,7 +127,7 @@ class TomoViewer(QtGui.QWidget):
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slc]) #slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.darks[slc])
 
     def getheader(self):
         return self.data.header
@@ -146,8 +146,11 @@ class TomoViewer(QtGui.QWidget):
         fmanager.cor_scale = lambda x: x//8
         fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
 
-    def runFullRecon(self, proj, sino, nchunk, ncore, update_call):
-        fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call, self.fullReconFinished)
+    def runFullRecon(self, proj, sino, nchunk, ncore, update_call, interrupt_signal):
+        fmanager.run_full_recon(self, proj, sino, nchunk, ncore,
+                                update_call=update_call,
+                                finish_call=self.fullReconFinished,
+                                interrupt_signal=interrupt_signal)
 
     def addSlicePreview(self, params, recon):
         self.previewViewer.addPreview(recon[0], params)
