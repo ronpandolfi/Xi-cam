@@ -98,31 +98,31 @@ class mainwindow():
             self._scatteringForm = customwidgets.scattering()
         return self._scatteringForm
 
-    def runLocal(self):
-        shapes = []
-        layers = []
-
-        shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
-        layers = [feature.toDict() for feature in featuremanager.features if
-                  type(feature) is customwidgets.layer or customwidgets.substrate]
-        unitcells = [feature.structure.toUnitCellDict() for feature in featuremanager.features if
-                     type(feature) is customwidgets.particle]
-        structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
-                      type(feature) is customwidgets.particle]
-
-        out = {'hipGisaxsInput': UnsortableOrderedDict([('shapes', shapes),
-                                                        ('unitcells', unitcells),
-                                                        ('layers', layers),
-                                                        ('structures', structures),
-                                                        ('instrumentation', self.detectorForm.toDict()),
-                                                        ('computation', self.scatteringForm.toDict())])}
-        with open('test.json', 'w') as outfile:
-            json.dump(out, outfile, indent=4)
-
-        with open('test.yml', 'w') as outfile:
-            yaml.dump(out, outfile, indent=4)
-
-        print yaml.dump(out, indent=4)
+    # def runLocal(self):
+    #     shapes = []
+    #     layers = []
+    #
+    #     shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
+    #     layers = [feature.toDict() for feature in featuremanager.features if
+    #               type(feature) is customwidgets.layer or customwidgets.substrate]
+    #     unitcells = [feature.structure.toUnitCellDict() for feature in featuremanager.features if
+    #                  type(feature) is customwidgets.particle]
+    #     structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
+    #                   type(feature) is customwidgets.particle]
+    #
+    #     out = {'hipGisaxsInput': UnsortableOrderedDict([('shapes', shapes),
+    #                                                     ('unitcells', unitcells),
+    #                                                     ('layers', layers),
+    #                                                     ('structures', structures),
+    #                                                     ('instrumentation', self.detectorForm.toDict()),
+    #                                                     ('computation', self.scatteringForm.toDict())])}
+    #     with open('test.json', 'w') as outfile:
+    #         json.dump(out, outfile, indent=4)
+    #
+    #     with open('test.yml', 'w') as outfile:
+    #         yaml.dump(out, outfile, indent=4)
+    #
+    #     print yaml.dump(out, indent=4)
 
 
 
