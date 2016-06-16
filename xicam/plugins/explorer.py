@@ -483,6 +483,8 @@ class SpotDatasetView(QtGui.QTreeWidget):
         print "Not implemented!"
 
     def menuActionClicked(self, position):
+        if self.currentItem().childCount() != 0:
+            return
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
 
@@ -787,6 +789,24 @@ class JobTable(QtGui.QTableWidget):
         self.horizontalHeader().setDefaultAlignment(QtCore.Qt.AlignLeft)
         self.setShowGrid(False)
 
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.menu = QtGui.QMenu(self)
+        cancel = QtGui.QAction('Cancel', self)
+        cancel.triggered.connect(self.cancelActionTriggered)
+        remove = QtGui.QAction('Remove', self)
+        remove.triggered.connect(self.removeActionTriggered)
+        self.menu.addActions([cancel, remove])
+        self.customContextMenuRequested.connect(self.menuRequested)
+
+    def menuRequested(self, pos):
+        self.menu.exec_(self.mapToGlobal(pos))
+
+    def cancelActionTriggered(self):
+        self.jobs[self.currentRow()].cancel()
+
+    def removeActionTriggered(self):
+        self.removeJob(self.jobs[self.currentRow()])
+
     def addJob(self, job_desc):
         row_num = self.rowCount()
         self.insertRow(row_num)
@@ -801,18 +821,22 @@ class JobTable(QtGui.QTableWidget):
     def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc) #TODO add interrupt signal to job entries!
         runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
-                                            callback_slot=job_entry.progress, finished_slot=finish_slot)
+                                            callback_slot=job_entry.progress, finished_slot=finish_slot,
+                                            interrupt_signal=job_entry.sigCancel)
         threads.add_to_queue(runnable)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
+        job_entry.sigRemove.connect(self.removeJob)
         job_entry.pulseStart()
         runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
-                                          finished_slot=job_entry.pulseStop)
+                                          finished_slot=job_entry.pulseStop,
+                                          interrupt_signal=job_entry.sigCancel)
         threads.add_to_queue(runnable)
 
     def removeJob(self, jobentry):
+        jobentry.cancel()
         idx = self.jobs.index(jobentry)
         del self.jobs[idx]
         self.removeRow(idx)
@@ -824,7 +848,8 @@ class JobEntry(QtGui.QWidget):
     Job entries
     """
 
-    sigCancel = QtCore.Signal(object)
+    sigCancel = QtCore.Signal()
+    sigRemove = QtCore.Signal(object)
 
     def __init__(self):
         super(JobEntry, self).__init__()
@@ -840,8 +865,8 @@ class JobEntry(QtGui.QWidget):
     def setDescription(self, desc):
         self.desc_label.setText(desc)
 
-    def cancelPressed(self):
-        self.sigCancel.emit(self)
+    def cancel(self):
+        self.sigCancel.emit()
 
     def progress(self, i):
         i = int(i*100)
