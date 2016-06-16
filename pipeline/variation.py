@@ -5,13 +5,14 @@ import warnings
 import variationoperators
 
 
+def variationiterator(simg,operationindex,roi=None,color=None):
+    for i in range(len(simg)):
+        yield i,simg.calcVariation(i,operationindex,roi),color
 
 def scanvariation(filepaths):
     simg = loader.multifilediffimage2(filepaths)
     for t in range(len(simg)):
         variationoperators.chisquared(simg,t,None)
-
-
 
 def filevariation(operationindex, filea, c, filec, roi=None):
     p = loader.loadimage(filea)
@@ -20,7 +21,6 @@ def filevariation(operationindex, filea, c, filec, roi=None):
     # print 'previous frame:' + filea
     # print p
     return variation(operationindex, p, c, n, roi)
-
 
 # Deprecating...
 def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
