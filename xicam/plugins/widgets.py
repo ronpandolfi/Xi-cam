@@ -1092,9 +1092,10 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        runnable_it = threads.RunnableIterator(self.plotvariation, variation.variationiterator, self.simg, self.operationindex)
-        runnable_it.emitter.sigFinished.connect(self.testfinish)
-        threads.queue.put(runnable_it)
+        runnable_it = threads.RunnableIterator(variation.variationiterator,
+                                               generator_args=(self.simg, self.operationindex),
+                                               callback_slot=self.plotvariation, finished_slot=self.testfinish)
+        threads.add_to_queue(runnable_it)
 
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
@@ -1109,11 +1110,11 @@ class timelineViewer(dimgViewer):
                     # variation = self.simg.scan(self.operationindex, roi)
                     # self.plotvariation(variation, [0, 255, 255])
                     # Run on thread queue
-                    runnable_it = threads.RunnableIterator(self.plotvariation, variation.variationiterator, self.simg,
-                                                           self.operationindex,roi,[0,255,255])
-                    runnable_it.emitter.sigFinished.connect(self.testfinish)
-                    threads.queue.put(runnable_it)
-
+                    runnable_it = threads.RunnableIterator(variation.variationiterator,
+                                                           generator_args=(self.simg, self.operationindex),
+                                                           callback_slot=self.plotvariation,
+                                                           finished_slot=self.testfinish)
+                    threads.add_to_queue(runnable_it)
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:

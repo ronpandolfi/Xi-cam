@@ -221,8 +221,9 @@ class RemoteFileView(QtGui.QListWidget):
         return str(self.currentItem().text())
 
     def getDirContents(self, path, *args):
-        runnable = threads.RunnableMethod(self.fillList, self.client.get_dir_contents, path, *args)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.get_dir_contents, method_args=(path,) + args,
+                                          callback_slot=self.fillList)
+        threads.add_to_queue(runnable)
 
     def refresh(self, path=None):
         if path is None:
@@ -290,9 +291,10 @@ class NERSCFileView(RemoteFileView):
         return None
 
     def deleteFile(self):
-        runnable = threads.RunnableMethod(None, self.client.delete_file, self.getSelectedFilePath(), self.system)
-        runnable.emitter.sigFinished.connect(self.refresh)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.delete_file,
+                                          method_args=(self.getSelectedFilePath(), self.system),
+                                          finished_slot=self.refresh)
+        threads.add_to_queue(runnable)
 
 
 class GlobusFileView(RemoteFileView):
@@ -371,8 +373,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.downloadFile(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
 
     def getDatasets(self, query):
-        runnable = threads.RunnableMethod(self.createDatasetDictionary, self.client.search, query, **self.search_params)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.search, method_args=(query, ), method_kwargs=self.search_params,
+                                          callback_slot=self.createDatasetDictionary)
+        threads.add_to_queue(runnable)
 
     def createDatasetDictionary(self, data):
         tree_data = {}
@@ -795,22 +798,19 @@ class JobTable(QtGui.QTableWidget):
         return jobentry
 
     @QtCore.Slot(str, object, list, dict)
-    def addProgJob(self, job_desc, method, args, kwargs, finish_slot=None):
-        job_entry = self.addJob(job_desc)
-        runnable = threads.RunnableIterator(job_entry.progress, method, *args, **kwargs)
-        if finish_slot is not None:
-            runnable.emitter.sigFinished.connect(finish_slot)
-        threads.queue.put(runnable)
-        #jobentry.sigCancel.connect(lambda x: self.removeJob(x))
-        #return jobentry
+    def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
+        job_entry = self.addJob(job_desc) #TODO add interrupt signal to job entries!
+        runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
+                                            callback_slot=job_entry.progress, finished_slot=finish_slot)
+        threads.add_to_queue(runnable)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
         job_entry.pulseStart()
-        runnable = threads.RunnableMethod(None, method, *args, **kwargs)
-        runnable.emitter.sigFinished.connect(job_entry.pulseStop)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
+                                          finished_slot=job_entry.pulseStop)
+        threads.add_to_queue(runnable)
 
     def removeJob(self, jobentry):
         idx = self.jobs.index(jobentry)
