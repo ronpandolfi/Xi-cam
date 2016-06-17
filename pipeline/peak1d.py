@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from os import listdir
+import os
 
 
 ##### Functions that calculate things #####
@@ -922,7 +922,7 @@ def process_demo_1():
 
 def batch_demo():
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
-    file_list = listdir(data_folder)
+    file_list = os.listdir(data_folder)
     out_dir = 'batch_demo_figures/'
 
     # Quick 'n' dirty scrub of file_list by file name
@@ -1240,11 +1240,50 @@ def smoothing_demo_1():
     plt.ion()  # Interactive plotting back on
 
 
-smoothing_demo_1()
+def saxs_demo_do_one(x, y, suffix, out_folder):
+    # Find and classify curvature maxima
+    log_curv = noiseless_curvature(np.log(x), np.log(y))
+    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    curvature_legit = ~np.isnan(log_curv)
+    log_curv_maxima = local_maxima_detector(log_curv)
+    normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
+    fig, axarray = figure_curv_minima_classified(x, y, log_curv_maxima, low_outliers, normals, high_outliers,
+                                                 normed_curv)
+    axarray[0].set_title('Curvature maxima in log-log space, classified as features, noise, and weirdness')
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    #        axarray[1].set_yscale('log')
+    plt.savefig(out_folder + 'curv_maxima_classified_' + suffix + '.pdf')
+    plt.close()
+
+    # Cleaning up some indexing mess, pointing to features
+    features, feature_indices = nested_boolean_indexing(log_curv_maxima, high_outliers)
+
+    # Choose local-fit segments
+    curv_zeros = find_zeros(log_curv)
+    running_variance = calc_running_local_variance(np.log(y), 2)
+    fig, axarray = figure_running_variance(x, y, curv_zeros, running_variance)
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    plt.savefig(out_folder + 'running_variance_' + suffix + '.pdf')
+    plt.close()
+    low_bound_indices, high_bound_indices, no_good_background, extrapolated_background = \
+        pick_slope_anchors(running_variance, feature_indices, curv_zeros, 0)
+    slope, offset, intensity, sigma = gauss_guess(np.log(x), np.log(y), log_curv, low_bound_indices, high_bound_indices,
+                                                  feature_indices)
+    fig, ax = figure_naive_gauss_guess(np.log(x), np.log(y), low_bound_indices, high_bound_indices, feature_indices,
+                                       slope, offset,
+                                       intensity, sigma)
+    ax.set_xscale('linear')
+    ax.set_yscale('linear')
+    plt.savefig(out_folder + 'naive_gauss_guess_' + suffix + '.pdf')
+    plt.close()
 
 
-def saxs_demo():  # Pretty much just showing it reads in so far.  More to come.
-    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/saxs_demo_figures/'
+def saxs_demo_1():  # Pretty much just showing it reads in so far.  More to come.
+    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/saxs_demo_1_figures/'
     # Data intake
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Liheng/megaSAXSspreadsheet/'
     file1 = 'megaSAXSspreadsheet.csv'
@@ -1258,53 +1297,113 @@ def saxs_demo():  # Pretty much just showing it reads in so far.  More to come.
     figure_intensity_errors(data, out_folder)
 
     for i in range(len(data)):
-        # TODO:  data smoothing
         [x, y, dy] = data[i]
+
+        saxs_demo_do_one(x, y, str(i), out_folder)
+
         # Smooth
-        mean_smoothed_9 = mean_smoother(y, 4)
+        mean_smoothed_19 = mean_smoother(y, 9)
 
-        # Find and classify curvature maxima
-        log_curv = noiseless_curvature(np.log(x), np.log(y))
-        normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
-        curvature_legit = ~np.isnan(log_curv)
-        log_curv_maxima = local_maxima_detector(log_curv)
-        normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
-        fig, axarray = figure_curv_minima_classified(x, y, log_curv_maxima, low_outliers, normals, high_outliers,
-                                                     normed_curv)
-        axarray[0].set_title('Curvature maxima, classified as features, noise, and weirdness')
-        axarray[0].set_xscale('log')
-        axarray[0].set_yscale('log')
-        axarray[1].set_xscale('log')
-        #        axarray[1].set_yscale('log')
-        plt.savefig(out_folder + 'curv_maxima_classified_' + str(i) + '.pdf')
+        saxs_demo_do_one(x, mean_smoothed_19, 'SMOOTHED_' + str(i), out_folder)
 
-        # Cleaning up some indexing mess, pointing to features
-        features, feature_indices = nested_boolean_indexing(log_curv_maxima, high_outliers)
-
-        # Choose local-fit segments
-        curv_zeros = find_zeros(log_curv)
-        running_variance = calc_running_local_variance(y, 2)
-        fig, axarray = figure_running_variance(x, y, curv_zeros, running_variance)
-        axarray[0].set_xscale('log')
-        axarray[0].set_yscale('log')
-        axarray[1].set_xscale('log')
-        plt.savefig(out_folder + 'running_variance_' + str(i) + '.pdf')
-        low_bound_indices, high_bound_indices, no_good_background, extrapolated_background = \
-            pick_slope_anchors(running_variance, feature_indices, curv_zeros, 0)
-        slope, offset, intensity, sigma = gauss_guess(x, y, log_curv, low_bound_indices, high_bound_indices,
-                                                      feature_indices)
-        fig, ax = figure_naive_gauss_guess(x, y, low_bound_indices, high_bound_indices, feature_indices, slope, offset,
-                                           intensity, sigma)
-        ax.set_xscale('log')
-        ax.set_yscale('log')
-        plt.savefig(out_folder + 'naive_gauss_guess_' + str(i) + '.pdf')
     plt.close('all')
     plt.ion()  # Interactive plotting back on
 
-saxs_demo()
+
+def read_one_beam_csv(filename):
+    # filename the full path name
+    data = np.genfromtxt(filename, delimiter=',', skip_header=2, autostrip=True, usecols=(0, 4))
+    x = data[:, 0]
+    y = data[:, 1]
+    return x, y
 
 
-# change is inevitable
+def remove_non_csv(filenames):
+    csv_only = []
+    csv_count = 0
+    for i in filenames:
+        if i[-4:] == '.csv':
+            csv_only.append(i)
+            csv_count += 1
+    # print '%i .csv files found.' % csv_count
+    return csv_only
+
+
+def saxs_demo_do_a_thing(x, y, suffix, out_folder):
+    # Find and classify curvature maxima
+    log_curv = noiseless_curvature(np.log(x), np.log(y))
+    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    curvature_legit = ~np.isnan(log_curv)
+    log_curv_maxima = local_maxima_detector(log_curv)
+    normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
+    fig, axarray = figure_curv_minima_classified(x, y, log_curv_maxima, low_outliers, normals, high_outliers,
+                                                 normed_curv)
+    a_title = '''Curvature maxima in log-log space, \n classified as features, noise, and weirdness'''
+    axarray[0].set_xlim([2., 5.])
+    axarray[1].set_xlim([2., 5.])
+    fig.set_xlim([2., 5.])
+    axarray[0].set_title(a_title)
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    #        axarray[1].set_yscale('log')
+    plt.savefig(out_folder + 'curv_maxima_classified_' + suffix + '.pdf')
+    plt.close()
+
+    # Cleaning up some indexing mess, pointing to features
+    features, feature_indices = nested_boolean_indexing(log_curv_maxima, high_outliers)
+
+    # Choose local-fit segments
+    curv_zeros = find_zeros(log_curv)
+    running_variance = calc_running_local_variance(np.log(y), 2)
+    fig, axarray = figure_running_variance(x, y, curv_zeros, running_variance)
+    axarray[0].set_xlim([2., 5.])
+    axarray[1].set_xlim([2., 5.])
+    fig.set_xlim([2., 5.])
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    plt.savefig(out_folder + 'running_variance_' + suffix + '.pdf')
+    plt.close()
+    low_bound_indices, high_bound_indices, no_good_background, extrapolated_background = \
+        pick_slope_anchors(running_variance, feature_indices, curv_zeros, 0)
+    slope, offset, intensity, sigma = gauss_guess(np.log(x), np.log(y), log_curv, low_bound_indices, high_bound_indices,
+                                                  feature_indices)
+    fig, ax = figure_naive_gauss_guess(np.log(x), np.log(y), low_bound_indices, high_bound_indices, feature_indices,
+                                       slope, offset,
+                                       intensity, sigma)
+    ax.set_xlim([2., 5.])
+    ax.set_xscale('linear')
+    ax.set_yscale('linear')
+    plt.savefig(out_folder + 'naive_gauss_guess_' + suffix + '.pdf')
+    plt.close()
+
+
+def saxs_demo_2():  # Pretty much just showing it reads in so far.  More to come.
+    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/saxs_demo_2_figures/'
+    # Data intake
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Liheng/beamtime/imagesR1/'
+    files1 = os.listdir(data_folder)
+    files1 = remove_non_csv(files1)
+    ###
+    files1 = files1[:5]
+    ###
+
+    plt.ioff()  # Don't show me batch plots!
+    for i in range(len(files1)):
+        x, y = read_one_beam_csv(data_folder + files1[i])
+        tag = (files1[i])[10:-8] + str(i)
+        saxs_demo_do_one(x, y, tag, out_folder)
+
+        # Smooth
+        mean_smoothed_19 = np.exp(mean_smoother(np.log(y), 9))
+        tag = tag + '_logSMOOTHED'
+        saxs_demo_do_one(x, mean_smoothed_19, tag, out_folder)
+
+    plt.close('all')
+    plt.ion()  # Interactive plotting back on
+    print 'run done'
+
 
 def monodisperse_model(q, R):
     pass
@@ -1368,7 +1467,7 @@ def collect_metrics(x, y):
 
 def discriminator():
     data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
-    file_list = listdir(data_folder)
+    file_list = os.listdir(data_folder)
 
     #    metrics = np.zeros(stuff, stuffy stuff)
     for ii in file_list:
@@ -1473,8 +1572,6 @@ def process_demo_2():
     plt.savefig(out_folder + 'naive_gauss_guess.pdf')
 
 
-process_demo_2()
-
 
 ##### Run scripts, optional #####
 
@@ -1482,6 +1579,10 @@ process_demo_2()
 # process_demo_1()
 # batch_demo()
 # process_demo_2()
+# smoothing_demo_1()
+# saxs_demo_1()
+#saxs_demo_2()
+
 
 ##### Not-yet-started and/or not-yet-used functions #####
 
