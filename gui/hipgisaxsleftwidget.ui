@@ -18,19 +18,9 @@
                 <number>0</number>
             </property>
             <item>
-                <widget class="QPushButton" name="showScatteringButton">
-                    <property name="text">
-                        <string>Scattering</string>
-                    </property>
-                    <property name="flat">
-                        <bool>true</bool>
-                    </property>
-                </widget>
-            </item>
-            <item>
                 <widget class="QPushButton" name="showDetectorButton">
                     <property name="text">
-                        <string>Detector</string>
+                        <string>Scattering</string>
                     </property>
                     <property name="flat">
                         <bool>true</bool>

@@ -973,7 +973,7 @@ class dimgViewer(QtGui.QWidget):
 
 class timelineViewer(dimgViewer):
     def __init__(self, simg=None, files=None, toolbar=None):
-        self.variationcurve = None
+        self.variationcurve = dict()
         self.toolbar = toolbar
 
         if simg is None:
@@ -1094,7 +1094,7 @@ class timelineViewer(dimgViewer):
         # Run on thread queue
         runnable_it = threads.RunnableIterator(variation.variationiterator,
                                                generator_args=(self.simg, self.operationindex),
-                                               callback_slot=self.plotvariation, finished_slot=self.testfinish)
+                                               callback_slot=lambda ret: self.plotvariation(*ret), finished_slot=self.testfinish)
         threads.add_to_queue(runnable_it)
 
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
@@ -1112,7 +1112,8 @@ class timelineViewer(dimgViewer):
                     # Run on thread queue
                     runnable_it = threads.RunnableIterator(variation.variationiterator,
                                                            generator_args=(self.simg, self.operationindex),
-                                                           callback_slot=self.plotvariation,
+                                                           generator_kwargs={'roi':roi,'color':[0,255,255]},    # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
+                                                           callback_slot=lambda ret: self.plotvariation(*ret),
                                                            finished_slot=self.testfinish)
                     threads.add_to_queue(runnable_it)
                 else:
@@ -1121,30 +1122,33 @@ class timelineViewer(dimgViewer):
                     # print 'Warning: error displaying ROI variation.'
                     #    print ex.message
 
-    def plotvariation(self, variation, color=None):
+    def plotvariation(self, variationx, variationy, color=None):
         # variation=variation[0]
-        if variation[1] == None:
+        print color
+        if variationx == None:
             return
 
         if color is None:
             color = [255, 255, 255]
-        if self.variationcurve is None:
-            self.variationcurve = self.timeline.plot()
+
+        colorhash = ','.join([str(c) for c in color])
+        if not colorhash in self.variationcurve:
+            self.variationcurve[colorhash] = self.timeline.plot()
 
         #print 'preappend:',self.variationcurve.getData()
 
-        data = self.variationcurve.getData()
+        data = self.variationcurve[colorhash].getData()
         if data[0] is None :
-            x = np.array(variation[0])
-            y = np.array(variation[1])
+            x = np.array(variationx)
+            y = np.array(variationx)
         else:
-            x = np.append(data[0],variation[0])
-            y = np.append(data[1],variation[1])
+            x = np.append(data[0],variationx)
+            y = np.append(data[1],variationy)
 
         #print 'data:',data
 
-        self.variationcurve.setData(x=x,y=y)
-        self.variationcurve.setPen(pg.mkPen(color=color))
+        self.variationcurve[colorhash].setData(x=x,y=y)
+        self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
     def testfinish(self,*args,**kwargs):
         print 'Finished:',args,kwargs
@@ -1154,12 +1158,9 @@ class timelineViewer(dimgViewer):
         self.operationindex = index
 
     def cleartimeline(self):
-        self.variationcurve=None
-        for item in self.timeline.items:
-            print item
-            if type(item) is pg.PlotDataItem:
-                item.isdeleting = True
-                self.timeline.removeItem(item)
+        for item in self.variationcurve.values():
+            self.timeline.removeItem(item)
+        self.variationcurve=dict()
 
     # def plotvariation(self, variation, color=None):
     #     if len(variation) == 0:
@@ -1367,9 +1368,6 @@ class ImageView(pg.ImageView):
         del kwargs['actionLog_Intensity']
         super(ImageView, self).__init__(*args,**kwargs)
 
-    def setImage(self,*args,**kwargs):
-        super(ImageView, self).setImage(*args,**kwargs)
-        #if self.actionLog_Intensity.isChecked(): self.
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -1388,6 +1386,10 @@ class ImageView(pg.ImageView):
             levelmax = np.log(self.levelMax)
             if np.isnan(levelmin): levelmin = 0
             if np.isnan(levelmax): levelmax = 1
+            if np.isinf(levelmin): levelmin = 0
+            print 'min:',levelmin
+            print 'max:',levelmax
+
             self.ui.histogram.setLevels(levelmin, levelmax)
 
     def updateImage(self, autoHistogramRange=True): # inject logarithm action
@@ -1398,12 +1400,7 @@ class ImageView(pg.ImageView):
         image = self.getProcessedImage()
 
         if autoHistogramRange:
-            levelmin = np.log(self.levelMin) if self.actionLog_Intensity.isChecked() else self.levelMin
-            levelmax = np.log(self.levelMax) if self.actionLog_Intensity.isChecked() else self.levelMax
-            if np.isnan(levelmin): levelmin = 0
-            if np.isnan(levelmax): levelmax = 1
-            self.ui.histogram.setHistogramRange(levelmin,levelmax)
-            self.ui.histogram.update()
+            self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
         if self.axes['t'] is None:
             self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
         else:
