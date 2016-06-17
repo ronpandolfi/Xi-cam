@@ -346,29 +346,17 @@ class SpotDatasetView(QtGui.QTreeWidget):
 
     def addTreeItems(self, item, value):
         item.setExpanded(False)
-
         if type(value) is dict:
             for key, val in sorted(value.iteritems()):
-                child = QtGui.QTreeWidgetItem()
-                child.setText(0, unicode(key))
+                icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
+                child = QtGui.QTreeWidgetItem([key], parent=self)
+                child.setIcon(0, icon)
                 item.addChild(child)
                 self.addTreeItems(child, val)
-        elif type(value) is list:
-            for val in value:
-                child = QtGui.QTreeWidgetItem()
-                item.addChild(child)
-                if type(val) is dict:
-                    child.setText(0, '[dict]')
-                    self.addTreeItems(child, val)
-                elif type(val) is list:
-                    child.setText(0, '[list]')
-                    self.addTreeItems(child, val)
-                else:
-                    child.setText(0, unicode(val))
-                child.setExpanded(False)
         else:
-            child = QtGui.QTreeWidgetItem()
-            child.setText(0, unicode(value))
+            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
+            child = QtGui.QTreeWidgetItem([value], parent=self)
+            child.setIcon(0, icon)
             item.addChild(child)
 
     def getDatasetAndStage(self):
