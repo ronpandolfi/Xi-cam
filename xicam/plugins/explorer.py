@@ -11,7 +11,8 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import xglobals
-from pipeline import loader
+from pipeline import loader,pathtools
+
 
 NERSC_SYSTEMS = ['cori', 'edison']
 
@@ -31,7 +32,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = os.path.expanduser('~')
+        self.path = pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
@@ -220,8 +221,9 @@ class RemoteFileView(QtGui.QListWidget):
         return str(self.currentItem().text())
 
     def getDirContents(self, path, *args):
-        runnable = threads.RunnableMethod(self.fillList, self.client.get_dir_contents, path, *args)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.get_dir_contents, method_args=(path,) + args,
+                                          callback_slot=self.fillList)
+        threads.add_to_queue(runnable)
 
     def refresh(self, path=None):
         if path is None:
@@ -289,9 +291,10 @@ class NERSCFileView(RemoteFileView):
         return None
 
     def deleteFile(self):
-        runnable = threads.RunnableMethod(None, self.client.delete_file, self.getSelectedFilePath(), self.system)
-        runnable.emitter.sigFinished.connect(self.refresh)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.delete_file,
+                                          method_args=(self.getSelectedFilePath(), self.system),
+                                          finished_slot=self.refresh)
+        threads.add_to_queue(runnable)
 
 
 class GlobusFileView(RemoteFileView):
@@ -370,8 +373,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.downloadFile(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
 
     def getDatasets(self, query):
-        runnable = threads.RunnableMethod(self.createDatasetDictionary, self.client.search, query, **self.search_params)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(self.client.search, method_args=(query, ), method_kwargs=self.search_params,
+                                          callback_slot=self.createDatasetDictionary)
+        threads.add_to_queue(runnable)
 
     def createDatasetDictionary(self, data):
         tree_data = {}
@@ -479,6 +483,8 @@ class SpotDatasetView(QtGui.QTreeWidget):
         print "Not implemented!"
 
     def menuActionClicked(self, position):
+        if self.currentItem().childCount() != 0:
+            return
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
 
@@ -783,6 +789,24 @@ class JobTable(QtGui.QTableWidget):
         self.horizontalHeader().setDefaultAlignment(QtCore.Qt.AlignLeft)
         self.setShowGrid(False)
 
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.menu = QtGui.QMenu(self)
+        cancel = QtGui.QAction('Cancel', self)
+        cancel.triggered.connect(self.cancelActionTriggered)
+        remove = QtGui.QAction('Remove', self)
+        remove.triggered.connect(self.removeActionTriggered)
+        self.menu.addActions([cancel, remove])
+        self.customContextMenuRequested.connect(self.menuRequested)
+
+    def menuRequested(self, pos):
+        self.menu.exec_(self.mapToGlobal(pos))
+
+    def cancelActionTriggered(self):
+        self.jobs[self.currentRow()].cancel()
+
+    def removeActionTriggered(self):
+        self.removeJob(self.jobs[self.currentRow()])
+
     def addJob(self, job_desc):
         row_num = self.rowCount()
         self.insertRow(row_num)
@@ -794,24 +818,25 @@ class JobTable(QtGui.QTableWidget):
         return jobentry
 
     @QtCore.Slot(str, object, list, dict)
-    def addProgJob(self, job_desc, method, args, kwargs, finish_slot=None):
-        job_entry = self.addJob(job_desc)
-        runnable = threads.RunnableIterator(job_entry.progress, method, *args, **kwargs)
-        if finish_slot is not None:
-            runnable.emitter.sigFinished.connect(finish_slot)
-        threads.queue.put(runnable)
-        #jobentry.sigCancel.connect(lambda x: self.removeJob(x))
-        #return jobentry
+    def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
+        job_entry = self.addJob(job_desc) #TODO add interrupt signal to job entries!
+        runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
+                                            callback_slot=job_entry.progress, finished_slot=finish_slot,
+                                            interrupt_signal=job_entry.sigCancel)
+        threads.add_to_queue(runnable)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
+        job_entry.sigRemove.connect(self.removeJob)
         job_entry.pulseStart()
-        runnable = threads.RunnableMethod(None, method, *args, **kwargs)
-        runnable.emitter.sigFinished.connect(job_entry.pulseStop)
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
+                                          finished_slot=job_entry.pulseStop,
+                                          interrupt_signal=job_entry.sigCancel)
+        threads.add_to_queue(runnable)
 
     def removeJob(self, jobentry):
+        jobentry.cancel()
         idx = self.jobs.index(jobentry)
         del self.jobs[idx]
         self.removeRow(idx)
@@ -823,7 +848,8 @@ class JobEntry(QtGui.QWidget):
     Job entries
     """
 
-    sigCancel = QtCore.Signal(object)
+    sigCancel = QtCore.Signal()
+    sigRemove = QtCore.Signal(object)
 
     def __init__(self):
         super(JobEntry, self).__init__()
@@ -839,8 +865,8 @@ class JobEntry(QtGui.QWidget):
     def setDescription(self, desc):
         self.desc_label.setText(desc)
 
-    def cancelPressed(self):
-        self.sigCancel.emit(self)
+    def cancel(self):
+        self.sigCancel.emit()
 
     def progress(self, i):
         i = int(i*100)

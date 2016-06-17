@@ -66,7 +66,7 @@ class plugin(base.plugin):
                     break
 
             if self.integrateOption.value():
-                x, y, _ = dimg.integrate()
+                x, y, _, _ = dimg.integrate()
                 data = np.array([x, y])
                 if not writer.writearray(data, path, suffix=''):
                     break

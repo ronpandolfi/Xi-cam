@@ -10,13 +10,12 @@
 
 from collections import deque
 import numpy as np
-import psutil
+from functools import partial
 from PySide import QtGui, QtCore
 from vispy import scene  # , app, io
 from vispy.color import Colormap  # , BaseColormap, ColorArray
 from pipeline import loader
 import pyqtgraph as pg
-from pyqtgraph.parametertree import ParameterTree
 import imageio
 import os
 import fmanager
@@ -31,32 +30,13 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
-"""
-Example volume rendering
-
-Controls:
-
-* 1  - toggle camera between first person (fly), regular 3D (turntable) and
-       arcball
-* 2  - toggle between volume rendering methods
-* 3  - toggle between stent-CT / brain-MRI image
-* 4  - toggle between colormaps
-* 0  - reset cameras
-* [] - decrease/increase isosurface threshold
-
-With fly camera:
-
-* WASD or arrow keys - move around
-* SPACE - brake
-* FC - move up-down
-* IJKL or mouse - look around
-"""
-
-
 class TomoViewer(QtGui.QWidget):
     """
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
     """
+
+    sigReconFinished = QtCore.Signal()
+
     def __init__(self, paths=None, data=None, *args, **kwargs):
 
         if paths is None and data is None:
@@ -64,16 +44,14 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
-        self._recon_running = False
         self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection View')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram View')
-        self.viewmode.addTab('Preview')
+        self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Run Pipeline')
         self.viewmode.addTab('Reconstruction View')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
@@ -82,9 +60,20 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-        self.cor = self.data.shape[1]/2
+        self.cor = float(self.data.shape[1])/2.0
 
-        self.projectionViewer = StackViewer(self.data, parent=self)
+        self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
+        self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
+        if fmanager.recon_function is not None:
+            center_param = fmanager.recon_function.params.child('center')
+            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
+            # manual center widget, but this limits the center options to a resolution of 0.5
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.setCenterButton.clicked.connect(
+                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
@@ -92,25 +81,19 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.sinogramViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
-        self.previewViewer.sigPreviewClicked.connect(
-            lambda: fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self)))
         self.viewstack.addWidget(self.previewViewer)
 
-        self.preview3DViewer = ReconstructionViewer(paths=paths, data=data)
+        self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.processViewer = RunViewer(paths, self.data.shape[::2], parent=self)
-        self.processViewer.sigRunClicked.connect(self.runFullRecon)
-        self.viewstack.addWidget(self.processViewer)
-
-        self.reconstructionViewer = QtGui.QStackedWidget()
+        self.reconstructionViewer = ReconstructionViewer(parent=self)
         self.viewstack.addWidget(self.reconstructionViewer)
 
-        l = QtGui.QVBoxLayout(self)
-        l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(self.viewstack)
-        l.addWidget(self.viewmode)
-        self.setLayout(l)
+        v = QtGui.QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.addWidget(self.viewstack)
+        v.addWidget(self.viewmode)
+        self.setLayout(v)
 
         self.viewmode.currentChanged.connect(self.currentChanged)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
@@ -126,20 +109,25 @@ class TomoViewer(QtGui.QWidget):
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
-            return np.ascontiguousarray(self.data.fabimage.getsinogramchunk(proj_slice=slice(*slc[0]),
-                                                                            sino_slc=slice(*slc[1])))
+            return np.ascontiguousarray(self.data.fabimage[slc])
+
+    def getproj(self, slc=None):
+        if slc is None:
+            return np.ascontiguousarray(self.projectionViewer.currentdata[np.newaxis, :, :])
+        else:
+            return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getflats(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.flats[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.flats[slc])
 
     def getdarks(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.darks[slc])
 
     def getheader(self):
         return self.data.header
@@ -147,42 +135,73 @@ class TomoViewer(QtGui.QWidget):
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 
-    def addPreview(self, params, recon):
-        npad = int((recon.shape[1] - self.data.shape[1])/2)
-        recon = recon[0, npad:-npad, npad:-npad] if npad != 0 else recon[0]
-        self.previewViewer.addPreview(recon, params)
-        self.viewstack.setCurrentWidget(self.previewViewer)
-
     def setCorValue(self, value):
         self.cor = value
 
-    @QtCore.Slot(tuple, tuple, str, str, int, int, object)
-    def runFullRecon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call):
-        if not self._recon_running:
-            self._recon_running = True
-            self.processViewer.local_console.clear()
-            fmanager.run_full_recon(self, proj, sino, out_name, out_format, nchunk, ncore, update_call,
-                                    self.fullReconFinished)
-        else:
-            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-                                          'Are you sure you want to start another one?',
-                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if r is QtGui.QMessageBox.Yes:
-                QtGui.QMessageBox.information(self, 'Reconstruction request',
-                                              'Then you should wait until the first one finishes.')
-        self._recon_path = os.path.dirname(out_name)
+    def runSlicePreview(self):
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.addSlicePreview))
+
+    def run3DPreview(self):
+        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+        fmanager.cor_scale = lambda x: x//8
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
+
+    def runFullRecon(self, proj, sino, nchunk, ncore, update_call, interrupt_signal):
+        fmanager.run_full_recon(self, proj, sino, nchunk, ncore,
+                                update_call=update_call,
+                                finish_call=self.fullReconFinished,
+                                interrupt_signal=interrupt_signal)
+
+    def addSlicePreview(self, params, recon):
+        self.previewViewer.addPreview(recon[0], params)
+        self.viewstack.setCurrentWidget(self.previewViewer)
+
+    def add3DPreview(self, params, recon):
+        # pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
+        # if pad > 0:
+        #     recon = recon[:, pad:-pad, pad:-pad]
+        recon = np.flipud(recon)
+        self.viewstack.setCurrentWidget(self.preview3DViewer)
+        self.preview3DViewer.setPreview(recon, params)
 
     def fullReconFinished(self):
-        self._recon_running = False
-        self.processViewer.local_console.insertPlainText('Reconstruction complete.')
-        self.reconstructionViewer.addWidget(StackViewer(self.loaddata(self._recon_path, False)))
+        self.sigReconFinished.emit()
+        path = fmanager.get_output_path()
+        # if not extension was given assume it is a tiff directory.
+        if '.' not in path:
+            path = os.path.split(path)[0]
+        self.reconstructionViewer.openDataset(path=path)
+        self.viewstack.setCurrentWidget(self.reconstructionViewer)
+
+    def onManualCenter(self, active):
+        if active:
+            self.projectionViewer.showCenterDetection()
+            self.viewstack.setCurrentWidget(self.projectionViewer)
+        else:
+            self.projectionViewer.hideCenterDetection()
 
 
 class ImageView(pg.ImageView):
     """
-    Subclass of PG ImageView to correct z-slider signal behavior.
+    Subclass of PG ImageView to correct z-slider signal behavior, and add coordinate label.
     """
     sigDeletePressed = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(ImageView, self).__init__(*args, **kwargs)
+        self.scene.sigMouseMoved.connect(self.mouseMoved)
+
+        self.coordsLabel = QtGui.QLabel(' ', parent=self)
+        self.coordsLabel.setMinimumHeight(16)
+        self.layout().addWidget(self.coordsLabel)
+        self.coordsLabel.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%)")
+
+
+    def buildMenu(self):
+        super(ImageView, self).buildMenu()
+        self.menu.removeAction(self.normAction)
+
     def keyPressEvent(self, ev):
         super(ImageView, self).keyPressEvent(ev)
         if ev.key() in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
@@ -210,26 +229,41 @@ class ImageView(pg.ImageView):
             ind = inds[-1,0]
         return ind, t
 
+    def mouseMoved(self, ev):
+        pos = ev
+        viewBox = self.imageItem.getViewBox()
+        try:
+            if viewBox.sceneBoundingRect().contains(pos):
+                mousePoint = viewBox.mapSceneToView(pos)
+                x, y = map(int, (mousePoint.x(), mousePoint.y()))
+                if (0 <= x < self.imageItem.image.shape[0]) & (0 <= y < self.imageItem.image.shape[1]):  # within bounds
+                    self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x={0},"
+                                             u"   <span style=''>y={1}</span>,   <span style=''>I={2}</span>"\
+                                             .format(x, y, self.imageItem.image[x, y]))
+                else:
+                    self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x= ,"
+                                             u"   <span style=''>y= </span>,   <span style=''>I= </span>")
+        except AttributeError:
+            pass
+
 
 class StackViewer(ImageView):
     """
     PG ImageView subclass to view projections or sinograms of a tomography dataset
     """
-    def __init__(self, data, view_label=None, *args, **kwargs):
+    def __init__(self, data=None, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
-        self.data = data
-        print data
-        self.ui.roiBtn.setParent(None)
-        self.setImage(self.data) # , axes={'t':0, 'x':2, 'y':1, 'c':3})
-        self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
-        self.getImageItem().setAutoDownsample(True)
-        self.autoLevels()
-        self.getView().invertY(False)
+
+        # self.getImageItem().setAutoDownsample(True)
 
         self.view_label = QtGui.QLabel(self)
         self.view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
-        self.view_spinBox.setRange(0, data.shape[0] - 1)
+        self.view_spinBox.setKeyboardTracking(False)
+
+        if data is not None:
+            self.setData(data)
+
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.view_label)
@@ -239,9 +273,18 @@ class StackViewer(ImageView):
         w.setLayout(l)
         self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
         self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
+        self.ui.menuBtn.setParent(None)
+        self.ui.roiBtn.setParent(None)
 
         self.sigTimeChanged.connect(self.indexChanged)
         self.view_spinBox.valueChanged.connect(self.setCurrentIndex)
+
+    def setData(self, data):
+        self.data = data
+        self.setImage(self.data)
+        self.autoLevels()
+        self.view_spinBox.setRange(0, self.data.shape[0] - 1)
+        self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.rawdata.shape[0], self.data.rawdata.shape[1]))
 
     def indexChanged(self, ind, time):
         self.view_spinBox.setValue(ind)
@@ -252,7 +295,296 @@ class StackViewer(ImageView):
 
     @property
     def currentdata(self):
-        return np.rot90(self.data[self.data.currentframe]) #these rotations are very annoying
+        return self.data[self.data.currentframe].transpose()  # Maybe we need to transpose this
+
+    def resetImage(self):
+        self.setImage(self.data, autoRange=False)
+        self.setIndex(self.currentIndex)
+
+
+class ROImageOverlay(pg.ROI):
+    sigTranslated = QtCore.Signal(int, int)
+
+    def __init__(self, data, bg_imageItem, pos, constrainX=False, constrainY=True, translateSnap=True, **kwargs):
+        size = bg_imageItem.image.shape
+        super(ROImageOverlay, self).__init__(pos, translateSnap=translateSnap, size=size, pen=pg.mkPen(None), **kwargs)
+
+        self.data = data
+        self.bg_imgeItem = bg_imageItem
+        self._y_constrained = constrainY
+        self._x_constrained = constrainX
+        self._image_overlap = np.empty(size, dtype='float32')
+        self._mask = np.zeros(size, dtype=bool)
+        self.currentImage = None
+        self.currentIndex = None
+        self.flipped = False
+        self.setCurrentImage(-1)
+        self.flipCurrentImage()
+        self.imageItem = pg.ImageItem(self.currentImage)
+        self.imageItem.setParentItem(self)
+        self.updateImage()
+
+    def setCurrentImage(self, idx):
+        self.currentImage = np.array(self.data[idx]).astype('float32')
+        self.currentIndex = idx
+        if self.flipped:
+            self.flipCurrentImage(toggle=False)
+
+    def constrainX(self, val):
+        self._x_constrained = val
+
+    def constrainY(self, val):
+        self._y_constrained = val
+
+    def flipCurrentImage(self, toggle=True):
+        self.currentImage = np.flipud(self.currentImage)
+        if toggle:
+            self.flipped = not self.flipped
+
+    @property
+    def image_overlap(self):
+        self._image_overlap.fill(0)
+        x, y = self.pos()
+
+        if x == 0:
+            x_slc, bg_x_slc = None, None
+        elif x < 0:
+            x_slc, bg_x_slc = slice(-x, None), slice(None, x)
+        elif x > 0:
+            x_slc, bg_x_slc = slice(None, -x), slice(x, None)
+
+        if y == 0:
+            y_slc, bg_y_slc = None, None
+        elif y < 0:
+            y_slc, bg_y_slc = slice(-y, None), slice(None, y)
+        elif y > 0:
+            y_slc, bg_y_slc = slice(None, -y), slice(y, None)
+
+        slc, bg_slc = (x_slc, y_slc), (bg_x_slc, bg_y_slc)
+
+        self._image_overlap[slc] = self.bg_imgeItem.image[bg_slc]
+
+        return self._image_overlap
+
+    def updateImage(self, autolevels=None):
+        self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
+
+    def translate(self, *args, **kwargs):
+        super(ROImageOverlay, self).translate(*args, **kwargs)
+        self.updateImage()
+        self.sigTranslated.emit(*self.pos())
+
+    def resetImage(self):
+        self.setCurrentImage(self.currentIndex)
+        self.updateImage()
+
+    def mouseDragEvent(self, ev):
+        """
+        Overload ROI.mouseDragEvent to set all vertical offsets to zero and constrain dragging to horizontal axis
+        """
+        if ev.isStart():
+            if ev.button() == QtCore.Qt.LeftButton:
+                self.setSelected(True)
+                if self.translatable:
+                    self.isMoving = True
+                    self.preMoveState = self.getState()
+                    self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
+                    self.sigRegionChangeStarted.emit(self)
+                    ev.accept()
+                else:
+                    ev.ignore()
+
+        elif ev.isFinish():
+            if self.translatable:
+                if self.isMoving:
+                    self.stateChangeFinished()
+                self.isMoving = False
+            return
+
+        if self.translatable and self.isMoving and ev.buttons() == QtCore.Qt.LeftButton:
+            snap = True if (ev.modifiers() & QtCore.Qt.ControlModifier) else None
+            newPos = self.mapToParent(ev.pos()) + self.cursorOffset
+            if self._y_constrained:
+                newPos.y = self.pos().y
+            if self._x_constrained:
+                newPos.x = self.pos().x
+            self.translate(newPos - self.pos(), snap=snap, finish=False)
+
+    def keyPressEvent(self, ev):
+        if ev.key() == QtCore.Qt.Key_Right:
+            self.translate(pg.Point((1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Left:
+            self.translate(pg.Point((-1, 0)))
+        elif ev.key() == QtCore.Qt.Key_Up:
+            self.translate(pg.Point((0, 1)))
+        elif ev.key() == QtCore.Qt.Key_Down:
+            self.translate(pg.Point((0, -1)))
+        ev.accept()
+
+
+
+class ProjectionViewer(QtGui.QWidget):
+    """
+    Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
+    """
+    sigCenterChanged = QtCore.Signal(float)
+
+    def __init__(self, data, view_label=None, center=None, *args, **kwargs):
+        super(ProjectionViewer, self).__init__(*args, **kwargs)
+        self.stackViewer = StackViewer(data, view_label=view_label)
+        self.imageItem = self.stackViewer.imageItem
+        self.data = self.stackViewer.data
+        self.normalized = False
+        self.flat = np.median(self.data.flats, axis=0).transpose()
+        self.dark = np.median(self.data.darks, axis=0).transpose()
+
+        self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0])
+        # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
+        self.imageItem.sigImageChanged.connect(self.roi.updateImage)
+        self.stackViewer.view.addItem(self.roi)
+        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
+
+        self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
+
+        self.stackViewer.keyPressEvent = self.keyPressEvent
+
+        self.cor_widget = QtGui.QWidget(self)
+        clabel = QtGui.QLabel('Rotation Center:')
+        clabel.setAlignment(QtCore.Qt.AlignRight)
+        olabel = QtGui.QLabel('Offset:')
+        self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox.setDecimals(1)
+        self.setCenterButton = QtGui.QPushButton('Set in Pipeline')
+        originBox = QtGui.QLabel(parent=self.cor_widget)
+        originBox.setText('x={}   y={}'.format(0, 0))
+        center = center if center is not None else data.shape[1]/2.0
+        self.centerBox.setValue(center) #setText(str(center))
+        h1 = QtGui.QHBoxLayout()
+        h1.setAlignment(QtCore.Qt.AlignLeft)
+        h1.setContentsMargins(0, 0, 0, 0)
+        h1.addWidget(clabel)
+        h1.addWidget(self.centerBox)
+        h1.addWidget(self.setCenterButton)
+        h1.addWidget(olabel)
+        h1.addWidget(originBox)
+
+        plabel = QtGui.QLabel('Overlay Projection No:')
+        plabel.setAlignment(QtCore.Qt.AlignRight)
+        spinBox = QtGui.QSpinBox(parent=self.cor_widget)
+        #TODO data shape seems to be on larger than the return from slicing it with [:-1]
+        spinBox.setRange(0, data.shape[0])
+        slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
+        slider.setRange(0, data.shape[0])
+        spinBox.setValue(data.shape[0])
+        slider.setValue(data.shape[0])
+        flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
+        flipCheckBox.setChecked(True)
+        constrainYCheckBox = QtGui.QCheckBox('Constrain Y', parent=self.cor_widget)
+        constrainYCheckBox.setChecked(True)
+        constrainXCheckBox = QtGui.QCheckBox('Constrain X', parent=self.cor_widget)
+        constrainXCheckBox.setChecked(False)
+        # rotateCheckBox = QtGui.QCheckBox('Enable Rotation', parent=self.cor_widget)
+        # rotateCheckBox.setChecked(False)
+        self.normCheckBox = QtGui.QCheckBox('Normalize', parent=self.cor_widget)
+        h2 = QtGui.QHBoxLayout()
+        h2.setAlignment(QtCore.Qt.AlignLeft)
+        h2.setContentsMargins(0, 0, 0, 0)
+        h2.addWidget(plabel)
+        h2.addWidget(spinBox)
+        h2.addWidget(flipCheckBox)
+        h2.addWidget(constrainXCheckBox)
+        h2.addWidget(constrainYCheckBox)
+        # h2.addWidget(rotateCheckBox) # This needs to be implemented correctly
+        h2.addWidget(self.normCheckBox)
+        h2.addStretch(1)
+
+        spinBox.setFixedWidth(spinBox.width())
+        v = QtGui.QVBoxLayout(self.cor_widget)
+        v.addLayout(h1)
+        v.addLayout(h2)
+        v.addWidget(slider)
+
+        l = QtGui.QGridLayout(self) # VBoxLayout(self)
+        l.setContentsMargins(0, 0, 0, 0)
+        l.addWidget(self.cor_widget)
+        l.addWidget(self.stackViewer)
+
+        slider.valueChanged.connect(spinBox.setValue)
+        slider.valueChanged.connect(self.stackViewer.resetImage)
+        spinBox.valueChanged.connect(self.changeOverlayProj)
+        flipCheckBox.stateChanged.connect(self.flipOverlayProj)
+        constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
+        constrainXCheckBox.stateChanged.connect(lambda v: self.roi.constrainX(v))
+        # rotateCheckBox.stateChanged.connect(self.addRotateHandle)
+        self.normCheckBox.stateChanged.connect(self.normalize)
+        self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
+        self.roi.sigTranslated.connect(self.setCenter)
+        self.roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
+
+        self.hideCenterDetection()
+
+    def changeOverlayProj(self, idx):
+        self.normCheckBox.setChecked(False)
+        self.roi.setCurrentImage(idx)
+        self.roi.updateImage()
+
+    def setCenter(self, x, y):
+        center = (self.data.shape[1] + x)/2.0
+        self.centerBox.setValue(center) # setText(str(center))
+        self.sigCenterChanged.emit(center)
+
+    def hideCenterDetection(self):
+        self.normalize(False)
+        self.cor_widget.hide()
+        self.roi_histogram.hide()
+        self.roi.setVisible(False)
+
+    def showCenterDetection(self):
+        self.cor_widget.show()
+        self.roi_histogram.show()
+        self.roi.setVisible(True)
+
+    def updateROIFromCenter(self, center):
+        s = self.roi.pos()[0]
+        self.roi.translate(pg.Point((2 * center - self.data.shape[1] - s, 0)))
+
+    def flipOverlayProj(self, val):
+        self.roi.flipCurrentImage()
+        self.roi.updateImage()
+
+    def addRotateHandle(self, val):
+        if val:
+            self.addRotateHandle.handle = self.roi.addRotateHandle([0,1], [0.2, 0.2])
+        else:
+            self.roi.removeHandle(self.addRotateHandle.handle)
+
+    def normalize(self, val):
+        if val and not self.normalized:
+            proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
+            overlay = self.roi.currentImage
+            if self.roi.flipped:
+                overlay = np.flipud(overlay)
+            overlay = (overlay - self.dark)/(self.flat - self.dark)
+            if self.roi.flipped:
+                overlay = np.flipud(overlay)
+            self.roi.currentImage = overlay
+            self.roi.updateImage(autolevels=True)
+            self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
+            self.stackViewer.updateImage()
+            self.normalized = True
+        elif not val and self.normalized:
+            self.stackViewer.resetImage()
+            self.roi.resetImage()
+            self.normalized = False
+            self.normCheckBox.setChecked(False)
+
+    def keyPressEvent(self, ev):
+        super(ProjectionViewer, self).keyPressEvent(ev)
+        if self.roi.isVisible():
+            self.roi.keyPressEvent(ev)
+        else:
+            super(StackViewer, self.stackViewer).keyPressEvent(ev)
+        ev.accept()
 
 
 class PreviewViewer(QtGui.QSplitter):
@@ -260,7 +592,6 @@ class PreviewViewer(QtGui.QSplitter):
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
     """
-    sigPreviewClicked = QtCore.Signal()
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
@@ -269,29 +600,24 @@ class PreviewViewer(QtGui.QSplitter):
         self.dim = dim
 
         self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
-        self.previewdata = deque(maxlen=self.maxpreviews)
+        self.datatrees = deque(maxlen=self.maxpreviews)
+        self.data = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
 
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
-        self.setDefaultsButton = QtGui.QPushButton(self)
-        self.setDefaultsButton.setText("Set Pipeline Parameters")
+        self.setPipelineButton = QtGui.QPushButton(self)
+        self.setPipelineButton.setText("Set As Pipeline")
         l.addWidget(self.functionform)
-        l.addWidget(self.setDefaultsButton)
+        l.addWidget(self.setPipelineButton)
         panel = QtGui.QWidget(self)
         panel.setLayout(l)
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
-
-        self.runButton = QtGui.QPushButton(self.imageview)
-        self.runButton.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.runButton, 1, 2, 1, 1)
+        self.imageview.ui.roiBtn.setParent(None)
 
         self.deleteButton = QtGui.QPushButton(self.imageview)
         self.deleteButton.setText("")
@@ -305,27 +631,26 @@ class PreviewViewer(QtGui.QSplitter):
         self.addWidget(self.imageview)
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
-        self.setDefaultsButton.clicked.connect(self.defaultsButtonClicked)
-        self.runButton.clicked.connect(self.previewClicked)
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
         try:
-            self.functionform.setCurrentWidget(self.previewdata[index])
+            self.functionform.setCurrentWidget(self.datatrees[index])
         except IndexError as e:
-            print e.message
             print 'index {} does not exist'.format(index)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
     def addPreview(self, image, funcdata):
-        self.previews.appendleft(np.rot90(np.flipud(image), 3))
+        self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
-        self.previewdata.appendleft(functree)
+        self.data.appendleft(funcdata)
+        self.datatrees.appendleft(functree)
         self.functionform.addWidget(functree)
         self.imageview.setImage(self.previews)
         self.functionform.setCurrentWidget(functree)
@@ -333,20 +658,67 @@ class PreviewViewer(QtGui.QSplitter):
     def removePreview(self):
         if len(self.previews) > 0:
             idx = self.imageview.currentIndex
-            self.functionform.removeWidget(self.previewdata[idx])
+            self.functionform.removeWidget(self.datatrees[idx])
             del self.previews[idx]
-            del self.previewdata[idx]
+            del self.datatrees[idx]
+            del self.data[idx]
             if len(self.previews) == 0:
                 self.imageview.clear()
             else:
                 self.imageview.setImage(self.previews)
 
     def defaultsButtonClicked(self):
-        current_data = self.previewdata[self.imageview.currentIndex]
-        print current_data
+        current_data = self.data[self.imageview.currentIndex]
+        fmanager.set_function_pipeline(current_data)
 
-    def previewClicked(self):
-        self.sigPreviewClicked.emit()
+
+class ReconstructionViewer(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(ReconstructionViewer, self).__init__(parent=parent)
+        self.stack_viewer = StackViewer()
+        self.path_edit = QtGui.QLineEdit(parent=self)
+        self.path_edit.setReadOnly(True)
+        self.browse_button = QtGui.QPushButton(parent=self)
+        self.browse_button.setText('Select Reconstruction')
+
+        layout = QtGui.QGridLayout(self)
+        layout.addWidget(self.path_edit, 0, 0, 1, 1)
+        layout.addWidget(self.browse_button, 0, 1, 1, 1)
+        layout.addWidget(self.stack_viewer, 1, 0, 2, 2)
+
+        self.browse_button.clicked.connect(self.openDataset)
+
+    def openDataset(self, path=None):
+        if path is None:
+            path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
+        if path:
+            data = loader.StackImage(path)
+            self.stack_viewer.setData(data)
+            if isinstance(path, list):
+                path = os.path.split(path[0])[0]
+            self.path_edit.setText(path)
+
+
+"""
+Example volume rendering
+
+Controls:
+
+* 1  - toggle camera between first person (fly), regular 3D (turntable) and
+       arcball
+* 2  - toggle between volume rendering methods
+* 3  - toggle between stent-CT / brain-MRI image
+* 4  - toggle between colormaps
+* 0  - reset cameras
+* [] - decrease/increase isosurface threshold
+
+With fly camera:
+
+* WASD or arrow keys - move around
+* SPACE - brake
+* FC - move up-down
+* IJKL or mouse - look around
+"""
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -365,15 +737,15 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
-        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self)
+        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
         l.addWidget(self.HistogramLUTWidget)
 
-        self.xregion = SliceWidget()
-        self.yregion = SliceWidget()
-        self.zregion = SliceWidget()
+        self.xregion = SliceWidget(parent=self)
+        self.yregion = SliceWidget(parent=self)
+        self.zregion = SliceWidget(parent=self)
         self.xregion.item.region.setRegion([0,5000])
         self.yregion.item.region.setRegion([0,5000])
         self.zregion.item.region.setRegion([0,5000])
@@ -386,7 +758,7 @@ class VolumeViewer(QtGui.QWidget):
 
         self.setLayout(l)
 
-        self.setVolume(vol=data,path=path)
+        # self.setVolume(vol=data,path=path)
 
         # self.volumeRenderWidget.export('video.mp4',fps=25,duration=10.)
         # self.writevideo()
@@ -487,7 +859,7 @@ class VolumeViewer(QtGui.QWidget):
 
 class VolumeRenderWidget(scene.SceneCanvas):
 
-    def __init__(self,vol=None,path=None,size=(800,600),show=False):
+    def __init__(self,vol=None, path=None, size=(800,600), show=False):
         super(VolumeRenderWidget, self).__init__(keys='interactive', size=size, show=show)
 
         # Prepare canvas
@@ -502,10 +874,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.setVolume(vol,path)
         self.volume=None
 
-
-
-
-
         # Create three cameras (Fly, Turntable and Arcball)
         fov = 60.
         self.cam1 = scene.cameras.FlyCamera(parent=self.view.scene, fov=fov, name='Fly')
@@ -514,7 +882,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.view.camera = self.cam2  # Select turntable at first
 
 
-    def setVolume(self,vol = None, path = None, sliceobj = None):
+    def setVolume(self, vol=None, path=None, sliceobj=None):
         print 'slice:',sliceobj
 
         if vol is None:
@@ -527,10 +895,11 @@ class VolumeRenderWidget(scene.SceneCanvas):
                 vol=loader.loadimage(path)
             else:
                 vol=loader.loadtiffstack(path)
-            self.vol=vol
 
         if vol is None:
             return
+
+        self.vol = vol
 
         if slice is not None:
             print 'preslice:',vol.shape
@@ -538,8 +907,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
             print 'postslice:',vol.shape
         else:
             slicevol=self.vol
-
-
 
         # Set whether we are emulating a 3D texture
         emulate_texture = False
@@ -555,10 +922,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
         # Translate the volume into the center of the view (axes are in strange order for unkown )
         self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2,-vol.shape[1]/2,-vol.shape[0]/2))
-
-
-
-
 
     # Implement key presses
     def on_key_press(self, event):
@@ -658,123 +1021,43 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
+    # sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
 
-    def __init__(self, path, dim, parent=None):
+    def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
-        s = QtGui.QSplitter(QtCore.Qt.Horizontal)
-        w = QtGui.QWidget()
-        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        w.setContentsMargins(0,0,0,0)
-        l = QtGui.QGridLayout()
-        l.setContentsMargins(0,0,0,0)
-        l.setSpacing(0)
 
-        path, name = os.path.split(path)
-        name = os.path.join('RECON_' + name.split('.')[0], name.split('.')[0])
-        out_path = os.path.join(path, name)
-
-        # Create Local Parameter Tree
-        self.localparamtree = pg.parametertree.ParameterTree(showHeader=False)
-        precon, prun, pspecs = self.setupParams(dim, out_path)
-        self.reconsettings = pg.parametertree.Parameter.create(name='Reconstruction Settings', type='group',
-                                                               children=precon)
-        self.localparamtree.setParameters(self.reconsettings, showTop=True)
-        self.localsettings = pg.parametertree.Parameter.create(name='Run Settings', type='group', children=prun)
-        self.localparamtree.addParameters(self.localsettings, showTop=True)
-        self.localspecs = pg.parametertree.Parameter.create(name='Local Specifications', type='group', children=pspecs)
-        self.localparamtree.addParameters(self.localspecs, showTop=True)
-
-        l.addWidget(self.localparamtree, 0, 0, 1, 2)
-
-        # Run and cancel push buttons
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton = QtGui.QPushButton()
-        self.runButton.setIcon(icon)
-        self.runButton.setFlat(True)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.cancelButton = QtGui.QPushButton()
-        self.cancelButton.setIcon(icon)
-        self.cancelButton.setFlat(True)
+        self.local_cancelButton = QtGui.QToolButton()
+        self.remote_cancelButton = QtGui.QToolButton()
 
-        l.addWidget(self.runButton, 1, 0, 1, 1)
-        l.addWidget(self.cancelButton, 1, 1, 1, 1)
-
-        w.setLayout(l)
-        s.addWidget(w)
-
-        # Text Browser for console
+        # Text Browser for local run console
         self.local_console = QtGui.QTextEdit() #Browser()
-        self.local_console.setReadOnly(True)
-        self.local_console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        s.addWidget(self.local_console)
+        self.local_console.setObjectName('Local')
 
-        self.addTab(s, 'Local')
-        self.addTab(QtGui.QWidget(), 'Remote')
+        # Text Brower for remote run console
+        self.remote_console = QtGui.QTextEdit()
+        self.remote_console.setObjectName('Remote')
 
-        # Wire up buttons
-        self.runButton.clicked.connect(self.runButtonClicked)
-
-        # Wire up parameters
-        self.reconsettings.param('Browse').sigActivated.connect(
-            lambda: self.reconsettings.param('Output Name').setValue(str(QtGui.QFileDialog.getSaveFileName(self,
-                                                                  'Save reconstruction as', out_path)[0])))
-
-        sinostart = self.reconsettings.param('Start Sinogram')
-        sinoend = self.reconsettings.param('End Sinogram')
-        sinostep = self.reconsettings.param('Step Sinogram')
-        nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-        chunks = self.localsettings.param('Sinogram Chunks')
-        sinos = self.localsettings.param('Sinograms per Chunk')
-        chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-        sinoschanged = lambda: chunks.setValue(np.round((nsino() -1)/ sinos.value()) + 1,  blockSignal=chunkschanged)
-        chunks.sigValueChanged.connect(chunkschanged)
-        sinos.sigValueChanged.connect(sinoschanged)
-        sinostart.sigValueChanged.connect(chunkschanged)
-        sinoend.sigValueChanged.connect(chunkschanged)
-        sinostep.sigValueChanged.connect(chunkschanged)
-
-        chunks.setValue(1)
-
-    def setupParams(self, dim, path):
-        # Local Recon Settings
-        precon = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, 'limits':[0, dim[1]]},
-                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[1]]},
-                  {'name': 'End Sinogram', 'type': 'int', 'value': dim[1], 'default': dim[1], 'limits': [0, dim[1]]},
-                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0, 'limits': [0, dim[0]]},
-                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1, 'limits': [1, dim[0]]},
-                  {'name': 'End Projection', 'type': 'int', 'value': dim[0], 'default': dim[0], 'limits': [0, dim[0]]},
-                  {'name': 'Ouput Format', 'type': 'list', 'values': [ 'TIFF (.tiff)'],
-                   'default': 'TIFF (.tiff)'},
-                  {'name': 'Output Name', 'type': 'str', 'value': path, 'default': path},
-                  {'name': 'Browse', 'type': 'action'},
-                  ]
-        # Local Run Settings
-        total, available = self.memory()
-        cores = self.cores()
-        prun = [{'name': 'Cores', 'type': 'int', 'value': cores, 'default': None},
-                  {'name': 'Sinogram Chunks', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]},
-                  {'name': 'Sinograms per Chunk', 'type': 'int', 'value': 0, 'default': 1, 'limits': [1, dim[1]]}]
-        # Local Specifications
-        # siPrefix probably does not use base 2. Oh well memory will be an estimate
-        pspecs = [{'name': 'Total Cores', 'type': 'int', 'value': cores, 'readonly': True},
-                  {'name': 'Total Memory', 'type': 'float', 'value': total, 'suffix': 'B', 'siPrefix': True,
-                   'readonly': True},
-                  {'name': 'Available Memory', 'type': 'float', 'value': available, 'suffix': 'B', 'siPrefix': True,
-                   'readonly': True}]
-        return precon, prun, pspecs
-
-    @staticmethod
-    def memory():
-        memory = psutil.virtual_memory()
-        return memory.total, memory.available
-
-    @staticmethod
-    def cores():
-        return psutil.cpu_count()
+        for console, button in zip((self.local_console, self.remote_console),
+                                   (self.local_cancelButton, self.remote_cancelButton)):
+            console.setReadOnly(True)
+            console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+            button.setIcon(icon)
+            button.setIconSize(QtCore.QSize(24, 24))
+            button.setFixedSize(32, 32)
+            button.setToolTip('Cancel Current Process')
+            w = QtGui.QWidget()
+            w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+            w.setContentsMargins(0,0,0,0)
+            l = QtGui.QGridLayout()
+            l.setContentsMargins(0,0,0,0)
+            l.setSpacing(0)
+            l.addWidget(console, 0, 0, 2, 2)
+            l.addWidget(button, 1, 2, 1, 1)
+            w.setLayout(l)
+            self.addTab(w, console.objectName())
 
     def log2local(self, msg):
         self.local_console.insertPlainText(msg)
@@ -798,9 +1081,39 @@ class RunViewer(QtGui.QTabWidget):
                                 self.log2local)
 
 
-class ReconstructionViewer(VolumeViewer):
+class Preview3DViewer(QtGui.QSplitter):
     def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(ReconstructionViewer, self).__init__()
+        super(Preview3DViewer, self).__init__()
+        self.setOrientation(QtCore.Qt.Horizontal)
+        l = QtGui.QVBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        self.functiontree = DataTreeWidget()
+        self.functiontree.setHeaderHidden(True)
+        self.functiontree.clear()
+        self.setPipelineButton = QtGui.QPushButton(self)
+        self.setPipelineButton.setText("Set Pipeline")
+        l.addWidget(self.functiontree)
+        l.addWidget(self.setPipelineButton)
+        panel = QtGui.QWidget(self)
+        panel.setLayout(l)
+
+        self.volumeviewer = VolumeViewer()
+
+        self.addWidget(panel)
+        self.addWidget(self.volumeviewer)
+
+        self.funcdata = None
+
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+
+    def setPreview(self, recon, funcdata):
+        self.functiontree.setData(funcdata, hideRoot=True)
+        self.funcdata = funcdata
+        self.functiontree.show()
+        self.volumeviewer.setVolume(vol=recon)
+
+    def defaultsButtonClicked(self):
+        fmanager.set_function_pipeline(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):
@@ -855,10 +1168,10 @@ class ArrayDeque(deque):
         self._dtype = dtype
 
         if arraylist:
-            if False in [np.array_equal(arraylist[0].shape, array.shape) for array in arraylist[1:]]:
-                raise ValueError('All arrays in arraylist must have the same dimensions')
-            elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
-                raise ValueError('All arrays in arraylist must have the same data type')
+            # if False in [np.array_equal(arraylist[0].shape, array.shape) for array in arraylist[1:]]:
+            #     raise ValueError('All arrays in arraylist must have the same dimensions')
+            # elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
+            #     raise ValueError('All arrays in arraylist must have the same data type')
             map(self._shape.append, arraylist[0].shape)
         elif arrayshape:
             map(self._shape.append, arrayshape)
@@ -889,17 +1202,17 @@ class ArrayDeque(deque):
         return np.min(min(self, key=lambda x:np.min(x)))
 
     def append(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
-            raise ValueError('Array must be of type {}'.format(self.dtype))
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        # if self.dtype is not None and arr.dtype != self.dtype:
+        #     raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).append(arr)
 
     def appendleft(self, arr):
-        if arr.shape != tuple(self.shape[1:]):
-            raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
-        elif self.dtype is not None and arr.dtype != self.dtype:
-            raise ValueError('Array must be of type {}'.format(self.dtype))
+        # if arr.shape != tuple(self.shape[1:]):
+        #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
+        # if self.dtype is not None and arr.dtype != self.dtype:
+        #     raise ValueError('Array must be of type {}'.format(self.dtype))
         super(ArrayDeque, self).appendleft(arr)
 
     def __getitem__(self, item):

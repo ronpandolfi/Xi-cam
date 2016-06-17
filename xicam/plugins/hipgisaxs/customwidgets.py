@@ -56,7 +56,7 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1LeftParenthesis3D.setObjectName(_fromUtf8("UnitCellVec1LeftParenthesis3D"))
         self.horizontalLayout.addWidget(self.UnitCellVec1LeftParenthesis3D)
         self.value1 = QtGui.QDoubleSpinBox(self)
-        self.value1.setDecimals(1)
+        self.value1.setDecimals(3)
         self.value1.setMinimum(-1000.0)
         self.value1.setMaximum(1000.0)
         self.value1.setSingleStep(0.5)
@@ -67,7 +67,7 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1Comma1.setObjectName(_fromUtf8("UnitCellVec1Comma1"))
         self.horizontalLayout.addWidget(self.UnitCellVec1Comma1)
         self.value2 = QtGui.QDoubleSpinBox(self)
-        self.value2.setDecimals(1)
+        self.value2.setDecimals(3)
         self.value2.setMinimum(-1000.0)
         self.value2.setMaximum(1000.0)
         self.value2.setSingleStep(0.5)
@@ -77,7 +77,7 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1Comma2.setObjectName(_fromUtf8("UnitCellVec1Comma2"))
         self.horizontalLayout.addWidget(self.UnitCellVec1Comma2)
         self.value3 = QtGui.QDoubleSpinBox(self)
-        self.value3.setDecimals(1)
+        self.value3.setDecimals(3)
         self.value3.setMinimum(-1000.0)
         self.value3.setMaximum(1000.0)
         self.value3.setSingleStep(0.5)
@@ -231,7 +231,7 @@ class featureWidget(QtGui.QWidget):
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
 
-
+        _ = self.form #force cache form
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
@@ -353,7 +353,8 @@ class layer(featureWidget):
                                                          'PMMA (10 keV)', 'Air', 'Vacuum'], value=0)
             self.delta = pTypes.SimpleParameter(type='float', name='delta', value=1, step=.01)
             self.beta = pTypes.SimpleParameter(type='float', name='beta', value=1, step=.01)
-            params = [self.Thickness, self.Material, self.delta, self.beta]
+            self.TransVec = VectorParameter(name='Translation')
+            params = [self.Thickness, self.Material, self.delta, self.beta, self.TransVec]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
@@ -394,6 +395,7 @@ class layer(featureWidget):
                                       ('order', featuremanager.features.index(self) - 1),
                                       ('material', self.Material.value()),
                                       ('thickness', self.Thickness.value()),
+                                      ('transvec', list(self.TransVec.value())),
                                       ('refindex', UnsortableOrderedDict([('delta', self.delta.value()),
                                                                           ('beta', self.beta.value())]))])
 
@@ -541,7 +543,8 @@ class particle(featureWidget):
 
         return UnsortableOrderedDict([('name', self.Type.value().lower()),
                                       ('key', self.name),
-                                      ('params', [param.toDict() for param in self.relevantParams()])])
+                                      ('params', [param.toDict() for param in self.relevantParams()]),
+                                      ('refindex',{'delta':self.delta.value(),'beta':self.beta.value()})])
 
 
 class form(QtGui.QWidget):
@@ -579,13 +582,11 @@ class ensemble(form):
     @property
     def form(self):
         if self._form is None:
-            self.Axis = pTypes.ListParameter(name='Axis', values=['None', 'x', 'y', 'z'], value=0)
-            self.Rotation = DistParameter(name='Rotation', higKey='angles')
+            #self.Axis = pTypes.ListParameter(name='Axis', values=['None', 'x', 'y', 'z'], value=0)
+            self.addRotationAction = pTypes.ActionParameter(name='Add Rotation')
+            self.addRotationAction.sigActivated.connect(self.addRotation)
 
-            self.Axis.sigValueChanged.connect(self.changeAxis)
-            self.Rotation.hide()
-
-            params = [self.Axis, self.Rotation]
+            params = [self.addRotationAction]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
@@ -593,6 +594,10 @@ class ensemble(form):
             self.parameterTree.setParameters(self.parameter, showTop=False)
             self._form = self.parameterTree
         return self._form
+
+    def addRotation(self):
+        n = len(self.parameter.children())
+        self.parameter.addChild(RotationParameter(name='Rotation '+str(n)))
 
     def changeAxis(self, _, choice):
         # print choice
@@ -602,11 +607,8 @@ class ensemble(form):
             self.Rotation.show()
 
     def toDict(self):
-        if self.Axis.value() == 'None':
-            return dict()
-        else:
-            return UnsortableOrderedDict([('axis', self.Axis.value()),
-                                          ('Rotation', self.Rotation.toDict())])
+        rots = [('rot'+str(self.parameter.children().index(rot)),rot.toDict()) for rot in self.parameter.children() if type(rot) is RotationParameter]
+        return UnsortableOrderedDict(rots)
 
 
 class structure(form):
@@ -670,6 +672,8 @@ class structure(form):
             self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
             self.Basis = ScalableGroup(name='Basis', children=[VectorParameter(name='Point 1')])
             self.Position = VectorParameter(name='Position')
+            self.iratio = pTypes.SimpleParameter(name='I Ratio', value=1, type='float')
+            self.transvec = VectorParameter(name='Translation')
 
             params = [{'name': 'Lattice', 'type': 'group', 'children': [self.LatticeChoice,
                                                                         self.LatticeA,
@@ -678,7 +682,8 @@ class structure(form):
                       self.Repetition,
                       self.Scaling,
                       self.Basis,
-                      self.Position
+                      self.Position,
+                      self.iratio
             ]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
@@ -744,15 +749,14 @@ class structure(form):
 
     def toStructureDict(self):
         return UnsortableOrderedDict([('key', 'st' + self.parent.name),
+                                      ('iratio',self.iratio.value()),
+                                      ('transvec',self.transvec.value()),
                                       ('grain', UnsortableOrderedDict([('refindex', {'delta': self.parent.delta.value(),
                                                                                      'beta': self.parent.delta.value()}),
                                                                        ('unitcell_key', 'u' + self.parent.name)])),
                                       ('ensemble', UnsortableOrderedDict([('maxgrains', [1, 1, 1]),
-                                                                          ('orientations',
-                                                                           UnsortableOrderedDict([('stat', 'single'),
-                                                                                                  ('rot1', {
-                                                                                                      'axis': self.parent.ensemble.Axis.value(),
-                                                                                                      'angles': self.parent.ensemble.Rotation.toDict()})]))]))])
+                                                                          ('orientations',self.parent.ensemble.toDict()
+                                                                           )]))])
 
     def toUnitCellDict(self):
         return UnsortableOrderedDict([('key', 'u' + self.parent.name),
@@ -789,16 +793,16 @@ class scattering(form):
             self.Energy = pTypes.SimpleParameter(name='Photon Energy', type='int', value=10000, suffix='eV',
                                                  siPrefix=True, step=100)
             self.Incidence = StepParameter(name='Incidence Angle(s)')
-            self.Rotation = StepParameter(name='In-plane Rotation')
-            self.Tilt = StepParameter(name='Tilt', suffix='deg')
+            #self.Rotation = StepParameter(name='In-plane Rotation')
+            #self.Tilt = StepParameter(name='Tilt', suffix='deg')
 
             self.IncidenceAngleVisual = pTypes.SimpleParameter(name='Incidence angle', value=0.120, suffix=' deg',
                                                                type='float')
-            self.TiltAngleVisual = pTypes.SimpleParameter(name='Tilt Angle', value=0, suffix=' deg', type='float')
+            #self.TiltAngleVisual = pTypes.SimpleParameter(name='Tilt Angle', value=0, suffix=' deg', type='float')
             self.Visualization = pTypes.GroupParameter(name='Beam Visualization (display only)',
                                                        children=[self.IncidenceAngleVisual, self.TiltAngleVisual])
 
-            params = [self.Experiment, self.Energy, self.Incidence, self.Rotation, self.Tilt, self.Visualization]
+            params = [self.Experiment, self.Energy, self.Incidence, self.Visualization]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
@@ -821,7 +825,7 @@ class scattering(form):
 
 
 class detector(form):
-    def __init__(self, name='Scattering'):
+    def __init__(self, name='Computation'):
         super(detector, self).__init__(name)
 
     @property
@@ -831,8 +835,8 @@ class detector(form):
             self.DetectorChoice = pTypes.ListParameter(name='Detector Model', values=detectornames, value='Custom...')
             self.DetectorChoice.sigValueChanged.connect(self.changeDetector)
 
-            self.Width = pTypes.SimpleParameter(name='Width', type='int', suffix=' px')
-            self.Height = pTypes.SimpleParameter(name='Height', type='int', suffix=' px')
+            self.Width = pTypes.SimpleParameter(name='Width', type='int', suffix=' px', value=300)
+            self.Height = pTypes.SimpleParameter(name='Height', type='int', suffix=' px', value=300)
             self.DetectorResolution = pTypes.GroupParameter(name='Detector Resolution',
                                                             children=[self.Width, self.Height])
             self.setConnected(True)
@@ -841,7 +845,14 @@ class detector(form):
             self.Qz = MinMaxParameter(name='Q Z')
             self.Qrange = pTypes.GroupParameter(name='Q Range', children=[self.Qparallel, self.Qz])
 
-            params = [self.DetectorChoice, self.DetectorResolution, self.Qrange]
+            self.smearing = pTypes.SimpleParameter(name='Smearing', value=0, type='float')
+
+            self.Experiment = pTypes.ListParameter(name='Experiment', values=['GISAXS', 'SAXS'], value=0)
+            self.Energy = pTypes.SimpleParameter(name='Photon Energy', type='int', value=10000, suffix='eV',
+                                                 siPrefix=True, step=100)
+            self.Incidence = StepParameter(name='Incidence Angle(s)')
+
+            params = [self.DetectorResolution, self.Qrange, self.smearing, self.Experiment, self.Incidence]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
@@ -873,17 +884,21 @@ class detector(form):
 
 
     def toDict(self):
-        return UnsortableOrderedDict([('pathprefix', '.'),
+        return UnsortableOrderedDict([('path', '.'),
                                       ('runname', 'BLAH'),
-                                      ('method', 'dwba'),
+                                      ('expt', self.Experiment.value().lower()),
+                                      ('alphai', self.Incidence.toDict()),
+                                      ('photon', UnsortableOrderedDict([('energy', self.Energy.value()),
+                                                                        ('unit', 'ev')])),
                                       ('smearing', 0),
-                                      ('resolution', [self.Width.value(), self.Height.value()]),
                                       ('detector', self.DetectorChoice.value()),
-                                      ('outputregion', UnsortableOrderedDict([('type', 'qspace'),
+                                      ('output', UnsortableOrderedDict([('type', 'qspace'),
                                                                               ('minpoint', [self.Qparallel.value()[0],
                                                                                             self.Qz.value()[0]]),
                                                                               ('maxpoint', [self.Qparallel.value()[0],
-                                                                                            self.Qz.value()[0]])]))])
+                                                                                            self.Qz.value()[0]])])),
+                                      ('resolution', [self.Width.value(), self.Height.value()])
+                                      ])
 
 
 class VectorParameterItem(pTypes.WidgetParameterItem):
@@ -1005,7 +1020,10 @@ class DistParameter(pTypes.GroupParameter):
     def toDict(self):
         d = UnsortableOrderedDict()
         choice = self.DistributionChoice.value()
-        d['type'] = self.opts['higKey'].lower()
+
+        if 'higKey' in self.opts:
+            d['type'] = self.opts['higKey'].lower()
+
         if choice == 'Uniform':
             d['min'] = self.Min.value()
             d['max'] = self.Max.value()
@@ -1028,6 +1046,25 @@ class DistParameter(pTypes.GroupParameter):
             d['stat'] = 'gaussian'
         return d
 
+class RotationParameter(pTypes.GroupParameter):
+    def __init__(self, **opts):
+        opts['type'] = 'bool'
+        opts['value'] = True
+        super(RotationParameter, self).__init__(**opts)
+
+        self.AxisChoice = pTypes.ListParameter(name='Axis', type='list', value=0,
+                                                       values=['X','Y','Z'])
+        self.AngleDist = DistParameter(name='Angles')
+        self.delete = pTypes.ActionParameter(name='Remove Rotation')
+        self.delete.sigActivated.connect(self.remove)  # Will this work?
+
+        self.addChildren([self.AxisChoice, self.AngleDist, self.delete])
+
+    def toDict(self):
+        d = dict()
+        d['axis'] = self.AxisChoice.value().lower()
+        d['angles'] = self.AngleDist.toDict()
+        return d
 
 class StepParameter(pTypes.GroupParameter):
     itemClass = hideableGroupParameterItem

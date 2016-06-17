@@ -12,6 +12,7 @@ def main():
     os.chdir(os.path.abspath(os.path.join(xicam.__file__,'../..')))
     xglobals.load()
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
+    sys.path.append(os.path.join(os.getcwd(), '/usr/local'))
     for path in sys.path:
         print 'path:', path
     app=QtGui.QApplication(sys.argv)

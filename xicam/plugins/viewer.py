@@ -4,7 +4,10 @@ from fabio import edfimage
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
 if op_sys == 'Darwin':
-    from Foundation import NSURL
+    try:
+        from Foundation import NSURL
+    except ImportError:
+        print 'NSURL not found. Drag and drop may not work correctly'
 
 import base
 from PySide import QtGui
@@ -14,7 +17,8 @@ import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
-
+from xicam import config
+import fabio
 
 class plugin(base.plugin):
     name = 'Viewer'
@@ -34,7 +38,7 @@ class plugin(base.plugin):
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
-                                     capture=self.capture)
+                                     capture=self.capture,removecosmics=self.removecosmics)
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -187,7 +191,7 @@ class plugin(base.plugin):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
-        self.imagePropModel.widgetchanged()
+        self.propertytable.setData(self.currentImage().dimg.headers)
 
 
     def openfiles(self, paths=None, operation=None, operationname=None):
@@ -232,8 +236,19 @@ class plugin(base.plugin):
                                    filter=u"EDF (*.edf)")
         dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
         filename, ok = dialog.getSaveFileName()
+        print filename
         if ok and filename:
             fabimg.write(filename)
 
     def capture(self):
         self.getCurrentTab().capture()
+
+    def maskload(self):
+        filename, ok = QtGui.QFileDialog.getOpenFileName(None, 'Load Mask', os.curdir)
+
+        if filename and ok:
+            self.openfiles([filename])
+        config.activeExperiment.addtomask(np.rot90(fabio.open(filename).data,3))
+
+    def removecosmics(self):
+        self.getCurrentTab().removecosmics()

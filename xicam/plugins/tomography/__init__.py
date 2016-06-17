@@ -27,7 +27,6 @@ from xicam.plugins import base
 from PySide import QtUiTools
 import fmanager
 from pyqtgraph.parametertree import ParameterTree
-from xicam import models
 import ui
 
 
@@ -40,22 +39,24 @@ class plugin(base.plugin):
 
         self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
         self.functionwidget = ui.functionwidget
-
-
-        super(plugin, self).__init__(*args, **kwargs)
-
+        self.console = self.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # SETUP FEATURES
         fmanager.layout = self.functionwidget.functionsList
-        fmanager.load()
-        fmanager.load_function_pipeline('yaml/tomography/functionstack.yml')
+        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
+        fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml', setdefaults=True)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
+
+        self.toolbar.connecttriggers(self.previewSlice, self.preview3D, self.fullReconstruction, self.manualCenter)
+        super(plugin, self).__init__(*args, **kwargs)
+
+        self._recon_running = False
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -73,25 +74,31 @@ class plugin(base.plugin):
         e.accept()
 
     def currentChanged(self, index):
+        self.toolbar.actionCenter.setChecked(False)
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         try:
             self.centerwidget.currentWidget().load()
-            ui.propertytable.setData([[key, value] for key, value in self.currentDataset().data.header.items()])
-            ui.propertytable.setHorizontalHeaderLabels([ 'Parameter', 'Value'])
-            ui.propertytable.show()
-            ui.configparams.child('Rotation Center').setValue(self.currentDataset().cor)
-            ui.configparams.child('Rotation Center').sigValueChanged.connect(self.currentDataset().setCorValue)
-            ui.configparams.child('Rotation Angle').setValue(float(self.currentDataset().getheader()['arange']))
-
-            recon = fmanager.recon_function
-            if recon is not None:
-                recon.setCenterParam(self.currentDataset().cor)
+            self.currentDataset().sigReconFinished.connect(self.fullReconstructionFinished)
+            self.setPipelineValues(self.currentDataset())
         except AttributeError as e:
             print e.message
 
+    def setPipelineValues(self, widget):
+        ui.propertytable.setData(widget.data.header.items())
+        ui.propertytable.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        ui.propertytable.show()
+        ui.setconfigparams(int(widget.data.header['nslices']),
+                           int(widget.data.header['nangles']))
+        fmanager.set_function_defaults(widget.data.header, funcs=fmanager.functions)
+        fmanager.update_function_parameters(funcs=fmanager.functions)
+        recon = fmanager.recon_function
+        if recon is not None:
+            recon.setCenterParam(self.currentDataset().cor)
+
     def tabCloseRequested(self, index):
         ui.propertytable.clear()
+        ui.propertytable.hide()
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths,*args,**kwargs):
@@ -104,4 +111,43 @@ class plugin(base.plugin):
         self.centerwidget.setCurrentWidget(widget)
 
     def currentDataset(self):
-        return self.centerwidget.currentWidget().widget
+        try:
+            return self.centerwidget.currentWidget().widget
+        except AttributeError:
+            print 'No dataset open.'
+
+    def previewSlice(self):
+        self.currentDataset().runSlicePreview()
+
+    def preview3D(self):
+        self.currentDataset().run3DPreview()
+
+    def fullReconstruction(self):
+        if not self._recon_running:
+            self._recon_running = True
+            self.console.local_console.clear()
+            self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
+                                                ui.configparams.child('End Projection').value(),
+                                                ui.configparams.child('Step Projection').value()),
+                                               (ui.configparams.child('Start Sinogram').value(),
+                                                ui.configparams.child('End Sinogram').value(),
+                                                ui.configparams.child('Step Sinogram').value()),
+                                               ui.configparams.child('Sinogram Chunks').value(),
+                                               ui.configparams.child('Cores').value(),
+                                               self.console.log2local,
+                                               self.console.local_cancelButton.clicked)
+
+        else:
+            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+                                                                          'Are you sure you want to start another one?',
+                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            if r is QtGui.QMessageBox.Yes:
+                QtGui.QMessageBox.information(self, 'Reconstruction request',
+                                              'Then you should wait until the first one finishes.')
+
+    def fullReconstructionFinished(self):
+        self.console.log2local('Reconstruction complete.')
+        self._recon_running = False
+
+    def manualCenter(self, value):
+        self.currentDataset().onManualCenter(value)

@@ -39,6 +39,8 @@ class rawimage(fabioimage):
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
 
+#TODO: merge bl832h5image with spoth5
+
 class spoth5image(fabioimage):
     def _readheader(self,f):
         with h5py.File(f,'r') as h:
@@ -114,7 +116,6 @@ fabio.openimage.spoth5image = spoth5image
 fabioutils.FILETYPES['h5'] = ['spoth5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'spoth5')
 
-
 class bl832h5image(fabioimage):
 
     def __init__(self, data=None , header=None):
@@ -181,7 +182,6 @@ class bl832h5image(fabioimage):
 
     @property
     def nframes(self):
-        # return sum(map(lambda key: 'bak' not in key and 'drk' not in key, self._dgroup.keys()))
         return len(self.frames)
 
     @nframes.setter
@@ -190,15 +190,40 @@ class bl832h5image(fabioimage):
 
     def getsinogram(self, idx=None):
         if idx is None: idx = self.data.shape[0]//2
-        self.sinogram = np.vstack([frame[0, idx] for frame in map(lambda x: self._dgroup[self.frames[x]],
+        self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
                                                                   range(self.nframes))])
         return self.sinogram
 
-    def getsinogramchunk(self, proj_slice, sino_slc):
-        shape = (proj_slice.stop - proj_slice.start, sino_slc.stop - sino_slc.start, self.data.shape[1])
-        arr = np.empty(shape)
-        for i in range(proj_slice.start, proj_slice.stop, proj_slice.step):
-            arr[i] = self._dgroup[self.frames[i]][0, sino_slc, :]
+    def __getitem__(self, item):
+        s = []
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and isinstance(item[n], int):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+        shape = ((s[0][1] - s[0][0])//s[0][2],
+                 (s[1][1] - s[1][0] - 1)//s[1][2] + 1,
+                 (s[2][1] - s[2][0] - 1)//s[2][2] + 1)
+        arr = np.empty(shape, dtype=self.data.dtype)
+        for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            arr[n]= self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])]
+        if arr.shape[0] == 1:
+            arr = arr[0]
         return arr
 
     def __len__(self):
@@ -232,9 +257,12 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
 
 
 class TiffStack(object):
-    def __init__(self, path, header=None):
+    def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
-        self.frames = glob.glob(os.path.join(path, '*.tiff'))
+        if isinstance(paths, list):
+            self.frames = paths
+        elif os.path.isdir(paths):
+            self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
         self.header= header
 
@@ -242,16 +270,24 @@ class TiffStack(object):
         return len(self.frames)
 
     def getframe(self, frame=0):
+        print self.frames[frame]
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
 
+    def close(self):
+        pass
 
-# if __name__ == '__main__':
-#     from matplotlib.pyplot import imshow, show
-#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-#     arr = data.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-#     print arr.shape
-#     print data.darks.shape
-#     print data.flats.shape
-#     # imshow(data.sinogram, cmap='gray')
-#     # show()
+
+# Testing
+if __name__ == '__main__':
+    from matplotlib.pyplot import imshow, show
+    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+    slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+    # arr = data.__getitem__(slc)
+    arr = data.getsinogram(100)
+    # print sorted(data.frames, reverse=True)
+    # print data.darks.shape
+    # print data.flats.shape
+    imshow(arr, cmap='gray')
+    show()

@@ -5,6 +5,7 @@ from PySide import QtCore, QtGui
 import pyqtgraph as pg
 import spacegrp_peaks
 import numpy as np
+from xicam import config
 
 
 # TODO: Add index of refraction to interface and backend
@@ -127,7 +128,7 @@ class VectorParameter(Parameter):
 
 class peak(object):
     def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
-        self.mode = mode
+        self.mode = mode # either 'Transmission' or 'Reflection'
         self.hkl = hkl
         self.x = x
         self.y = y
@@ -227,21 +228,22 @@ class spacegroupwidget(ParameterTree):
 
         self.rotationxyz = VectorParameter(name='Vector (x,y,z)')
         self.rotationvectorsample = hideableGroup(name='Rotation (sample-frame vector)', children=[self.rotationxyz])
-        self.rotationvectorsample.setValue([0,0,1])
+        self.rotationxyz.setValue([0,0,1])
 
         self.rotationuvw = VectorParameter(name='Vector (u,v,w)')
         self.rotationvectorcrystal = hideableGroup(name='Rotation (crystal-frame vector)', children=[self.rotationuvw])
-
+        self.rotationuvw.setValue([0,0,1])
 
         self.rotationhkl = VectorParameter(name='Vector (h,k,l)')
         self.rotationplane = hideableGroup(name='Rotation (crystal plane)', children=[self.rotationhkl])
+        self.rotationhkl.setValue([0,0,1])
 
         self.spacegroupeditors = [triclinicparameter(), monoclinicparameter(), orthorhombicparameter(),
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]
         self.rotations = [self.rotationvectorsample, self.rotationvectorcrystal, self.rotationplane]
 
-        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=1.)
-        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=1.)
+        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=2.236E-06)
+        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=-1.8790E-09)
         self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.beta, self.gamma])
 
         self.redrawsg = pTypes.ActionParameter(name='Overlay space group')
@@ -271,22 +273,31 @@ class spacegroupwidget(ParameterTree):
 
 
         activelatticetype = self.activelatticetype()
+        SG = self.spacegroupparameter.value()
+        refbeta = self.beta.value()
+        refgamma = self.gamma.value()
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], order=2)
-        for key in peaks:
-            from xicam import config
-            print key + " -> " + str(peaks[key])
+                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refgamma=refgamma,refbeta=refbeta,order=3,unitcell=None,space_grp=SG)
+        for peak in peaks:
+            print unicode(peak)
+
+
+        #     print key + " -> " + str(peaks[key])
             center = config.activeExperiment.center
             sdd = config.activeExperiment.getvalue('Detector Distance')
-            pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
-            peaks[key] = pixels
+            pixelsize = config.activeExperiment.getvalue('Pixel Size X')
+            peak.position(center,sdd,pixelsize)
+            print 'x:',peak.x
+            print 'y:',peak.y
+        #     pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
+        #     peaks[key] = pixels
 
-        peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
-                 not np.any(peaks[p] < -100000)] + \
-                [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if
-                 not np.any(peaks[p] < -100000)]
+        # peaks = [peak('Transmission', p, peaks[p][0][0], peaks[p][0][1], 1, 1, 1) for p in peaks if
+        #          not np.any(peaks[p] < -100000)] + \
+        #         [peak('Reflection', p, peaks[p][1][0], peaks[p][1][1], 1, 1, 1) for p in peaks if
+        #          not np.any(peaks[p] < -100000)]
 
         self.sigDrawSGOverlay.emit(peakoverlay(peaks))
         # self.sigDrawSGOverlay.emit(peakoverlay(
@@ -472,6 +483,7 @@ cubicspacegroupnames = ['P23', 'F23', 'I23', u'P2₁3', u'I2₁3', 'Pm-3', 'Pn-3
                         'F432', u'F4₁32', 'I432', u'P4₃32', u'P4₁32', u'I4₁32', 'P-43m', 'F-43m', 'I-43m', 'P-43n',
                         'F-43c', 'I-43d',
                         'Pm-3m', 'Pn-3n', 'Pm-3n', 'Pn-3m', 'Fm-3m', 'Fm-3c', 'Fd-3m', 'Fd-3c', 'Im-3m', 'Ia-3d']
-spacegroupnames = [triclinicspacegroupnames, monoclinicspacegroupnames, orhorhombicspacegroupnames,
-                   tetragonalspacegroupnames, trigonalspacegroupnames, hexagonalspacegroupnames, cubicspacegroupnames]
+import sgexclusions
+spacegroupnames = [sgexclusions.Triclinic.conditions.keys(), sgexclusions.Monoclinic.conditions.keys(), sgexclusions.Orthorhombic.conditions.keys(),
+                   sgexclusions.Tetragonal.conditions.keys(), sgexclusions.Trigonal.conditions.keys(), sgexclusions.Hexagonal.conditions.keys(), sgexclusions.Cubic.conditions.keys()]
 spacegrouptypes = ['Triclinic', 'Monoclinic', 'Orthorhombic', 'Tetragonal', 'Trigonal', 'Hexagonal', 'Cubic']

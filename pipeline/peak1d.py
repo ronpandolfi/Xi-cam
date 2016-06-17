@@ -532,6 +532,78 @@ def gauss_guess(x, y, curvature, low_anchor_indices, high_anchor_indices, featur
     return slope, offset, intensity, sigma
 
 
+def masked_mean_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the mean of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return mean: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least one valid element;
+    otherwise the mean along axis 0 is not defined.
+    Returns *mean*, the mean of *y2d* along axis 0.
+    '''
+    sum = (y2d * mask2d).sum(axis=0)
+    num_elements = mask2d.sum(axis=0)
+    mean = sum / num_elements
+    return mean
+
+
+def masked_variance_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the variance of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return variance: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least two valid elements;
+    otherwise the variance along axis 0 is not defined.
+    Returns *variance*, the variance of *y2d* along axis 0.
+    '''
+    mean = masked_mean_2d_axis_0(y2d, mask2d)
+    difference = (y2d - mean) * mask2d
+    num_elements = mask2d.sum(axis=0)
+    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
+    return variance
+
+
+def read_mega_spreadsheet(filename, data_folder):
+    '''
+    Strictly for reading some data Liheng gave me.
+
+    :param filename:
+    :param data_folder:
+    :return trimmed_data_list: A list of lists of 1d numpy float arrays
+    '''
+    data = np.genfromtxt(data_folder + filename, delimiter=',')
+    # (length, width) = data.shape  # (429, 27)
+    # Split data into components
+    data1 = data[:, 0:3]
+    data2 = data[:, 4:7]
+    data3 = data[:, 8:11]
+    data4 = data[:, 12:15]
+    data5 = data[:, 16:19]
+    data6 = data[:, 20:23]
+    data7 = data[:, 24:27]
+    data_list = [data1, data2, data3, data4, data5, data6, data7]
+    #    print 'data 1 end', data1[-20:, :]
+    #    print 'data 7 end', data7[-20:, :]
+    trimmed_data_list = []
+    for i in data_list:
+        i_mask = ~np.isnan(i[:, 0])
+        x = (i[:, 0])[i_mask]
+        y = (i[:, 1])[i_mask]
+        dy = (i[:, 2])[i_mask]
+        trimmed_data_list.append([x, y, dy])
+    return trimmed_data_list
+
+
 ##### Figure-making functions #####
 
 def figure_initial_maxima(x, y, maxima):
@@ -711,6 +783,98 @@ def figure_naive_gauss_guess(x, y, low_bound_indices, high_bound_indices, featur
     return fig, ax
 
 
+def figure_smoothed_comparison(x_list, y_list, labels):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.hold(True)
+    data, = ax.plot(x_list[0], y_list[0], ls='-', color='black', marker=',', lw=2)
+    smoothed_1, = ax.plot(x_list[1], y_list[1], ls='-', color='blue', marker=',', lw=1)
+    smoothed_2, = ax.plot(x_list[2], y_list[2], ls='-', color='green', marker=',', lw=1)
+    smoothed_3, = ax.plot(x_list[3], y_list[3], ls='-', color='red', marker=',', lw=1)
+    smoothed_4, = ax.plot(x_list[4], y_list[4], ls='-', color='magenta', marker=',', lw=1)
+    handles = [data, smoothed_1, smoothed_2, smoothed_3, smoothed_4]
+    # Shrink x axis by 20%; place legend to the right plot
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(handles, labels, prop={'size': 10}, loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.set_xlabel('q')
+    ax.set_ylabel('Intensity')
+    return fig, ax
+
+
+def plot_peaks_flat_all(x, y_lists, masks, title, location, labels):
+    # Feature region plot
+    x_peak = x[masks[0]]
+    x_peaks = []
+    y_peaks = []
+    for i in range(len(labels)):
+        y_peak = (y_lists[i])[masks[0]]
+        y_peaks.append(y_peak)
+        x_peaks.append(x_peak)
+    fig, ax = figure_smoothed_comparison(x_peaks, y_peaks, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'peaks.pdf')
+    # Continuum region plot
+    x_flat = x[masks[1]]
+    x_flats = []
+    y_flats = []
+    for i in range(len(labels)):
+        y_flat = (y_lists[i])[masks[1]]
+        y_flats.append(y_flat)
+        x_flats.append(x_flat)
+    fig, ax = figure_smoothed_comparison(x_flats, y_flats, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'continuum.pdf')
+    # Full range plot
+    x_all = x[masks[2]]
+    x_alls = []
+    y_alls = []
+    for i in range(len(labels)):
+        y_all = (y_lists[i])[masks[2]]
+        y_alls.append(y_all)
+        x_alls.append(x_all)
+    fig, ax = figure_smoothed_comparison(x_alls, y_alls, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'all.pdf')
+
+
+def figure_many_intensity_errors(data):
+    num_data = len(data)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'indigo']
+    for ii in range(num_data):
+        x = data[ii][0]
+        y = data[ii][1]
+        dy = data[ii][2]
+        ax.fill_between(x, y + dy, y - dy, facecolor=colors[ii], alpha=0.3)
+        ax.plot(x, y, lw=3, ls='-', marker=',', color=colors[ii])
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_title('Intensity and error estimates, SAXS data')
+    ax.set_xlabel('q')
+    ax.set_ylabel('Intensity')
+    return fig, ax
+
+
+def figure_intensity_errors(data, out_folder):
+    num_data = len(data)
+    for ii in range(num_data):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        x = data[ii][0]
+        y = data[ii][1]
+        dy = data[ii][2]
+        ax.fill_between(x, y + dy, y - dy, facecolor='k', alpha=0.3)
+        ax.plot(x, y, lw=3, ls='-', marker=',', color='k')
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_title('Intensity and error estimates, SAXS data')
+        ax.set_xlabel('q')
+        ax.set_ylabel('Intensity')
+        plt.savefig(out_folder + 'intensity_errors_' + str(ii) + '.pdf')
+
+
 ##### Complex script functions #####
 
 
@@ -885,6 +1049,79 @@ def edge_preserving_smoothing(y, mysteries):
 
 def curvature_from_quadratic_approximation(x, y, n):
     a, b, c = local_quadratic_approximation(x, y, n)
+def mean_smoother(y, n):
+    '''
+    Takes local running mean *n* pixels to each side.
+
+    :param y: 1d numpy float array
+    :param n: int
+    :return mean_smoothed:  1d numpy float array
+    '''
+    y_stacked, mask = shift_stack(y, n, n)
+    mean_smoothed = masked_mean_2d_axis_0(y_stacked, mask)
+    return mean_smoothed
+
+
+def masked_median_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the median of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return mean: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Unlike mean and variance, median cannot negate elements by setting their weight to zero.
+    This leads to unequally-sized regions, esp. near boundaries.
+    In order to avoid unnecessary iteration over unevenly-sized boundary regions,
+    those regions are split up by number of valid elements,
+    e.g., all pixels with 3 valid elements are handled together.
+    Returns *median*, the median of *y2d* along axis 0.
+    '''
+    median = np.zeros(y2d.size, dtype=float)
+    mask = mask2d.any(axis=0)
+    num_entries = mask2d.sum(axis=0)
+    num_max_entries = num_entries.max()
+    num_min_entries = num_entries.min()
+    if num_min_entries == 0:
+        num_min_entries = 1  # skip past empty columns; they're already masked zeros
+    median = np.zeros(num_entries.size, dtype=float)
+    for i in range(num_min_entries, num_max_entries + 1):
+        i_entries = np.equal(num_entries, i)
+        num_i = i_entries.sum()
+        if num_i != 0:
+            mask_i = i_entries & mask2d  # i_entries is broadcast to dimensions of mask2d
+            # numpy aggregates items along rows first, then columns.
+            # We want columns first for this application, so we get clever with transpose.
+            medianees = y2d.T[mask_i.T]
+            medianees = (medianees.reshape((num_i, i))).T
+            median[i_entries] = np.median(medianees, axis=0)
+    return median, mask
+
+
+def median_smoother(y, n):
+    '''
+    Takes local running median *n* pixels to each side.
+
+    :param y: 1d numpy float array
+    :param n: int
+    :return median_smoothed:  1d numpy float array
+    :return median_mask:  1d numpy bool array
+
+    If for whatever reason there are no valid elements at a pizel,
+    the median_mask at that pixel is set to zero.
+    This may need to be handled separately from overall image mask; not sure.
+    Presently included for completeness, I guess.
+    '''
+    y_stacked, mask = shift_stack(y, n, n)
+    median_smoothed, median_mask = masked_median_2d_axis_0(y_stacked, mask)
+    return median_smoothed, median_mask
+
+
+def curvature_from_quadratic_approximation(x, y, n):
+    abc = local_quadratic_approximation(x, y, n)
+    a = abc[0, :]
     curvature = 2 * a
     return curvature
 
@@ -898,6 +1135,378 @@ def local_quadratic_approximation(x, y, n):
 
 def quadratic_approximation(x, y):
     return a, b, c
+def local_quadratic_approximation_no_errors(x, y, n):
+    x_stacked, stack_mask = shift_stack(x, n, n)
+    y_stacked, stack_mask = shift_stack(y, n, n)
+    a, b, c = quadratic_approximation_no_errors(x_stacked, y_stacked, stack_mask)
+    y_smoothed = a * x ** 2 + b * x + c
+    curv_smoothed = 2 * a
+    return y_smoothed, curv_smoothed, a, b, c
+
+
+def local_quadratic_approximation_with_errors(x, y, dy, n):
+    x_stacked, stack_mask = shift_stack(x, n, n)
+    #    y_stacked, stack_mask = shift_stack(y, n, n)
+    #    dy_stacked, stack_mask = shift_stack(dy, n, n)
+    #    a, b, c = quadratic_approximation(x_stacked, y_stacked, dy_stacked, stack_mask)
+    a, b, c = quadratic_approximation(x_stacked, y, dy, stack_mask)
+    y_smoothed = a * x ** 2 + b * x + c
+    curv_smoothed = 2 * a
+    return y_smoothed, curv_smoothed, a, b, c
+
+
+def quadratic_approximation(x, y, dy, mask):
+    length = x.shape[1]
+    # Notation in the form of
+    # xe4_dyen2 = x exponent 4 (x**4) dy exponent negative 2 (dy**-2)
+    xe4_dyen2 = (x ** 4 * dy ** -2 * mask).sum(axis=0)
+    xe3_dyen2 = (x ** 3 * dy ** -2 * mask).sum(axis=0)
+    xe2_dyen2 = (x ** 2 * dy ** -2 * mask).sum(axis=0)
+    x_dyen2 = (x * dy ** -2 * mask).sum(axis=0)
+    dyen2 = (dy ** -2 * mask).sum(axis=0)
+    y_xe2_dyen2 = (y * x ** 2 * dy ** -2 * mask).sum(axis=0)
+    y_x_dyen2 = (y * x * dy ** -2 * mask).sum(axis=0)
+    y_dyen2 = (y * dy ** -2 * mask).sum(axis=0)
+    abc = np.zeros((3, length), dtype=float)
+    for i in range(length):
+        fit_vector = np.array([[y_xe2_dyen2[i]],
+                               [y_x_dyen2[i]],
+                               [y_dyen2[i]]])
+        fit_matrix = np.array([[xe4_dyen2[i], xe3_dyen2[i], xe2_dyen2[i]],
+                               [xe3_dyen2[i], xe2_dyen2[i], x_dyen2[i]],
+                               [xe2_dyen2[i], x_dyen2[i], dyen2[i]]])
+        abc[:, i] = (np.dot(np.linalg.pinv(fit_matrix), fit_vector)).ravel()
+    a = abc[0, :]
+    b = abc[1, :]
+    c = abc[2, :]
+    return a, b, c
+
+
+def quadratic_approximation_no_errors(x, y, mask):
+    dy = np.ones(x.shape, dtype=float)
+    return quadratic_approximation(x, y, dy, mask)
+
+
+def quadratic_approximation_no_mask(x, y, dy):
+    mask = np.ones(x.shape, dtype=bool)
+    return quadratic_approximation(x, y, dy, mask)
+
+
+def quadratic_approximation_no_mask_no_errors(x, y):
+    dy = np.ones(x.shape, dtype=float)
+    mask = np.ones(x.shape, dtype=bool)
+    return quadratic_approximation(x, y, dy, mask)
+
+
+# Finish later
+def overplot_quadratic_approx(x, y, n, a, b, c):
+    num_data = x.size
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    xn = shift_stack(x, n, n)
+    y_smooth = a * x ** 2 + b * x + c
+    yn = a * xn ** 2 + b * xn + c
+
+    for ii in range(num_data):
+        x = data[ii][0]
+        y = data[ii][1]
+        dy = data[ii][2]
+        ax.fill_between(x, y + dy, y - dy, facecolor=colors[ii], alpha=0.3)
+        ax.plot(x, y, lw=3, ls='-', marker=',', color=colors[ii])
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_title('Intensity and error estimates, SAXS data')
+    ax.set_xlabel('q')
+    ax.set_ylabel('Intensity')
+    return fig, ax
+
+
+# Ugh, finish later
+def plot_peaks_flat_all_quadsanity(x, y, y_smooth, a, b, c, masks, title, location, labels):
+    # Feature region plot
+    x_peak = x[masks[0]]
+    x_peaks = []
+    y_peaks = []
+    for i in range(len(labels)):
+        y_peak = (y_lists[i])[masks[0]]
+        y_peaks.append(y_peak)
+        x_peaks.append(x_peak)
+    fig, ax = figure_smoothed_comparison(x_peaks, y_peaks, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'peaks.pdf')
+    # Continuum region plot
+    x_flat = x[masks[1]]
+    x_flats = []
+    y_flats = []
+    for i in range(len(labels)):
+        y_flat = (y_lists[i])[masks[1]]
+        y_flats.append(y_flat)
+        x_flats.append(x_flat)
+    fig, ax = figure_smoothed_comparison(x_flats, y_flats, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'continuum.pdf')
+    # Full range plot
+    x_all = x[masks[2]]
+    x_alls = []
+    y_alls = []
+    for i in range(len(labels)):
+        y_all = (y_lists[i])[masks[2]]
+        y_alls.append(y_all)
+        x_alls.append(x_all)
+    fig, ax = figure_smoothed_comparison(x_alls, y_alls, labels)
+    ax.set_title(title)
+    plt.savefig(location + 'all.pdf')
+
+
+def smoothing_demo_1():
+    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/smoothing_demo_1_figures/'
+    # Data intake
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Fang/spreadsheets1d/'
+    file1 = 'Sample2_30x30_t60_0069_1D.csv'
+    data = np.genfromtxt(data_folder + file1, delimiter=',')
+    (length, width) = data.shape  # (1096, 2)
+    # The data is for some reason doubled.  Quick 2-line fix.
+    length = length / 2
+    data = data[0:length, :]
+    x = data[:, 0]
+    y = data[:, 1]
+    # masks specify interesting regions of the spectrum
+    peaks_mask = (np.less(x, 5.5) & np.greater(x, 4.5))
+    continuum_mask = (np.less(x, 2.0) & np.greater(x, 1.0))
+    all_mask = np.ones(x.shape, dtype=bool)
+    masks = [peaks_mask, continuum_mask, all_mask]
+
+    plt.ioff()  # Don't show me batch plots!
+    # mean smoothing
+    mean_smoothed_3 = mean_smoother(y, 1)
+    mean_smoothed_5 = mean_smoother(y, 2)
+    mean_smoothed_7 = mean_smoother(y, 3)
+    mean_smoothed_9 = mean_smoother(y, 4)
+    y_list = [y, mean_smoothed_3, mean_smoothed_5, mean_smoothed_7, mean_smoothed_9]
+    labels = ['Data', '3-pixel smoothed', '5-pixel smoothed', '7-pixel smoothed', '9-pixel smoothed']
+    title = 'Mean smoothing comparison'
+    location = out_folder + 'mean_smoothed_'
+    plot_peaks_flat_all(x, y_list, masks, title, location, labels)
+
+    # median smoothing
+    median_smoothed_3, _ = median_smoother(y, 1)
+    median_smoothed_5, _ = median_smoother(y, 2)
+    median_smoothed_7, _ = median_smoother(y, 3)
+    median_smoothed_9, _ = median_smoother(y, 4)
+    y_list = [y, median_smoothed_3, median_smoothed_5, median_smoothed_7, median_smoothed_9]
+    labels = ['Data', '3-pixel smoothed', '5-pixel smoothed', '7-pixel smoothed', '9-pixel smoothed']
+    title = 'Median smoothing comparison'
+    location = out_folder + 'median_smoothed_'
+    plot_peaks_flat_all(x, y_list, masks, title, location, labels)
+
+    # quadratic approximation smoothing
+    quad_smoothed_5, _, a_5, b_5, c_5 = local_quadratic_approximation_no_errors(x, y, 2)
+    quad_smoothed_7, _, a_7, b_7, c_7 = local_quadratic_approximation_no_errors(x, y, 3)
+    quad_smoothed_9, _, a_9, b_9, c_9 = local_quadratic_approximation_no_errors(x, y, 4)
+    quad_smoothed_11, _, a_11, b_11, c_11 = local_quadratic_approximation_no_errors(x, y, 5)
+    a_list = [a_5, a_7, a_9, a_11]
+    b_list = [b_5, b_7, b_9, b_11]
+    c_list = [c_5, c_7, c_9, c_11]
+    y_list = [y, quad_smoothed_5, quad_smoothed_7, quad_smoothed_9, quad_smoothed_11]
+    labels = ['Data', '5-pixel smoothed', '7-pixel smoothed', '9-pixel smoothed', '11-pixel smoothed']
+    title = 'Quadratic smoothing comparison'
+    location = out_folder + 'quadratic_smoothed_'
+    plot_peaks_flat_all_quadsanity(x, y_list, a_list, b_list, c_list, masks, title, location, labels)
+
+    plt.close('all')
+    plt.ion()  # Interactive plotting back on
+
+
+def saxs_demo_do_one(x, y, suffix, out_folder):
+    # Find and classify curvature maxima
+    log_curv = noiseless_curvature(np.log(x), np.log(y))
+    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    curvature_legit = ~np.isnan(log_curv)
+    log_curv_maxima = local_maxima_detector(log_curv)
+    normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
+    fig, axarray = figure_curv_minima_classified(x, y, log_curv_maxima, low_outliers, normals, high_outliers,
+                                                 normed_curv)
+    axarray[0].set_title('Curvature maxima in log-log space, classified as features, noise, and weirdness')
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    #        axarray[1].set_yscale('log')
+    plt.savefig(out_folder + 'curv_maxima_classified_' + suffix + '.pdf')
+    plt.close()
+
+    # Cleaning up some indexing mess, pointing to features
+    features, feature_indices = nested_boolean_indexing(log_curv_maxima, high_outliers)
+
+    # Choose local-fit segments
+    curv_zeros = find_zeros(log_curv)
+    running_variance = calc_running_local_variance(np.log(y), 2)
+    fig, axarray = figure_running_variance(x, y, curv_zeros, running_variance)
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    plt.savefig(out_folder + 'running_variance_' + suffix + '.pdf')
+    plt.close()
+    low_bound_indices, high_bound_indices, no_good_background, extrapolated_background = \
+        pick_slope_anchors(running_variance, feature_indices, curv_zeros, 0)
+    slope, offset, intensity, sigma = gauss_guess(np.log(x), np.log(y), log_curv, low_bound_indices, high_bound_indices,
+                                                  feature_indices)
+    fig, ax = figure_naive_gauss_guess(np.log(x), np.log(y), low_bound_indices, high_bound_indices, feature_indices,
+                                       slope, offset,
+                                       intensity, sigma)
+    ax.set_xscale('linear')
+    ax.set_yscale('linear')
+    plt.savefig(out_folder + 'naive_gauss_guess_' + suffix + '.pdf')
+    plt.close()
+
+
+def saxs_demo_1():  # Pretty much just showing it reads in so far.  More to come.
+    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/saxs_demo_1_figures/'
+    # Data intake
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Liheng/megaSAXSspreadsheet/'
+    file1 = 'megaSAXSspreadsheet.csv'
+    data = read_mega_spreadsheet(file1, data_folder)
+    [data1, data2, data3, data4, data5, data6, data7] = data
+    [[x1, y1, dy1], [x2, y2, dy2], [x3, y3, dy3], [x4, y4, dy4], [x5, y5, dy5], [x6, y6, dy6], [x7, y7, dy7]] = data
+
+    plt.ioff()  # Don't show me batch plots!
+    fig, ax = figure_many_intensity_errors(data)
+    plt.savefig(out_folder + 'many_intensity_errors.pdf')
+    figure_intensity_errors(data, out_folder)
+
+    for i in range(len(data)):
+        [x, y, dy] = data[i]
+
+        saxs_demo_do_one(x, y, str(i), out_folder)
+
+        # Smooth
+        mean_smoothed_19 = mean_smoother(y, 9)
+
+        saxs_demo_do_one(x, mean_smoothed_19, 'SMOOTHED_' + str(i), out_folder)
+
+    plt.close('all')
+    plt.ion()  # Interactive plotting back on
+
+
+def read_one_beam_csv(filename):
+    # filename the full path name
+    data = np.genfromtxt(filename, delimiter=',', skip_header=2, autostrip=True, usecols=(0, 4))
+    x = data[:, 0]
+    y = data[:, 1]
+    return x, y
+
+
+def remove_non_csv(filenames):
+    csv_only = []
+    csv_count = 0
+    for i in filenames:
+        if i[-4:] == '.csv':
+            csv_only.append(i)
+            csv_count += 1
+    # print '%i .csv files found.' % csv_count
+    return csv_only
+
+
+def saxs_demo_do_a_thing(x, y, suffix, out_folder):
+    # Find and classify curvature maxima
+    log_curv = noiseless_curvature(np.log(x), np.log(y))
+    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    curvature_legit = ~np.isnan(log_curv)
+    log_curv_maxima = local_maxima_detector(log_curv)
+    normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
+    fig, axarray = figure_curv_minima_classified(x, y, log_curv_maxima, low_outliers, normals, high_outliers,
+                                                 normed_curv)
+    a_title = '''Curvature maxima in log-log space, \n classified as features, noise, and weirdness'''
+    axarray[0].set_xlim([2., 5.])
+    axarray[1].set_xlim([2., 5.])
+    fig.set_xlim([2., 5.])
+    axarray[0].set_title(a_title)
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    #        axarray[1].set_yscale('log')
+    plt.savefig(out_folder + 'curv_maxima_classified_' + suffix + '.pdf')
+    plt.close()
+
+    # Cleaning up some indexing mess, pointing to features
+    features, feature_indices = nested_boolean_indexing(log_curv_maxima, high_outliers)
+
+    # Choose local-fit segments
+    curv_zeros = find_zeros(log_curv)
+    running_variance = calc_running_local_variance(np.log(y), 2)
+    fig, axarray = figure_running_variance(x, y, curv_zeros, running_variance)
+    axarray[0].set_xlim([2., 5.])
+    axarray[1].set_xlim([2., 5.])
+    fig.set_xlim([2., 5.])
+    axarray[0].set_xscale('log')
+    axarray[0].set_yscale('log')
+    axarray[1].set_xscale('log')
+    plt.savefig(out_folder + 'running_variance_' + suffix + '.pdf')
+    plt.close()
+    low_bound_indices, high_bound_indices, no_good_background, extrapolated_background = \
+        pick_slope_anchors(running_variance, feature_indices, curv_zeros, 0)
+    slope, offset, intensity, sigma = gauss_guess(np.log(x), np.log(y), log_curv, low_bound_indices, high_bound_indices,
+                                                  feature_indices)
+    fig, ax = figure_naive_gauss_guess(np.log(x), np.log(y), low_bound_indices, high_bound_indices, feature_indices,
+                                       slope, offset,
+                                       intensity, sigma)
+    ax.set_xlim([2., 5.])
+    ax.set_xscale('linear')
+    ax.set_yscale('linear')
+    plt.savefig(out_folder + 'naive_gauss_guess_' + suffix + '.pdf')
+    plt.close()
+
+
+def saxs_demo_2():  # Pretty much just showing it reads in so far.  More to come.
+    out_folder = '/Users/Amanda/PyCharmProjects/peak_detection/saxs_demo_2_figures/'
+    # Data intake
+    data_folder = '/Users/Amanda/Desktop/Travails/Programming/ImageProcessing/SampleData/Liheng/beamtime/imagesR1/'
+    files1 = os.listdir(data_folder)
+    files1 = remove_non_csv(files1)
+    ###
+    files1 = files1[:5]
+    ###
+
+    plt.ioff()  # Don't show me batch plots!
+    for i in range(len(files1)):
+        x, y = read_one_beam_csv(data_folder + files1[i])
+        tag = (files1[i])[10:-8] + str(i)
+        saxs_demo_do_one(x, y, tag, out_folder)
+
+        # Smooth
+        mean_smoothed_19 = np.exp(mean_smoother(np.log(y), 9))
+        tag = tag + '_logSMOOTHED'
+        saxs_demo_do_one(x, mean_smoothed_19, tag, out_folder)
+
+    plt.close('all')
+    plt.ion()  # Interactive plotting back on
+    print 'run done'
+
+
+# Life is change
+
+
+def monodisperse_model(q, R):
+    pass
+
+
+def smoother(y):
+    pass
+
+
+def binner(y, nbins, npix):
+    pass
+
+
+def convolution_smoother(y, kernel):
+    pass
+
+
+def gauss_smoother(x, y, x0, sigma):
+    pass
+
+
+def edge_preserving_smoothing(y, mysteries):
+    pass
 
 
 def pseudo_voigt(x, x0, gamma, sigma):
@@ -1051,6 +1660,10 @@ process_demo_2()
 # process_demo_1()
 # batch_demo()
 # process_demo_2()
+# smoothing_demo_1()
+# saxs_demo_1()
+#saxs_demo_2()
+
 
 ##### Not-yet-started and/or not-yet-used functions #####
 

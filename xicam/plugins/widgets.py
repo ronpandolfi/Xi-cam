@@ -13,6 +13,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, reg
 from xicam import dialogs
 from xicam import xglobals
 import scipy
+from pipeline import variation
+from xicam import threads
 
 
 class OOMTabItem(QtGui.QWidget):
@@ -32,6 +34,7 @@ class OOMTabItem(QtGui.QWidget):
         self.itemclass = itemclass
         self.args = args
         self.kwargs = kwargs
+        self.saved = None
 
         self.isloaded = False
         self.setLayout(QtGui.QVBoxLayout())
@@ -52,6 +55,9 @@ class OOMTabItem(QtGui.QWidget):
 
             self.widget = self.itemclass(*self.args, **self.kwargs)
 
+            if hasattr(self.widget,'restore'):
+                self.widget.restore(*self.saved)
+
             self.layout().addWidget(self.widget)
 
             self.isloaded = True
@@ -62,12 +68,16 @@ class OOMTabItem(QtGui.QWidget):
     def unload(self):
         """
         orphan the tab widget and queue them for deletion. Mwahahaha.
+        Try to save values return from widget's save; restore values with widget's 'restore' method
         """
+
         if self.isloaded:
+            if hasattr(self.widget,'save'):
+                self.saved = self.widget.save()
+
             self.widget.deleteLater()
             self.widget = None
-
-        self.isloaded = False
+            self.isloaded = False
 
 
 class dimgViewer(QtGui.QWidget):
@@ -93,7 +103,7 @@ class dimgViewer(QtGui.QWidget):
             self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
-        self.imgview = ImageView(self)
+        self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
         self.imageitem = self.imgview.getImageItem()
         self.graphicslayoutwidget = self.imgview
         self.imgview.ui.roiBtn.setParent(None)
@@ -254,9 +264,9 @@ class dimgViewer(QtGui.QWidget):
 
         # self.viewbox.scene().removeItem(evt)
 
-    @property
-    def isChiPlot(self):
-        return self.plotwidget.currentIndex()
+    # @property
+    # def isChiPlot(self):
+    #     return self.plotwidget.currentIndex()
 
     def mouseMoved(self, evt):
         """
@@ -303,9 +313,9 @@ class dimgViewer(QtGui.QWidget):
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
-
-                    self.plotwidget.movPosLine(self.getq(mousePoint.x(), mousePoint.y(),mode='parallel'),
-                                               self.getq(mousePoint.x(), mousePoint.y(), mode='z'))
+                    if self.plotwidget is not None: #for timeline
+                        self.plotwidget.movPosLine(self.getq(mousePoint.x(), mousePoint.y(),mode='parallel'),
+                                                   self.getq(mousePoint.x(), mousePoint.y(), mode='z'))
 
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
@@ -412,6 +422,8 @@ class dimgViewer(QtGui.QWidget):
             self.imgview.setImage(self.dimg)
 
         self.drawcenter()
+
+        self.replot()
 
         # if not iscake and not isremesh:
         #     self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))
@@ -533,9 +545,9 @@ class dimgViewer(QtGui.QWidget):
         # self.replot()
 
     def removecosmics(self):
-        c = cosmics.cosmicsimage(self.dimg.data)
+        c = cosmics.cosmicsimage(self.dimg.rawdata)
         c.run(maxiter=4)
-        config.activeExperiment.addtomask(c.mask)
+        config.activeExperiment.addtomask(1-c.mask)
         # self.maskoverlay()
 
     @debugtools.timeit
@@ -961,25 +973,25 @@ class dimgViewer(QtGui.QWidget):
 
 class timelineViewer(dimgViewer):
     def __init__(self, simg=None, files=None, toolbar=None):
-        self.variation = dict()
+        self.variationcurve = dict()
         self.toolbar = toolbar
 
         if simg is None:
-            simg = loader.imageseries(paths=files)
+            simg = loader.loaddiffimage(files)
 
         self.simg = simg
-        dimg = simg.first()
+        #dimg = simg.first()
 
         self.operationindex = 0
 
-        super(timelineViewer, self).__init__(dimg, toolbar=toolbar)
+        super(timelineViewer, self).__init__(simg, toolbar=toolbar)
 
-        img = np.array(self.simg.thumbs)
-        img = (np.log(img * (img > 0) + (img < 1)))
+        #img = np.array(self.simg.thumbs)
+        #img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imgview.setImage(img, xvals=self.simg.xvals)
+        self.imgview.setImage(simg)
 
-        self.imageitem.sigImageChanged.connect(self.setscale)
+        # self.imageitem.sigImageChanged.connect(self.setscale)
 
         # self.paths = dict(zip(range(len(paths)), sorted(paths)))
         # self.setvariationmode(0)
@@ -991,11 +1003,11 @@ class timelineViewer(dimgViewer):
         self.viewbox.addItem(self.highresimgitem)
         self.highresimgitem.hide()
 
-        self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
-        self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
-        self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigPositionChangeFinished.connect(self.drawframeoverlay)
+        # self.imgview.timeLine.sigDragged.connect(self.hideoverlay)
+        # self.imgview.sigKeyRelease.connect(self.drawframeoverlay)
 
-        self.drawframeoverlay()
+        # self.drawframeoverlay()
         self.imgview.autoRange()
 
         timelineplot = self.imgview.getRoiPlot()
@@ -1035,26 +1047,26 @@ class timelineViewer(dimgViewer):
     def plottimeline(self, t, V, color=[255, 255, 255]):
         pass
 
-    def drawframeoverlay(self):
-        self.scale = 1
-        self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
-        self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
+    # def drawframeoverlay(self):
+    #     self.scale = 1
+    #     self.dimg = self.simg.getDiffImage(round(self.imgview.timeLine.getXPos()))
+    #     self.imgview.imageItem.updateImage(self.redrawimage(returnimg=True), noscale=True)
 
-    def updatelowresLUT(self):
+    # def updatelowresLUT(self):
+    #
+    #     self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+    #
+    # def hideoverlay(self):
+    #     self.scale = 5
 
-        self.imageitem.setLookupTable(self.imgview.getHistogramWidget().item.getLookupTable)
+    # def setscale(self):
+    #     self.imageitem.resetTransform()
+    #     self.imageitem.scale(self.scale, self.scale)
 
-    def hideoverlay(self):
-        self.scale = 5
-
-    def setscale(self):
-        self.imageitem.resetTransform()
-        self.imageitem.scale(self.scale, self.scale)
-
-    def showlowres(self):
-        # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
-        # xvals=self.simg.xvals)
-        self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
+    # def showlowres(self):
+    #     # self.imgview.setImage(np.repeat(np.repeat(np.array(self.simg.thumbs.values()), 10, axis=0), 10, axis=1),
+    #     # xvals=self.simg.xvals)
+    #     self.imgview.setImage(np.array(self.simg.thumbs.values()), xvals=self.simg.xvals)
 
     def reduce(self):
         pass
@@ -1067,68 +1079,121 @@ class timelineViewer(dimgViewer):
         self.plotvariation()
 
     def rescan(self):
+        #return
         self.cleartimeline()
         variationoperators.experiment = config.activeExperiment
-        variation = self.simg.scan(self.operationindex)
-        self.plotvariation(variation)
+
+
+        # keys = range(len(self.simg))[:-1]# TODO: generalize!
+        # values = list(variation.variationiterator(self.simg))[1:]
+        # print 'keys:',keys
+        # print 'values:',values
+        # d = dict(zip(keys,values))
+        # self.plotvariation(d)
+
+        # Run on thread queue
+        runnable_it = threads.RunnableIterator(variation.variationiterator,
+                                               generator_args=(self.simg, self.operationindex),
+                                               callback_slot=lambda ret: self.plotvariation(*ret), finished_slot=self.testfinish)
+        threads.add_to_queue(runnable_it)
+
+        # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
+
+        # variation = self.simg.scan(self.operationindex)
+        # self.plotvariation(variation)
 
         for roi in self.viewbox.addedItems:
             # try:
             if hasattr(roi, 'isdeleting'):
                 if not roi.isdeleting:
-                    roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem)
-                    variation = self.simg.scan(self.operationindex, roi)
-                    self.plotvariation(variation, [0, 255, 255])
-
+                    roi = roi.getArrayRegion(np.ones_like(self.imgview.imageItem.image), self.imageitem).T
+                    # variation = self.simg.scan(self.operationindex, roi)
+                    # self.plotvariation(variation, [0, 255, 255])
+                    # Run on thread queue
+                    runnable_it = threads.RunnableIterator(variation.variationiterator,
+                                                           generator_args=(self.simg, self.operationindex),
+                                                           generator_kwargs={'roi':roi,'color':[0,255,255]},    # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
+                                                           callback_slot=lambda ret: self.plotvariation(*ret),
+                                                           finished_slot=self.testfinish)
+                    threads.add_to_queue(runnable_it)
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:
                     # print 'Warning: error displaying ROI variation.'
                     #    print ex.message
 
+    def plotvariation(self, variationx, variationy, color=None):
+        # variation=variation[0]
+        print color
+        if variationx == None:
+            return
+
+        if color is None:
+            color = [255, 255, 255]
+
+        colorhash = ','.join([str(c) for c in color])
+        if not colorhash in self.variationcurve:
+            self.variationcurve[colorhash] = self.timeline.plot()
+
+        #print 'preappend:',self.variationcurve.getData()
+
+        data = self.variationcurve[colorhash].getData()
+        if data[0] is None :
+            x = np.array(variationx)
+            y = np.array(variationx)
+        else:
+            x = np.append(data[0],variationx)
+            y = np.append(data[1],variationy)
+
+        #print 'data:',data
+
+        self.variationcurve[colorhash].setData(x=x,y=y)
+        self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
+
+    def testfinish(self,*args,**kwargs):
+        print 'Finished:',args,kwargs
+
     def setvariationmode(self, index):
         print 'operationset:', index
         self.operationindex = index
 
     def cleartimeline(self):
-        for item in self.timeline.items:
-            print item
-            if type(item) is pg.PlotDataItem:
-                item.isdeleting = True
-                self.timeline.removeItem(item)
+        for item in self.variationcurve.values():
+            self.timeline.removeItem(item)
+        self.variationcurve=dict()
 
-    def plotvariation(self, variation, color=None):
-        if len(variation) == 0:
-            return None
+    # def plotvariation(self, variation, color=None):
+    #     if len(variation) == 0:
+    #         return None
+    #
+    #     if color is None:
+    #         color = [255, 255, 255]
+    #
+    #     # TODO: plot variation with indices, and skipped frames; skip None's
+    #
+    #
+    #
+    #     t = np.array(variation.keys())
+    #     d = np.array(variation.values())
+    #
+    #     # print variation
+    #     d = d[t.argsort()]
+    #     t = sorted(t)
+    #
+    #     self.timeline.enableAutoScale()
+    #     # self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
+    #
+    #     print 'plottype:', type(d[0])
+    #     if type(d[0]) in [float, int, np.float64]:
+    #         self.timeline.plot(t, d, pen=pg.mkPen(color=color))
+    #     elif type(d[0]) is np.ndarray:
+    #         for dt in d:
+    #             self.timeline.plot(dt[0], dt[1])
 
-        if color is None:
-            color = [255, 255, 255]
-
-        # TODO: plot variation with indices, and skipped frames; skip None's
-
-
-
-        t = np.array(variation.keys())
-        d = np.array(variation.values())
-
-        # print variation
-        d = d[t.argsort()]
-        t = sorted(t)
-
-        self.timeline.enableAutoScale()
-        # self.timeruler = TimeRuler(pen=pg.mkPen('#FFA500', width=3), movable=True)
-
-        print 'plottype:', type(d[0])
-        if type(d[0]) in [float, int, np.float64]:
-            self.timeline.plot(t, d, pen=pg.mkPen(color=color))
-        elif type(d[0]) is np.ndarray:
-            for dt in d:
-                self.timeline.plot(dt[0], dt[1])
-
-    def redrawframe(self, index, time, forcelow=False):
-        key = round(time)
-        self.dimg = self.simg.getDiffImage(key)
-        self.redrawimage(forcelow=forcelow)
+    # def redrawframe(self, index, time, forcelow=False):
+    #     key = round(time)
+    #     self.dimg = self.simg.getDiffImage(key)
+    #     self.redrawimage(forcelow=forcelow)
 
     def gotomax(self):
         pass
@@ -1298,6 +1363,11 @@ class zintegrationwidget(integrationsubwidget):
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
+    def __init__(self,*args,**kwargs):
+        self.actionLog_Intensity=kwargs['actionLog_Intensity']
+        del kwargs['actionLog_Intensity']
+        super(ImageView, self).__init__(*args,**kwargs)
+
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -1308,6 +1378,34 @@ class ImageView(pg.ImageView):
         if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             ev.accept()
             self.sigKeyRelease.emit()
+
+    def setImage(self,*args,**kwargs):
+        super(ImageView, self).setImage(*args,**kwargs)
+        if self.actionLog_Intensity.isChecked():
+            levelmin = np.log(self.levelMin)
+            levelmax = np.log(self.levelMax)
+            if np.isnan(levelmin): levelmin = 0
+            if np.isnan(levelmax): levelmax = 1
+            if np.isinf(levelmin): levelmin = 0
+            print 'min:',levelmin
+            print 'max:',levelmax
+
+            self.ui.histogram.setLevels(levelmin, levelmax)
+
+    def updateImage(self, autoHistogramRange=True): # inject logarithm action
+        ## Redraw image on screen
+        if self.image is None:
+            return
+
+        image = self.getProcessedImage()
+
+        if autoHistogramRange:
+            self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+        if self.axes['t'] is None:
+            self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
+        else:
+            self.ui.roiPlot.show()
+            self.imageItem.updateImage(np.log(image[self.currentIndex] * (image[self.currentIndex]> 0) + (image[self.currentIndex] < 1)) if self.actionLog_Intensity.isChecked() else image[self.currentIndex])
 
 
 from scipy.signal import fftconvolve
@@ -1480,6 +1578,46 @@ class fileTreeWidget(QtGui.QTreeView):
         self.filetreemodel.setRootPath(root.absolutePath())
         self.setRootIndex(self.filetreemodel.index(root.absolutePath()))
         self.show()
+
+
+class frameproptable(pg.TableWidget):
+    """
+    Widget for displaying hierarchical python data structures
+    (eg, nested dicts, lists, and arrays), adapted from pyqtgraph datatree.
+    """
+
+    def __init__(self, parent=None, data=None):
+        super(frameproptable, self).__init__(parent)
+        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setData(data)
+        self.setColumnCount(2)
+        self.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.horizontalHeader().setStretchLastSection(True)
+        self.verticalHeader().hide()
+        self.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding,QtGui.QSizePolicy.MinimumExpanding)
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+
+        useAsMenu = QtGui.QMenu(u'Use as...',parent=self.contextMenu)
+        useAsMenu.addAction('Beam Energy').triggered.connect(self.useAsEnergy)
+        self.contextMenu.addMenu(useAsMenu)
+
+    def setData(self,data):
+        if data is None:
+            self.setVisible(False)
+            return
+        data=data.items()
+        self.setHidden(len(data) == 0)
+        super(frameproptable, self).setData(data)
+
+    def sizeHint(self):
+        return QtCore.QSize(self.parent().width(),self.parent().height()/2)
+
+    def useAsEnergy(self):
+        print self.getSelectedKey()
+
+    def getSelectedKey(self):
+        return self.item(self.selectedIndexes()[0].row(),0).value
 
 
 def pixel2q(x, y, experiment):

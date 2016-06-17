@@ -71,6 +71,8 @@ class SGClass:
         Get the relevant exclusion rule column and then test against it.
         """
         col=self.getcolumn(m)
+        if type(self.conditions[SG]) is str: # ALLOW LINKED CONDITIONS
+            SG = self.conditions[SG]
         return self.checkcolumn(SG,col,m)
 
     def getcolumn(self,m):
@@ -101,14 +103,14 @@ class SGClass:
 
 class Triclinic(SGClass):
     conditions = OrderedDict([('P1',[]),
-                              ('P-1',[])])
+                              (u'P1\u0305',[])])
     def check(self,m,SG):
         return True
 
 class Monoclinic(SGClass):
     ############## IMPORTANT NOTE ################
     # Monoclinic must have the unique axis as b for this to work!
-
+    # Status: COMPLETE!
     conditions = OrderedDict([('P2',[None,None,None]), #3
                               (u'P2₁',[None,None,k]), #4
                               ('C2',[hpk,h,k]), #5
@@ -154,6 +156,7 @@ class Monoclinic(SGClass):
         return column
 
 class Orthorhombic(SGClass):
+    # Status: COMPLETE!
     conditions = OrderedDict([('P222',[None,None,None,None,None,None,None]), #16
                               (u'P222₁',[None,None,None,None,None,None,l]),#17
                               (u'P22₁2',[None,None,None,None,None,k,None]),
@@ -223,7 +226,7 @@ class Orthorhombic(SGClass):
                               (u'Pc2₁b', [None, l, None, k, None, k, l]),
                               (u'Pcmb',  [None, l, None, k, None, k, l]),
                               (u'Pc2₁n', [None, l, None, hpk, h, k, l]),
-                              (u'Pcmn',  [None, l, None, h[k], h, k, l]),
+                              (u'Pcmn',  [None, l, None, hpk, h, k, l]),
                               (u'Pca2₁', [None, l, h, None, h, None, l]),
                               (u'Pcam',  [None, l, h, None, h, None, l]),
                               (u'Pcaa', [None, l, h, h, h, None, l]),
@@ -333,6 +336,34 @@ class Orthorhombic(SGClass):
                               ('Immm', [hpkpl,kpl,hpl,hpk,h,k,l]),
                               (u'I2\u20812\u20812\u2081', [hpkpl,kpl,hpl,hpk,h,k,l]),
                               ('Im2m', [hpkpl,kpl,hpl,hpk,h,k,l]),
+                              ('F222', [[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
+                              ('I2mm', [hpkpl,kpl,hpl,hpk,h,k,l]),
+                              ('Im2a',[hpkpl,kpl,hpl,[h,k],h,k,l]),
+                              ('I2mb',[hpkpl,kpl,hpl,[h,k],h,k,l]),
+                              ('Ima2',[hpkpl,kpl,[h,l],hpk,h,k,l]),
+                              ('I2cm',[hpkpl,kpl,[h,l],hpk,h,k,l]),
+                              ('I2cb',[hpkpl,kpl,[h,l],[h,k],h,k,l]),
+                              ('Iem2',[hpkpl,kpl,[h,l],[h,k],h,k,l]),
+                              ('Ic2a',[hpkpl,[k,l],hpl,[h,k],h,k,l]),
+                              ('Iba2',[hpkpl,[k,l],[h,l],hpk,h,k,l]),
+                              ('Fmm2',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
+                              ('Fm2m',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
+                              ('F2mm',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
+                              ('F2dd',[[hpk,hpl,kpl],[k,l],[hpl4n,h,l],[hpk4n,h,k],h4n,k4n,l4n]),
+                              ('Fd2d',[[hpk,hpl,kpl],[kpl4n,k,l],[h,l],[hpk4n,h,k],h4n,k4n,l4n]),
+                              ('Fdd2',[[hpk,hpl,kpl],[kpl4n,k,l],[hpl4n,h,l],[h,k],h4n,k4n,l4n]),
+                              ('Imma',[hpkpl,kpl,hpl,[h,k],h,k,l]),
+                              ('Immb',[hpkpl,kpl,hpl,[h,k],h,k,l]),
+                              ('Imam',[hpkpl,kpl,[h,l],hpk,h,k,l]),
+                              ('Imcm',[hpkpl,kpl,[h,l],hpk,h,k,l]),
+                              ('Imcb',[hpkpl,kpl,[h,l],[h,k],h,k,l]),
+                              ('Iemm',[hpkpl,kpl,[h,l],[h,k],h,k,l]),
+                              ('Icma',[hpkpl,[k,l],hpl,[h,k],h,k,l]),
+                              ('Ibam',[hpkpl,[k,l],[h,l],hpk,h,k,l]),
+                              ('Ibca',[hpkpl,[k,l],[h,l],[h,k],h,k,l]),
+                              ('Icab',[hpkpl,[k,l],[h,l],[h,k],h,k,l]),
+                              ('Fmmm',[[hpk,hpl,kpl],[k,l],[h,l],[h,k],h,k,l]),
+                              ('Fddd',[[hpk,hpl,kpl],[kpl4n,k,l],[hpl4n,h,l],[hpk4n,h,k],h4n,k4n,l4n])
     ])
 
     def getcolumn(self,m):
@@ -353,7 +384,77 @@ class Orthorhombic(SGClass):
         return column
 
 class Tetragonal(SGClass):
-    conditions = OrderedDict([])
+    #Status: COMPLETE!
+
+    conditions = OrderedDict([('P4',[None,None,None,None,None,None,None]),
+                              (u'P4\u0305','P4'),
+                              ('P4/m','P4'),
+                              ('P422','P4'),
+                              ('P4mm','P4'),
+                              (u'P4\u03052m','P4'),
+                              ('P4/mmm','P4'),
+                              (u'P4\u0305m2','P4'),
+                              (u'P42₁2',[None,None,None,None,None,k,None]),
+                              (u'P4\u03052₁m',u'P42₁2'),
+                              (u'P4₂',[None,None,None,None,l,None,None]),
+                              (u'P4₂/m',u'P4₂'),
+                              (u'P4₂22',u'P4₂'),
+                              (u'P4₂2₁2',[None,None,None,None,l,k,None]),
+                              (u'P4₁',[None,None,None,None,l4n,None,None]),
+                              (u'P4₃',u'P4₁'),
+                              (u'P4₁22',u'P4₁'),
+                              (u'P4₃22',u'P4₁'),
+                              (u'P4₁2₁2',[None,None,None,None,l4n,k,None]),
+                              (u'P4₃2₁2',u'P4₁2₁2'),
+                              (u'P4₂mc',[None,None,None,l,l,None,None]),
+                              (u'P4\u03052c',u'P4₂mc'),
+                              (u'P42/mmc',u'P4₂mc'),
+                              (u'P4\u03052₁c',[None,None,None,l,l,k,None]),
+                              ('P4bm',[None,None,k,None,None,k,None]),
+                              (u'P4\u0305b2','P4bm'),
+                              (u'P4/mbm','P4bm'),
+                              (u'P4₂bc',[None,None,k,l,l,k,None]),
+                              (u'P4₂/mbc',u'P4₂bc'),
+                              (u'P4₂cm',[None,None,l,None,l,None,None]),
+                              (u'P4\u0305c2',u'P4₂cm'),
+                              (u'P4₂/mcm',u'P4₂cm'),
+                              (u'P4cc',[None,None,l,l,l,None,None]),
+                              (u'P4/mcc',u'P4cc'),
+                              (u'P4₂nm',[None,None,kpl,None,l,k,None]),
+                              (u'P4\u0305n2',u'P4₂nm'),
+                              (u'P4₂/mnm',u'P4₂nm'),
+                              (u'P4nc',[None,None,kpl,l,l,k,None]),
+                              (u'P4/mnc',u'P4nc'),
+                              (u'P4/n',[None,hpk,None,None,None,k,None]),
+                              (u'P4/nmm',u'P4/n'),
+                              (u'P4₂/n',[None,hpk,None,None,l,k]),
+                              (u'P4₂/nmc',[None,hpk,None,l,l,k,None]),
+                              (u'P4/nbm',[None,hpk,k,None,None,k,None]),
+                              (u'P4₂/nbc',[None,hpk,k,l,l,k,None]),
+                              (u'P4₂/ncm',[None,hpk,l,None,l,k,None]),
+                              (u'P4/ncc',[None,hpk,l,l,l,k,None]),
+                              (u'P4₂nnm',[None,hpk,kpl,None,l,k,None]),
+                              (u'P4/nnc',[None,hpk,kpl,l,l,k,None]),
+                              (u'I4',[hpkpl,hpk,kpl,l,l,k,None]),
+                              (u'I4\u0305',u'I4'),
+                              (u'I4/m',u'I4'),
+                              (u'I422',u'I4'),
+                              (u'I4mm',u'I4'),
+                              (u'I4\u03052m',u'I4'),
+                              (u'I4/mmm',u'I4'),
+                              (u'I4\u0305m2',u'I4'),
+                              (u'I4₁',[hpkpl,hpk,kpl,l,l4n,k,None]),
+                              (u'I4₁22',u'I4₁'),
+                              (u'I4₁md',[hpkpl,hpk,kpl,twohpl4n,l4n,k,h]),
+                              (u'I4\u03052d',u'I4₁md'),
+                              (u'I4cm',[hpk,l,hpk,[k,l],l,l,k,None]),
+                              (u'I4\u0305c2',u'I4cm'),
+                              (u'I4/mcm',u'I4cm'),
+                              (u'I4₁cd',[hpkpl,hpk,[k,l],twohpl4n,l4n,k,h]),
+                              (u'I4₁/a',[hpkpl,[h,k],kpl,l,l4n,k,None]),
+                              (u'I4₁/amd',[hpkpl,[h,k],kpl,twohpl4n,l4n,k,h]),
+                              (u'I4₁/acd',[hpkpl,[h,k],[k,l],twohpl4n,l4n,k,h])
+                              ])
 
     def getcolumn(self,m):
         mh,mk,ml=m
@@ -374,7 +475,44 @@ class Tetragonal(SGClass):
         return column
 
 class Trigonal(SGClass):
-    conditions = OrderedDict([])
+    # Status: COMPLETE!
+    ## Hexagonal miller axes disabled to eliminate conflicts
+    #
+    # conditions = OrderedDict([('P3',[None, None, None, None]),
+    #                             (u'P3\u0305',[None, None, None, None]),
+    #                             ('P321',[None, None, None, None]),
+    #                             ('P3m1',[None, None, None, None]),
+    #                             (u'P3m\u03051',[None, None, None, None]),
+    #                             ('P312',[None, None, None, None]),
+    #                             ('P31m',[None, None, None, None]),
+    #                             (u'P3\u03051m',[None, None, None, None]),
+    #                             (u'p3₁',[None, None, None, l3n]),
+    #                             (u'p3₁21',[None, None, None, l3n]),
+    #                             ('p3₁12',[None, None, None, l3n]),
+    #                             ('p3₂',[None, None, None, l3n]),
+    #                             (u'p3₂21',[None, None, None, l3n]),
+    #                             (u'p3₂12',[None, None, None, l3n]),
+    #                             ('P31c',[None, None, l, l]),
+    #                             (u'P3\u03051c',[None, None, l, l]),
+    #                             ('P3c1',[None, l, None, l]),
+    #                             (u'P3\u0305c1',[None, l, None, l]),
+    #                             ('R3',[mhpkpl3n, hpl3n, l3n, l3n]),     # TODO: Why are there duplicate entries in the SG table for the R3's?
+    #                             (u'R3\u0305',[mhpkpl3n, hpl3n, l3n, l3n]),
+    #                             ('R32',[mhpkpl3n, hpl3n, l3n, l3n]),
+    #                             ('R3m',[mhpkpl3n, hpl3n, l3n, l3n]),
+    #                             (u'R3\u0305m',[mhpkpl3n, hpl3n, l3n, l3n]),
+    #                             ('R3c',[mhpkpl3n, [hpl3n,l], l3n, l6n]),
+    #                             (u'R3\u0305c',[mhpkpl3n, [hpl3n,l], l3n, l6n]),
+    #                             ('R3c',[mhpkpl3n, [hpl3n,l], l3n, l6n]),
+    #                           ])
+
+    conditions = OrderedDict([('R3',[None,None,None,None]),
+                              (u'R3\u0305','R3'),
+                              (u'R32','R3'),
+                              (u'R3m','R3'),
+                              (u'R3\u0305m','R3'),
+                              ('R3c',[None,None,l,h]),
+                              (u'R3\u0305c','R3c')])
 
     def getcolumn(self,m):
         if len(m)==4:
@@ -390,33 +528,99 @@ class Trigonal(SGClass):
         elif len(m)==3:
             mh,mk,ml = m
             if mh==mk==ml:
-                column = 6
+                column = 3
             elif mh==mk:
-                column = 5
+                column = 2
             else:
-                column = 4
+                column = 1
         else:
             debugtools.frustration()
             raise ValueError
         return column
 
 class Hexagonal(SGClass):
-    conditions = OrderedDict([])
+    # Status: COMPLETE!
+    conditions = OrderedDict([('P6',[None, None, None]),
+                                (u'P6\u0305',[None, None, None]),
+                                ('P6/m',[None, None, None]),
+                                ('P622',[None, None, None]),
+                                ('P6mm',[None, None, None]),
+                                (u'P6\u03052m',[None, None, None]),
+                                ('P6/mmm',[None, None, None]),
+                                (u'P6\u0305m2',[None, None, None]),
+                                ('P6₃', [None, None, l]),
+                                ('P6₃/m', [None, None, l]),
+                                ('P6₃22', [None, None, l]),
+                                ('P6₂',[None, None, l3n]),
+                                ('P6₂22',[None, None, l3n]),
+                                ('P6₄',[None, None, None, l3n]),
+                                ('P6₁',[None, None, l6n]),
+                                ('P6₁22',[None, None, l6n]),
+                                ('P6₃',[None, None, l6n]),
+                                ('P6₅22',[None, None, l6n]),
+                                ('P6₃mc',[None, l, l]),
+                                (u'P6\u03052c',[None, l, l]),
+                                ('P6₃/mmc',[None, l, l]),
+                                ('P6₃cm',[l, None, l]),
+                                (u'P6\u0305c2',[l, None, l]),
+                                ('P6₃/mcm',[l, None, l]),
+                                ('P6cc',[l,l,l]),
+                                ('P6/mcc',[l,l,l])
+                              ])
 
     def getcolumn(self,m):
-        mh,mk,mi,ml = m
-        if arezeros(1,1,1,0,m):
+        mh,mk,ml = m
+        mi = -(mh+mk)
+        hexm = (mh,mk,mi,ml)
+        if arezeros(1,1,1,0,hexm):
             column = 2
         elif mh==mk and mi==-2*mh:          # TODO: What rules apply to hexagonal 1111
             column = 1
-        elif arezeros(0,0,1,0,m) and mh==-mk:
+        elif arezeros(0,0,1,0,hexm) and mh==-mk:
             column = 0
         else:
             column = None
         return column
 
 class Cubic(SGClass):
-    conditions = OrderedDict([])
+    # Status: COMPLETE
+    conditions = OrderedDict([('P23',[None, None, None, None]),
+                                (u'Pm3\u0305',[None, None, None, None]),
+                                ('P432',[None, None, None, None]),
+                                (u'P4\u03053m',[None, None, None, None]),
+                                (u'Pm3\u0305m',[None, None, None, None]),
+                                ('P2₁3',[None, None, None, l]),
+                                ('P4₂32',[None, None, None, l]),
+                                ('P4₁32',[None, None, None, l4n]),
+                                ('P4₃32',[None, None, None, l4n]),
+                                (u'P4\u03053n',[None, None, l, l]),
+                                (u'Pm3\u0305n',[None, None, l, l]),
+                                (u'Pa3\u0305',[None, k, None, l]), # TODO: Handle this special case!
+                                (u'Pn3\u0305',[None, kpl, None, l]),
+                                (u'Pn3\u0305m',[None, kpl, None, l]),
+                                (u'Pn3\u0305n',[None, kpl, l, l]),
+                                ('I23', [hpkpl, kpl, l, l]),
+                                ('I2₁3', [hpkpl, kpl, l, l]),
+                                (u'Im3\u0305', [hpkpl, kpl, l, l]),
+                                ('I432', [hpkpl, kpl, l, l]),
+                                (u'I4\u03053m', [hpkpl, kpl, l, l]),
+                                (u'Im3\u0305m', [hpkpl, kpl, l, l]),
+                                ('I4₁32',[hpkpl, kpl, l, l4n]),
+                                (u'I4\u03053d',[hpkpl, kpl, [twohpl4n,l],l4n]),
+                                (u'Ia3\u0305',[hpkpl, [k,l], l, l]),
+                                (u'Ia3\u0305d',[hpkpl, [k,l], [twohpl4n,l],l4n]),
+                                ('F23',[[hpk,hpl,kpl],[k,l],hpl,l]),
+                                (u'Fm3\u0305',[[hpk,hpl,kpl],[k,l],hpl,l]),
+                                ('F432',[[hpk,hpl,kpl],[k,l],hpl,l]),
+                                (u'F4\u03053m',[[hpk,hpl,kpl],[k,l],hpl,l]),
+                                (u'Fm3\u0305m',[[hpk,hpl,kpl],[k,l],hpl,l]),
+                                ('F4₁32',[[hpk,hpl,kpl],[k,l],hpl,l4n]),
+                                (u'F4\u03053c',[[hpk,hpl,kpl],[k,l],[h,l],l]),
+                                (u'Fm3\u0305c',[[hpk,hpl,kpl],[k,l],[h,l],l]),
+                                (u'Fd3\u0305',[[hpk,hpl,kpl],[kpl4n,k,l],hpl,l4n]),
+                                (u'Fd3\u0305m',[[hpk,hpl,kpl],[kpl4n,k,l],hpl,l4n]),
+                                (u'Fd3\u0305c',[[hpk,hpl,kpl],[kpl4n,k,l],[h,l],l4n])
+                              ])
 
     def getcolumn(self,m):
         mh,mk,ml = m
@@ -439,10 +643,15 @@ class Cubic(SGClass):
 Triclinic = Triclinic()
 Monoclinic = Monoclinic()
 Orthorhombic = Orthorhombic()
+Tetragonal = Tetragonal()
+Trigonal = Trigonal()
+Hexagonal = Hexagonal()
+Cubic = Cubic()
+
 
 SGkeys = SGClass.conditions.keys()
 
-crystalsystems = [Triclinic, Monoclinic, Orthorhombic]
+crystalsystems = [Triclinic, Monoclinic, Orthorhombic,Tetragonal,Trigonal, Hexagonal, Cubic]
 
 
 def check(m,SG):

@@ -21,7 +21,7 @@ class plugin(base.plugin):
     def __init__(self, *args, **kwargs):
 
 
-        self.leftwidget, self.centerwidget, self.rightwidget = ui.loadUi()
+        self.leftwidget, self.centerwidget, self.rightwidget = ui.load()
 
 
         # INIT FORMS
@@ -46,7 +46,6 @@ class plugin(base.plugin):
         self.leftwidget.addFeatureButton.clicked.connect(featuremanager.addLayer)
         self.leftwidget.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
         self.leftwidget.addParticleButton.clicked.connect(featuremanager.addParticle)
-        self.leftwidget.showScatteringButton.clicked.connect(self.showScattering)
         self.leftwidget.showComputationButton.clicked.connect(self.showComputation)
         self.leftwidget.showDetectorButton.clicked.connect(self.showDetector)
         self.leftwidget.addParticleButton.setMenu(ui.particlemenu)
@@ -104,7 +103,7 @@ class plugin(base.plugin):
 
         shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
         layers = [feature.toDict() for feature in featuremanager.features if
-                  type(feature) is customwidgets.layer or customwidgets.substrate]
+                  type(feature) in [customwidgets.layer, customwidgets.substrate]]
         unitcells = [feature.structure.toUnitCellDict() for feature in featuremanager.features if
                      type(feature) is customwidgets.particle]
         structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
@@ -114,8 +113,7 @@ class plugin(base.plugin):
                                                         ('unitcells', unitcells),
                                                         ('layers', layers),
                                                         ('structures', structures),
-                                                        ('instrumentation', self.detectorForm.toDict()),
-                                                        ('computation', self.scatteringForm.toDict())])}
+                                                        ('instrumentation', self.detectorForm.toDict())])}
         with open('test.json', 'w') as outfile:
             json.dump(out, outfile, indent=4)
 

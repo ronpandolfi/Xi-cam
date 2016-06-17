@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 import fabio
+from fabio import fabioutils
 import numpy
 import pyfits
 import os
@@ -44,10 +45,6 @@ def loadimage(path):
 
     data = None
     try:
-        if ':' in path:
-            print 'WARNING: colon (":") character detected in path; using hack to bypass fabio bug'
-            print 'Note: fabio 0.3.0 may have fixed this; check back later'
-            path='HACK:'+path
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
             if ext == '.gb':
@@ -244,7 +241,7 @@ def scanalesandroparaslines(lines, frame):
     return OrderedDict(zip(keys, values))
 
 
-def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
+def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
     if data1 is None or data2 is None or paras1 is None or paras2 is None:
         (data1, paras1) = loadsingle(filepath1)
         (data2, paras2) = loadsingle(filepath2)
@@ -257,10 +254,17 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 
     if 'Detector Vertical' in paras1 and 'Detector Vertical' in paras2 and \
                     'Detector Horizontal' in paras1 and 'Detector Horizontal' in paras2:
-        positionY1 = float(paras1['Detector Vertical'])
-        positionY2 = float(paras2['Detector Vertical'])
-        positionX1 = float(paras1['Detector Horizontal'])
-        positionX2 = float(paras2['Detector Horizontal'])
+        positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
+        positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
+        positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
+        positionX2 = float(paras2[config.activeExperiment.mapHeader('Detector Horizontal')])
+
+    I1 = 1
+    I2 = 1
+    if config.activeExperiment.mapHeader('I1 AI') in paras1 and config.activeExperiment.mapHeader('I1 AI') in paras2:
+        I1 = float(paras1[config.activeExperiment.mapHeader('I1 AI')])
+        I2 = float(paras2[config.activeExperiment.mapHeader('I1 AI')])
+
 
     deltaX = round((positionX2 - positionX1) / 0.172)
     deltaY = round((positionY2 - positionY1) / 0.172)
@@ -301,7 +305,7 @@ def loadstichted(filepath2, filepath1, data1=None, data2=None, paras1=None, para
                       'constant')
 
     with numpy.errstate(divide='ignore'):
-        data = (d1 + d2) / (mask2 + mask1)
+        data = (d1/I1 + d2/I2) / (mask2 + mask1) * (I1+I2)/2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)
 
@@ -368,7 +372,7 @@ def loadpath(path):
                 path2 = path.replace('_lo_', '_hi_')
             else: # '_hi_' in path:
                 path2 = path.replace('_hi_', '_lo_')
-            return loadstichted(path, path2)
+            return loadstitched(path, path2)
         except Exception as ex:
             print 'Stitching failed: ', ex.message
 
@@ -418,6 +422,8 @@ class diffimage():
         :param detector: pyFAI.detectors.Detector
         :param experiment: xicam.config.experiment
         """
+
+        warnings.warn('diffimage is deprecated. Migrate this to diffimage2')
 
         print 'Loading ' + unicode(filepath) + '...'
 
@@ -504,7 +510,7 @@ class diffimage():
     def detector(self):
         if self._detector is None:
             if self.data is not None:
-                name, detector, binning = self.finddetector()
+                name, detector = self.finddetector()
             else:
                 return None
 
@@ -518,28 +524,29 @@ class diffimage():
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1*binning)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2*binning)
-                    self.experiment.setvalue('Detector', name)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Detector', detector.name)
         return self._detector
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
-            print detector
-            print 'det:',name, detector
+            # print detector
+            # print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector, 1
+                    return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
                         print 'Detector found with binning: ' + name
-                        return name, detector, binning
+                        detector.set_binning(binning)
+                        return name, detector
         return None, None
         raise ValueError('Detector could not be identified!')
 
@@ -887,7 +894,7 @@ class StackImage(object):
         self.filepath = filepath
 
         if filepath is not None:
-            if os.path.isdir(filepath):
+            if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
@@ -929,7 +936,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getframe(frame), 3)
+        return self.fabimage.getframe(frame).transpose()
 
     def invalidatecache(self):
         self.cache = dict()
@@ -968,7 +975,7 @@ class SinogramStack(StackImage):
         return new_obj
 
     def _getimage(self, frame):
-        return np.rot90(self.fabimage.getsinogram(frame), 3)
+        return self.fabimage.getsinogram(frame).transpose()
 
 
 class diffimage2(object):
@@ -980,6 +987,7 @@ class diffimage2(object):
         :param detector: pyFAI.detectors.Detector
         :param experiment: xicam.config.experiment
         """
+
 
 
         print 'Loading ' + '...'
@@ -1009,23 +1017,8 @@ class diffimage2(object):
         self.cache = dict()
         self.cachecheck = None
 
-    @property
-    def xvals(self):
-        return numpy.array(sorted(self.paths.keys()))
-
-    def first(self):
-        if len(self.paths) > 0:
-            firstpath = sorted(list(self.paths.values()))[0]
-            print firstpath
-            return diffimage(filepath=firstpath, experiment=self.experiment)
-        else:
-            return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
-
-    def __getitem__(self, item):
-        return self.getDiffImage(self.paths.keys()[item])
-
     def __len__(self):
-        return len(self.paths)
+        return len(self.filepaths)
 
     def updateexperiment(self):
         # Force cache the detector
@@ -1034,6 +1027,8 @@ class diffimage2(object):
         # Set experiment energy
         if 'Beamline Energy' in self.params:
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
+        elif 'mono' in self.params:
+            self.experiment.setvalue('Energy', self.params['mono'])
 
 
 
@@ -1072,7 +1067,7 @@ class diffimage2(object):
     def detector(self):
         if self._detector is None:
             if self.rawdata is not None:
-                name, detector, binning = self.finddetector()
+                name, detector = self.finddetector()
             else:
                 return None
 
@@ -1086,27 +1081,28 @@ class diffimage2(object):
                 if self.experiment is not None:
                     if mask is not None:
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
-                    self.experiment.setvalue('Pixel Size X', detector.pixel1 * binning)
-                    self.experiment.setvalue('Pixel Size Y', detector.pixel2 * binning)
-                    self.experiment.setvalue('Detector', name)
+                    self.experiment.setvalue('Pixel Size X', detector.pixel1)
+                    self.experiment.setvalue('Pixel Size Y', detector.pixel2)
+                    self.experiment.setvalue('Detector', detector.name)
         return self._detector
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
             if hasattr(detector, 'MAX_SHAPE'):
-                print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
+                #print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
-                    return name, detector, 1
+                    return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
                         print 'Detector found with binning: ' + name
-                        return name, detector, binning
-        return None, None, None
+                        detector.set_binning(binning)
+                        return name, detector
+        return None, None
 
 
     @detector.setter
@@ -1310,12 +1306,12 @@ class diffimage2(object):
         from matplotlib import pylab as plt
         plt.imshow(img)
         plt.show()
-    #
-    # def __getattr__(self, name):
-    #    if name in self.cache:
-    #        return self.cache[name]
-    #    else:
-    #        raise AttributeError('diffimage has no attribute: ' + name)
+
+    def __getattr__(self, name):
+       if name in self.cache:
+           return self.cache[name]
+       else:
+           raise AttributeError('diffimage has no attribute: ' + name)
 
 
 # each diffimage class should implement:
@@ -1367,7 +1363,7 @@ class singlefilediffimage2(diffimage2):
             img = self.mirrorsymmetryfill(img)
 
         if self.cakemode:
-            img = self.cake(img, self.mask)
+            img = self.cakemask
         elif self.remeshmode:
             img = self.remesh(img, self.mask)
 
@@ -1390,16 +1386,27 @@ class singlefilediffimage2(diffimage2):
 class multifilediffimage2(diffimage2):
     ndim = 3
     def __init__(self, filepaths, detector=None, experiment=None):
-        self.filepaths = filepaths
+        self.filepaths = sorted(list(filepaths))
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache=dict()
         self.currentframe = 0
 
-        self.dtype = self.data.dtype
-        self.max = np.max(self.data)
-        self.min = np.min(self.data)
-        self.shape = self.data.shape[0],self.data.shape[1],len(filepaths)
+        self.dtype = self.rawdata.dtype
+        self.max = np.max(self.rawdata)
+        self.min = np.min(self.rawdata)
+        self.shape = self.rawdata.shape[0],self.rawdata.shape[1],len(filepaths)
         self.size = np.product(self.shape)
+
+
+    def xvals(self,_):
+        return numpy.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
+
+    def first(self):
+        if len(self.filepaths) > 0:
+            firstpath = self.filepaths[0]
+            return diffimage(filepath=firstpath, experiment=self.experiment)
+        else:
+            return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
     @property
     def rawdata(self):
@@ -1431,14 +1438,26 @@ class multifilediffimage2(diffimage2):
         return self.transformdata
 
     def _getframe(self,frame=None): # keeps 3 frames in cache at most
+        #print 'frame:',frame
         if frame is None: frame=self.currentframe
-
+        if type(frame) is list: frame=frame[1].step
         self.currentframe = frame
-        if frame in self._framecache:
-            return self._framecache[frame]
-        else:
+        if not frame in self._framecache:
             if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
-            self._framecache[frame]=loadimage(self.filepaths[frame])
+            self._framecache[frame]=np.rot90(loadimage(self.filepaths[frame]),3)
+        return self._framecache[frame]
+
+    def calcVariation(self, i, operationindex, roi):
+        if roi is None:
+            roi = 1
+        if i == 0:
+            return None  # Prevent wrap-around with first variation
+
+        try:
+            return variation.variationoperators.operations.values()[operationindex](self, i, roi)
+        except IndexError as ex:
+            print 'Skipping index:', i
+        return None
 
     def __getitem__(self, item):
         return self._getframe(item)
@@ -1494,6 +1513,7 @@ class stackdiffimage2(diffimage2):
         if frame is None: frame=self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame= frame[1].step
+        frame = min(frame,len(self))
         self.currentframe = frame
         if frame not in self._framecache:
             if len(self._framecache)>2: del self._framecache[self._framecache.keys()[0]] #del the first cached item

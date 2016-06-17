@@ -1,0 +1,28 @@
+Tiff Stack:
+- name: fname
+  type: str
+- name: axis
+  type: int
+- name: digit
+  type: int
+- name: overwrite
+  type: bool
+Numpy Array:
+- name: fname
+  type: str
+- name: overwrite
+  type: bool
+Data Exchange:
+- name: fname
+  type: str
+- name: axes
+  type: str
+- name: overwrite
+  type: bool
+Write HDF5:
+- name: fname
+  type: str
+- name: gname
+  type: str
+- name: overwrite
+  type: bool

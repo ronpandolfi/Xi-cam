@@ -90,13 +90,13 @@ class plugin(QtCore.QObject):
             config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
             l.addWidget(configtree)
 
-            propertytable = QtGui.QTableView()
-            self.imagePropModel = models.imagePropModel(self.currentImage, propertytable)
-            propertytable.verticalHeader().hide()
-            propertytable.horizontalHeader().hide()
-            propertytable.setModel(self.imagePropModel)
-            propertytable.horizontalHeader().setStretchLastSection(True)
-            l.addWidget(propertytable)
+            self.propertytable = widgets.frameproptable()
+            #
+            # propertytable.verticalHeader().hide()
+            # propertytable.horizontalHeader().hide()
+
+            # propertytable.horizontalHeader().setStretchLastSection(True)
+            l.addWidget(self.propertytable)
             w.setLayout(l)
             self.rightwidget = w
 
