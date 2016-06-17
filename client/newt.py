@@ -1,7 +1,5 @@
-from os.path import split, join
-
+import os
 from requests import HTTPError
-
 from client.user import User
 
 
@@ -32,7 +30,7 @@ class NewtClient(User):
 
         if response.json()['auth']:
             self.authentication = response
-            super(NewtClient, self).login(username)
+            return super(NewtClient, self).login(username)
         else:
             self.authentication = None
 
@@ -50,7 +48,7 @@ class NewtClient(User):
         :return: None
         """
         if system not in cls.systems:
-            raise NERSCError('%s is not a NERSC system' % system)
+            raise NEWTError('%s is not a NERSC system' % system)
 
     def get_system_status(self, system='all'):
         """
@@ -91,7 +89,7 @@ class NewtClient(User):
         """
         info = self.get_dir_contents(path, system)
         if len(info) > 1:
-            raise NERSCError('{} is a directory'.format(path))
+            raise NEWTError('{} is a directory'.format(path))
 
         return int(info[0]['size'])
 
@@ -251,7 +249,7 @@ class NewtClient(User):
         """
         self.check_login()
         self.check_system(system)
-        fname = split(fpath)[-1]
+        fname = os.path.split(fpath)[-1]
         with open(fpath, 'rb') as f:
             file = {'file': (fpath, f), 'file_name': fname}
             response = self.post(self.BASE_URL + '/file/' + system + dpath, files=file)
@@ -312,6 +310,6 @@ class NewtClient(User):
         r.close()
 
 
-class NERSCError(Exception):
+class NEWTError(Exception):
     """Raised when a parameter that will be used for the NEWT API is invalid"""
     pass

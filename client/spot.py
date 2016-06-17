@@ -22,7 +22,7 @@ class SpotClient(NewtClient):
         response = self.post(self.SPOT_URL + '/auth', data=credentials)
         if response.json()['auth']:
             self.authentication = response
-            super(SpotClient, self).login(username, password)
+            return super(SpotClient, self).login(username, password)
         else:
             self.authentication = None
 

@@ -7,14 +7,13 @@ Created on Mon Oct 19 17:22:00 2015
 
 import os
 import tempfile
+from functools import partial
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import xglobals
+from xicam import clientmanager as cmanager
 from pipeline import loader,pathtools
-
-
-NERSC_SYSTEMS = ['cori', 'edison']
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -56,7 +55,7 @@ class LocalFileView(QtGui.QTreeView):
         self.menu.addActions(standardActions)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.menuActionClicked)
+        self.customContextMenuRequested.connect(self.menuRequested)
 
         self.doubleClicked.connect(self.onDoubleClick)
 
@@ -115,66 +114,13 @@ class LocalFileView(QtGui.QTreeView):
     def openFile(self):
         print 'Open files here or emit open signal to whoever wants it'
 
-    def menuActionClicked(self, position):
+    def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
     def addMenuAction(self, action_name, triggered_slot):
         action = QtGui.QAction(action_name, self)
         action.triggered.connect(triggered_slot)
         self.menu.addAction(action)
-
-
-class FileExplorer(QtGui.QWidget):
-    """
-    Container for local file tree view that adds back button and path label
-    """
-
-    def __init__(self, file_view, parent=None):
-        super(FileExplorer, self).__init__(parent)
-
-        self.file_view = file_view
-        self.path_label = QtGui.QLineEdit(self)
-        self.back_button = QtGui.QToolButton(self)
-
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap('gui/back.png'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.back_button.setIcon(icon)
-        self.back_button.setIconSize(QtCore.QSize(18, 18))
-        self.back_button.setFixedSize(32, 32)
-
-        self.path_label.setReadOnly(True)
-
-        l = QtGui.QVBoxLayout(self)
-        l.setStretch(0, 0)
-        l.setContentsMargins(0, 0, 0, 0)
-        l.setSpacing(0)
-        hl = QtGui.QHBoxLayout()
-        hl.addWidget(self.back_button)
-        hl.addWidget(self.path_label)
-        hl.setStretch(0, 0)
-        l.addLayout(hl)
-        l.addWidget(self.file_view)
-
-        self.setPathLabel(self.file_view.path)
-        self.back_button.clicked.connect(self.onBackClick)
-        self.file_view.pathChanged.connect(self.setPathLabel)
-
-    def onBackClick(self):
-        path = self.file_view.path
-        path = os.path.dirname(str(path))
-        self.file_view.refresh(path=path)
-
-    def setPathLabel(self, path):
-        self.path_label.setText(path)
-
-    def getRawDatasetList(self):
-        widget = self.file_view
-        items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
-        items = [i.text() for i in items]
-        return items
-
-    def getSelectedFilePath(self):
-        return self.file_view.getSelectedFilePath()
 
 
 class RemoteFileView(QtGui.QListWidget):
@@ -202,7 +148,7 @@ class RemoteFileView(QtGui.QListWidget):
         # standardActions[3].triggered.connect(self.sigTransfer.emit)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.menuActionClicked)
+        self.customContextMenuRequested.connect(self.menuRequested)
 
     def onDoubleClick(self, item):
         file_name = item.text()
@@ -248,7 +194,7 @@ class RemoteFileView(QtGui.QListWidget):
     def deleteFile(self):
         return None
 
-    def menuActionClicked(self, position):
+    def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
 
@@ -362,7 +308,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         # standardActions[3].triggered.connect(self.sigTransfer.emit)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.menuActionClicked)
+        self.customContextMenuRequested.connect(self.menuRequested)
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
     def onDoubleClick(self, item):
@@ -428,18 +374,6 @@ class SpotDatasetView(QtGui.QTreeWidget):
     def getDatasetAndStage(self):
         stage = self.currentItem().parent().text(0)
         dataset = self.currentItem().parent().parent().text(0)
-        # dataset, stage, dset_item = None, None, None
-        # parent_items = self.findItems('*', QtCore.Qt.MatchWildcard)
-        # for item in parent_items:
-        #     for child_item in [item.child(i) for i in range(item.childCount())]:
-        #         for child_child_item in [child_item.child(j) for j in range(child_item.childCount())]:
-        #             if child_child_item.text(0) == file_name:
-        #                 dset_item = child_child_item
-        #
-        # if dset_item is not None:
-        #     stage = str(dset_item.parent().text(0))
-        #     dataset = str(dset_item.parent().parent().text(0))
-
         return stage, dataset
 
     def getSelectedFile(self):
@@ -482,10 +416,63 @@ class SpotDatasetView(QtGui.QTreeWidget):
     def previewDataset(self):
         print "Not implemented!"
 
-    def menuActionClicked(self, position):
+    def menuRequested(self, position):
         if self.currentItem().childCount() != 0:
             return
         self.menu.exec_(self.viewport().mapToGlobal(position))
+
+
+class FileExplorer(QtGui.QWidget):
+    """
+    Container for local and remote file tree view that adds back button and path label
+    """
+
+    def __init__(self, file_view, parent=None):
+        super(FileExplorer, self).__init__(parent)
+
+        self.file_view = file_view
+        self.path_label = QtGui.QLineEdit(self)
+        self.back_button = QtGui.QToolButton(self)
+
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap('gui/back.png'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.back_button.setIcon(icon)
+        self.back_button.setIconSize(QtCore.QSize(18, 18))
+        self.back_button.setFixedSize(32, 32)
+
+        self.path_label.setReadOnly(True)
+
+        l = QtGui.QVBoxLayout(self)
+        l.setStretch(0, 0)
+        l.setContentsMargins(0, 0, 0, 0)
+        l.setSpacing(0)
+        hl = QtGui.QHBoxLayout()
+        hl.addWidget(self.back_button)
+        hl.addWidget(self.path_label)
+        hl.setStretch(0, 0)
+        l.addLayout(hl)
+        l.addWidget(self.file_view)
+
+        self.setPathLabel(self.file_view.path)
+        self.back_button.clicked.connect(self.onBackClick)
+        self.file_view.pathChanged.connect(self.setPathLabel)
+
+    def onBackClick(self):
+        path = self.file_view.path
+        path = os.path.dirname(str(path))
+        self.file_view.refresh(path=path)
+
+    def setPathLabel(self, path):
+        self.path_label.setText(path)
+
+    def getRawDatasetList(self):
+        widget = self.file_view
+        items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
+        items = [i.text() for i in items]
+        return items
+
+    def getSelectedFilePath(self):
+        return self.file_view.getSelectedFilePath()
 
 
 class SpotDatasetExplorer(QtGui.QWidget):
@@ -603,7 +590,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     """
 
     sigLoginSuccess = QtCore.Signal(bool)
-    sigLoginRequest = QtCore.Signal()
+    sigLoginRequest = QtCore.Signal(QtCore.Signal, bool)
     sigProgJob = QtCore.Signal(str, object, list, dict, object)
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigOpenFiles = QtCore.Signal(list)
@@ -621,7 +608,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.setTabsClosable(True)
 
         self.explorers['Local'] = FileExplorer(LocalFileView(self), self)
-        self.addFileExplorer('Local', self.explorers['Local'])
+        self.addFileExplorer('Local', self.explorers['Local'], closable=False)
         self.explorers['Local'].file_view.sigDelete.connect(self.deleteFile)
         self.explorers['Local'].file_view.sigOpen.connect(self.openFiles)
 
@@ -640,19 +627,28 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.addspot = QtGui.QAction('SPOT', self.newtabmenu)
         self.addcori = QtGui.QAction('Cori', self.newtabmenu)
         self.addedison = QtGui.QAction('Edison', self.newtabmenu)
+        self.addbragg = QtGui.QAction('Bragg', self.newtabmenu)
         self.addglobus = QtGui.QAction('Globus endpoint', self.newtabmenu)
-        self.standard_actions = [self.addspot, self.addcori, self.addedison] #, self.addglobus]
-        self.newtabmenu.addActions(self.standard_actions)
+        self.addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
+        self.standard_actions = {'SPOT': self.addspot, 'Cori': self.addcori, 'Edison': self.addedison,
+                                 'Bragg': self.addbragg, 'SFTP': self.addsftp} #, self.addglobus]
+        self.newtabmenu.addActions(self.standard_actions.values())
         self.addspot.triggered.connect(self.addSPOTTab)
-        self.addedison.triggered.connect(lambda: self.addNERSCTab('edison'))
-        self.addcori.triggered.connect(lambda: self.addNERSCTab('cori'))
+        self.addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
+        self.addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
+        self.addbragg.triggered.connect(lambda: self.addHPCTab('Bragg'))
+        self.addsftp.triggered.connect(self.addSFTPTab)
 
     def enableActions(self):
-        for action in self.standard_actions:
-            action.setEnabled(True)
+        for name, action in self.standard_actions.iteritems():
+            if name in self.explorers.keys():
+                action.setEnabled(False)
+            else:
+                action.setEnabled(True)
 
-    def addFileExplorer(self, name, file_explorer, closable=False):
+    def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
+        self.wireExplorerSignals(file_explorer)
         idx = len(self.explorers) - 1
         tab = self.insertTab(idx, file_explorer, name)
         if closable is False:
@@ -663,48 +659,68 @@ class MultipleFileExplorer(QtGui.QTabWidget):
                 self.tabBar().tabButton(tab, QtGui.QTabBar.LeftSide).resize(0, 0)
                 self.tabBar().tabButton(tab, QtGui.QTabBar.LeftSide).hide()
 
-    @xglobals.login_exeption_handle
-    def addNERSCTab(self, system, closable=True, *args):
-        self.sigLoginSuccess.emit(xglobals.spot_client.logged_in)
-        self.sigLoginRequest.emit()
-        client = xglobals.load_spot(self.addNERSCTab, system, closable)
-        explorer = FileExplorer(NERSCFileView(client, system, self))
+    def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.openFiles)
-        explorer.file_view.sigDelete.connect(self.deleteFile)
-        explorer.file_view.sigDownload.connect(self.downloadFile)
-        explorer.file_view.sigTransfer.connect(self.transferFile)
-        self.addFileExplorer(system.capitalize(), explorer, closable=closable)
-        action = self.addcori if system == 'cori' else self.addedison
-        action.setEnabled(False)
+        if hasattr(explorer, 'sigDownload'):
+            explorer.file_view.sigDownload.connect(self.downloadFile)
+        if hasattr(explorer, 'sigDelete'):
+            explorer.file_view.sigDelete.connect(self.deleteFile)
+        if hasattr(explorer, 'sigTransfer'):
+            explorer.file_view.sigTransfer.connect(self.transferFile)
 
-    @xglobals.login_exeption_handle
-    def addSPOTTab(self, closable=True, *args):
-        self.sigLoginSuccess.emit(xglobals.spot_client.logged_in)
-        self.sigLoginRequest.emit()
-        client = xglobals.load_spot(self.addSPOTTab, closable)
-        explorer = SpotDatasetExplorer(client, self)
-        explorer.file_view.sigOpen.connect(self.openFiles)
-        explorer.file_view.sigDownload.connect(self.downloadFile)
-        explorer.file_view.sigTransfer.connect(self.transferFile)
-        self.addFileExplorer('SPOT', explorer, closable=closable)
-        self.addspot.setEnabled(False)
+    def addHPCTab(self, system):
+        # # NERSC tabs based on NEWT API
+        # add_nersc_explorer = lambda client: self.addFileExplorer(system.capitalize(),
+        #                                                          FileExplorer(NERSCFileView(client, system, self)))
+        # login_callback = lambda client: self.loginSuccess(client, add_explorer=add_nersc_explorer)
+        # self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
+        # add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
+        #                                                         FileExplorer(SFTPTreeWidget(client, self)))
+        # NERSC tabs based on SFTP
+        add_sftp_explorer = lambda client: self.addFileExplorer(system,
+                                                                FileExplorer(SFTPTreeWidget(client, self)))
+        add_sftp_callback = lambda client: self.loginSuccess(client, add_explorer=add_sftp_explorer)
+        login_callback = lambda client: cmanager.add_sftp_client(system, client, add_sftp_callback)
+        sftp_client = partial(cmanager.sftp_client, cmanager.HPC_SYSTEM_ADDRESSES[system])
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, sftp_client), False)
 
-    @xglobals.login_exeption_handle
-    def addGlobusTab(self, endpoint, closable=True, *args):
-        self.sigLoginSuccess.emit(xglobals.globus_client.logged_in)
-        self.sigLoginRequest.emit()
-        client = xglobals.load_spot(self.addGlobusTab, endpoint, closable)
-        explorer = FileExplorer(GlobusFileView(endpoint, client, self))
-        name = endpoint.split('#')[-1]
-        self.addFileExplorer(name, explorer, closable=closable)
+    def addSPOTTab(self):
+        add_spot_explorer = lambda client: self.addFileExplorer('SPOT', SpotDatasetExplorer(client, self))
+        login_callback = lambda client: self.loginSuccess(client, add_explorer=add_spot_explorer)
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
+
+    def addGlobusTab(self, endpoint):
+        add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
+                                                                 FileExplorer(GlobusFileView(client, client, self)))
+        add_endpoint_callback = lambda client: self.loginSuccess(client, add_explorer=add_globus_explorer)
+        login_callback = lambda client: cmanager.add_globus_client(endpoint.split('#')[-1], client,
+                                                                   add_endpoint_callback)
+        globus_client = cmanager.globus_client()
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, globus_client.login), False)
+
+    def addSFTPTab(self):
+        add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
+                                                                 FileExplorer(SFTPTreeWidget(client, self)))
+        add_sftp_callback = lambda client: self.loginSuccess(client, add_explorer=add_sftp_explorer)
+        login_callback = lambda client: cmanager.add_sftp_client(client.host, client, add_sftp_callback)
+        sftp_client = cmanager.sftp_client
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, sftp_client), True)
+
+    def loginSuccess(self, client, add_explorer=None):
+        if not client:
+            self.sigLoginSuccess.emit(False)
+        else:
+            add_explorer(client)
+            self.enableActions()
+            self.sigLoginSuccess.emit(True)
 
     def removeTab(self, p_int):
         if self.tabText(p_int) != 'Jobs':
             name = self.explorers.keys()[p_int]
-            self.explorers.pop(name)
+            explorer = self.explorers.pop(name)
+            cmanager.logout(explorer.file_view.client)
             self.widget(p_int).deleteLater()
-            action = [action for action in self.standard_actions if action.text() == name][0]
-            action.setEnabled(True)
+            self.enableActions()
         super(MultipleFileExplorer, self).removeTab(p_int)
 
     def removeTabs(self):
@@ -819,7 +835,7 @@ class JobTable(QtGui.QTableWidget):
 
     @QtCore.Slot(str, object, list, dict)
     def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
-        job_entry = self.addJob(job_desc) #TODO add interrupt signal to job entries!
+        job_entry = self.addJob(job_desc)
         runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
                                             callback_slot=job_entry.progress, finished_slot=finish_slot,
                                             interrupt_signal=job_entry.sigCancel)
@@ -878,3 +894,137 @@ class JobEntry(QtGui.QWidget):
     def pulseStop(self):
         self.progressbar.setRange(0, 100)
         self.progress(1)
+
+#TODO walktree in a different thread!
+class LazyTreeItem(QtGui.QTreeWidgetItem):
+    def __init__(self, name, icon=None, parent=None):
+        super(LazyTreeItem, self).__init__([name], parent=parent)
+        self.parentItem = parent
+        if icon is not None:
+            self.setIcon(0, icon)
+        self.setChildIndicatorPolicy(QtGui.QTreeWidgetItem.ShowIndicator)
+
+    def setExpanded(self, expand):
+        if expand and self.childCount() == 0:
+            self.getChildren()
+        super(LazyTreeItem, self).setExpanded(expand)
+
+    def getChildren(self):
+        # Override this function to get children
+        pass
+
+
+class SFTPDirTreeItem(LazyTreeItem):
+    def __init__(self, name, client, path, icon=None, parent=None):
+        super(SFTPDirTreeItem, self).__init__(name, icon, parent)
+        self.client = client
+        self.path = path
+
+    def getChildren(self):
+        self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
+
+    def addChildFile(self, path):
+        name = os.path.split(path)[-1]
+        icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
+        item = QtGui.QTreeWidgetItem([name], parent=self)
+        item.setIcon(0, icon)
+        self.addChild(item)
+
+
+    def addChildDir(self, path):
+        name = os.path.split(path)[-1]
+        icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
+        item = SFTPDirTreeItem(name, self.client, path, icon, self)
+        item.setIcon(0, icon)
+        self.addChild(item)
+
+    def handleUnknown(self, path):
+        print 'Unknown object found: {0}'.format(path)
+
+
+class SFTPTreeWidget(QtGui.QTreeWidget):
+
+    pathChanged = QtCore.Signal(str)
+    sigDelete = QtCore.Signal()
+    sigOpen = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(tuple)
+    sigTransfer = QtCore.Signal(tuple)
+
+    def __init__(self, sftp_client, parent=None):
+        super(SFTPTreeWidget, self).__init__(parent=parent)
+        self.client = sftp_client
+        self.path = sftp_client.pwd
+
+        self.itemExpanded.connect(self.getItemChildren)
+        self.itemDoubleClicked.connect(self.onDoubleClick)
+        self.setHeaderHidden(True)
+        self.refresh()
+
+        self.menu = QtGui.QMenu(parent=self)
+        openAction = QtGui.QAction('Open', self)
+        downloadAction = QtGui.QAction('Download', self)
+        deleteAction = QtGui.QAction('Delete', self)
+        self.menu.addActions([openAction, downloadAction, deleteAction])
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def refresh(self, path=None):
+        self.clear()
+        if path is not None:
+            self.path = path
+            self.client.cd(path)
+        self.client.walktree(self.path, lambda x: self.createTopLevelItem(x, 'file'),
+                             lambda x: self.createTopLevelItem(x, 'dir'),
+                             lambda x: x, recurse=False)
+        self.pathChanged.emit(self.path)
+
+    def createTopLevelItem(self, path, type):
+        name = os.path.split(path)[-1]
+        if type == 'file':
+            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
+            item = QtGui.QTreeWidgetItem([name], parent=self)
+            item.setIcon(0, icon)
+        elif type == 'dir':
+            name = os.path.split(path)[-1]
+            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
+            item = SFTPDirTreeItem(name, self.client, path, icon, self)
+            item.setIcon(0, icon)
+        else:
+            return
+        self.addTopLevelItem(item)
+
+    def onDoubleClick(self, item):
+        print item, type(item)
+        print SFTPDirTreeItem
+        if isinstance(item, SFTPDirTreeItem):
+            self.path = item.path
+            self.refresh()
+
+    def getItemChildren(self, item):
+        if item.childCount() == 0:
+            item.getChildren()
+
+    def openActionTriggered(self):
+        pass
+
+    def downloadActionTriggered(self):
+        pass
+
+    def deleteActionTriggered(self):
+        pass
+
+if __name__ == '__main__':
+    import client
+    import getpass
+    import sys
+    passw = getpass.getpass()
+    client = client.sftp.SFTPClient('bl832viz2.dhcp.lbl.gov', username='lbluque', password=passw)
+    app = QtGui.QApplication(sys.argv)
+    w = SFTPTreeWidget(client)
+    w.setWindowTitle("Test this thing")
+    w.show()
+    sys.exit(app.exec_())
