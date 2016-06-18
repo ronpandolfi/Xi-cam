@@ -154,7 +154,6 @@ def set_function_pipeline(pipeline, setdefaults=False):
                     continue
                 elif param == 'Input Functions':
                     for ipf, sipfs in value.iteritems():
-                        print 'setting input func', ipf, sipfs
                         ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
                         [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
                 else:
@@ -256,7 +255,7 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     params = OrderedDict()
     funstack = []
     for func in functions:
-        if (not func.previewButton.isChecked() and func.func_name != 'Reconstruction') or func.func_name == 'Write':
+        if (not func.previewChecked() and func.func_name != 'Reconstruction') or func.func_name == 'Write':
             continue
         # Correct center of rotation
         elif func.func_name in ('Padding', 'Downsample', 'Upsample'):
@@ -264,17 +263,15 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
 
         params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
         p = update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                    param_dict=params[func.func_name][func.subfunc_name],
+                                    param_dict=deepcopy(func.getParamDict(update=update)),
                                     input_partials=func.input_partials, slc=slc)
         funstack.append(p)
-        # params[func.func_name][func.subfunc_name].update({k: v for k, v in p.keywords.items()
-        #                                                   if k in params[func.func_name][func.subfunc_name]})
         if func.input_functions is not None:
-            params[func.func_name][func.subfunc_name]['Input Functions'] = {infunc.func_name: {infunc.subfunc_name:
-                                                                            deepcopy(infunc.getParamDict(update=update))
-                                                                                               }
-                                                                            for infunc in func.input_functions
-                                                                            if infunc is not None}
+            in_dict = {infunc.func_name: {infunc.subfunc_name: deepcopy(infunc.getParamDict(update=update))}
+                                          for infunc in func.input_functions if infunc is not None
+                                          and infunc.previewChecked()}
+            if in_dict:
+                params[func.func_name][func.subfunc_name].update({'Input Functions': in_dict})
     lock_function_params(False)
     return funstack, widget.getsino(slc), partial(callback, params)
 
