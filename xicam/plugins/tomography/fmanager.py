@@ -118,9 +118,6 @@ def update():
     for item in functions:
         layout.addWidget(item)
 
-    w = ui.centerwidget.currentWidget()
-    if w:
-        set_function_defaults(w.widget.data.header, functions)
 
 def load_form(path):
     guiloader = QUiLoader()
@@ -146,6 +143,7 @@ def load_function_pipeline(yaml_file, setdefaults=False):
 
 def set_function_pipeline(pipeline, setdefaults=False):
     clear_functions()
+    # Way too many for loops, oops
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             funcWidget = add_function(func, subfunc)
@@ -155,7 +153,9 @@ def set_function_pipeline(pipeline, setdefaults=False):
                 elif param == 'Input Functions':
                     for ipf, sipfs in value.iteritems():
                         ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
-                        [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                        for p, v in sipfs[sipfs.keys()[0]].items():
+                            ifwidget.params.child(p).setValue(v)
+                            if setdefaults: ifwidget.params.child(p).setDefault(v)
                 else:
                     child = funcWidget.params.child(param)
                     child.setValue(value)

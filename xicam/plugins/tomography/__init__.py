@@ -79,8 +79,10 @@ class plugin(base.plugin):
             tab.unload()
         try:
             self.centerwidget.currentWidget().load()
-            self.currentDataset().sigReconFinished.connect(self.fullReconstructionFinished)
-            self.setPipelineValues(self.currentDataset())
+            current_dataset = self.currentDataset()
+            if current_dataset is not None:
+                current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
+                self.setPipelineValues(current_dataset)
         except AttributeError as e:
             print e.message
 

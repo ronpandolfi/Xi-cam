@@ -21,4 +21,3 @@ Functions:
 Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]
-    Projection Angles: [Projection Angles]

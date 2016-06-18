@@ -69,6 +69,7 @@ class FeatureWidget(QtGui.QWidget):
         else:
             icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.previewButton.setCheckable(False)
+            self.previewButton.setChecked(True)
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
         self.previewButton.setChecked(True)
@@ -176,7 +177,7 @@ class FuncWidget(FeatureWidget):
         self.menu = QtGui.QMenu()
 
     def previewChecked(self):
-        if self.previewButton.isChecked():
+        if self.previewButton.isChecked() or not self.previewButton.isCheckable():
             return True
         else:
             return False
@@ -343,16 +344,16 @@ class ReconFuncWidget(FuncWidget):
     def addInputFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
         fwidget = self.angles if func == 'Projection Angles' else self.center
         if fwidget is not None and fwidget.subfunc_name != 'Manual':
-            value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
-                                               '{} input function already in pipeline\n'
-                                               'Do you want to replace it?'.format(func),
-                                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if value is QtGui.QMessageBox.No:
-                return
-            else:
-                try:
-                    fwidget.deleteLater()
-                except AttributeError:
+            if func != 'Projection Angles':
+                value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
+                                                   '{} input function already in pipeline\n'
+                                                   'Do you want to replace it?'.format(func),
+                                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+                if value is QtGui.QMessageBox.No:
+                    return
+            try:
+                fwidget.deleteLater()
+            except AttributeError:
                     pass
         checkable = False if func == 'Projection Angles' else True
         fwidget = FuncWidget(func, subfunc, package=package, checkable=checkable)
