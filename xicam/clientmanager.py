@@ -1,7 +1,7 @@
 import threads
 import client
 
-# Some HPC host addresses
+# Some default HPC host addresses
 HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 'Bragg': 'bragg.dhcp.lbl.gov'}
 
 # Clients and what not
@@ -18,6 +18,7 @@ globus_clients = {}
 
 
 def login_wrapper(client_login, *args, **kwargs):
+    """Decorator to catch all login errors from NEWT, Globus, and PySFTP/Paramiko"""
     def handled_login(*args, **kwargs):
         try:
             return client_login(*args, **kwargs)
@@ -26,21 +27,28 @@ def login_wrapper(client_login, *args, **kwargs):
             return
     return handled_login
 
+
 def login(client_callback, client_login, credentials):
+    """Login clients on a background thread"""
     handled_login = login_wrapper(client_login)
     runnable = threads.RunnableMethod(handled_login, method_kwargs=credentials, callback_slot=client_callback)
     threads.add_to_queue(runnable)
 
 
 def add_sftp_client(host, client, callback):
+    """Add sftp client to dictionary in order to have them accessible to plugins"""
     sftp_clients[host] = client
     callback(client)
 
+
 def add_globus_client(endpoint, client, callback):
+    """Add globus client to dictionary in order to have them accessible to plugins"""
     globus_clients[endpoint] = client
     callback(client)
 
+
 def logout(client_obj, callback=None):
+    """Logout client on a background thread"""
     # TODO remove clients from their corresponding dictionaries!!!
     if hasattr(client_obj, 'logout'):
         method = client_obj.logout

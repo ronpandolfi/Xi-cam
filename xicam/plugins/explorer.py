@@ -421,12 +421,14 @@ class FileExplorer(QtGui.QWidget):
         self.file_view = file_view
         self.path_label = QtGui.QLineEdit(self)
         self.back_button = QtGui.QToolButton(self)
+        self.refresh_button = QtGui.QToolButton(self)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap('gui/back.png'), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.back_button.setIcon(icon)
-        self.back_button.setIconSize(QtCore.QSize(18, 18))
-        self.back_button.setFixedSize(32, 32)
+        for button, icon_file in zip((self.back_button, self.refresh_button), ('gui/back.png', 'gui/refresh_2.png')):
+            icon = QtGui.QIcon()
+            icon.addPixmap(QtGui.QPixmap(icon_file), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            button.setIcon(icon)
+            button.setIconSize(QtCore.QSize(18, 18))
+            button.setFixedSize(32, 32)
 
         self.path_label.setReadOnly(True)
 
@@ -436,19 +438,24 @@ class FileExplorer(QtGui.QWidget):
         l.setSpacing(0)
         hl = QtGui.QHBoxLayout()
         hl.addWidget(self.back_button)
+        hl.addWidget(self.refresh_button)
         hl.addWidget(self.path_label)
         hl.setStretch(0, 0)
         l.addLayout(hl)
         l.addWidget(self.file_view)
 
         self.setPathLabel(self.file_view.path)
-        self.back_button.clicked.connect(self.onBackClick)
+        self.back_button.clicked.connect(self.onBackClicked)
+        self.refresh_button.clicked.connect(self.onRefreshClicked)
         self.file_view.pathChanged.connect(self.setPathLabel)
 
-    def onBackClick(self):
+    def onBackClicked(self):
         path = self.file_view.path
         path = os.path.dirname(str(path))
         self.file_view.refresh(path=path)
+
+    def onRefreshClicked(self):
+        self.file_view.refresh()
 
     def setPathLabel(self, path):
         self.path_label.setText(path)
