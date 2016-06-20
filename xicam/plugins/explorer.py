@@ -581,6 +581,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigLoginRequest = QtCore.Signal(QtCore.Signal, bool)
     sigProgJob = QtCore.Signal(str, object, list, dict, object)
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
+    sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpenFiles = QtCore.Signal(list)
 
     def __init__(self, parent=None):
@@ -607,6 +608,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         self.sigProgJob.connect(self.jobtab.addProgJob)
         self.sigPulsJob.connect(self.jobtab.addPulseJob)
+        self.sigSFTPJob.connect(self.jobtab.addSFTPJob)
 
         self.tab.plusClicked.connect(self.onPlusClicked)
         self.tabCloseRequested.connect(self.removeTab)
@@ -649,12 +651,18 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.openFiles)
-        if hasattr(explorer, 'sigDownload'):
+        try:
             explorer.file_view.sigDownload.connect(self.downloadFile)
-        if hasattr(explorer, 'sigDelete'):
+        except AttributeError:
+            pass
+        try:
             explorer.file_view.sigDelete.connect(self.deleteFile)
-        if hasattr(explorer, 'sigTransfer'):
+        except AttributeError:
+            pass
+        try:
             explorer.file_view.sigTransfer.connect(self.transferFile)
+        except AttributeError:
+            pass
 
     def addHPCTab(self, system):
         # # NERSC tabs based on NEWT API
@@ -756,20 +764,22 @@ class MultipleFileExplorer(QtGui.QTabWidget):
                 fileDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
                 fileDialog.selectFile(self.currentWidget().file_view.getSelectedFile())
                 if fileDialog.exec_():
-                    kwargs['save_path'] = str(fileDialog.selectedFiles()[0])
+                    save_path = str(fileDialog.selectedFiles()[0])
+                    if isinstance(self.currentWidget().file_view, SFTPTreeWidget):
+                        kwargs['localpath'] = save_path
+                        self.sigSFTPJob.emit(desc, method, args, kwargs, fslot)
+                    else:
+                        kwargs['save_path'] = save_path
+                        self.sigProgJob.emit(desc, method, args, kwargs, fslot)
+                    self.addTab(self.jobtab, 'Jobs')
                 else:
                     return
-
-            self.sigProgJob.emit(desc, method, args, kwargs, fslot)
-            self.addTab(self.jobtab, 'Jobs')
 
     def transferFile(self):
         transfer = self.currentWidget().file_view.transferFile()
         if transfer is not None:
             desc, method, args, kwargs = transfer
             if isinstance(self.currentWidget().file_view, SpotDatasetView):
-                # TODO Find a way to track the progress of rsync or cp on nersc to run the job as an iterator and get rid of if statement
-                print 'This absurd emit'
                 self.sigPulsJob.emit(desc, method, args, kwargs)
             else:
                 self.sigProgJob.emit(desc, method, args, kwargs)
@@ -829,6 +839,12 @@ class JobTable(QtGui.QTableWidget):
                                             interrupt_signal=job_entry.sigCancel)
         threads.add_to_queue(runnable)
 
+    def addSFTPJob(self, job_desc, method, args, kwargs, finish_slot=None):
+        job_entry = self.addJob(job_desc)
+        kwargs['callback'] = job_entry.progressRaw
+        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs, finished_slot=finish_slot)
+        threads.add_to_queue(runnable)
+
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
@@ -875,6 +891,9 @@ class JobEntry(QtGui.QWidget):
     def progress(self, i):
         i = int(i*100)
         self.progressbar.setValue(i)
+
+    def progressRaw(self, transfered, total):
+        self.progress(transfered/total)
 
     def pulseStart(self):
         self.progressbar.setRange(0, 0)
@@ -952,6 +971,9 @@ class SFTPTreeWidget(QtGui.QTreeWidget):
         openAction = QtGui.QAction('Open', self)
         downloadAction = QtGui.QAction('Download', self)
         deleteAction = QtGui.QAction('Delete', self)
+        openAction.triggered.connect(self.openActionTriggered)
+        downloadAction.triggered.connect(self.downloadActionTriggered)
+        deleteAction.triggered.connect(self.deleteActionTriggered)
         self.menu.addActions([openAction, downloadAction, deleteAction])
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -985,10 +1007,15 @@ class SFTPTreeWidget(QtGui.QTreeWidget):
             return
         self.addTopLevelItem(item)
 
-    def onDoubleClick(self, item):
-        print item, type(item)
-        print SFTPDirTreeItem
+    @staticmethod
+    def isDir(item):
         if isinstance(item, SFTPDirTreeItem):
+            return True
+        else:
+            return False
+
+    def onDoubleClick(self, item):
+        if self.isDir(item):
             self.path = item.path
             self.refresh()
 
@@ -996,11 +1023,29 @@ class SFTPTreeWidget(QtGui.QTreeWidget):
         if item.childCount() == 0:
             item.getChildren()
 
+    def getSelectedFile(self):
+        item = self.currentItem()
+        fname = None
+        if item is not None:
+            fname = item.text(0)
+        return fname
+
     def openActionTriggered(self):
         pass
 
-    def downloadActionTriggered(self):
-        pass
+    def downloadActionTriggered(self, save_path=None, fslot=None):
+        item = self.currentItem()
+        file = item.text(0)
+        desc = '{0} from {1}'.format(file, self.client.host)
+        args = ('{0}/{1}'.format(self.path, file),)
+        kwargs = {}
+        if save_path is not None:
+            kwargs['localpath'] = save_path
+        if self.isDir(item):
+            method = self.client.get_r
+        else:
+            method = self.client.get
+        self.sigDownload.emit((desc, method, args, kwargs, fslot))
 
     def deleteActionTriggered(self):
         pass

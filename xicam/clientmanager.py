@@ -2,7 +2,7 @@ import threads
 import client
 
 # Some HPC host addresses
-HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 'Bragg': 'bragg.dchp.lbl.gov'}
+HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 'Bragg': 'bragg.dhcp.lbl.gov'}
 
 # Clients and what not
 # bind classes to new names
@@ -21,7 +21,8 @@ def login_wrapper(client_login, *args, **kwargs):
     def handled_login(*args, **kwargs):
         try:
             return client_login(*args, **kwargs)
-        except client.EXCEPTIONS:
+        except client.EXCEPTIONS as e:
+            print e.message
             return
     return handled_login
 
@@ -49,13 +50,10 @@ def logout(client_obj, callback=None):
     threads.add_to_queue(runnable)
 
 
+#TODO implement this to save NIM credentials
 class NIMCredentials(object):
     """Class to save NIM user credentials to avoid inputting them soooo many times"""
     # Is this not secure? I am mangling the names though...
     def __init__(self, user, password):
         self.__user = user
         self.__password = password
-
-
-class NotLoggedInError(Exception):
-    pass
