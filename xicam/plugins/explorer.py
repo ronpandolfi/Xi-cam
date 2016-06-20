@@ -526,50 +526,106 @@ class SpotDatasetExplorer(QtGui.QWidget):
         return items
 
 
-class TabBarPlus(QtGui.QTabBar):
-    """
-    Tab bar that has a plus button floating to the right of the tabs.
-    """
+class SFTPTreeWidget(QtGui.QTreeWidget):
 
-    plusClicked = QtCore.Signal()
+    pathChanged = QtCore.Signal(str)
+    sigDelete = QtCore.Signal()
+    sigOpen = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(tuple)
+    sigTransfer = QtCore.Signal(tuple)
 
-    def __init__(self, parent=None):
-        super(TabBarPlus, self).__init__(parent)
+    def __init__(self, sftp_client, parent=None):
+        super(SFTPTreeWidget, self).__init__(parent=parent)
+        self.client = sftp_client
+        self.path = sftp_client.pwd
 
-        self.plus_button = QtGui.QPushButton(" + ")
-        self.plus_button.setParent(self)
-        self.plus_button.setMaximumSize(32, 32)
-        self.plus_button.setMinimumSize(32, 32)
-        self.plus_button.clicked.connect(self.plusClicked.emit)
-        self.movePlusButton()  # Move to the correct location
-        self.setDocumentMode(True)
+        self.itemExpanded.connect(self.getItemChildren)
+        self.itemDoubleClicked.connect(self.onDoubleClick)
+        self.setHeaderHidden(True)
+        self.refresh()
 
-    def sizeHint(self):
-        sizeHint = QtGui.QTabBar.sizeHint(self)
-        width = sizeHint.width()
-        height = sizeHint.height()
-        return QtCore.QSize(width+32, height)
+        self.menu = QtGui.QMenu(parent=self)
+        openAction = QtGui.QAction('Open', self)
+        downloadAction = QtGui.QAction('Download', self)
+        deleteAction = QtGui.QAction('Delete', self)
+        openAction.triggered.connect(self.openActionTriggered)
+        downloadAction.triggered.connect(self.downloadActionTriggered)
+        deleteAction.triggered.connect(self.deleteActionTriggered)
+        self.menu.addActions([openAction, downloadAction, deleteAction])
 
-    def resizeEvent(self, event):
-        super(TabBarPlus, self).resizeEvent(event)
-        self.movePlusButton()
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
 
-    def tabLayoutChange(self):
-        super(TabBarPlus, self).tabLayoutChange()
-        self.movePlusButton()
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
 
-    def movePlusButton(self):
-        # Find the width of all of the tabs
-        size = 0
-        for i in range(self.count()):
-            size += self.tabRect(i).width()
+    def refresh(self, path=None):
+        self.clear()
+        if path is not None:
+            self.path = path
+            self.client.cd(path)
+        self.client.walktree(self.path, lambda x: self.createTopLevelItem(x, 'file'),
+                             lambda x: self.createTopLevelItem(x, 'dir'),
+                             lambda x: x, recurse=False)
+        self.pathChanged.emit(self.path)
 
-        h = self.geometry().top()
-        w = self.width()
-        if size > w:
-            self.plus_button.move(w, h)
+    def createTopLevelItem(self, path, type):
+        name = os.path.split(path)[-1]
+        if type == 'file':
+            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
+            item = QtGui.QTreeWidgetItem([name], parent=self)
+            item.setIcon(0, icon)
+        elif type == 'dir':
+            name = os.path.split(path)[-1]
+            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
+            item = SFTPDirTreeItem(name, self.client, path, icon, self)
+            item.setIcon(0, icon)
         else:
-            self.plus_button.move(size, h)
+            return
+        self.addTopLevelItem(item)
+
+    @staticmethod
+    def isDir(item):
+        if isinstance(item, SFTPDirTreeItem):
+            return True
+        else:
+            return False
+
+    def onDoubleClick(self, item):
+        if self.isDir(item):
+            self.path = item.path
+            self.refresh()
+
+    def getItemChildren(self, item):
+        if item.childCount() == 0:
+            item.getChildren()
+
+    def getSelectedFile(self):
+        item = self.currentItem()
+        fname = None
+        if item is not None:
+            fname = item.text(0)
+        return fname
+
+    def openActionTriggered(self):
+        pass
+
+    def downloadActionTriggered(self, save_path=None, fslot=None):
+        item = self.currentItem()
+        file = item.text(0)
+        desc = '{0} from {1}'.format(file, self.client.host)
+        args = ('{0}/{1}'.format(self.path, file),)
+        kwargs = {}
+        if save_path is not None:
+            kwargs['localpath'] = save_path
+        if self.isDir(item):
+            method = self.client.get_r
+        else:
+            method = self.client.get
+        self.sigDownload.emit((desc, method, args, kwargs, fslot))
+
+    def deleteActionTriggered(self):
+        pass
 
 
 class MultipleFileExplorer(QtGui.QTabWidget):
@@ -786,6 +842,52 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             self.addTab(self.jobtab, 'Jobs')
 
 
+class TabBarPlus(QtGui.QTabBar):
+    """
+    Tab bar that has a plus button floating to the right of the tabs.
+    """
+
+    plusClicked = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(TabBarPlus, self).__init__(parent)
+
+        self.plus_button = QtGui.QPushButton(" + ")
+        self.plus_button.setParent(self)
+        self.plus_button.setMaximumSize(32, 32)
+        self.plus_button.setMinimumSize(32, 32)
+        self.plus_button.clicked.connect(self.plusClicked.emit)
+        self.movePlusButton()  # Move to the correct location
+        self.setDocumentMode(True)
+
+    def sizeHint(self):
+        sizeHint = QtGui.QTabBar.sizeHint(self)
+        width = sizeHint.width()
+        height = sizeHint.height()
+        return QtCore.QSize(width+32, height)
+
+    def resizeEvent(self, event):
+        super(TabBarPlus, self).resizeEvent(event)
+        self.movePlusButton()
+
+    def tabLayoutChange(self):
+        super(TabBarPlus, self).tabLayoutChange()
+        self.movePlusButton()
+
+    def movePlusButton(self):
+        # Find the width of all of the tabs
+        size = 0
+        for i in range(self.count()):
+            size += self.tabRect(i).width()
+
+        h = self.geometry().top()
+        w = self.width()
+        if size > w:
+            self.plus_button.move(w, h)
+        else:
+            self.plus_button.move(size, h)
+
+
 class JobTable(QtGui.QTableWidget):
     """
     Class with table of download, upload and transfer jobs
@@ -948,107 +1050,6 @@ class SFTPDirTreeItem(LazyTreeItem):
     def handleUnknown(self, path):
         print 'Unknown object found: {0}'.format(path)
 
-
-class SFTPTreeWidget(QtGui.QTreeWidget):
-
-    pathChanged = QtCore.Signal(str)
-    sigDelete = QtCore.Signal()
-    sigOpen = QtCore.Signal(list)
-    sigDownload = QtCore.Signal(tuple)
-    sigTransfer = QtCore.Signal(tuple)
-
-    def __init__(self, sftp_client, parent=None):
-        super(SFTPTreeWidget, self).__init__(parent=parent)
-        self.client = sftp_client
-        self.path = sftp_client.pwd
-
-        self.itemExpanded.connect(self.getItemChildren)
-        self.itemDoubleClicked.connect(self.onDoubleClick)
-        self.setHeaderHidden(True)
-        self.refresh()
-
-        self.menu = QtGui.QMenu(parent=self)
-        openAction = QtGui.QAction('Open', self)
-        downloadAction = QtGui.QAction('Download', self)
-        deleteAction = QtGui.QAction('Delete', self)
-        openAction.triggered.connect(self.openActionTriggered)
-        downloadAction.triggered.connect(self.downloadActionTriggered)
-        deleteAction.triggered.connect(self.deleteActionTriggered)
-        self.menu.addActions([openAction, downloadAction, deleteAction])
-
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.menuRequested)
-
-    def menuRequested(self, position):
-        self.menu.exec_(self.viewport().mapToGlobal(position))
-
-    def refresh(self, path=None):
-        self.clear()
-        if path is not None:
-            self.path = path
-            self.client.cd(path)
-        self.client.walktree(self.path, lambda x: self.createTopLevelItem(x, 'file'),
-                             lambda x: self.createTopLevelItem(x, 'dir'),
-                             lambda x: x, recurse=False)
-        self.pathChanged.emit(self.path)
-
-    def createTopLevelItem(self, path, type):
-        name = os.path.split(path)[-1]
-        if type == 'file':
-            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
-            item = QtGui.QTreeWidgetItem([name], parent=self)
-            item.setIcon(0, icon)
-        elif type == 'dir':
-            name = os.path.split(path)[-1]
-            icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
-            item = SFTPDirTreeItem(name, self.client, path, icon, self)
-            item.setIcon(0, icon)
-        else:
-            return
-        self.addTopLevelItem(item)
-
-    @staticmethod
-    def isDir(item):
-        if isinstance(item, SFTPDirTreeItem):
-            return True
-        else:
-            return False
-
-    def onDoubleClick(self, item):
-        if self.isDir(item):
-            self.path = item.path
-            self.refresh()
-
-    def getItemChildren(self, item):
-        if item.childCount() == 0:
-            item.getChildren()
-
-    def getSelectedFile(self):
-        item = self.currentItem()
-        fname = None
-        if item is not None:
-            fname = item.text(0)
-        return fname
-
-    def openActionTriggered(self):
-        pass
-
-    def downloadActionTriggered(self, save_path=None, fslot=None):
-        item = self.currentItem()
-        file = item.text(0)
-        desc = '{0} from {1}'.format(file, self.client.host)
-        args = ('{0}/{1}'.format(self.path, file),)
-        kwargs = {}
-        if save_path is not None:
-            kwargs['localpath'] = save_path
-        if self.isDir(item):
-            method = self.client.get_r
-        else:
-            method = self.client.get
-        self.sigDownload.emit((desc, method, args, kwargs, fslot))
-
-    def deleteActionTriggered(self):
-        pass
 
 if __name__ == '__main__':
     import client
