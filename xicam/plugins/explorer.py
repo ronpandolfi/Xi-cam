@@ -11,9 +11,8 @@ from functools import partial
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
-from xicam import xglobals
 from xicam import clientmanager as cmanager
-from pipeline import loader,pathtools
+from pipeline import pathtools
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -130,12 +129,12 @@ class RemoteFileView(QtGui.QListWidget):
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self)]
-        # , QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
-        standardActions[0].triggered.connect(lambda: self.onDoubleClick(self.currentItem()))
-        # standardActions[1].triggered.connect(self.handleDeleteAction)
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self),
+        QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
+        standardActions[0].triggered.connect(self.handleOpenAction)
         standardActions[1].triggered.connect(self.handleDownloadAction)
-        # standardActions[3].triggered.connect(self.sigTransfer.emit)
+        standardActions[2].triggered.connect(self.handleDeleteAction)
+        standardActions[3].triggered.connect(self.handleTransferAction)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
@@ -151,17 +150,13 @@ class RemoteFileView(QtGui.QListWidget):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
     def onDoubleClick(self, item):
-        file_name = item.text()
-
-        if '.' in file_name:
-            save_path = os.path.join(tempfile.gettempdir(), file_name)
-            self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
-        elif len(file_name.split('.')) == 1:
+        file_name = item.text(0)
+        if len(file_name.split('.')) == 1:
             path = self.path + '/' + str(file_name)
             self.refresh(path=path)
 
     def getSelectedFilePaths(self):
-        paths = ['{0}/{1}'.format(self.path, str(self.item(i).text())) for i in self.selectedIndexes()]
+        paths = ['{0}/{1}'.format(self.path, item.text()) for item in self.selectedItems()]
         return paths
 
     def getSelectedFile(self):
@@ -177,6 +172,18 @@ class RemoteFileView(QtGui.QListWidget):
         for item in value:
             if item['name'] != '.' and item['name'] != '..':
                 self.addItem(item['name'])
+
+    def handleOpenAction(self):
+        pass
+
+    def handleTransferAction(self):
+        pass
+
+    def handleDownloadAction(self):
+        pass
+
+    def handleDeleteAction(self):
+        pass
 
 
 # This has been replaced with SFTP based client see SFTPFileView
@@ -198,6 +205,20 @@ class RemoteFileView(QtGui.QListWidget):
 #
 #         super(NERSCFileView, self).getDirContents(path, self.system)
 #         super(NERSCFileView, self).refresh(path=path)
+#
+#    def onDoubleClick(self, item):
+#        file_name = item.text()
+#        if '.' in file_name:
+#            save_path = os.path.join(tempfile.gettempdir(), file_name)
+#            self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
+#        super(NERSCFileView, self).onDoubleClick(item)
+#
+#     def handleOpenAction(self):
+#         paths = self.getSelectedFilePaths()
+#         files = [os.path.split(path)[-1] for path in paths]
+#         for file_name in files:
+#             save_path = os.path.join(tempfile.gettempdir(), file_name)
+#             self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
 #
 #     def handleDownloadAction(self, save_path=None, fslot=None):
 #         fpath = super(NERSCFileView, self).handleDownloadAction()
@@ -306,7 +327,8 @@ class SFTPFileView(QtGui.QTreeWidget):
         if path is not None:
             self.path = path
             self.client.cd(path)
-        self.client.walktree(self.path, lambda x: self.createTopLevelItem(x, 'file'),
+        self.client.walktree(self.path,
+                             lambda x: self.createTopLevelItem(x, 'file'),
                              lambda x: self.createTopLevelItem(x, 'dir'),
                              lambda x: x, recurse=False)
         self.pathChanged.emit(self.path)
@@ -318,13 +340,11 @@ class SFTPFileView(QtGui.QTreeWidget):
         name = os.path.split(path)[-1]
         if type == 'file':
             icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
-            item = QtGui.QTreeWidgetItem([name], parent=self)
-            item.setIcon(0, icon)
+            item = SFTPFileTreeItem(name, path, icon, self)
         elif type == 'dir':
             name = os.path.split(path)[-1]
             icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
             item = SFTPDirTreeItem(name, self.client, path, icon, self)
-            item.setIcon(0, icon)
         else:
             return
         self.addTopLevelItem(item)
@@ -340,13 +360,18 @@ class SFTPFileView(QtGui.QTreeWidget):
         if self.isDir(item):
             self.path = item.path
             self.refresh()
+        else:
+            file_name = item.text(0)
+            save_path = [os.path.join(tempfile.gettempdir(), file_name)]
+            self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
     def getItemChildren(self, item):
         if item.childCount() == 0:
             item.getChildren()
 
     def getSelectedFilePaths(self):
-        paths = ['{0}/{1}'.format(self.path, item.text(0)) for item in self.selectedItems()]
+        paths = [item.path for item in self.selectedItems()]
+        print paths
         return paths
 
     def deleteSelection(self):
@@ -357,12 +382,16 @@ class SFTPFileView(QtGui.QTreeWidget):
 
     def handleOpenAction(self):
         paths = self.getSelectedFilePaths()
-        self.sigOpen.emit(paths)
+        save_paths = [os.path.join(tempfile.gettempdir(), os.path.split(path)[-1]) for path in paths]
+        for save_path in save_paths:
+            self.handleDownloadAction(save_paths=[save_path], fslot=(lambda: self.sigOpen.emit([save_path])))
 
-    def handleDownloadAction(self, save_path=None, fslot=None):
+    def handleDownloadAction(self, save_paths=None, fslot=None):
         paths = self.getSelectedFilePaths()
         items = self.selectedItems()
-        for path, item in zip(paths, items):
+        if save_paths is None:
+            save_paths = len(paths) * (None,)
+        for path, item, save_path in zip(paths, items, save_paths):
             name = os.path.split(path)[-1]
             desc = '{0} from {1}'.format(name, self.client.host)
             args = (path,)
@@ -423,7 +452,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
     def getDatasets(self, query):
-        runnable = threads.RunnableMethod(self.client.search, method_args=(query, ),
+        runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
                                           method_kwargs=self.search_params,
                                           callback_slot=self.createDatasetDictionary)
         threads.add_to_queue(runnable)
@@ -743,22 +772,30 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         #                                                         FileExplorer(SFTPTreeWidget(client, self)))
 
         # NERSC tabs based on SFTP
-        add_sftp_explorer = lambda client: self.addFileExplorer(system, FileExplorer(SFTPFileView(client, self)))
-        add_sftp_callback = lambda client: self.loginSuccess(client, add_explorer=add_sftp_explorer)
-        login_callback = lambda client: cmanager.add_sftp_client(system, client, add_sftp_callback)
+        add_sftp_explorer = lambda client: self.addFileExplorer(system,
+                                                                FileExplorer(SFTPFileView(client,self)))
+        add_sftp_callback = lambda client: self.loginSuccess(client,
+                                                             add_explorer=add_sftp_explorer)
+        login_callback = lambda client: cmanager.add_sftp_client(system,
+                                                                 client,
+                                                                 add_sftp_callback)
         sftp_client = partial(cmanager.sftp_client, cmanager.HPC_SYSTEM_ADDRESSES[system])
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, sftp_client), False)
 
     def addSPOTTab(self):
-        add_spot_explorer = lambda client: self.addFileExplorer('SPOT', SpotDatasetExplorer(client, self))
-        login_callback = lambda client: self.loginSuccess(client, add_explorer=add_spot_explorer)
+        add_spot_explorer = lambda client: self.addFileExplorer('SPOT',
+                                                                SpotDatasetExplorer(client, self))
+        login_callback = lambda client: self.loginSuccess(client,
+                                                          add_explorer=add_spot_explorer)
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
 
     def addGlobusTab(self, endpoint):
         add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
                                                                  FileExplorer(GlobusFileView(client, client, self)))
-        add_endpoint_callback = lambda client: self.loginSuccess(client, add_explorer=add_globus_explorer)
-        login_callback = lambda client: cmanager.add_globus_client(endpoint.split('#')[-1], client,
+        add_endpoint_callback = lambda client: self.loginSuccess(client,
+                                                                 add_explorer=add_globus_explorer)
+        login_callback = lambda client: cmanager.add_globus_client(endpoint.split('#')[-1],
+                                                                   client,
                                                                    add_endpoint_callback)
         globus_client = cmanager.globus_client()
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, globus_client.login), False)
@@ -766,8 +803,11 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def addSFTPTab(self):
         add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
                                                                 FileExplorer(SFTPFileView(client, self)))
-        add_sftp_callback = lambda client: self.loginSuccess(client, add_explorer=add_sftp_explorer)
-        login_callback = lambda client: cmanager.add_sftp_client(client.host, client, add_sftp_callback)
+        add_sftp_callback = lambda client: self.loginSuccess(client,
+                                                             add_explorer=add_sftp_explorer)
+        login_callback = lambda client: cmanager.add_sftp_client(client.host,
+                                                                 client,
+                                                                 add_sftp_callback)
         sftp_client = cmanager.sftp_client
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, sftp_client), True)
 
@@ -803,7 +843,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.addTab(self.jobtab, 'Jobs')
 
     def handleDownloadActions(self, name, desc, method, args, kwargs, fslot):
-        if 'save_path' not in kwargs and 'remotepath' not in kwargs:
+        if 'save_path' not in kwargs and 'localpath' not in kwargs:
             fileDialog = QtGui.QFileDialog(self, 'Save as', os.path.expanduser('~'))
             fileDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
             fileDialog.selectFile(name)
@@ -1031,7 +1071,7 @@ class SFTPDirTreeItem(LazyTreeItem):
     def addChildFile(self, path):
         name = os.path.split(path)[-1]
         icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
-        item = QtGui.QTreeWidgetItem([name], parent=self)
+        item = SFTPFileTreeItem(name, path, icon=icon, parent=self)
         item.setIcon(0, icon)
         self.addChild(item)
 
@@ -1045,6 +1085,19 @@ class SFTPDirTreeItem(LazyTreeItem):
 
     def handleUnknown(self, path):
         print 'Unknown object found: {0}'.format(path)
+
+
+class SFTPFileTreeItem(QtGui.QTreeWidgetItem):
+    """
+    SFTP File tree item that saves its path
+    """
+
+    def __init__(self, name, path, icon=None, parent=None):
+        super(SFTPFileTreeItem, self).__init__([name], parent=parent)
+        self.parentItem = parent
+        if icon is not None:
+            self.setIcon(0, icon)
+        self.path = path
 
 
 if __name__ == '__main__':
