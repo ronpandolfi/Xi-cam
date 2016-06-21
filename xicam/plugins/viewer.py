@@ -31,14 +31,14 @@ class plugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        self.bottomwidget = widgets.integrationwidget()
+        self.bottomwidget = widgets.integrationwidget(self.getCurrentTab)
 
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
-                                     capture=self.capture,removecosmics=self.removecosmics)
+                                     capture=self.capture, removecosmics=self.removecosmics)
 
         super(plugin, self).__init__(*args, **kwargs)
 

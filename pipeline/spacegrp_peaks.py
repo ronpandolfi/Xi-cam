@@ -277,11 +277,11 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
     nu = 1 - np.complex(refgamma,refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
-    alphai = np.deg2rad(0.2)
+    alphai = np.deg2rad(0.18)
     k = 2 * np.pi / wavelen
     peaks = list()
     for hkl in HKL:
-        if hkl[2] < 0: continue
+        #if hkl[2] < 0: continue
         if not sgexclusions.check(hkl,space_grp): continue
         if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]

@@ -4,6 +4,7 @@ from PySide import QtCore
 import multiprocessing
 import time
 import pyFAI
+import remesh
 
 
 def radialintegrate(dimg, cut=None):
@@ -150,7 +151,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None):
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
     centeroverride = None # TODO: reimplement for remeshing
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
@@ -216,7 +217,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     return q, radialprofile, color, requestkey
 
 
-def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, xres=1000, yres=1000):
+def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None, xres=1000, yres=1000):
     print 'Chi integration...'
 
     AI = pyFAI.AzimuthalIntegrator()
@@ -252,7 +253,7 @@ def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], reque
 
     return chi, chiprofile, color, requestkey
 
-def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
+def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
     print 'X integration...'
 
     if mask is not None:
@@ -284,7 +285,7 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
     return qx, xprofile, color, requestkey
 
 
-def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None):
+def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
     print 'Z integration...'
     if mask is not None:
         mask = mask.copy()
@@ -344,3 +345,82 @@ def qintegrate(*args,**kwargs):
     # else:
          return radialintegratepyFAI(*args,**kwargs)
 
+def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey=None, qvrt = None, qpar = None):
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+
+    chi = np.arange(-180,180,360/1000.)
+
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
+    xprofile = np.ma.average(maskeddata, axis=1)
+
+    return chi, xprofile, color, requestkey
+
+def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey=None, qvrt = None, qpar = None):
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    print AIdict
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+
+    q = np.arange(1000)*np.max(qpar)/10000.
+
+    maskeddata = np.ma.masked_array(data, mask=1-mask)
+    zprofile = np.ma.average(maskeddata, axis=0)
+
+    return q, zprofile, color, requestkey
+
+
+def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
+    q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1) # TODO: get incoming angle from header
+    q = np.arange(len(qprofile))*(np.max(qpar)**2 + np.max(qvrt)**2)
+
+    return q, qprofile, color, requestkey
+
+def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
+    return chiintegratepyFAI(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+
+def remeshxintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
+    pass
+
+def remeshzintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    print AIdict
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+
+    q = np.arange(1000) * np.max(AI.qArray(data.shape[::-1]))
+
+    maskeddata = np.ma.masked_array(data, mask=1 - mask)
+    zprofile = np.ma.average(maskeddata, axis=0)
+
+    return q, zprofile, color, requestkey

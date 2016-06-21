@@ -51,6 +51,7 @@ class MyMainWindow():
         with open('gui/style.stylesheet', 'r') as f:
             style = f.read()
         app.setStyleSheet(qdarkstyle.load_stylesheet() + style)
+        app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False)
 
 
 

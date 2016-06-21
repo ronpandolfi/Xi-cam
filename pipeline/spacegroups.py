@@ -419,11 +419,9 @@ class hexagonalparameter(spacegroup):
 
     def __init__(self):
         super(hexagonalparameter, self).__init__(name=self.crystalsystem)
-        self.alpha.setValue(90)
-        self.beta.setValue(90)
+        self.alpha.setValue(60)
+        self.beta.setValue(60)
         self.gamma.setValue(120)
-        self.alpha.setReadonly(True)
-        self.beta.setReadonly(True)
         self.gamma.setReadonly(True)
         self.b.setReadonly(True)
         self.a.sigValueChanged.connect(self._setb)
