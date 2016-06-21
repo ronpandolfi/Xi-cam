@@ -695,20 +695,22 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.tabCloseRequested.connect(self.removeTab)
 
         self.newtabmenu = QtGui.QMenu(None)
-        self.addspot = QtGui.QAction('SPOT', self.newtabmenu)
-        self.addcori = QtGui.QAction('Cori', self.newtabmenu)
-        self.addedison = QtGui.QAction('Edison', self.newtabmenu)
-        self.addbragg = QtGui.QAction('Bragg', self.newtabmenu)
-        self.addglobus = QtGui.QAction('Globus endpoint', self.newtabmenu)
-        self.addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
-        self.standard_actions = {'SPOT': self.addspot, 'Cori': self.addcori, 'Edison': self.addedison,
-                                 'Bragg': self.addbragg, 'SFTP': self.addsftp} #, self.addglobus]
+        addspot = QtGui.QAction('SPOT', self.newtabmenu)
+        addcori = QtGui.QAction('Cori', self.newtabmenu)
+        addedison = QtGui.QAction('Edison', self.newtabmenu)
+        addbragg = QtGui.QAction('Bragg', self.newtabmenu)
+        addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
+        showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
+        self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
+                                 'Bragg': addbragg, 'SFTP': addsftp})
         self.newtabmenu.addActions(self.standard_actions.values())
-        self.addspot.triggered.connect(self.addSPOTTab)
-        self.addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
-        self.addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
-        self.addbragg.triggered.connect(lambda: self.addHPCTab('Bragg'))
-        self.addsftp.triggered.connect(self.addSFTPTab)
+        self.newtabmenu.addAction(showjobtab)
+        addspot.triggered.connect(self.addSPOTTab)
+        addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
+        addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
+        addbragg.triggered.connect(lambda: self.addHPCTab('Bragg'))
+        addsftp.triggered.connect(self.addSFTPTab)
+        showjobtab.triggered.connect(lambda: self.addTab(self.jobtab, 'Jobs'))
 
     def enableActions(self):
         for name, action in self.standard_actions.iteritems():
@@ -789,16 +791,18 @@ class MultipleFileExplorer(QtGui.QTabWidget):
                                                           add_explorer=add_spot_explorer)
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
 
-    def addGlobusTab(self, endpoint):
-        add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
-                                                                 FileExplorer(GlobusFileView(client, client, self)))
-        add_endpoint_callback = lambda client: self.loginSuccess(client,
-                                                                 add_explorer=add_globus_explorer)
-        login_callback = lambda client: cmanager.add_globus_client(endpoint.split('#')[-1],
-                                                                   client,
-                                                                   add_endpoint_callback)
-        globus_client = cmanager.globus_client()
-        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, globus_client.login), False)
+    #TODO add globus tranfer capabilities to SFTP connected machines if they are globus endpoints
+    # This is being replaced by SFTP tabs
+    # def addGlobusTab(self, endpoint):
+    #     add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
+    #                                                              FileExplorer(GlobusFileView(client, client, self)))
+    #     add_endpoint_callback = lambda client: self.loginSuccess(client,
+    #                                                              add_explorer=add_globus_explorer)
+    #     login_callback = lambda client: cmanager.add_globus_client(endpoint.split('#')[-1],
+    #                                                                client,
+    #                                                                add_endpoint_callback)
+    #     globus_client = cmanager.globus_client()
+    #     self.sigLoginRequest.emit(partial(cmanager.login, login_callback, globus_client.login), False)
 
     def addSFTPTab(self):
         add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
@@ -1032,7 +1036,6 @@ class JobEntry(QtGui.QWidget):
         self.progress(1)
 
 
-#TODO walktree in a different thread!
 class LazyTreeItem(QtGui.QTreeWidgetItem):
     """
     Base class for a lazy tree item that does not get its children until asked to
@@ -1055,6 +1058,7 @@ class LazyTreeItem(QtGui.QTreeWidgetItem):
         raise NotImplementedError('getChildren method not implemented. This method must be implemented.')
 
 
+#TODO walktree in a different thread!
 class SFTPDirTreeItem(LazyTreeItem):
     """
     SFTP folder tree item that will not retrieve its contents until it is expanded
@@ -1066,6 +1070,15 @@ class SFTPDirTreeItem(LazyTreeItem):
         self.path = path
 
     def getChildren(self):
+        #TODO need to fix how pixmaps are handled when adding tree items with icons, because apparently:
+        #TODO "It is not safe to use pixmaps outside the GUI thread"
+        # runnable = threads.RunnableMethod(self.client.walktree,
+        #                                   method_args=(self.path,
+        #                                                self.addChildFile,
+        #                                                self.addChildDir,
+        #                                                self.handleUnknown),
+        #                                   method_kwargs={'recurse': False})
+        # threads.add_to_queue(runnable)
         self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
 
     def addChildFile(self, path):
