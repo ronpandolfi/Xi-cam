@@ -210,11 +210,11 @@ def scanparaslines(lines):
     for line in lines:
         cells = filter(None, re.split('[=:]+', line))
 
-        key = cells[0]
+        key = cells[0].strip()
 
         if cells.__len__() == 2:
             cells[1] = cells[1].split('/')[0]
-            paras[key] = cells[1]
+            paras[key] = cells[1].strip()
         elif cells.__len__() == 1:
             paras[key] = ''
 
