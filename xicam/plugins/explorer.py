@@ -295,6 +295,7 @@ class GlobusFileView(RemoteFileView):
 class SFTPFileView(QtGui.QTreeWidget):
 
     pathChanged = QtCore.Signal(str)
+    sigAddTopLevelItem = QtCore.Signal(str, str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
@@ -304,6 +305,8 @@ class SFTPFileView(QtGui.QTreeWidget):
         super(SFTPFileView, self).__init__(parent=parent)
         self.client = sftp_client
         self.path = sftp_client.pwd
+
+        self.sigAddTopLevelItem.connect(self.addTopLevelItem)
 
         self.itemExpanded.connect(self.getItemChildren)
         self.itemDoubleClicked.connect(self.onDoubleClick)
@@ -327,16 +330,25 @@ class SFTPFileView(QtGui.QTreeWidget):
         if path is not None:
             self.path = path
             self.client.cd(path)
-        self.client.walktree(self.path,
-                             lambda x: self.createTopLevelItem(x, 'file'),
-                             lambda x: self.createTopLevelItem(x, 'dir'),
-                             lambda x: x, recurse=False)
-        self.pathChanged.emit(self.path)
+        runnable = threads.RunnableMethod(self.client.walktree,
+                                          method_args=(self.path,
+                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
+                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'dir'),
+                                                       lambda: None),
+                                          method_kwargs={'recurse': False},
+                                          finished_slot=lambda: self.pathChanged.emit(self.path))
+        threads.add_to_queue(runnable)
+        # Or on gui thread
+        # self.client.walktree(self.path,
+        #                      lambda x: self.createTopLevelItem(x, 'file'),
+        #                      lambda x: self.createTopLevelItem(x, 'dir'),
+        #                      lambda x: x, recurse=False)
+        # self.pathChanged.emit(self.path)
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
-    def createTopLevelItem(self, path, type):
+    def addTopLevelItem(self, path, type):
         name = os.path.split(path)[-1]
         if type == 'file':
             icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File)
@@ -347,7 +359,7 @@ class SFTPFileView(QtGui.QTreeWidget):
             item = SFTPDirTreeItem(name, self.client, path, icon, self)
         else:
             return
-        self.addTopLevelItem(item)
+        super(SFTPFileView, self).addTopLevelItem(item)
 
     @staticmethod
     def isDir(item):
@@ -837,7 +849,8 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             self.sigOpen.emit(paths)
 
     def handleDeleteActions(self, paths):
-        r = QtGui.QMessageBox.warning(self, 'Delete file', 'Are you sure you want to delete {}'.format(paths),
+        r = QtGui.QMessageBox.warning(self, 'Delete file',
+                                      'Are you sure you want to delete\n{}?'.format(',\n'.join(paths)),
                                        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
         if r == QtGui.QMessageBox.Yes:
             self.currentWidget().file_view.deleteSelection()
@@ -1059,27 +1072,32 @@ class LazyTreeItem(QtGui.QTreeWidgetItem):
 
 
 #TODO walktree in a different thread!
-class SFTPDirTreeItem(LazyTreeItem):
+class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
     """
     SFTP folder tree item that will not retrieve its contents until it is expanded
     """
+    sigAddChildFile = QtCore.Signal(str)
+    sigAddChildDir = QtCore.Signal(str)
 
     def __init__(self, name, client, path, icon=None, parent=None):
-        super(SFTPDirTreeItem, self).__init__(name, icon, parent)
+        # super(SFTPDirTreeItem, self).__init__(name, icon, parent)
+        LazyTreeItem.__init__(self, name, icon, parent)
+        QtCore.QObject.__init__(self, parent=parent)
         self.client = client
         self.path = path
+        self.sigAddChildFile.connect(self.addChildFile)
+        self.sigAddChildDir.connect(self.addChildDir)
 
     def getChildren(self):
-        #TODO need to fix how pixmaps are handled when adding tree items with icons, because apparently:
-        #TODO "It is not safe to use pixmaps outside the GUI thread"
-        # runnable = threads.RunnableMethod(self.client.walktree,
-        #                                   method_args=(self.path,
-        #                                                self.addChildFile,
-        #                                                self.addChildDir,
-        #                                                self.handleUnknown),
-        #                                   method_kwargs={'recurse': False})
-        # threads.add_to_queue(runnable)
-        self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
+        runnable = threads.RunnableMethod(self.client.walktree,
+                                          method_args=(self.path,
+                                                       self.sigAddChildFile.emit,
+                                                       self.sigAddChildDir.emit,
+                                                       self.handleUnknown),
+                                          method_kwargs={'recurse': False})
+        threads.add_to_queue(runnable)
+        # or on gui thread
+        # self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
 
     def addChildFile(self, path):
         name = os.path.split(path)[-1]
