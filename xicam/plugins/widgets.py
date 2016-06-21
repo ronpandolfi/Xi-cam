@@ -941,7 +941,7 @@ class dimgViewer(QtGui.QWidget):
 
             dataregion = self.dimg.rawdata[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
             maskregion = self.dimg.mask[lowerleft[0]:topright[0], lowerleft[1]:topright[1]]
-            guesspath = self.paths[0]
+            guesspath = self.filepaths[0]
 
             qpar_min = self.getq(*lowerleft, mode='parallel') * 10
             qvrt_min = self.getq(*lowerleft, mode='z') * 10
