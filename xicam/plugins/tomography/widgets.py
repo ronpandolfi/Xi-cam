@@ -366,7 +366,7 @@ class ROImageOverlay(pg.ROI):
 
         return self._image_overlap
 
-    def updateImage(self, autolevels=None):
+    def updateImage(self, autolevels=False):
         self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
 
     def translate(self, *args, **kwargs):
