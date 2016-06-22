@@ -5,6 +5,7 @@ from xicam import xglobals
 import importlib
 from pipeline import msg
 import os
+import pkgutil
 
 modules = []
 plugins = OrderedDict()
@@ -14,20 +15,23 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
 
 def initplugins(placeholders):
     global plugins, modules
-    modules = [module for module in os.listdir(os.path.dirname(__file__)) if '.pyc' not in module and module not in ['widgets.py','login.py','base.py','explorer.py','spew','__init__.py']]
-    for i in range(len(modules)):
+
+    packages = pkgutil.iter_modules(__path__, '.')
+    print 'packages:',packages
+    packages = [pkg for pkg in packages if pkg[1] not in ['.widgets', '.login', '.base', '.explorer', '.__init__']]
+    print 'packages:', packages
+
+    for importer, modname, ispkg in packages:
         try:
-            modules[i] = importlib.import_module('.' + modules[i].replace('.py',''),'xicam.plugins')
+            print "Found plugin %s (is a package: %s)" % (modname, ispkg)
+            modules.append(importlib.import_module(modname,'xicam.plugins'))
+            print "Imported", modules[-1]
         except ImportError as ex:
-            msg.logMessage('Module could not be loaded: ' + modules[i])
+            msg.logMessage('Module could not be loaded: ' + modname)
             msg.logMessage(ex.message)
 
-
-
-
-
-
     for module in modules:
+        print module.__name__
         if type(module) is str: continue
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
