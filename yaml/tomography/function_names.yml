@@ -38,7 +38,7 @@ Region of Interest:
 Padding:
 - pad
 - tomopy
-Outlier Removal:
+Remove Outliers:
 - remove_outlier
 - tomopy
 Polar Mean Filter:
