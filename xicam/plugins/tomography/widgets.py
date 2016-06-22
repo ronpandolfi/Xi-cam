@@ -139,7 +139,10 @@ class TomoViewer(QtGui.QWidget):
         self.cor = value
 
     def runSlicePreview(self):
-        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.addSlicePreview))
+        slice_no = self.sinogramViewer.view_spinBox.value()
+        print slice_no
+        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, partial(self.addSlicePreview,
+                                                                                   slice_no=slice_no)))
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
@@ -149,8 +152,8 @@ class TomoViewer(QtGui.QWidget):
     def runFullRecon(self, proj, sino, nchunk, ncore, update_call):
         fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call, self.fullReconFinished)
 
-    def addSlicePreview(self, params, recon):
-        self.previewViewer.addPreview(np.rot90(recon[0],1), params)
+    def addSlicePreview(self, params, recon, slice_no):
+        self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
     def add3DPreview(self, params, recon):
@@ -442,7 +445,6 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
 
         self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
-
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
@@ -451,7 +453,11 @@ class ProjectionViewer(QtGui.QWidget):
         olabel = QtGui.QLabel('Offset:')
         self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
         self.centerBox.setDecimals(1)
-        self.setCenterButton = QtGui.QPushButton('Set in Pipeline')
+        self.setCenterButton = QtGui.QToolButton()
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/check_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setCenterButton.setIcon(icon)
+        self.setCenterButton.setToolTip('Set center in pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
         originBox.setText('x={}   y={}'.format(0, 0))
         center = center if center is not None else data.shape[1]/2.0
@@ -599,29 +605,49 @@ class PreviewViewer(QtGui.QSplitter):
         self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
         self.datatrees = deque(maxlen=self.maxpreviews)
         self.data = deque(maxlen=self.maxpreviews)
+        self.slice_numbers = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
-
-        l = QtGui.QVBoxLayout()
-        l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
-        self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set As Pipeline")
-        l.addWidget(self.functionform)
-        l.addWidget(self.setPipelineButton)
+
+        self.deleteButton = QtGui.QToolButton(self)
+        self.deleteButton.setToolTip('Delete this preview')
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.deleteButton.setIcon(icon)
+
+        self.setPipelineButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/check_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setPipelineButton.setIcon(icon)
+        self.setPipelineButton.setToolTip('Set as pipeline')
+
+        ly = QtGui.QVBoxLayout()
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
+        ly.addWidget(self.functionform)
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(self.setPipelineButton)
+        h.addWidget(self.deleteButton)
+        ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.setLayout(l)
+        panel.setLayout(ly)
+        self.setPipelineButton.hide()
+        self.deleteButton.hide()
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
         self.imageview.ui.roiBtn.setParent(None)
+        self.imageview.ui.menuBtn.setParent(None)
 
-        self.deleteButton = QtGui.QPushButton(self.imageview)
-        self.deleteButton.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.deleteButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 1, 1, 1)
+        self.view_label = QtGui.QLabel(self)
+        self.view_label.setText('No: ')
+        self.view_number = QtGui.QSpinBox(self)
+        self.view_number.setReadOnly(True)
+        self.view_number.setMaximum(5000) # Large enough number
+        self.imageview.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(panel)
@@ -636,18 +662,23 @@ class PreviewViewer(QtGui.QSplitter):
     def indexChanged(self, index, time):
         try:
             self.functionform.setCurrentWidget(self.datatrees[index])
+            self.view_number.setValue(self.slice_numbers[index])
         except IndexError as e:
             print 'index {} does not exist'.format(index)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
-    def addPreview(self, image, funcdata):
+    def addPreview(self, image, funcdata, slice_number):
+        self.deleteButton.show()
+        self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
+        self.slice_numbers.appendleft(slice_number)
+        self.view_number.setValue(slice_number)
         self.functionform.addWidget(functree)
         self.imageview.setImage(self.previews)
         self.functionform.setCurrentWidget(functree)
@@ -659,8 +690,11 @@ class PreviewViewer(QtGui.QSplitter):
             del self.previews[idx]
             del self.datatrees[idx]
             del self.data[idx]
+            del self.slice_numbers[idx]
             if len(self.previews) == 0:
                 self.imageview.clear()
+                self.deleteButton.hide()
+                self.setPipelineButton.hide()
             else:
                 self.imageview.setImage(self.previews)
 
@@ -1221,4 +1255,3 @@ class ArrayDeque(deque):
             return super(ArrayDeque, self).__getitem__(dq_item).__getitem__(item)
         else:
             return super(ArrayDeque, self).__getitem__(item)
-
