@@ -20,7 +20,7 @@ def main():
     xglobals.app = app
     pixmap = QtGui.QPixmap(os.path.join(os.getcwd(), "gui/splash.gif"))
     print 'CWD:', os.getcwd()
-    if True: # Disable to bypass splashscreen for testing on windows
+    if True:  # Disable to bypass splashscreen for testing on windows
         splash = SplashScreen(pixmap, f=QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.SplashScreen)
         splash.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         splash.setMask(pixmap.mask())

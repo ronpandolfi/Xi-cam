@@ -84,8 +84,8 @@ class MyMainWindow():
 
         plugins.plugins['MOTD'].instance.activate()
 
-        plugins.base.fileexplorer.sigOpenFiles.connect(self.openfiles)
-        plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.openActionTriggered)
+        plugins.base.fileexplorer.sigOpen.connect(self.openfiles)
+        plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.handleOpenAction)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
         self.ui.modemenu.addWidget(pluginmode)

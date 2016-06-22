@@ -29,6 +29,7 @@ class LoginDialog(QtGui.QWidget):
 
         self.ui.login_button.clicked.connect(self.handleLogin)
         self.ui.pass_box.returnPressed.connect(self.handleLogin)
+        self.ui.host_box.returnPressed.connect(self.handleLogin)
         self.ui.logout_button.clicked.connect(self.handleLogout)
         self.setStyleSheet('background-color:#111111;')
 
@@ -39,29 +40,59 @@ class LoginDialog(QtGui.QWidget):
         l.addWidget(self.ui)
         self.setLayout(l)
 
+        self._login_slot = None
+
+    @property
+    def login_slot(self):
+        return self._login_slot
+
+    @login_slot.setter
+    def login_slot(self, slot):
+        if self.login_slot is not None:
+            self.loginClicked.disconnect(self.login_slot)
+        self._login_slot = slot
+        self.loginClicked.connect(self._login_slot)
+
+    @QtCore.Slot(QtCore.Signal, bool)
+    def loginRequest(self, login_clicked_slot, show_host=False):
+        if show_host:
+            self.ui.host_box.show()
+        else:
+            self.ui.host_box.hide()
+        self.ui.user_box.setFocus()
+        self.login_slot = login_clicked_slot
+        self.setCurrentWidget(self.ui.login_page)
+        self.show()
 
     def handleLogin(self):
-        usr, pwd= self.ui.user_box.text(), self.ui.pass_box.text()
+        host, usr, pwd = self.ui.host_box.text(), self.ui.user_box.text(), self.ui.pass_box.text()
         if usr == '':
             QtGui.QMessageBox.warning(self, 'Username missing', 'You forgot to mention who you are!')
         elif pwd == '':
             QtGui.QMessageBox.warning(self, 'Password missing',
                                       'You need to provide proof that you really are {}!'.format(usr))
+        elif host == '' and not self.ui.host_box.isHidden():
+            QtGui.QMessageBox.warning(self, 'Host missing',
+                                      'Xi-cam can not guess what host you want to connect to yet!')
         else:
             self.setCurrentWidget(self.ui.progress_page)
             self.progressMessage('Logging in...')
             self.startProgress()
-            self.loginClicked.emit((usr, pwd))
+            credentials = {'username': usr, 'password': pwd} if self.ui.host_box.isHidden() \
+                else {'username': usr, 'password': pwd, 'host': host}
+            self.loginClicked.emit(credentials)
 
-    def loginSuccessful(self, status):
+    def loginSuccessful(self, status, client_callback=None):
         self.stopProgress()
+        self.setCurrentWidget(self.ui.login_page)
         if status is True:
-            self.ui.user_label.setText('Welcome {}'.format(self.ui.user_box.text()))
-            self.setCurrentWidget(self.ui.logged_page)
+            for box in (self.ui.pass_box, self.ui.user_box, self.ui.host_box):
+                box.clear()
+            self.hide()
         else:
-            self.setCurrentWidget(self.ui.login_page)
-        self.ui.pass_box.clear()
+            self.ui.pass_box.clear()
         self.sigLoggedIn.emit(status)
+
 
     def setCurrentWidget(self, widget):
         self.ui.stackedWidget.setCurrentWidget(widget)
