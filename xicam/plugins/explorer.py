@@ -819,21 +819,23 @@ class JobTable(QtGui.QTableWidget):
 
     @QtCore.Slot(str, object, list, dict)
     def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
-        job_entry = self.addJob(job_desc) #TODO add interrupt signal to job entries!
-        runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
-                                            callback_slot=job_entry.progress, finished_slot=finish_slot,
-                                            interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        job_entry = self.addJob(job_desc)
+        job_entry.sigRemove.connect(self.removeJob)
+        job = threads.iterator(generator, callback_slot=job_entry.progress, finished_slot=finish_slot,
+                               interrupt_signal=job_entry.sigCancel)
+        job(*args, **kwargs)
+        # runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
+        #                                     callback_slot=job_entry.progress, finished_slot=finish_slot,
+        #                                     interrupt_signal=job_entry.sigCancel)
+        # threads.add_to_queue(runnable)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
         job_entry.sigRemove.connect(self.removeJob)
         job_entry.pulseStart()
-        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
-                                          finished_slot=job_entry.pulseStop,
-                                          interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        job = threads.iterator(method, finished_slot=job_entry.pulseStop, interrupt_signal=job_entry.sigCancel)
+        job(*args, **kwargs)
 
     def removeJob(self, jobentry):
         jobentry.cancel()
