@@ -451,7 +451,6 @@ class ProjectionViewer(QtGui.QWidget):
 
         self.cor_widget = QtGui.QWidget(self)
         clabel = QtGui.QLabel('Rotation Center:')
-        clabel.setAlignment(QtCore.Qt.AlignRight)
         olabel = QtGui.QLabel('Offset:')
         self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
         self.centerBox.setDecimals(1)
@@ -534,7 +533,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi.updateImage()
 
     def setCenter(self, x, y):
-        center = (self.data.shape[1] + x)/2.0
+        center = (self.data.shape[1] + x)/2.0 - 0.5 # subtract half a pixel out of 'some' convention?
         self.centerBox.setValue(center) # setText(str(center))
         self.sigCenterChanged.emit(center)
 
