@@ -1301,11 +1301,6 @@ class diffimage2(object):
         img = img * marginmask + symimg * padmask * (1 - marginmask)
         return img
 
-    def imtest(self,img):
-        from matplotlib import pylab as plt
-        plt.imshow(img)
-        plt.show()
-
     def __getattr__(self, name):
        if name in self.cache:
            return self.cache[name]
