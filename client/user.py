@@ -21,6 +21,7 @@ class User(object):
     def login(self, username):
         self.username = username
         self.logged_in = True
+        return self
 
     def logout(self):
         self.logged_in = False
