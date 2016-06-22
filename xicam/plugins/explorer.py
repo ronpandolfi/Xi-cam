@@ -561,6 +561,8 @@ class TabBarPlus(QtGui.QTabBar):
     def __init__(self, parent=None):
         super(TabBarPlus, self).__init__(parent)
 
+        self.setDocumentMode(True)
+
         self.plus_button = QtGui.QPushButton(" + ")
         self.plus_button.setParent(self)
         self.plus_button.setMaximumSize(32, 32)
