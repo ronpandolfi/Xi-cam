@@ -533,7 +533,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi.updateImage()
 
     def setCenter(self, x, y):
-        center = (self.data.shape[1] + x)/2.0 - 0.5 # subtract half a pixel out of 'some' convention?
+        center = (self.data.shape[1] + x - 1)/2.0# subtract half a pixel out of 'some' convention?
         self.centerBox.setValue(center) # setText(str(center))
         self.sigCenterChanged.emit(center)
 
@@ -550,8 +550,8 @@ class ProjectionViewer(QtGui.QWidget):
 
     def updateROIFromCenter(self, center):
         s = self.roi.pos()[0]
-        self.roi.translate(pg.Point((2 * center - self.data.shape[1] - s, 0)))
-
+        self.roi.translate(pg.Point((2 * center + 1 - self.data.shape[1] - s, 0))) # 1 again due to the so-called COR
+                                                                                   # conventions...
     def flipOverlayProj(self, val):
         self.roi.flipCurrentImage()
         self.roi.updateImage()
