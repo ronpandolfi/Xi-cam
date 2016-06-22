@@ -13,7 +13,7 @@ w = QtGui.QSplitter()
 w.setOrientation(QtCore.Qt.Vertical)
 w.setContentsMargins(0, 0, 0, 0)
 l = QtGui.QVBoxLayout()
-l.setContentsMargins(0, 0, 0, 0)
+l.setContentsMargins(0, 10, 0, 0)
 l.setSpacing(0)
 
 fileexplorer = explorer.MultipleFileExplorer(w)

@@ -32,7 +32,6 @@ def initplugins(placeholders):
 
     for module in modules:
         print module.__name__
-        if type(module) is str: continue
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
