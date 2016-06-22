@@ -152,7 +152,9 @@ class TomoViewer(QtGui.QWidget):
     def runFullRecon(self, proj, sino, nchunk, ncore, update_call):
         fmanager.run_full_recon(self, proj, sino, nchunk, ncore, update_call, self.fullReconFinished)
 
-    def addSlicePreview(self, params, recon, slice_no):
+    def addSlicePreview(self, params, recon, slice_no=None):
+        if slice_no is None:
+            slice_no = self.sinogramViewer.view_spinBox.value()
         self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
 
