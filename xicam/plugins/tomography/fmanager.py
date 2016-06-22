@@ -263,7 +263,7 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
             correct_center(func)
 
         p = update_function_partial(func.partial, func.func_name, func.args_complement, widget,
-                                    param_dict=deepcopy(func.getParamDict(update=update)),
+                                    param_dict=params[func.func_name][func.subfunc_name],
                                     input_partials=func.input_partials, slc=slc)
         funstack.append(p)
         if func.input_functions is not None:
@@ -293,7 +293,7 @@ def update_function_partial(fpartial, name, argnames, datawidget, param_dict=Non
             if slices is not None:
                 map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
             kwargs[pname] = ipartial(*pargs)
-            if param_dict is not None:
+            if param_dict is not None and pname in param_dict.keys():
                 param_dict[pname] = kwargs[pname]
             if pname == 'center':
                 if cor_offset is None:
