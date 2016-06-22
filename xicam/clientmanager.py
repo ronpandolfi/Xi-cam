@@ -19,12 +19,14 @@ globus_clients = {}
 
 def login_wrapper(client_login, *args, **kwargs):
     """Decorator to catch all login errors from NEWT, Globus, and PySFTP/Paramiko"""
+
     def handled_login(*args, **kwargs):
         try:
             return client_login(*args, **kwargs)
         except client.EXCEPTIONS as e:
             print e.message
             return
+
     return handled_login
 
 
@@ -58,7 +60,7 @@ def logout(client_obj, callback=None):
     threads.add_to_queue(runnable)
 
 
-#TODO implement this to save NIM credentials
+# TODO implement this to save NIM credentials
 class NIMCredentials(object):
     """Class to save NIM user credentials to avoid inputting them soooo many times"""
     # Is this not secure? I am mangling the names though...

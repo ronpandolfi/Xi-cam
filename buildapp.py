@@ -47,8 +47,8 @@ OPTIONS = {'argv_emulation': False,
            'iconfile': 'gui/icon.icns',
            'plist': {
                'CFBundleName': 'Xi-cam',
-               'CFBundleShortVersionString': '1.2.2',  # must be in X.X.X format
-               'CFBundleVersion': '1.2.2',
+               'CFBundleShortVersionString': '1.2.4',  # must be in X.X.X format
+               'CFBundleVersion': '1.2.4',
                'CFBundleIdentifier': 'com.lbnl.xicam',  # optional
                'NSHumanReadableCopyright': '@ 2016',  # optional
                'CFBundleDevelopmentRegion': 'English',  #optional - English is default

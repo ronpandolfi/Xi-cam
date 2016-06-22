@@ -130,7 +130,7 @@ class RemoteFileView(QtGui.QListWidget):
 
         self.menu = QtGui.QMenu()
         standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self),
-        QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
+                           QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
         standardActions[1].triggered.connect(self.handleDownloadAction)
         standardActions[2].triggered.connect(self.handleDeleteAction)
@@ -188,7 +188,7 @@ class RemoteFileView(QtGui.QListWidget):
 
 # This has been replaced with SFTP based client see SFTPFileView
 # class NERSCFileView(RemoteFileView):
-#     """
+# """
 #     File explorer for NERSC systems, must be passed a client and a worker to make REST calls
 #     """
 #
@@ -273,17 +273,17 @@ class GlobusFileView(RemoteFileView):
             name = os.path.split(path)[-1]
             method = self.client.transfer_generator
             desc = '{0} from {1}.'.format(name, self.endpoint)
-            args = [self.endpoint, path, 'LOCAL ENDPOINT'] #TODO Local endpoint again....
+            args = [self.endpoint, path, 'LOCAL ENDPOINT']  # TODO Local endpoint again....
             kwargs = {}
             self.sigDownload.emit(name, desc, method, args, kwargs, fslot)
 
     def handleTransferAction(self):
-        #TODO implement this
+        # TODO implement this
         paths = super(GlobusFileView, self).getSelectedFilePaths()
         for path in paths:
             method = self.client.transfer_generator
             desc = '{0} from {1}.'.format(os.path.split(path)[-1], self.endpoint)
-            args = [self.endpoint, path, 'DEST ENDPOINT'] #TODO Dest endpoint geeet it....
+            args = [self.endpoint, path, 'DEST ENDPOINT']  # TODO Dest endpoint geeet it....
             kwargs = {}
             return desc, method, args, kwargs
 
@@ -293,7 +293,6 @@ class GlobusFileView(RemoteFileView):
 
 
 class SFTPFileView(QtGui.QTreeWidget):
-
     pathChanged = QtCore.Signal(str)
     sigAddTopLevelItem = QtCore.Signal(str, str)
     sigDelete = QtCore.Signal(list)
@@ -340,7 +339,7 @@ class SFTPFileView(QtGui.QTreeWidget):
         threads.add_to_queue(runnable)
         # Or on gui thread
         # self.client.walktree(self.path,
-        #                      lambda x: self.createTopLevelItem(x, 'file'),
+        # lambda x: self.createTopLevelItem(x, 'file'),
         #                      lambda x: self.createTopLevelItem(x, 'dir'),
         #                      lambda x: x, recurse=False)
         # self.pathChanged.emit(self.path)
@@ -507,7 +506,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
 
     def getStagesAndDatasets(self):
         dsets_stages = [(item.parent().parent().text(0), item.parent().text(0))
-         for item in self.selectedItems() if item.childCount() == 0]
+                        for item in self.selectedItems() if item.childCount() == 0]
         return dsets_stages
 
     def getSelectedDatasets(self):
@@ -523,7 +522,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         names = self.getSelectedDatasets()
         stages_dsets = self.getStagesAndDatasets()
         if save_paths is None:
-            save_paths = len(names)*(None, )
+            save_paths = len(names) * (None, )
         for name, stage_dset, save_path in zip(names, stages_dsets, save_paths):
             desc = '{} from SPOT.'.format(name)
             method = self.client.download_dataset_generator
@@ -534,7 +533,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
             self.sigDownload.emit(name, desc, method, args, kwargs, fslot)
 
     def handleTransferAction(self):
-        #TODO need to implement this
+        # TODO need to implement this
         fname = self.getSelectedDatasets()
         stage, dataset = self.getStagesAndDatasets()
         system = self.client.system
@@ -600,7 +599,7 @@ class FileExplorer(QtGui.QWidget):
         self.path_label.setText(path)
 
     # def getRawDatasetList(self):
-    #     widget = self.file_view
+    # widget = self.file_view
     #     items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
     #     items = [i.text() for i in items]
     #     return items
@@ -658,17 +657,17 @@ class SpotDatasetExplorer(QtGui.QWidget):
     def getSelectedFilePath(self):
         return os.path.join(*self.file_view.getStagesAndDatasets())
 
-    # def getRawDatasetList(self):
-    #     widget = self.file_view
-    #     items = []
-    #
-    #     parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
-    #     child_items = []
-    #     for item in parent_items:
-    #         child_items += [item.child(i) for i in range(item.childCount())]
-    #     for item in child_items:
-    #         items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
-    #     return items
+        # def getRawDatasetList(self):
+        # widget = self.file_view
+        # items = []
+        #
+        #     parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
+        #     child_items = []
+        #     for item in parent_items:
+        #         child_items += [item.child(i) for i in range(item.childCount())]
+        #     for item in child_items:
+        #         items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
+        #     return items
 
 
 class MultipleFileExplorer(QtGui.QTabWidget):
@@ -714,7 +713,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
         self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
-                                 'Bragg': addbragg, 'SFTP': addsftp})
+                                             'Bragg': addbragg, 'SFTP': addsftp})
         self.newtabmenu.addActions(self.standard_actions.values())
         self.newtabmenu.addAction(showjobtab)
         addspot.triggered.connect(self.addSPOTTab)
@@ -779,7 +778,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def addHPCTab(self, system):
         # # NERSC tabs based on NEWT API
         # add_nersc_explorer = lambda client: self.addFileExplorer(system.capitalize(),
-        #                                                          FileExplorer(NERSCFileView(client, system, self)))
+        # FileExplorer(NERSCFileView(client, system, self)))
         # login_callback = lambda client: self.loginSuccess(client, add_explorer=add_nersc_explorer)
         # self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
         # add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
@@ -787,7 +786,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         # NERSC tabs based on SFTP
         add_sftp_explorer = lambda client: self.addFileExplorer(system,
-                                                                FileExplorer(SFTPFileView(client,self)))
+                                                                FileExplorer(SFTPFileView(client, self)))
         add_sftp_callback = lambda client: self.loginSuccess(client,
                                                              add_explorer=add_sftp_explorer)
         login_callback = lambda client: cmanager.add_sftp_client(system,
@@ -806,7 +805,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     #TODO add globus tranfer capabilities to SFTP connected machines if they are globus endpoints
     # This is being replaced by SFTP tabs
     # def addGlobusTab(self, endpoint):
-    #     add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
+    # add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
     #                                                              FileExplorer(GlobusFileView(client, client, self)))
     #     add_endpoint_callback = lambda client: self.loginSuccess(client,
     #                                                              add_explorer=add_globus_explorer)
@@ -851,7 +850,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleDeleteActions(self, paths):
         r = QtGui.QMessageBox.warning(self, 'Delete file',
                                       'Are you sure you want to delete\n{}?'.format(',\n'.join(paths)),
-                                       QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                                      QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
         if r == QtGui.QMessageBox.Yes:
             self.currentWidget().file_view.deleteSelection()
 
@@ -907,7 +906,7 @@ class TabBarPlus(QtGui.QTabBar):
         sizeHint = QtGui.QTabBar.sizeHint(self)
         width = sizeHint.width()
         height = sizeHint.height()
-        return QtCore.QSize(width+32, height)
+        return QtCore.QSize(width + 32, height)
 
     def resizeEvent(self, event):
         super(TabBarPlus, self).resizeEvent(event)
@@ -1071,7 +1070,7 @@ class LazyTreeItem(QtGui.QTreeWidgetItem):
         raise NotImplementedError('getChildren method not implemented. This method must be implemented.')
 
 
-#TODO walktree in a different thread!
+# TODO walktree in a different thread!
 class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
     """
     SFTP folder tree item that will not retrieve its contents until it is expanded
@@ -1135,6 +1134,7 @@ if __name__ == '__main__':
     import client
     import getpass
     import sys
+
     passw = getpass.getpass()
     client = client.sftp.SFTPClient('bl832viz2.dhcp.lbl.gov', username='lbluque', password=passw)
     app = QtGui.QApplication(sys.argv)
