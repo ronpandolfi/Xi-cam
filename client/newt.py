@@ -33,6 +33,7 @@ class NewtClient(User):
             return super(NewtClient, self).login(username)
         else:
             self.authentication = None
+            raise NEWTError('Bad Authentication: Unable to log in')
 
     def logout(self):
         self.authentication = self.post(self.BASE_URL + '/logout')
