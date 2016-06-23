@@ -394,15 +394,37 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     AI.setPyFAI(**AIdict)
 
     qpar, qvrt = remesh.remeshqarray(data, None, AI, .1) # TODO: get incoming angle from header
-    q = np.arange(len(qprofile))*(np.max(qpar)**2 + np.max(qvrt)**2)
+    print 'maxq:',np.sqrt(np.max(qpar**2 + qvrt**2))/10.
+    q = np.arange(len(qprofile))*np.sqrt(np.max(qpar**2 + qvrt**2))/len(qprofile)/10.
 
     return q, qprofile, color, requestkey
 
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
+    np.save('data.npy',data)
+    np.save('mask.npy',mask)
     return chiintegratepyFAI(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
 def remeshxintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
-    pass
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    print AIdict
+
+    if not mask.shape == data.shape:
+        print "No mask match. Mask will be ignored."
+        mask = np.ones_like(data)
+        print 'emptymask:', mask.shape
+
+    if cut is not None:
+        print 'cut:', cut.shape
+        mask &= cut.astype(bool)
+
+    center = np.where(qvrt == qvrt.min())
+    qx = qvrt[center[1]]
+
+    maskeddata = np.ma.masked_array(data, mask=1 - mask)
+    xprofile = np.ma.average(maskeddata, axis=0)
+
+    return qx, xprofile, color, requestkey
 
 def remeshzintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()

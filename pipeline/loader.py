@@ -1359,7 +1359,7 @@ class singlefilediffimage2(diffimage2):
         if self.cakemode:
             img = self.cakemask
         elif self.remeshmode:
-            img = self.remesh(img, self.mask)
+            img = self.remesh(img, self.mask)>0
 
         return img
 
