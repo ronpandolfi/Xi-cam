@@ -316,7 +316,7 @@ def run_preview_recon(funstack, initializer, callback):
         reset_cor()
 
 
-def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_call=None):
+def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None, finish_call=None):
     global functions
     lock_function_params(True)
     partials, params = [], OrderedDict()
@@ -329,20 +329,20 @@ def run_full_recon(widget, proj, sino, nchunk, ncore, update_call=None, finish_c
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
-    runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, nchunk, ncore)
+    runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, sino_p_chunk, ncore)
     runnable_it.emitter.sigFinished.connect(finish_call)
     threads.queue.put(runnable_it)
     return params
 #TODO have current recon parameters in run console or in recon view...
 
 
-def _recon_iter(datawidget, partials, proj, sino, nchunk, ncore):
+def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
     write_start = sino[0]
-    total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
-    nsino = (total_sino - 1) // nchunk + 1
+    total_sino = (sino[1] - sino[0]) // sino[2]
+    nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
     for i in range(nchunk):
         init = True
-        start, end = i * nsino + sino[0], (i + 1) * nsino + sino[0]
+        start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]
         for name, fpartial, argnames, ipartials in partials:
             fpartial = update_function_partial(fpartial, name, argnames, datawidget,
                                                slc=(slice(*proj), slice(start, end, sino[2])),

@@ -131,13 +131,12 @@ class plugin(base.plugin):
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
-            chunks = ((end - start) // step - 1) // ui.configparams.child('Sinograms/Chunk').value() + 1
-            print chunks
+            # chunks = ((end - start) // step - 1) // ui.configparams.child('Sinograms/Chunk').value() + 1
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),
                                                (start, end, step),
-                                               chunks,
+                                               ui.configparams.child('Sinograms/Chunk').value(),
                                                ui.configparams.child('CPU Cores').value(),
                                                self.console.log2local)
 

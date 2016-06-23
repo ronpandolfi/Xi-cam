@@ -216,12 +216,11 @@ class bl832h5image(fabioimage):
                 start, step = 0, 1
 
             s.append((start, stop, step))
-        shape = ((s[0][1] - s[0][0])//s[0][2],
-                 (s[1][1] - s[1][0] - 1)//s[1][2] + 1,
-                 (s[2][1] - s[2][0] - 1)//s[2][2] + 1)
-        arr = np.empty(shape, dtype=self.data.dtype)
-        for n, it in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            arr[n]= self._dgroup[self.frames[it]][0, slice(*s[1]), slice(*s[2])]
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self._dgroup[self.frames[i]][0, slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
         return arr
