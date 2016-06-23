@@ -164,12 +164,13 @@ class SpotClient(NewtClient):
 
     def download_raw_image(self, dataset, stage, image=None, index=None):
         """
+        Download raw data from an image in a SPOT dataset
 
-        :param dataset:
-        :param stage:
-        :param image:
-        :param fpath:
-        :return:
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: 2D ndarray
         """
 
         images = list(self.list_dataset_images(dataset, stage))
@@ -190,12 +191,13 @@ class SpotClient(NewtClient):
 
     def get_image_download_URLS(self, dataset, stage, image=None, index=None):
         """
+        Get download URL's for a specific image in a SPOT dataset
 
-        :param dataset:
-        :param stage:
-        :param image:
-        :param index:
-        :return:
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: dict with urls to images
         """
         images = list(self.list_dataset_images(dataset, stage))
         if image is None and index is None:
@@ -214,12 +216,13 @@ class SpotClient(NewtClient):
 
     def download_image(self, dataset, stage, save_path= None, ext='png', image=None, index=None):
         """
+        Download a specific image in a dataset as png or tif image
 
-        :param dataset:
-        :param stage:
-        :param image:
-        :param index:
-        :return:
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: 2D ndarray
         """
         if ext not in ('png', 'tif'):
             raise ValueError('ext can only be png or tif')
