@@ -11,7 +11,7 @@ def showMessage(s,timeout=0):
     else:
         logMessage(s)
 
-def logMessage(s,level='info',loggername=None):
+def logMessage(s,level=20,loggername=None):
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
     if loggername is not None:
         loggername = inspect.stack()[1][3]
