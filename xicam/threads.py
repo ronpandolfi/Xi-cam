@@ -9,8 +9,8 @@ import time
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
-# Error is raised if this import is removed probably due to some circular import between xglobals and here
-from client import spot, globus
+# Error is raised if this import is removed probably due to some circular with this module and something???
+from client import spot, globus, sftp
 
 
 QtCore.Signal = QtCore.Signal
