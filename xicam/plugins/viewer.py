@@ -17,7 +17,8 @@ import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
-
+from xicam import config
+import fabio
 
 class plugin(base.plugin):
     name = 'Viewer'
@@ -37,7 +38,7 @@ class plugin(base.plugin):
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
-                                     capture=self.capture)
+                                     capture=self.capture,removecosmics=self.removecosmics)
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -235,8 +236,19 @@ class plugin(base.plugin):
                                    filter=u"EDF (*.edf)")
         dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
         filename, ok = dialog.getSaveFileName()
+        print filename
         if ok and filename:
             fabimg.write(filename)
 
     def capture(self):
         self.getCurrentTab().capture()
+
+    def maskload(self):
+        filename, ok = QtGui.QFileDialog.getOpenFileName(None, 'Load Mask', os.curdir)
+
+        if filename and ok:
+            self.openfiles([filename])
+        config.activeExperiment.addtomask(np.rot90(fabio.open(filename).data,3))
+
+    def removecosmics(self):
+        self.getCurrentTab().removecosmics()

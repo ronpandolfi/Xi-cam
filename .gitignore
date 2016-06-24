@@ -1,5 +1,3 @@
-*.so
-*.ipynb
 .DS_Store
 *.edf
 *.nxs

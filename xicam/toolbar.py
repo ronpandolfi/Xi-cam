@@ -238,7 +238,7 @@ class difftoolbar(QtGui.QToolBar):
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
                         radialsym, mirrorsym, roi, arc, polymask, process=None, video=None, spacegroup=None,
-                        capture=None):
+                        capture=None,removecosmics=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -273,6 +273,10 @@ class difftoolbar(QtGui.QToolBar):
         if capture is not None:
             self.actionCapture.setVisible(True)
             self.actionCapture.triggered.connect(capture)
+
+        if removecosmics is not None:
+            self.actionRemove_Cosmics.setVisible(True)
+            self.actionRemove_Cosmics.triggered.connect(removecosmics)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

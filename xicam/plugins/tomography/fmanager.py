@@ -124,6 +124,7 @@ def update():
     widget = ui.centerwidget.currentWidget()
     if widget is not None:
         widget.widget.wireupCenterSelection(recon_function)
+        set_function_defaults(w.widget.data.header)
 
 
 def load_form(path):
@@ -318,9 +319,9 @@ def update_function_partial(fpartial, name, argnames, datawidget, param_dict=Non
 
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
-        runnable = threads.RunnableMethod(callback, reduce, (lambda f1, f2: f2(f1)), funstack, initializer)
-        runnable.lock = threads.mutex
-        threads.queue.put(runnable)
+        runnable = threads.RunnableMethod(reduce, method_args=((lambda f1, f2: f2(f1)), funstack, initializer),
+                                          callback_slot=callback, lock=threads.mutex)
+        threads.add_to_queue(runnable)
         reset_cor()
 
 
@@ -337,9 +338,10 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None, fi
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
-    runnable_it = threads.RunnableIterator(update_call, _recon_iter, widget, partials, proj, sino, sino_p_chunk, ncore)
-    runnable_it.emitter.sigFinished.connect(finish_call)
-    threads.queue.put(runnable_it)
+    runnable_it = threads.RunnableIterator(_recon_iter, generator_args=(widget, partials, proj, sino, nchunk, ncore,),
+                                           callback_slot=update_call, finished_slot=finish_call,
+                                           interrupt_signal=interrupt_signal)
+    threads.add_to_queue(runnable_it)
     return params
 #TODO have current recon parameters in run console or in recon view...
 

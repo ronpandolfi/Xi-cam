@@ -129,7 +129,7 @@ class TomoViewer(QtGui.QWidget):
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slc]) #slice(*slc[0]), slice(*slc[1]), :])
+            return np.ascontiguousarray(self.data.darks[slc])
 
     def getheader(self):
         return self.data.header
@@ -872,7 +872,6 @@ class VolumeViewer(QtGui.QWidget):
                 bins = 500
 
         kwds['bins'] = bins
-        print kwds
         hist = np.histogram(stepData, **kwds)
 
         return hist[1][:-1], hist[0]
@@ -1257,3 +1256,4 @@ class ArrayDeque(deque):
             return super(ArrayDeque, self).__getitem__(dq_item).__getitem__(item)
         else:
             return super(ArrayDeque, self).__getitem__(item)
+

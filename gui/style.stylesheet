@@ -13,9 +13,7 @@ QWidget {
     outline: 0;
 }
 
-QWidget {
 
-}
 
 QHeaderView::section
 {
@@ -28,9 +26,6 @@ QHeaderView::section
     padding: 6px;
 }
 
-QHeaderView {
-
-}
 
 
 QTreeView, QListView {

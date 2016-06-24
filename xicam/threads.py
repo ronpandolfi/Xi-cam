@@ -34,55 +34,147 @@ class RunnableMethod(QtCore.QRunnable):
     Runnable that will execute a given method from a QThreadPool and emit the response to the given callback function
     """
 
-    def __init__(self, callback_slot, method, *args, **kwargs):
+    def __init__(self, method, method_args=(), method_kwargs={}, callback_slot=None, finished_slot=None,
+                 priority=0, lock=None):
+        """
+        RunnableMethod constructor
+        :param method: function object, method to run on seperate thread
+        :param method_args: tup, positional arguments for method
+        :param method_kwargs: dict, keyword arguments for method
+        :param callback_slot: function object (qt slot), slot to recieve return value of method
+        :param finished_slot: function object (qt slot), slot to recieve void signal if method finishes successfully
+        :param priority: int, priority given to runnable
+        """
         super(RunnableMethod, self).__init__()
         self.emitter = Emitter()
-        self._callback_slot = callback_slot
         self._method = method
-        self.lock = None
-        self.args = args
-        self.kwargs = kwargs
+        self._priority = priority
+        self.lock = lock
+        self.method_args = method_args
+        self.method_kwargs = method_kwargs
 
+        self.setAutoDelete(True)
+
+        # Connect callback and finished slots to corresponding signals
         if callback_slot is not None:
-            self.emitter.sigRetValue.connect(self._callback_slot, QtCore.Qt.QueuedConnection)
+            self.emitter.sigRetValue.connect(callback_slot, QtCore.Qt.QueuedConnection)
+        if finished_slot is not None:
+            self.emitter.sigFinished.connect(finished_slot, QtCore.Qt.QueuedConnection)
 
     def run(self):
+        """
+        Override virtual run method of QRunnable base class
+        """
+
         # print 'Started {0} in thread {1}, will emit back to {2}'.format(self._method.__name__,
         #                                                                 QtCore.QThread.currentThread(),
         #                                                                 self._callback_slot.__name__)
-        # self.emitter.sigFinished.connect(self._callback_slot)  # Connect here or in constructor?
         try:
             if self.lock is not None: self.lock.lock()
-            value = self._method(*self.args, **self.kwargs)
-        except Exception:
-            raise
+            value = self._method(*self.method_args, **self.method_kwargs)
+            if value is None:
+                value = False
+            self.emitter.sigRetValue.emit(value)
+        except Exception as ex:
+            print 'Error: ', ex.message
+        else:
+            self.emitter.sigFinished.emit()
         finally:
             if self.lock is not None: self.lock.unlock()
-
-        if value is None:
-            value = False
-
-        self.emitter.sigRetValue.emit(value)
-
-        self.emitter.sigFinished.emit()
 
 
 class RunnableIterator(RunnableMethod):
     """
-    Runnable that will loop through an iterator and emit a signal representing the progress of a generator method
+    Runnable that will loop through an iterator and emit a signal representing the progress of a
+    iterator or generator method
     """
 
-    def __init__(self, callback_slot, generator, *args, **kwargs):
-        super(RunnableIterator, self).__init__(callback_slot, generator, *args, **kwargs)
+    def __init__(self, generator, generator_args=(), generator_kwargs={},
+                 callback_slot=None, finished_slot=None, interrupt_signal=None, priority=0, lock=None):
+        """
+        RunnableIterator constructor
+        :param generator: generator object, method to run on seperate thread
+        :param generator_args: tup, positional arguments for generator
+        :param generator_kwargs: dict, keyword arguments for generator
+        :param callback_slot: function object (qt slot), slot to recieve yield value of generator
+        :param finished_slot: function object (qt slot), slot to recieve void signal if generator finishes successfully
+        :param interrupt_signal:, qt signal, signal used to interrupt generator
+        :param priority: int, priority given to runnable
+        """
+        super(RunnableIterator, self).__init__(generator, generator_args,
+                                               generator_kwargs, callback_slot, finished_slot, priority, lock)
+        self._interrupt = False
+
+        if interrupt_signal is not None:
+            interrupt_signal.connect(self.interrupt)
+
+    def interrupt(self):
+        self._interrupt = True
 
     def run(self):
+        """
+        Override virtual run method of QRunnable base class
+        """
+
         # print 'Started {0} in thread {1}, will update to {2}'.format(self._method.__name__,
         #                                                              QtCore.QThread.currentThread(),
         #                                                              self._callback_slot.__name__)
-        for status in self._method(*self.args, **self.kwargs):
-            self.emitter.sigRetValue.emit(status)
+        if self.lock is not None: self.lock.lock()
+        try:
+            for status in self._method(*self.method_args, **self.method_kwargs):
+                if self._interrupt:
+                    raise StopIteration('{0} running in background thread {1} interrupted'.format(self._method.__name__,
+                                                                                    QtCore.QThread.currentThreadId()))
+                if status is None:
+                    status = False
+                self.emitter.sigRetValue.emit(status)
+        except Exception as ex:
+            print 'Error: ', ex.message
+        else:
+            self.emitter.sigFinished.emit()
+        finally:
+            if self.lock is not None: self.lock.unlock()
 
-        self.emitter.sigFinished.emit()
+
+def method(function, callback_slot=None, finished_slot=None, lock=None, *args, **kwargs):
+    """
+    Decorator for functions/methods to run as RunnableMethods on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_method = threads.method(method_to_decorate, ...) Do not pass args or kwargs yet.
+    then simply run it: decorated_iterator(*args, **kwargs)
+    :param function: function/method to run on a background thread
+    :param callback_slot: slot to call with the return value of the function
+    :param finished_slot: slot to recieve finished signal when function completes
+    :param lock: (mutex) simple lock if multiple access needs to be prevented
+    :return: decorated method
+    """
+    def runnable_method(*args, **kwargs):
+        runnable = RunnableIterator(iterator, generator_args=args, generator_kwargs=kwargs,
+                                    callback_slot=callback_slot, finished_slot=finished_slot,
+                                    lock=lock)
+        add_to_queue(runnable)
+    return runnable_method
+
+
+def iterator(generator, callback_slot=None, finished_slot=None, interrupt_signal=None, lock=None, *args, **kwargs):
+    """
+    Decorator for iterators/generators to run as RunnableIterators on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_iterator = threads.iterator(iterator_to_decorate, ...) Do not pass args or kwargs yet.
+    then simply run it: decorated_iterator(*args, **kwargs)
+    :param generator: iterator/generator to be decorated
+    :param callback_slot: slot to call with the yield value or next value of iterator
+    :param finished_slot: slot to receive finished signal when iterator finishes
+    :param interrupt_signal: signal to break out of iterator loop prematurely
+    :param lock: (mutex) simple lock if multiple access needs to be prevented
+    :return: decorated iterator
+    """
+    def runnable_iterator(*args, **kwargs):
+        runnable = RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
+                                    callback_slot=callback_slot, finished_slot=finished_slot,
+                                    interrupt_signal=interrupt_signal, lock=lock)
+        add_to_queue(runnable)
+    return runnable_iterator
 
 
 class Worker(QtCore.QObject):
@@ -100,19 +192,28 @@ class Worker(QtCore.QObject):
     def __del__(self):
         self.queue.join()
 
-    def startRunnable(self, runnable, priority=0):
-        self.pool.start(runnable, priority)
-
     def stopWork(self):
         self._stop = True
 
     def run(self):
+        """
+        Continuously get Runnables from queue and running them on available threads as long as stop flag is false
+        """
         while not self._stop:
-            item = self.queue.get()
+            runnable = self.queue.get()
             # print "Worker got item {} off queue".format(type(item))
-            self.startRunnable(item)
+            self.pool.start(runnable, runnable._priority)
             self.queue.task_done()
             time.sleep(0.1)
+
+
+def add_to_queue(runnable):
+    global queue
+    try:
+        queue.put(runnable)
+    except Exception as e:
+        print 'Error: ', e.message
+
 
 #TODO: allow threads to be compatibile with debugging
 # Application globals
