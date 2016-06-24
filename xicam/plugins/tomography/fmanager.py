@@ -262,11 +262,12 @@ def construct_preview_pipeline(widget, callback, update=True, slc=None):
     params = OrderedDict()
     funstack = []
     for func in functions:
-        params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
         if not func.previewChecked() or func.func_name == 'Write':
             continue
+
+        params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
         # Correct center of rotation
-        elif func.func_name in ('Padding', 'Downsample', 'Upsample'):
+        if func.func_name in ('Padding', 'Downsample', 'Upsample'):
             correct_center(func)
 
         p = update_function_partial(func.partial, func.func_name, func.args_complement, widget,
