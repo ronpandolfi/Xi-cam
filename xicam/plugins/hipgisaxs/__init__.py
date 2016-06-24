@@ -109,11 +109,12 @@ class plugin(base.plugin):
         structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
                       type(feature) is customwidgets.particle]
 
-        out = {'hipGisaxsInput': UnsortableOrderedDict([('shapes', shapes),
+        out = {'hipGisaxsInput': UnsortableOrderedDict([('schemaversion','0.1'),
+                                                        ('shapes', shapes),
                                                         ('unitcells', unitcells),
                                                         ('layers', layers),
                                                         ('structures', structures),
-                                                        ('instrumentation', self.detectorForm.toDict())])}
+                                                        ('computation', self.detectorForm.toDict())])}
         with open('test.json', 'w') as outfile:
             json.dump(out, outfile, indent=4)
 

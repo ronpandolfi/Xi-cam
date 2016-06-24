@@ -238,9 +238,10 @@ class featureWidget(QtGui.QWidget):
                                            'Are you sure you want to delete this feature?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            featuremanager.features = [feature for feature in featuremanager.features if feature is not self]
-            self.deleteLater()
+            featuremanager.features.remove(self)
             ui.showForm(ui.blankForm)
+            self.deleteLater()
+
 
     def mousePressEvent(self, *args, **kwargs):
         self.showSelf()
@@ -751,8 +752,8 @@ class structure(form):
         return UnsortableOrderedDict([('key', 'st' + self.parent.name),
                                       ('iratio',self.iratio.value()),
                                       ('transvec',self.transvec.value()),
-                                      ('grain', UnsortableOrderedDict([('refindex', {'delta': self.parent.delta.value(),
-                                                                                     'beta': self.parent.delta.value()}),
+                                      ('grain', UnsortableOrderedDict([#('refindex', {'delta': self.parent.delta.value(),
+                                                                       #              'beta': self.parent.delta.value()}),
                                                                        ('unitcell_key', 'u' + self.parent.name)])),
                                       ('ensemble', UnsortableOrderedDict([('maxgrains', [1, 1, 1]),
                                                                           ('orientations',self.parent.ensemble.toDict()
