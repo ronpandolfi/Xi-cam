@@ -140,7 +140,6 @@ class TomoViewer(QtGui.QWidget):
 
     def runSlicePreview(self):
         slice_no = self.sinogramViewer.view_spinBox.value()
-        print slice_no
         fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, partial(self.addSlicePreview,
                                                                                    slice_no=slice_no)))
 

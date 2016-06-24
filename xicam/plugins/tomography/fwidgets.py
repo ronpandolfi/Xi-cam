@@ -282,8 +282,8 @@ class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
         super(ReconFuncWidget, self).__init__(function, subfunction, package, checkable=False)
 
-        self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
+        self.kwargs_complement['algorithm'] = subfunction.lower()
 
         # Input functions
         self.center = None
@@ -313,9 +313,11 @@ class ReconFuncWidget(FuncWidget):
     @property
     def partial(self):
         d = deepcopy(self.param_dict)
-        d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
+        if 'cutoff' in d.keys() and 'order' in d.keys():
+            d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
         kwargs = dict(d, **self.kwargs_complement)
-        if 'center' in kwargs: del kwargs['center']
+        if 'center' in kwargs:
+            del kwargs['center']
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -381,6 +383,29 @@ class ReconFuncWidget(FuncWidget):
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
+
+
+class AstraReconFuncWidget(ReconFuncWidget):
+    def __init__(self, function, subfunction, package):
+        super(AstraReconFuncWidget, self).__init__(function, subfunction, reconpkg.tomopy)
+        self.kwargs_complement['algorithm'] = reconpkg.tomopy.astra
+        self.kwargs_complement['options'] = {}
+        self.kwargs_complement['options']['method'] = subfunction.replace(' ', '_')
+        if 'CUDA' in subfunction:
+            self.kwargs_complement['options']['proj_type'] = 'cuda'
+        else:
+            self.kwargs_complement['options']['proj_type'] = 'linear'
+
+    @property
+    def partial(self):
+        d = deepcopy(self.param_dict)
+        kwargs = deepcopy(self.kwargs_complement)
+        if 'center' in d:
+            del d['center']
+        kwargs['options'].update(d)
+        self._partial = partial(self._function, **kwargs)
+        return self._partial
+
 
 
 class TestRangeDialog(QtGui.QDialog):

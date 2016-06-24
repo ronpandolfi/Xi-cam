@@ -78,13 +78,16 @@ def add_function(function, subfunction):
         package = reconpkg.packages[fdata.names[subfunction][1]]
     except KeyError:
         package = eval(fdata.names[subfunction][1])
-    if not hasattr(package, fdata.names[subfunction][0]):
-        warnings.warn('{0} function not available in {1}'.format(subfunction, package))
-        return
+    # if not hasattr(package, fdata.names[subfunction][0]):
+    #     warnings.warn('{0} function not available in {1}'.format(subfunction, package))
+    #     return
 
     currentindex = len(functions)
     if function == 'Reconstruction':
-        func = fwidgets.ReconFuncWidget(function, subfunction, package)
+        if reconpkg.astra is not None and package == reconpkg.astra:
+            func = fwidgets.AstraReconFuncWidget(function, subfunction, package)
+        else:
+            func = fwidgets.ReconFuncWidget(function, subfunction, package)
         recon_function = func
     else:
         func = fwidgets.FuncWidget(function, subfunction, package)

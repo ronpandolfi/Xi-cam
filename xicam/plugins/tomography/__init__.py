@@ -65,7 +65,6 @@ class plugin(base.plugin):
             else:
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
-                print(fname)
                 self.openfiles([fname])
             e.accept()
 
