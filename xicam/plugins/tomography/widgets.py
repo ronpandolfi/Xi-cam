@@ -64,16 +64,6 @@ class TomoViewer(QtGui.QWidget):
 
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
-        if fmanager.recon_function is not None:
-            center_param = fmanager.recon_function.params.child('center')
-            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
-            # manual center widget, but this limits the center options to a resolution of 0.5
-            # self.projectionViewer.sigCenterChanged.connect(
-            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
-            self.projectionViewer.setCenterButton.clicked.connect(
-                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
@@ -97,6 +87,18 @@ class TomoViewer(QtGui.QWidget):
 
         self.viewmode.currentChanged.connect(self.currentChanged)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
+
+    def wireupCenterSelection(self, recon_function):
+        if recon_function is not None:
+            center_param = recon_function.params.child('center')
+            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
+            # manual center widget, but this limits the center options to a resolution of 0.5
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.setCenterButton.clicked.connect(
+                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
 
     @staticmethod
     def loaddata(paths, raw=True):

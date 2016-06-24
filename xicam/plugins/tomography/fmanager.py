@@ -112,7 +112,8 @@ def swap_functions(idx_1, idx_2):
 
 
 def update():
-    global layout, functions
+    #TODO inspect this... Probably this is causing those segfaults
+    global layout, functions, recon_function
     assert isinstance(layout, QtGui.QVBoxLayout)
 
     for i in range(layout.count()):
@@ -120,6 +121,9 @@ def update():
 
     for item in functions:
         layout.addWidget(item)
+    widget = ui.centerwidget.currentWidget()
+    if widget is not None:
+        widget.widget.wireupCenterSelection(recon_function)
 
 
 def load_form(path):

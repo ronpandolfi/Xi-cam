@@ -81,6 +81,7 @@ class plugin(base.plugin):
             current_dataset = self.currentDataset()
             if current_dataset is not None:
                 current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
+                current_dataset.wireupCenterSelection(fmanager.recon_function)
                 self.setPipelineValues(current_dataset)
         except AttributeError as e:
             print e.message
