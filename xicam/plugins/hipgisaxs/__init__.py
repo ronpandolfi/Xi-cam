@@ -13,7 +13,7 @@ import ui
 import featuremanager
 import display
 import customwidgets
-
+from pipeline import msg
 
 class plugin(base.plugin):
     name = 'HipGISAXS'
@@ -54,6 +54,7 @@ class plugin(base.plugin):
 
         # SETUP DISPLAY
         display.load()
+        display.redraw()
         self.centerwidget.addWidget(display.viewWidget)
 
         super(plugin, self).__init__(*args, **kwargs)
@@ -98,8 +99,6 @@ class plugin(base.plugin):
         return self._scatteringForm
 
     def runLocal(self):
-        shapes = []
-        layers = []
 
         shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
         layers = [feature.toDict() for feature in featuremanager.features if
@@ -109,7 +108,7 @@ class plugin(base.plugin):
         structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
                       type(feature) is customwidgets.particle]
 
-        out = {'hipGisaxsInput': UnsortableOrderedDict([('schemaversion','0.1'),
+        out = {'hipGisaxsInput': UnsortableOrderedDict([('version','0.1'),
                                                         ('shapes', shapes),
                                                         ('unitcells', unitcells),
                                                         ('layers', layers),
@@ -122,6 +121,23 @@ class plugin(base.plugin):
             yaml.dump(out, outfile, indent=4)
 
         print yaml.dump(out, indent=4)
+
+        import subprocess
+        msg.logMessage(subprocess.call(["hipgisaxs", "test.yml"]))
+        import os
+
+        d=os.getcwd()
+        import glob
+        dirs = filter(os.path.isdir, glob.glob(os.path.join(d, "*")))
+        dirs.sort(key=lambda x: os.path.getmtime(x))
+
+        latestdir=dirs[-1]
+        print 'latestdir',latestdir
+        import glob
+        latestout=glob.glob(os.path.join(latestdir,'*.out'))
+        from xicam import plugins
+        print 'latestout',latestout
+        plugins.plugins['Viewer'].instance.openfiles(latestout)
 
 
 class mainwindow():

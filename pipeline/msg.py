@@ -23,7 +23,7 @@ def logMessage(s,level=20,loggername=None):
     stdch.setLevel(level)
     logger.addHandler(stdch)
 
-    s = time.asctime()+'\t'+s
+    s = time.asctime()+'\t'+unicode(s)
 
     logger.log(level,s)
     if guilogcallable:

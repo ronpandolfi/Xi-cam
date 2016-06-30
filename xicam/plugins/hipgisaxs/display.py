@@ -4,22 +4,19 @@ from OpenGL.GL import *
 import latvec
 import numpy as np
 from PySide import QtGui
+import featuremanager
+import customwidgets
 
 viewWidget = None
-grid = None
 
-boxsize = 10
-spherescale =.2
+boxsize = 100
+spherescale = 2
 
 
 def load():
-    global viewWidget, grid
+    global viewWidget
     viewWidget = orthoGLViewWidget()
-
-    grid = gl.GLGridItem()
-    addLayer(-1., 0.)
-
-    viewWidget.addItem(grid)
+    redraw()
 
 
 class orthoGLViewWidget(gl.GLViewWidget):
@@ -74,7 +71,8 @@ class latticeFrame(gl.GLGridItem):
         # glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
         #
         glLineWidth(3)
-        glColor4f(1, .5, 0., .65)
+        #glColor4f(1, .5, 0., .65)
+        glColor4f(0,1.,1.,.65)
 
         glBegin(GL_LINES)
         for line in self.lines:
@@ -87,28 +85,29 @@ class latticeFrame(gl.GLGridItem):
 
 
 def clear():
-    for item in viewWidget.items:
-        if not item == grid:
-            item._setView(None)
 
+    for item in viewWidget.items:
+        item._setView(None)
+    grid = gl.GLGridItem(size=QtGui.QVector3D(200,200,0))
+    grid.setSpacing(10,10,10)
     viewWidget.items = [grid]
-    addLayer(-1., 0.)
+    addLayer(-20., 0.)
     viewWidget.update()
 
 
-def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale):
-    clear()
-
-    vecs = latvec.latticevectors(a, b, c, zoffset, orders)
+def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale, shape='Sphere', z0=0, **kwargs):
+    vecs = latvec.latticevectors(a, b, c, kwargs['radius'], orders, maxr=100, maxz=30)
 
     if basis is None:
         basis = [(0, 0, 0)]
 
     for basisvec in basis:
         for vec in vecs:
-            addSphere(np.sum([vec, basisvec], axis=0),[spherescale]*3)
+            if shape=='Sphere':
+                addSphere(np.sum([map(np.add,vec,[0,0,z0]), basisvec], axis=0),[kwargs['radius']]*3)
 
-    lines = latvec.latticelines(a, b, c, zoffset, orders-1)
+
+    lines = latvec.latticelines(a, b, c, zoffset+z0, orders-1, maxr=100, maxz=30)
 
     viewWidget.addItem(latticeFrame(lines))
 
@@ -116,13 +115,13 @@ def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale):
 def addSphere(center, scale):
     md = gl.MeshData.sphere(rows=5, cols=10)
     alpha = .3
-    sphere = gl.GLMeshItem(meshdata=md, smooth=True, color=(0, 1, 1, alpha), shader='shaded')
+    sphere = gl.GLMeshItem(meshdata=md, smooth=True, color=(1, 0, 1, alpha), shader='shaded')
     sphere.translate(*center)
     sphere.scale(*scale)
     viewWidget.addItem(sphere)
 
 
-def addLayer(z0, z1):
+def addLayer(z0, z1, glOptions='opaque'):
     verts = np.array([[-boxsize, -boxsize, z0],
                       [-boxsize, boxsize, z0],
                       [boxsize, -boxsize, z0],
@@ -137,5 +136,19 @@ def addLayer(z0, z1):
          [4, 5, 6], [5, 7, 6]])
 
     layer = gl.GLMeshItem(vertexes=verts, faces=faces, color=(.3, .3, .3, .8), smooth=True, shader='shaded',
-                          glOptions='opaque')
+                          glOptions=glOptions)
     viewWidget.addItem(layer)
+
+def redraw():
+    clear()
+    layerz=0
+    particlez=0
+    for feature in featuremanager.features:
+        if type(feature) is customwidgets.layer:
+            particlez=layerz
+            addLayer(layerz,layerz+feature.Thickness.value()*1.e9,glOptions='additive')
+            layerz+=feature.Thickness.value()*1.e9
+        elif type(feature) is customwidgets.particle:
+            basis = [vecparam.value() for vecparam in feature.structure.Basis.children()]
+            showLattice(map(float, feature.structure.LatticeA.value()), map(float, feature.structure.LatticeB.value()),
+                            map(float, feature.structure.LatticeC.value()), basis=basis, z0=particlez, shape=feature.Type.value(), radius=feature.Radius.Value.value(), height=feature.Height.Value.value(), width=feature.Width.Value.value(), length=feature.Length.Value.value(), baseangle=feature.BaseAngle.Value.value())
