@@ -1184,128 +1184,136 @@ class diffimage2(object):
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
-        return self.cache['remesh']
-
-    def queryAlphaI(self):
-        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
-                                                  decimals=3)
-        if alphai and ok:
-            alphai = np.deg2rad(alphai)
-            self.headers['Alpha'] = alphai
-            return alphai
-
-        return None
 
 
-    def __del__(self):
-        # TODO: do more here!
-        # if self._data is not None:
-        #    self.writenexus()
-        pass
 
-    @debugtools.timeit
-    def writenexus(self):
-        nxpath = pathtools.path2nexus(self.filepath)
-        w = writer.nexusmerger(img=self._rawdata, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
-                               variation=self._variation)
-        w.run()
-
-    def findcenter(self):
-        # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.rawdata)
-
-        # Set the center in the experiment
-        self.experiment.center = (x, y)
-
-    def integrate(self, mode='', cut=None):
-        ai = config.activeExperiment.getAI().getPyFAI()
-        iscake = False
-        return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
-
-    @debugtools.timeit  #0.07s on Izanami
-    def variation(self, operationindex, roi):
-        if operationindex not in self._variation or roi is not None:
-            nxpath = pathtools.path2nexus(self.filepath)
-            if os.path.exists(nxpath) and roi is None:
-                v = readvariation(nxpath)
-                #print v
-                if operationindex in v:
-                    self._variation[operationindex] = v[operationindex]
-                    print 'successful variation load!'
-                else:
-                    prv = pathtools.similarframe(self.filepath, -1)
-                    nxt = pathtools.similarframe(self.filepath, +1)
-                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
-            else:
-                prv = pathtools.similarframe(self.filepath, -1)
-                nxt = pathtools.similarframe(self.filepath, +1)
-                if roi is None:
-                    print prv, self.dataunrot, nxt
-                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
-                else:
-                    v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
-                    return v
-        return self._variation[operationindex]
-
-    @property
-    def headers(self):
-        if self._headers is None:
-            self._headers = loadparas(self.filepath)
-
-        return self._headers
-
-    @property
-    def radialintegration(self):
-        if 'radialintegration' in self.cache.keys():
-            self.cache['radialintegration'] = integration.radialintegrate(self)
-
-        return self.cache['radialintegration']
-
-    def view(self,t):
-        if t is np.ndarray:
-            return self.displaydata
-
-    def radialsymmetryfill(self,img):
-        centerx = config.activeExperiment.center[0]
-        centery = config.activeExperiment.center[1]
-        symimg = np.rot90(img.copy(), 2)
-
-        xshift = -(img.shape[0] - 2 * centerx)
-        yshift = -(img.shape[1] - 2 * centery)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        symimg = np.roll(symimg, int(yshift), axis=1)
-
-        marginmask = config.activeExperiment.mask
-
-
-        x, y = np.indices(img.shape)
-        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
-    def mirrorsymmetryfill(self,img):
-        centerx = config.activeExperiment.getvalue('Center X')
-        symimg = np.flipud(img.copy())
-        self.imtest(symimg)
-        xshift = -(img.shape[1] - 2 * centerx)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        self.imtest(symimg)
-        marginmask = config.activeExperiment.mask
-        self.imtest(marginmask)
-
-        x, y = np.indices(img.shape)
-        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
-        self.imtest(padmask)
-        self.imtest(symimg * padmask * (1 - marginmask))
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
-    def __getattr__(self, name):
-       if name in self.cache:
-           return self.cache[name]
-       else:
-           raise AttributeError('diffimage has no attribute: ' + name)
+# class singlefilediffimage2(diffimage2):
+#     ndim=2
+#     def __init__(self, filepath, detector=None, experiment=None):
+#         self.filepath = filepath
+#         super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
+#         return self.cache['remesh']
+#
+#     def queryAlphaI(self):
+#         alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
+#                                                   decimals=3)
+#         if alphai and ok:
+#             alphai = np.deg2rad(alphai)
+#             self.headers['Alpha'] = alphai
+#             return alphai
+#
+#         return None
+#
+#
+#     def __del__(self):
+#         # TODO: do more here!
+#         # if self._data is not None:
+#         #    self.writenexus()
+#         pass
+#
+#     @debugtools.timeit
+#     def writenexus(self):
+#         nxpath = pathtools.path2nexus(self.filepath)
+#         w = writer.nexusmerger(img=self._rawdata, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
+#                                variation=self._variation)
+#         w.run()
+#
+#     def findcenter(self):
+#         # Auto find the beam center
+#         [x, y] = center_approx.center_approx(self.rawdata)
+#
+#         # Set the center in the experiment
+#         self.experiment.center = (x, y)
+#
+#     def integrate(self, mode='', cut=None):
+#         ai = config.activeExperiment.getAI().getPyFAI()
+#         iscake = False
+#         return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
+#
+#     @debugtools.timeit  #0.07s on Izanami
+#     def variation(self, operationindex, roi):
+#         if operationindex not in self._variation or roi is not None:
+#             nxpath = pathtools.path2nexus(self.filepath)
+#             if os.path.exists(nxpath) and roi is None:
+#                 v = readvariation(nxpath)
+#                 #print v
+#                 if operationindex in v:
+#                     self._variation[operationindex] = v[operationindex]
+#                     print 'successful variation load!'
+#                 else:
+#                     prv = pathtools.similarframe(self.filepath, -1)
+#                     nxt = pathtools.similarframe(self.filepath, +1)
+#                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+#             else:
+#                 prv = pathtools.similarframe(self.filepath, -1)
+#                 nxt = pathtools.similarframe(self.filepath, +1)
+#                 if roi is None:
+#                     print prv, self.dataunrot, nxt
+#                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+#                 else:
+#                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
+#                     return v
+#         return self._variation[operationindex]
+#
+#     @property
+#     def headers(self):
+#         if self._headers is None:
+#             self._headers = loadparas(self.filepath)
+#
+#         return self._headers
+#
+#     @property
+#     def radialintegration(self):
+#         if 'radialintegration' in self.cache.keys():
+#             self.cache['radialintegration'] = integration.radialintegrate(self)
+#
+#         return self.cache['radialintegration']
+#
+#     def view(self,t):
+#         if t is np.ndarray:
+#             return self.displaydata
+#
+#     def radialsymmetryfill(self,img):
+#         centerx = config.activeExperiment.center[0]
+#         centery = config.activeExperiment.center[1]
+#         symimg = np.rot90(img.copy(), 2)
+#
+#         xshift = -(img.shape[0] - 2 * centerx)
+#         yshift = -(img.shape[1] - 2 * centery)
+#         symimg = np.roll(symimg, int(xshift), axis=0)
+#         symimg = np.roll(symimg, int(yshift), axis=1)
+#
+#         marginmask = config.activeExperiment.mask
+#
+#
+#         x, y = np.indices(img.shape)
+#         padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
+#
+#         img = img * marginmask + symimg * padmask * (1 - marginmask)
+#         return img
+#
+#     def mirrorsymmetryfill(self,img):
+#         centerx = config.activeExperiment.getvalue('Center X')
+#         symimg = np.flipud(img.copy())
+#         self.imtest(symimg)
+#         xshift = -(img.shape[1] - 2 * centerx)
+#         symimg = np.roll(symimg, int(xshift), axis=0)
+#         self.imtest(symimg)
+#         marginmask = config.activeExperiment.mask
+#         self.imtest(marginmask)
+#
+#         x, y = np.indices(img.shape)
+#         padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
+#         self.imtest(padmask)
+#         self.imtest(symimg * padmask * (1 - marginmask))
+#         img = img * marginmask + symimg * padmask * (1 - marginmask)
+#         return img
+#
+#     def __getattr__(self, name):
+#        if name in self.cache:
+#            return self.cache[name]
+#        else:
+#            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 # each diffimage class should implement:
@@ -1455,6 +1463,14 @@ class multifilediffimage2(diffimage2):
 
     def __getitem__(self, item):
         return self._getframe(item)
+
+
+class datadiffimage2(singlefilediffimage2):
+    ndim = 2
+
+    def __init__(self, data, detector=None, experiment=None):
+        super(datadiffimage2, self).__init__(filepath=None, detector=detector, experiment=experiment)
+        self._rawdata = np.rot90(data,3)
 
 class stackdiffimage2(diffimage2):
     ndim = 3

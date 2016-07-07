@@ -14,11 +14,14 @@ import featuremanager
 import display
 import customwidgets
 from pipeline import msg
+import numpy as np
 
 class plugin(base.plugin):
     name = 'HipGISAXS'
 
     def __init__(self, *args, **kwargs):
+
+        self.sftp_client = dict()
 
 
         self.leftwidget, self.centerwidget, self.rightwidget = ui.load()
@@ -50,6 +53,13 @@ class plugin(base.plugin):
         self.leftwidget.showDetectorButton.clicked.connect(self.showDetector)
         self.leftwidget.addParticleButton.setMenu(ui.particlemenu)
         self.leftwidget.runLocal.clicked.connect(self.runLocal)
+        self.leftwidget.runRemote.clicked.connect(self.runRemote)
+
+
+        # inject loginwidget
+        from xicam.plugins import login
+        self.loginwidget=login.LoginDialog()
+        self.leftwidget.layout().addWidget(self.loginwidget)
 
 
         # SETUP DISPLAY
@@ -138,6 +148,31 @@ class plugin(base.plugin):
         from xicam import plugins
         print 'latestout',latestout
         plugins.plugins['Viewer'].instance.openfiles(latestout)
+
+    def runRemote(self):
+        from xicam import clientmanager as cmanager
+        from functools import partial
+
+        add_ssh_callback = lambda client: self.loginSuccess(client)
+        login_callback = lambda client: cmanager.add_ssh_client(client.host,
+                                                                 client,
+                                                                 add_ssh_callback)
+        ssh_client = cmanager.ssh_client
+        self.loginwidget.loginRequest(partial(cmanager.login, login_callback, ssh_client), True)
+
+
+    def loginSuccess(self,client):
+        self.loginwidget.loginSuccessful(True)
+        sftp = client.open_sftp()
+        sftp.put('test.yml','test.yml')
+        sftp.close()
+        stdin,stdout,stderr = client.exec_command('hipgisaxs/bin/hipgisaxs test.yml')
+        out = np.array([np.fromstring(line,sep=',') for line in stdout.read().splitlines()])
+        from xicam import plugins
+        plugins.plugins['Viewer'].instance.opendata(out)
+
+
+
 
 
 class mainwindow():

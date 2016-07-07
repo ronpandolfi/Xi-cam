@@ -207,7 +207,7 @@ class plugin(base.plugin):
 
     def opendata(self, data=None, operation=None, operationname=None):
         self.activate()
-        dimg = loader.diffimage(data=data)
+        dimg = loader.datadiffimage2(data=data)
         widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, dimg=dimg, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)

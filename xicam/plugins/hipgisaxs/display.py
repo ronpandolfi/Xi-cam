@@ -20,6 +20,10 @@ def load():
 
 
 class orthoGLViewWidget(gl.GLViewWidget):
+    def __init__(self):
+        super(orthoGLViewWidget, self).__init__()
+        self.opts['distance']=200
+
     def projectionMatrix(self, region=None):
         # Xw = (Xnd + 1) * width/2 + X
         if region is None:
@@ -98,6 +102,8 @@ def clear():
 def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale, shape='Sphere', z0=0, **kwargs):
     vecs = latvec.latticevectors(a, b, c, kwargs['radius'], orders, maxr=100, maxz=30)
 
+    linez=0
+
     if basis is None:
         basis = [(0, 0, 0)]
 
@@ -105,12 +111,45 @@ def showLattice(a, b, c, orders=7, basis=None, zoffset=spherescale, shape='Spher
         for vec in vecs:
             if shape=='Sphere':
                 addSphere(np.sum([map(np.add,vec,[0,0,z0]), basisvec], axis=0),[kwargs['radius']]*3)
+                linez=kwargs['radius']
+            elif shape=='Box':
+                addBox(np.sum([map(np.add,vec,[0,0,z0]), basisvec], axis=0),[kwargs['length'],kwargs['width'],kwargs['height']])
+                linez=kwargs['height']
+            elif shape == 'Cylinder':
+                addCylinder(np.sum([map(np.add, vec, [0, 0, z0]), basisvec], axis=0),
+                       [kwargs['radius'], kwargs['radius'], kwargs['height']])
+                linez = kwargs['height']
 
 
-    lines = latvec.latticelines(a, b, c, zoffset+z0, orders-1, maxr=100, maxz=30)
+    lines = latvec.latticelines(a, b, c, linez+z0, orders-1, maxr=100, maxz=30)
 
     viewWidget.addItem(latticeFrame(lines))
 
+def addBox(center, scale):
+    verts = np.array([[-.5, -.5, .5],
+                      [-.5, .5, .5],
+                      [.5, -.5, .5],
+                      [.5, .5, .5],
+                      [-.5, -.5, -.5],
+                      [-.5, .5, -.5],
+                      [.5, -.5, -.5],
+                      [.5, .5, -.5]])
+    faces = np.array(
+        [[0, 2, 1], [1, 2, 3], [0, 1, 4], [1, 5, 4], [1, 3, 5], [3, 7, 5], [3, 2, 7], [2, 6, 7], [2, 0, 6], [0, 4, 6],
+         [4, 5, 6], [5, 7, 6]])
+
+    box = gl.GLMeshItem(vertexes=verts,faces = faces, color=(1,0,1,.3), shader = 'shaded', smooth=True, glOptions='opaque')
+    box.translate(*center)
+    box.scale(*scale)
+    viewWidget.addItem(box)
+
+def addCylinder(center, scale):
+    md = gl.MeshData.cylinder(rows=1, cols=20)
+    alpha = .3
+    sphere = gl.GLMeshItem(meshdata=md, smooth=True, color=(1, 0, 1, alpha), shader='shaded')
+    sphere.translate(*center)
+    sphere.scale(*scale)
+    viewWidget.addItem(sphere)
 
 def addSphere(center, scale):
     md = gl.MeshData.sphere(rows=5, cols=10)
