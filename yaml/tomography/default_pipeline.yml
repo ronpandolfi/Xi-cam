@@ -1,5 +1,8 @@
 Normalization:
   Regular: {}
+Outlier Removal:
+  Remove Outliers:
+    dif: 0.03
 Negative Logarithm:
   Negative Logarithm: {}
 Stripe Removal:
@@ -22,6 +25,10 @@ Reconstruction:
     Input Functions:
       Center Detection:
         Phase Correlation: {}
+      Projection Angles:
+        Projection Angles:
+          ang1: 270
+          ang2: 90
 Crop:
   Crop:
     p11: 531
@@ -36,6 +43,11 @@ Circular Mask:
     ratio: 1.0
     val: 0
     axis: 0
+Convert Data Type:
+  Convert Data Type:
+    dtype: uint8
+    imin: -10
+    imax: 30
 Write:
   Tiff Stack:
     digit: 4

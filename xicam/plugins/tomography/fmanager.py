@@ -350,8 +350,11 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
 
 def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
     write_start = sino[0]
-    total_sino = (sino[1] - sino[0]) // sino[2]
     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
+    total_sino = (sino[1] - sino[0]) // sino[2]
+    if total_sino < sino_p_chunk:
+        sino_p_chunk = total_sino
+
     for i in range(nchunk):
         init = True
         start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]

@@ -16,6 +16,7 @@ op_sys = platform.system()
 #     from Foundation import NSURL
 
 import os
+import time
 import numpy as np
 import pipeline
 from pipeline import loader
@@ -57,6 +58,7 @@ class plugin(base.plugin):
         super(plugin, self).__init__(*args, **kwargs)
 
         self._recon_running = False
+        self.recon_start_time = 0
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -140,7 +142,7 @@ class plugin(base.plugin):
                                                ui.configparams.child('CPU Cores').value(),
                                                update_call=self.console.log2local,
                                                interrupt_signal=self.console.local_cancelButton.clicked)
-
+            self.recon_start_time = time.time()
         else:
             r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
                                                                           'Are you sure you want to start another one?',
@@ -150,7 +152,8 @@ class plugin(base.plugin):
                                               'Then you should wait until the first one finishes.')
 
     def fullReconstructionFinished(self):
-        self.console.log2local('Reconstruction complete.')
+        run_time = time.time() - self.recon_start_time
+        self.console.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
         self._recon_running = False
 
     def manualCenter(self, value):
