@@ -138,7 +138,8 @@ class plugin(base.plugin):
                                                (start, end, step),
                                                ui.configparams.child('Sinograms/Chunk').value(),
                                                ui.configparams.child('CPU Cores').value(),
-                                               self.console.log2local)
+                                               update_call=self.console.log2local,
+                                               interrupt_signal=self.console.local_cancelButton.clicked)
 
         else:
             r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'

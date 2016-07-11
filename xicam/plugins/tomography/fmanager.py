@@ -124,7 +124,7 @@ def update():
     widget = ui.centerwidget.currentWidget()
     if widget is not None:
         widget.widget.wireupCenterSelection(recon_function)
-        set_function_defaults(w.widget.data.header)
+        set_function_defaults(widget.widget.data.header, functions)
 
 
 def load_form(path):
@@ -325,7 +325,8 @@ def run_preview_recon(funstack, initializer, callback):
         reset_cor()
 
 
-def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None, finish_call=None):
+def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
+                   finish_call=None, interrupt_signal=None):
     global functions
     lock_function_params(True)
     partials, params = [], OrderedDict()
@@ -338,7 +339,8 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None, fi
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
     lock_function_params(False)
-    runnable_it = threads.RunnableIterator(_recon_iter, generator_args=(widget, partials, proj, sino, nchunk, ncore,),
+    runnable_it = threads.RunnableIterator(_recon_iter,
+                                           generator_args=(widget, partials, proj, sino, sino_p_chunk, ncore,),
                                            callback_slot=update_call, finished_slot=finish_call,
                                            interrupt_signal=interrupt_signal)
     threads.add_to_queue(runnable_it)
