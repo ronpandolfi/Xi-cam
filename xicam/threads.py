@@ -149,7 +149,7 @@ def method(function, callback_slot=None, finished_slot=None, lock=None, *args, *
     :return: decorated method
     """
     def runnable_method(*args, **kwargs):
-        runnable = RunnableIterator(iterator, generator_args=args, generator_kwargs=kwargs,
+        runnable = RunnableMethod(function, method_args=args, method_kwargs=kwargs,
                                     callback_slot=callback_slot, finished_slot=finished_slot,
                                     lock=lock)
         add_to_queue(runnable)
