@@ -161,7 +161,6 @@ class MyMainWindow():
         """
         when a file is opened, check if there is calibration and offer to use the image as calibrant
         """
-        print(filenames)
         if filenames is not u'':
             if config.activeExperiment.iscalibrated or len(filenames) > 1:
                 self.openimages(filenames)

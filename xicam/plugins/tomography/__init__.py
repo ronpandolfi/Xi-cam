@@ -18,7 +18,7 @@ op_sys = platform.system()
 import os
 import time
 import pipeline
-from pipeline import loader
+from pipeline import msg
 from PySide import QtCore, QtGui
 from xicam import xglobals
 import widgets as twidgets
@@ -105,6 +105,7 @@ class plugin(base.plugin):
         self.centerwidget.widget(index).deleteLater()
 
     def openfiles(self, paths, *args, **kwargs):
+        msg.showMessage('Loading file...', timeout=10)
         self.activate()
         if type(paths) is list:
             paths = paths[0]
@@ -120,9 +121,11 @@ class plugin(base.plugin):
             print 'No dataset open.'
 
     def previewSlice(self):
+        msg.showMessage('Computing slice preview...', timeout=10)
         self.currentDataset().runSlicePreview()
 
     def preview3D(self):
+        msg.showMessage('Computing 3D preview...', timeout=10)
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
@@ -132,6 +135,7 @@ class plugin(base.plugin):
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
+            msg.showMessage('Starting tomography reconstruction...', timeout=10)
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),

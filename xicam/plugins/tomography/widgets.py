@@ -143,13 +143,11 @@ class TomoViewer(QtGui.QWidget):
     def runSlicePreview(self):
         slice_no = self.sinogramViewer.view_spinBox.value()
         fmanager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
-        # fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, partial(self.addSlicePreview,
-        #                                                                            slice_no=slice_no)))
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
         fmanager.cor_scale = lambda x: x//8
-        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
+        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc)
 
     def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
         fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
