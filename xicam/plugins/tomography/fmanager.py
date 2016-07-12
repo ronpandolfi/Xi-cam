@@ -112,12 +112,8 @@ def swap_functions(idx_1, idx_2):
 
 
 def update():
-    #TODO inspect this... Probably this is causing those segfaults
     global layout, functions, recon_function
     assert isinstance(layout, QtGui.QVBoxLayout)
-
-    for i in range(layout.count()):
-        layout.itemAt(i).parent = None
 
     for item in functions:
         layout.addWidget(item)
