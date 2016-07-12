@@ -1017,7 +1017,10 @@ class diffimage2(object):
         self.cachecheck = None
 
     def __len__(self):
-        return len(self.filepaths)
+        if hasattr(self,'filepaths'):
+            return len(self.filepaths)
+        else:
+            return 1
 
     def updateexperiment(self):
         # Force cache the detector

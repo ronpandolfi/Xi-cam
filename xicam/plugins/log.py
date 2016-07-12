@@ -19,8 +19,6 @@ class plugin(base.plugin):
 
         msg.guilogcallable=self.log
 
-        msg.logMessage('Testing!')
-
         super(plugin, self).__init__(*args, **kwargs)
 
     def log(self,level,s,icon=None): # We can have icons!

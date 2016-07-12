@@ -1,3 +1,4 @@
+import time
 from xicam.plugins import base
 from PySide import QtGui
 import os
@@ -13,8 +14,11 @@ import ui
 import featuremanager
 import display
 import customwidgets
-from pipeline import msg
 import numpy as np
+from xicam import clientmanager as cmanager
+from functools import partial
+from xicam import plugins
+from pipeline import msg
 
 class plugin(base.plugin):
     name = 'HipGISAXS'
@@ -54,6 +58,7 @@ class plugin(base.plugin):
         self.leftwidget.addParticleButton.setMenu(ui.particlemenu)
         self.leftwidget.runLocal.clicked.connect(self.runLocal)
         self.leftwidget.runRemote.clicked.connect(self.runRemote)
+        self.leftwidget.runDask.clicked.connect(self.runDask)
 
 
         # inject loginwidget
@@ -108,7 +113,7 @@ class plugin(base.plugin):
             self._scatteringForm = customwidgets.scattering()
         return self._scatteringForm
 
-    def runLocal(self):
+    def writeyaml(self):
 
         shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
         layers = [feature.toDict() for feature in featuremanager.features if
@@ -124,13 +129,17 @@ class plugin(base.plugin):
                                                         ('layers', layers),
                                                         ('structures', structures),
                                                         ('computation', self.detectorForm.toDict())])}
-        with open('test.json', 'w') as outfile:
-            json.dump(out, outfile, indent=4)
+        # with open('test.json', 'w') as outfile:
+        #     json.dump(out, outfile, indent=4)
 
         with open('test.yml', 'w') as outfile:
             yaml.dump(out, outfile, indent=4)
 
-        print yaml.dump(out, indent=4)
+        msg.logMessage(yaml.dump(out, indent=4))
+
+    def runLocal(self):
+
+        self.writeyaml()
 
         import subprocess
         msg.logMessage(subprocess.call(["hipgisaxs", "test.yml"]))
@@ -150,27 +159,45 @@ class plugin(base.plugin):
         plugins.plugins['Viewer'].instance.openfiles(latestout)
 
     def runRemote(self):
-        from xicam import clientmanager as cmanager
-        from functools import partial
 
-        add_ssh_callback = lambda client: self.loginSuccess(client)
-        login_callback = lambda client: cmanager.add_ssh_client(client.host,
-                                                                 client,
-                                                                 add_ssh_callback)
-        ssh_client = cmanager.ssh_client
-        self.loginwidget.loginRequest(partial(cmanager.login, login_callback, ssh_client), True)
+        self.writeyaml()
+
+        if len(cmanager.ssh_clients):
+            client = cmanager.ssh_clients.values()[0]
+            self.loginSuccess(client)
+        else:
+
+            add_ssh_callback = lambda client: self.loginSuccess(client)
+            login_callback = lambda client: cmanager.add_ssh_client(client.host,
+                                                                     client,
+                                                                     add_ssh_callback)
+            ssh_client = cmanager.ssh_client
+            self.loginwidget.loginRequest(partial(cmanager.login, login_callback, ssh_client), True)
+
+    def runDask(self):
+        from distributed import Executor
+        ex = Executor(ip+':'+port)
+
+        def runhipgisaxs():
+            import subprocess
+            subprocess.Popen('hipgisaxs test.yml')
+
+
+
+
+        ex.submit(runhipgisaxs)
 
 
     def loginSuccess(self,client):
         self.loginwidget.loginSuccessful(True)
         sftp = client.open_sftp()
-        sftp.put('test.yml','test.yml')
+        timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
+        sftp.put('test.yml',timestamp+'.yml')
         sftp.close()
-        stdin,stdout,stderr = client.exec_command('hipgisaxs/bin/hipgisaxs test.yml')
+        stdin,stdout,stderr = client.exec_command('hipgisaxs/bin/hipgisaxs '+timestamp+'.yml')
         out = np.array([np.fromstring(line,sep=',') for line in stdout.read().splitlines()])
-        from xicam import plugins
+        msg.logMessage(stderr.read())
         plugins.plugins['Viewer'].instance.opendata(out)
-
 
 
 

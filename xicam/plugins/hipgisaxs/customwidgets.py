@@ -238,6 +238,8 @@ class featureWidget(QtGui.QWidget):
             ui.showForm(ui.blankForm)
             self.deleteLater()
 
+        display.redraw()
+
     def mousePressEvent(self, *args, **kwargs):
         self.showSelf()
         self.hideothers()
@@ -467,6 +469,12 @@ class particle(featureWidget):
             # PYRAMID
             self.BaseAngle = DistParameter(name='Angle with base (deg)', higKey='baseangle', value=15)
 
+            # ROTATIONS
+
+            self.XRotation = pTypes.SimpleParameter(name='X Rotation', value=0, type='float')
+            self.YRotation = pTypes.SimpleParameter(name='Y Rotation', value=0, type='float')
+            self.ZRotation = pTypes.SimpleParameter(name='Z Rotation', value=0, type='float')
+
             # Refractive index
             self.delta = pTypes.SimpleParameter(type='float', name='delta', value=4.60093997E-06, step=.01)
             self.beta = pTypes.SimpleParameter(type='float', name='beta', value=3.91313968E-08, step=.01)
@@ -476,11 +484,14 @@ class particle(featureWidget):
             self.Radius.show()
 
             params = [self.Type, self.Radius, self.Length, self.Width, self.Height, self.BaseAngle,
-                      self.RefractiveIndex]
+                      self.XRotation, self.YRotation, self.ZRotation, self.RefractiveIndex]
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
             self.parameterTree = ParameterTree()
             self.parameterTree.setParameters(self.parameter, showTop=False)
+
+            self.parameter.sigTreeStateChanged.connect(display.redraw)
+
             self._form = self.parameterTree
         return self._form
 
@@ -497,7 +508,7 @@ class particle(featureWidget):
             param.show()
 
     def wireup(self):
-        super(structure, self).wireup()
+        super(particle, self).wireup()
         self.form
         self.setConnected(True)
 
@@ -530,6 +541,9 @@ class particle(featureWidget):
         return UnsortableOrderedDict([('name', self.Type.value().lower()),
                                       ('key', self.name),
                                       ('params', [param.toDict() for param in self.relevantParams()]),
+                                      ('xrot',self.XRotation.value()),
+                                      ('yrot', self.XRotation.value()),
+                                      ('zrot', self.XRotation.value()),
                                       ('refindex', {'delta': self.delta.value(), 'beta': self.beta.value()})])
 
 
@@ -706,6 +720,8 @@ class structure(form):
             self.parameterTree = ParameterTree()
             self.parameterTree.setParameters(self.parameter, showTop=False)
             self._form = self.parameterTree
+
+            self. parameter.sigTreeStateChanged.connect(display.redraw)
         return self._form
 
     def wireup(self):
@@ -720,14 +736,15 @@ class structure(form):
 
         for item in [self.LatticeA, self.LatticeB, self.LatticeC]:
             if connect:
-                item.sigValueChanged.connect(self.showUnitCell)
+                #item.sigValueChanged.connect(self.showUnitCell)
                 item.sigValueChanged.connect(self.switchtoCustom)
             else:
-                item.sigValueChanged.disconnect(self.showUnitCell)
+                #item.sigValueChanged.disconnect(self.showUnitCell)
                 item.sigValueChanged.disconnect(self.switchtoCustom)
 
-    def showUnitCell(self):
-        display.redraw()
+    # def showUnitCell(self):
+    #     display.redraw()
+
 
     def switchtoCustom(self):
         self.LatticeChoice.setValue(0)
@@ -750,7 +767,7 @@ class structure(form):
             self.Scaling.show()
             self.Repetition.show()
 
-        self.showUnitCell()
+        #self.showUnitCell()
 
     def resetDimensions(self):
         self.domainsize.show()
@@ -786,7 +803,7 @@ class structure(form):
             self.LatticeB.setValue((5, 3 ** .5 * .5, 0))
             self.LatticeC.setValue((0, 0, 10))
 
-        self.showUnitCell()
+        #self.showUnitCell()
 
         self.setConnected(True)
 
