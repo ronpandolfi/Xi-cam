@@ -277,9 +277,7 @@ class FuncWidget(FeatureWidget):
                 fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
                                                  fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
                                                                                   deepcopy(self.partial)]})
-                # fmanager.run_preview_recon(*fmanager.pipeline_preview_action(widget,
-                #                            ui.centerwidget.currentWidget().addSlicePreview, update=False))
-
+        print 'done distrubuting range'
 
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):

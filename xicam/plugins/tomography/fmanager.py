@@ -323,6 +323,7 @@ def update_function_partial(fpartial, name, argnames, datawidget, param_dict=Non
                     cor_offset = cor_scale
                 recon_function.params.child('center').setValue(kwargs[pname])
                 kwargs[pname] = cor_offset(kwargs[pname])
+                reset_cor()
 
     if kwargs:
         fpartial.keywords.update(kwargs)
@@ -336,7 +337,6 @@ def run_preview_recon(funstack, initializer, callback):
         runnable = threads.RunnableMethod(reduce, method_args=((lambda f1, f2: f2(f1)), funstack, initializer),
                                           callback_slot=callback, lock=threads.mutex)
         threads.add_to_queue(runnable)
-        reset_cor()
 
 
 def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
