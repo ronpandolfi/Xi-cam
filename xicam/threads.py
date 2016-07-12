@@ -70,7 +70,8 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 QtCore.QThread.currentThread(),
         #                                                                 self._callback_slot.__name__)
         try:
-            if self.lock is not None: self.lock.lock()
+            if self.lock is not None:
+                self.lock.lock()
             value = self._method(*self.method_args, **self.method_kwargs)
             if value is None:
                 value = False
@@ -80,7 +81,8 @@ class RunnableMethod(QtCore.QRunnable):
         else:
             self.emitter.sigFinished.emit()
         finally:
-            if self.lock is not None: self.lock.unlock()
+            if self.lock is not None:
+                self.lock.unlock()
 
 
 class RunnableIterator(RunnableMethod):
@@ -149,7 +151,7 @@ def method(function, callback_slot=None, finished_slot=None, lock=None, *args, *
     :return: decorated method
     """
     def runnable_method(*args, **kwargs):
-        runnable = RunnableIterator(iterator, generator_args=args, generator_kwargs=kwargs,
+        runnable = RunnableMethod(function, method_args=args, method_kwargs=kwargs,
                                     callback_slot=callback_slot, finished_slot=finished_slot,
                                     lock=lock)
         add_to_queue(runnable)

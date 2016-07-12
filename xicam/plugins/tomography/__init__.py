@@ -17,7 +17,6 @@ op_sys = platform.system()
 
 import os
 import time
-import numpy as np
 import pipeline
 from pipeline import loader
 from PySide import QtCore, QtGui
@@ -76,10 +75,10 @@ class plugin(base.plugin):
 
     def currentChanged(self, index):
         self.toolbar.actionCenter.setChecked(False)
-        for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
-            tab.unload()
+        # for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
+        #     tab.unload()
         try:
-            self.centerwidget.currentWidget().load()
+            # self.centerwidget.currentWidget().load()
             current_dataset = self.currentDataset()
             if current_dataset is not None:
                 current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
@@ -105,18 +104,18 @@ class plugin(base.plugin):
         ui.propertytable.hide()
         self.centerwidget.widget(index).deleteLater()
 
-    def openfiles(self, paths,*args,**kwargs):
+    def openfiles(self, paths, *args, **kwargs):
         self.activate()
         if type(paths) is list:
             paths = paths[0]
 
-        widget = widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
+        widget = twidgets.TomoViewer(paths=paths) #widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
     def currentDataset(self):
         try:
-            return self.centerwidget.currentWidget().widget
+            return self.centerwidget.currentWidget() #.widget
         except AttributeError:
             print 'No dataset open.'
 
@@ -133,7 +132,6 @@ class plugin(base.plugin):
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
-            # chunks = ((end - start) // step - 1) // ui.configparams.child('Sinograms/Chunk').value() + 1
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),

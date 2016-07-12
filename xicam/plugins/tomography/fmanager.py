@@ -123,8 +123,8 @@ def update():
         layout.addWidget(item)
     widget = ui.centerwidget.currentWidget()
     if widget is not None:
-        widget.widget.wireupCenterSelection(recon_function)
-        set_function_defaults(widget.widget.data.header, functions)
+        widget.wireupCenterSelection(recon_function)
+        set_function_defaults(widget.data.header, functions)
 
 
 def load_form(path):
@@ -230,7 +230,7 @@ def update_function_parameters(funcs):
             update_function_parameters(funcs=f.input_functions)
 
 
-def pipeline_preview_action(widget, callback, update=True, slc=None):
+def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs=None):
     global functions
 
     if len(functions) < 1:
@@ -239,8 +239,14 @@ def pipeline_preview_action(widget, callback, update=True, slc=None):
         QtGui.QMessageBox.warning(None, 'Reconstruction method required',
                                   'You have to select a reconstruction method to run a preview')
         return None, None, None
+    if fixed_funcs is None:
+        fixed_funcs = {}
 
-    return construct_preview_pipeline(widget, callback, update=update, slc=slc)
+    construct_in_background = threads.method(construct_preview_pipeline,
+                                             callback_slot=lambda x: run_preview_recon(*x),
+                                             lock=threads.mutex)
+    construct_in_background(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
+    # return construct_preview_pipeline(widget, callback, update=update, slc=slc)
 
 
 def correct_center(func):
@@ -256,22 +262,29 @@ def correct_center(func):
         cor_scale = lambda x: x * 2 ** s
 
 
-def construct_preview_pipeline(widget, callback, update=True, slc=None):
+def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, slc=None):
     global functions, cor_scale
+    if fixed_funcs is None:
+        fixed_funcs = {}
 
-    lock_function_params(True)  # you probably do not need this anymore
+    lock_function_params(True)  # you probably do not need this anymore but maybe you do...
     params = OrderedDict()
     funstack = []
     for func in functions:
         if not func.previewChecked() or func.func_name == 'Write':
             continue
 
-        params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
+        if func.subfunc_name in fixed_funcs:
+            params[func.func_name] = {func.subfunc_name: fixed_funcs[func.subfunc_name][0]}
+            fpartial = fixed_funcs[func.subfunc_name][1]
+        else:
+            params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
+            fpartial = func.partial
         # Correct center of rotation
         if func.func_name in ('Padding', 'Downsample', 'Upsample'):
             correct_center(func)
 
-        p = update_function_partial(func.partial, func.func_name, func.args_complement, widget,
+        p = update_function_partial(fpartial, func.func_name, func.args_complement, widget,
                                     param_dict=params[func.func_name][func.subfunc_name],
                                     input_partials=func.input_partials, slc=slc)
         funstack.append(p)
@@ -289,6 +302,7 @@ def update_function_partial(fpartial, name, argnames, datawidget, param_dict=Non
                             ncore=None):
     global recon_function, cor_offset, cor_scale
     kwargs = {}
+
     for arg in argnames:
         if arg in 'flats':
             kwargs[arg] = datawidget.getflats(slc=slc)

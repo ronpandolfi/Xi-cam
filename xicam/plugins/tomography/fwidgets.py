@@ -269,13 +269,16 @@ class FuncWidget(FeatureWidget):
             return
 
         if test.exec_():
-            widget = ui.centerwidget.currentWidget().widget
+            widget = ui.centerwidget.currentWidget()
             if widget is None: return
+            self.updateParamsDict()
             for i in test.selectedRange():
-                self.updateParamsDict()
                 self.param_dict[param.name()] = i
-                fmanager.run_preview_recon(*fmanager.pipeline_preview_action(widget,
-                                           ui.centerwidget.currentWidget().widget.addSlicePreview, update=False))
+                fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
+                                                 fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
+                                                                                  deepcopy(self.partial)]})
+                # fmanager.run_preview_recon(*fmanager.pipeline_preview_action(widget,
+                #                            ui.centerwidget.currentWidget().addSlicePreview, update=False))
 
 
 class ReconFuncWidget(FuncWidget):
@@ -330,7 +333,7 @@ class ReconFuncWidget(FuncWidget):
             if self.center.subfunc_name == 'Phase Correlation':
                 slices = ((0, None, None),(-1, None, None))
             else:
-                slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+                slices = ((None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
 
             if self.center.subfunc_name == 'Nelder-Mead':
                 p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
