@@ -30,7 +30,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = pathtools.getRoot()
+        self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
