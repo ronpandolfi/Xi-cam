@@ -38,7 +38,7 @@ class plugin(base.plugin):
     name = "Tomography"
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
+        self.leftmodes, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
         self.functionwidget = ui.functionwidget
         self.console = self.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)

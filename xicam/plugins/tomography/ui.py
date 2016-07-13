@@ -83,6 +83,8 @@ def loadUi():
     l.addWidget(functionwidget)
 
     leftwidget.setLayout(l)
+    icon = QtGui.QIcon(QtGui.QPixmap("gui/function.png"))
+    leftmodes = [(leftwidget, icon)]
 
     rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
@@ -140,7 +142,7 @@ def loadUi():
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar
+    return leftmodes, centerwidget, rightwidget, bottomwidget, toolbar
 
 
 def showform(widget):
