@@ -1,7 +1,3 @@
-FP:
-  - name: center
-    type: float
-    suffix: px
 BP:
   - name: center
     type: float
@@ -40,10 +36,6 @@ ART:
 #    type: float
 #  - name: MaxConstraint
 #    type: float
-FP_CUDA:
-  - name: center
-    type: float
-    suffix: px
 BP_CUDA:
   - name: center
     type: float
