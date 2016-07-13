@@ -114,7 +114,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/open_32.png</normaloff>open_32.png</iconset>
+         <normaloff>gui/open_32.png</normaloff>gui/open_32.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -148,12 +148,6 @@
    </item>
   </layout>
   <zorder>featuresScroll</zorder>
-  <zorder>moveUpButton</zorder>
-  <zorder>moveDownButton</zorder>
-  <zorder>addFunctionButton</zorder>
-  <zorder>fileButton</zorder>
-  <zorder>resetPipelineButton</zorder>
-  <zorder>clearButton</zorder>
   <zorder></zorder>
  </widget>
  <resources/>

@@ -2,6 +2,9 @@ from collections import OrderedDict
 from PySide import QtGui
 import sys
 from xicam import xglobals
+import importlib
+from pipeline import msg
+import os
 
 modules = []
 plugins = OrderedDict()
@@ -10,12 +13,22 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, xas, ipythonconsole, spoth5file, hipgisaxs, batch, viewer3D, tomography
-
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, xas, viewer3D, spoth5file, hipgisaxs, batch, tomography]
+    modules = [module for module in os.listdir(os.path.dirname(__file__)) if '.pyc' not in module and module not in ['widgets.py','login.py','base.py','explorer.py','spew','__init__.py']]
+    for i in range(len(modules)):
+        try:
+            modules[i] = importlib.import_module('.' + modules[i].replace('.py',''),'xicam.plugins')
+        except ImportError as ex:
+            msg.logMessage('Module could not be loaded: ' + modules[i])
+            msg.logMessage(ex.message)
+
+
+
+
+
 
     for module in modules:
+        if type(module) is str: continue
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
@@ -38,6 +51,7 @@ def buildactivatemenu(modewidget):
 
 class pluginlink():
     def __init__(self, module, placeholders):
+        print module
         self.plugin = module.plugin
         self.modulename = module.__name__
         self.module = module
