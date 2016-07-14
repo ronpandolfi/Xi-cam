@@ -199,6 +199,8 @@ class ALS832h5image(fabioimage):
 
     def __getitem__(self, item):
         s = []
+        if not isinstance(item, tuple) or not isinstance(item, list):
+            item = (item, )
         for n in range(3):
             if n == 0:
                 stop = len(self)

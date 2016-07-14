@@ -329,7 +329,7 @@ class ReconFuncWidget(FuncWidget):
             p.append(('center', None, self.mcenter))
         else:
             if self.center.subfunc_name == 'Phase Correlation':
-                slices = (slice(0, None, None), slice(-1, None, None))
+                slices = (0, -1)
             else:
                 slices = (slice(None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
 
