@@ -460,8 +460,8 @@ class particle(featureWidget):
 
             # BOX
             self.Length = DistParameter(name='Length (x)', higKey='xsize', value=10)
-            self.Width = DistParameter(name='Width (y)', higKey='height', value=10)
-            self.Height = DistParameter(name='Height (z)', higKey='ysize', value=10)
+            self.Width = DistParameter(name='Width (y)', higKey='ysize', value=10)
+            self.Height = DistParameter(name='Height (z)', higKey='height', value=10)
 
             # CYLINDER
             # (redundant)
@@ -542,8 +542,8 @@ class particle(featureWidget):
                                       ('key', self.name),
                                       ('params', [param.toDict() for param in self.relevantParams()]),
                                       ('xrot',self.XRotation.value()),
-                                      ('yrot', self.XRotation.value()),
-                                      ('zrot', self.XRotation.value()),
+                                      ('yrot', self.YRotation.value()),
+                                      ('zrot', self.ZRotation.value()),
                                       ('refindex', {'delta': self.delta.value(), 'beta': self.beta.value()})])
 
 
@@ -607,8 +607,28 @@ class ensemble(form):
             self.Rotation.show()
 
     def toDict(self):
+        # check that all the distributions are the same
+        allsame=True
+        if len(self.parameter.children())>1:
+            disttype=self.parameter.children()[1].AngleDist.DistributionChoice.value()
+            print 'disttype:',disttype
+            for rot in [rot for rot in self.parameter.children() if type(rot) is RotationParameter]:
+                print 'distchoice:',rot.AngleDist.DistributionChoice.value()
+                if not rot.AngleDist.DistributionChoice.value() == disttype:
+                    allsame = False
+        else:
+            return dict()
+
+        if not allsame:
+            from xicam import dialogs
+            dialogs.infodialog("HipGISAXS currently supports only 1 type of orientation distribution at a time. Please edit the ensemble.","Too many distributions")
+            raise NotImplementedError
+
+        stat = {'Uniform':'range','Random':'random','Bragg':'bragg','Gaussian':'gaussian'}
+
         rots = [('rot' + str(self.parameter.children().index(rot)), rot.toDict()) for rot in self.parameter.children()
                 if type(rot) is RotationParameter]
+        rots = [('stat',stat[disttype])]+rots
         return UnsortableOrderedDict(rots)
 
 
@@ -671,6 +691,8 @@ class structure(form):
             self.non3DType.hide()
             self.domainsize = pTypes.SimpleParameter(name='Domain Size', type='float', value=100)
             self.domainsize.hide()
+            self.non3Dlattice = pTypes.ListParameter(name='Planar Lattice', type='list', values=['Hexagonal','Cubic'])
+            self.non3Dlattice.hide()
 
             # 1-D
             self.xmean = pTypes.SimpleParameter(name='Mean', type='float', value=100)
@@ -704,6 +726,7 @@ class structure(form):
 
             params = [self.dimensions,
                       self.non3DType,
+                      self.non3Dlattice,
                       self.xspacing,
                       self.yspacing,
                       self.domainsize,
@@ -756,11 +779,13 @@ class structure(form):
             self.xspacing.show()
             self.non3DType.show()
             self.domainsize.show()
+            self.non3Dlattice.show()
         elif choice == '2D':
             self.xspacing.show()
             self.yspacing.show()
             self.non3DType.show()
             self.domainsize.show()
+            self.non3Dlattice.show()
         elif choice == '3D':
             self.Lattice.show()
             self.Basis.show()
@@ -770,7 +795,7 @@ class structure(form):
         #self.showUnitCell()
 
     def resetDimensions(self):
-        self.domainsize.show()
+        self.domainsize.hide()
         self.non3DType.hide()
         self.xspacing.hide()
         self.yspacing.hide()
@@ -778,6 +803,7 @@ class structure(form):
         self.Basis.hide()
         self.Scaling.hide()
         self.Repetition.hide()
+        self.non3Dlattice.show()
 
     def changeUnitCellType(self, _, choice):
 
@@ -808,9 +834,12 @@ class structure(form):
         self.setConnected(True)
 
     def toStructureDict(self):
-        ensemble = [('maxgrains', [1, 1, 1])]
+
         if len(self.parent.ensemble.toDict()):
+            ensemble = [('maxgrains', [360, 1, 1])]
             ensemble.append(('orientations', self.parent.ensemble.toDict()))
+        else:
+            ensemble = [('maxgrains', [1, 1, 1])]
 
         return UnsortableOrderedDict([('key', 'st' + self.parent.name),
                                       ('iratio', self.iratio.value()),
@@ -835,12 +864,14 @@ class structure(form):
         grain = [('unitcell_key', 'u' + self.parent.name),
                  ('layer_key', layer_key)]  # IMPORTANT! How should this be determined?...
         if self.dimensions.value() == '1D':
-            grain.extend([('lattice', self.non3DType.value()),
+            grain.extend([('type', self.non3DType.value().lower()),
+                          ('lattice',self.non3Dlattice.value().lower()),
                           ('xspacing', UnsortableOrderedDict([('mean',self.xmean.value()),
                                                               ('std',self.xstd.value())])),
                           ('domain', self.domainsize.value())])  # Where does hex/cubic go?...
         elif self.dimensions.value() == '2D':
-            grain.extend([('lattice', self.non3DType.value()),
+            grain.extend([('type', self.non3DType.value().lower()),
+                          ('lattice',self.non3Dlattice.value().lower()),
                           ('xspacing', UnsortableOrderedDict([('mean',self.xmean.value()),
                                                               ('std',self.xstd.value())])),
                           ('yspacing', UnsortableOrderedDict([('mean',self.ymean.value()),
@@ -1045,6 +1076,72 @@ class ScalableGroup(hideableGroupParameter):
         return d
 
 
+class RotationDistParameter(pTypes.GroupParameter):
+    itemClass = hideableGroupParameterItem
+
+    def __init__(self, value=None, **opts):
+        opts['type'] = 'bool'
+        opts['value'] = True
+        pTypes.GroupParameter.__init__(self, **opts)
+
+        self.DistributionChoice = pTypes.ListParameter(name='Distribution', type='list', value=0,
+                                                       values=['Uniform', 'Random', 'Gaussian', 'Bragg'])
+        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
+        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
+        self.Mean = pTypes.SimpleParameter(name='Mean', type='float', value=0)
+        self.Variance = pTypes.SimpleParameter(name='Variance', type='float', value=0)
+
+        self.Mean.hide()
+        self.Variance.hide()
+
+        self.DistributionChoice.sigValueChanged.connect(self.distributionChanged)
+
+        self.addChildren([self.DistributionChoice, self.Min, self.Max, self.Mean, self.Variance])
+
+    def distributionChanged(self, _, choice):
+        # print choice
+        if choice == 'Uniform':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.hide()
+            self.Variance.hide()
+        elif choice == 'Random':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.hide()
+            self.Variance.hide()
+        elif choice == 'Gaussian':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.show()
+            self.Variance.show()
+        elif choice == 'Bragg':
+            self.Min.hide()
+            self.Max.hide()
+            self.Mean.hide()
+            self.Variance.hide()
+
+    def toDict(self):
+        d = UnsortableOrderedDict()
+        choice = self.DistributionChoice.value()
+
+        if choice == 'Uniform':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stat'] = 'uniform'
+        elif choice == 'Random':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stat'] = 'random'
+        elif choice == 'Gaussian':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stddev'] = np.sqrt(self.Variance.value())
+            d['mean'] = self.Mean.value()
+            d['stat'] = 'gaussian'
+        return d
+
+
 class DistParameter(pTypes.GroupParameter):
     itemClass = hideableGroupParameterItem
 
@@ -1070,7 +1167,7 @@ class DistParameter(pTypes.GroupParameter):
 
         self.DistributionChoice.sigValueChanged.connect(self.distributionChanged)
 
-        self.addChildren([self.DistributionChoice, self.Value, self.Min, self.Max, self.Variance, self.N])
+        self.addChildren([self.DistributionChoice, self.Value, self.Min, self.Max, self.Mean, self.Variance, self.N])
 
     def distributionChanged(self, _, choice):
         # print choice
@@ -1141,16 +1238,15 @@ class RotationParameter(pTypes.GroupParameter):
 
         self.AxisChoice = pTypes.ListParameter(name='Axis', type='list', value=0,
                                                values=['X', 'Y', 'Z'])
-        self.AngleDist = DistParameter(name='Angles')
+        self.AngleDist = RotationDistParameter(name='Angles')
         self.delete = pTypes.ActionParameter(name='Remove Rotation')
         self.delete.sigActivated.connect(self.remove)  # Will this work?
 
         self.addChildren([self.AxisChoice, self.AngleDist, self.delete])
 
     def toDict(self):
-        d = dict()
+        d = self.AngleDist.toDict()
         d['axis'] = self.AxisChoice.value().lower()
-        d['angles'] = self.AngleDist.toDict()
         return d
 
 
