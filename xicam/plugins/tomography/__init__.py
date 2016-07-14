@@ -156,7 +156,7 @@ class plugin(base.plugin):
 
     def fullReconstructionFinished(self):
         run_time = time.time() - self.recon_start_time
-        self.console.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
+        self.console.log2local('Reconstruction complete. Run time: {:.2f} s \n\n'.format(run_time))
         self._recon_running = False
 
     def manualCenter(self, value):

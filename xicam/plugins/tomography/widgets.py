@@ -1093,7 +1093,9 @@ class RunViewer(QtGui.QTabWidget):
             self.addTab(w, console.objectName())
 
     def log2local(self, msg):
-        self.local_console.insertPlainText(msg)
+        text = self.local_console.toPlainText()
+        self.local_console.setText(msg + text)
+        # self.local_console.insertPlainText(msg)
 
     def sino_indices(self):
         return (self.reconsettings.child('Start Sinogram').value(),
@@ -1257,3 +1259,16 @@ class ArrayDeque(deque):
         else:
             return super(ArrayDeque, self).__getitem__(item)
 
+
+if __name__ == '__main__':
+    import sys, time
+    app = QtGui.QApplication(sys.argv)
+    w = RunViewer()
+    def foobar():
+        for i in range(10000):
+            w.log2local('Line {}\n\n'.format(i))
+            # time.sleep(.1)
+    w.local_cancelButton.clicked.connect(foobar)
+    w.setWindowTitle("Test this thing")
+    w.show()
+    sys.exit(app.exec_())
