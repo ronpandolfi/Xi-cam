@@ -1,4 +1,6 @@
 import os
+import sys
+import inspect
 import fabio, pyFAI
 import h5py
 import tifffile
@@ -39,7 +41,31 @@ class rawimage(fabioimage):
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
 
-#TODO: merge bl832h5image with spoth5
+class H5image(fabioimage):
+    """
+    HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
+    To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
+    subclass and include 'h5' somewhere in its name.
+    """
+    def __new__(cls, *args, **kwargs):
+        h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+                           if 'h5' in image[0] and image[0] != 'H5image']
+        for image_class in h5image_classes:
+            try:
+                cls = image_class[1](*args, **kwargs)
+            except Exception as e:
+                continue
+            else:
+                break
+        else:
+            raise RuntimeError('H5 format not recognized')
+        return cls
+
+
+fabio.openimage.H5 = H5image
+fabioutils.FILETYPES['h5'] = ['h5']
+fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
+
 
 class spoth5image(fabioimage):
     def _readheader(self,f):
@@ -111,10 +137,6 @@ class spoth5image(fabioimage):
         except AttributeError:
             return False
 
-
-fabio.openimage.spoth5image = spoth5image
-fabioutils.FILETYPES['h5'] = ['spoth5']
-fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'spoth5')
 
 class bl832h5image(fabioimage):
 
@@ -251,11 +273,6 @@ class bl832h5image(fabioimage):
         self._h5.close()
 
 
-fabio.openimage.bl832h5 = bl832h5image
-fabioutils.FILETYPES['h5'] = ['bl832h5']
-fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'bl832h5')
-
-
 class TiffStack(object):
     def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
@@ -291,3 +308,32 @@ if __name__ == '__main__':
     # print data.flats.shape
     imshow(arr, cmap='gray')
     show()
+
+
+    class Foo(object):
+        def __init__(self, foo):
+            self.foo = foo
+
+
+    class Bar(object):
+        def __init__(self, bar):
+            self.bar = bar
+
+
+    class Meta(type):
+        def __call__(cls, foobar):
+            if isinstance(foobar, int):
+                cls = Foo
+            else:
+                cls = Bar
+            return type.__call__(cls, foobar)
+
+
+    class FooBar(object):
+        __metaclass__ = Meta
+
+
+    foo = FooBar(1)
+    print type(foo), foo.foo
+    bar = FooBar('hello')
+    print type(bar), bar.bar
