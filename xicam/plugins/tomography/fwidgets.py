@@ -329,9 +329,9 @@ class ReconFuncWidget(FuncWidget):
             p.append(('center', None, self.mcenter))
         else:
             if self.center.subfunc_name == 'Phase Correlation':
-                slices = ((0, None, None),(-1, None, None))
+                slices = (slice(0, None, None), slice(-1, None, None))
             else:
-                slices = ((None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
+                slices = (slice(None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
 
             if self.center.subfunc_name == 'Nelder-Mead':
                 p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))

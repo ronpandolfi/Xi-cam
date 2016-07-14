@@ -77,6 +77,7 @@ class RunnableMethod(QtCore.QRunnable):
                 value = False
             self.emitter.sigRetValue.emit(value)
         except Exception as ex:
+            raise ex
             print 'Error: ', ex.message
         else:
             self.emitter.sigFinished.emit()

@@ -262,7 +262,6 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     global functions, cor_scale
     if fixed_funcs is None:
         fixed_funcs = {}
-
     lock_function_params(True)  # you probably do not need this anymore but maybe you do...
     params = OrderedDict()
     funstack = []
