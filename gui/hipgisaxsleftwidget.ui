@@ -27,7 +27,7 @@
                     </property>
                 </widget>
             </item>
-            <item>
+            <!--<item>
                 <widget class="QPushButton" name="showComputationButton">
                     <property name="text">
                         <string>Computation</string>
@@ -36,7 +36,7 @@
                         <bool>true</bool>
                     </property>
                 </widget>
-            </item>
+            </item>-->
             <item>
                 <widget class="QScrollArea" name="featuresScroll">
                     <property name="minimumSize">

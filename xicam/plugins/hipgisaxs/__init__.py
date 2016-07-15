@@ -53,7 +53,7 @@ class plugin(base.plugin):
         self.leftwidget.addFeatureButton.clicked.connect(featuremanager.addLayer)
         self.leftwidget.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
         self.leftwidget.addParticleButton.clicked.connect(featuremanager.addParticle)
-        self.leftwidget.showComputationButton.clicked.connect(self.showComputation)
+        #self.leftwidget.showComputationButton.clicked.connect(self.showComputation)
         self.leftwidget.showDetectorButton.clicked.connect(self.showDetector)
         self.leftwidget.addParticleButton.setMenu(ui.particlemenu)
         self.leftwidget.runLocal.clicked.connect(self.runLocal)
@@ -146,21 +146,26 @@ class plugin(base.plugin):
         self.writeyaml()
 
         import subprocess
-        msg.logMessage(subprocess.call(["hipgisaxs", "test.yml"]))
-        import os
+        p=subprocess.Popen(["hipgisaxs", "test.yml"], stdout=subprocess.PIPE)
+        stdout,stderr=p.communicate()
+        out = np.array([np.fromstring(line, sep=' ') for line in stdout.splitlines()])
+        #msg.logMessage(stderr.read())
+        plugins.plugins['Viewer'].instance.opendata(out)
 
-        d=os.getcwd()
-        import glob
-        dirs = filter(os.path.isdir, glob.glob(os.path.join(d, "*")))
-        dirs.sort(key=lambda x: os.path.getmtime(x))
-
-        latestdir=dirs[-1]
-        print 'latestdir',latestdir
-        import glob
-        latestout=glob.glob(os.path.join(latestdir,'*.out'))
-        from xicam import plugins
-        print 'latestout',latestout
-        plugins.plugins['Viewer'].instance.openfiles(latestout)
+        # import os
+        #
+        # d=os.getcwd()
+        # import glob
+        # dirs = filter(os.path.isdir, glob.glob(os.path.join(d, "*")))
+        # dirs.sort(key=lambda x: os.path.getmtime(x))
+        #
+        # latestdir=dirs[-1]
+        # print 'latestdir',latestdir
+        # import glob
+        # latestout=glob.glob(os.path.join(latestdir,'*.out'))
+        # from xicam import plugins
+        # print 'latestout',latestout
+        # plugins.plugins['Viewer'].instance.openfiles(latestout)
 
     def runRemote(self):
 
