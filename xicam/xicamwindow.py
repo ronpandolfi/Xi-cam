@@ -237,7 +237,7 @@ class MyMainWindow(QtCore.QObject):
               username = str(login.textName.text())
               machine = str(login.textMachine.text())
               password = str(login.textPass.text())
-              print username, machine, password
+              print username, machine#, password
               self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop, password, self.session_address[obj], self.session_exec[obj])
               self.sessionmenu.setTitle("Active Session ({0})".format(self.session_machines[obj]))
 
