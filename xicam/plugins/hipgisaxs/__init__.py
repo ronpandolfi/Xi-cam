@@ -211,8 +211,10 @@ class plugin(base.plugin):
 
         print "Fetching result please wait"
         result =  future_tag.result()
-        #do something with result
-        print result
+
+        out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
+        #msg.logMessage(stderr.read())
+        plugins.plugins['Viewer'].instance.opendata(out)
 
 
     def loginSuccess(self,client):
