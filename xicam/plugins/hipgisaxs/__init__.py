@@ -136,7 +136,7 @@ class plugin(base.plugin):
         # with open('test.json', 'w') as outfile:
         #     json.dump(out, outfile, indent=4)
 
-        with open('test.yml', 'w') as outfile:
+        with open(os.path.join(os.path.expanduser('~'),'test.yml'), 'w') as outfile:
             yaml.dump(out, outfile, indent=4)
 
         msg.logMessage(yaml.dump(out, indent=4))
@@ -146,8 +146,9 @@ class plugin(base.plugin):
         self.writeyaml()
 
         import subprocess
-        p=subprocess.Popen(["hipgisaxs", "test.yml"], stdout=subprocess.PIPE)
+        p=subprocess.Popen(["hipgisaxs", os.path.join(os.path.expanduser('~'),'test.yml')], stdout=subprocess.PIPE)
         stdout,stderr=p.communicate()
+        stdout=stdout.replace('\r\r','\r')        # Hack to fix double carriage returns
         out = np.array([np.fromstring(line, sep=' ') for line in stdout.splitlines()])
         #msg.logMessage(stderr.read())
         plugins.plugins['Viewer'].instance.opendata(out)
