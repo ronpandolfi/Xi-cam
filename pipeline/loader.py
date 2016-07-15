@@ -1187,6 +1187,20 @@ class diffimage2(object):
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
+    def findcenter(self):
+        # Auto find the beam center
+        [x, y] = center_approx.center_approx(self.rawdata)
+
+        # Set the center in the experiment
+        self.experiment.center = (x, y)
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = loadparas(self.filepath)
+
+        return self._headers
+
 
 
 
