@@ -17,6 +17,7 @@ def logMessage(s,level=20,loggername=None):
         loggername = inspect.stack()[1][3]
     logger = logging.getLogger(loggername)
     logger.log(level,s)
+    print s
 
 def clearMessage():
     statusbar.clearMessage()

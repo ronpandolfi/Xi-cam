@@ -67,11 +67,11 @@ shortcut_table = [
 
 msi_data = {'Shortcut': shortcut_table}
 
-buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles'],
+buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging'],
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__]}
+                'include_files': ['hipgisaxs.exe','gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__]}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
 
@@ -96,7 +96,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.3',
+      version='1.2.4',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
