@@ -1304,6 +1304,8 @@ class integrationsubwidget(pg.PlotWidget):
                 xglobals.pool.apply_async(integrationfunction,
                                           args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
                                           callback=self.replotcallback)
+    def movPosLine(self, qx,qz,dimg=None):
+        raise NotImplementedError
 
     def plotresult(self, result):
 
@@ -1384,6 +1386,10 @@ class cakexintegrationwidget(integrationsubwidget):
         super(cakexintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
 
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(np.rad2deg(np.arctan2(qx,qz)))
+        self.posLine.show()
+
 class cakezintegrationwidget(integrationsubwidget):
 
     iscake = True
@@ -1393,6 +1399,10 @@ class cakezintegrationwidget(integrationsubwidget):
     def __init__(self):
         super(cakezintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(np.sqrt(qx**2+qz**2))
+        self.posLine.show()
 
 class remeshqintegrationwidget(integrationsubwidget):
 

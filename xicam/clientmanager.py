@@ -8,6 +8,7 @@ HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 
 # bind classes to new names
 sftp_client = client.sftp.SFTPClient
 globus_client = client.globus.GlobusClient
+ssh_client = client.ssh.SSHClient
 
 # Singleton instance of spot_client
 spot_client = client.spot.SpotClient()
@@ -15,6 +16,7 @@ spot_client = client.spot.SpotClient()
 # Dicts to hold client instances
 sftp_clients = {}
 globus_clients = {}
+ssh_clients = {}
 
 
 def login_wrapper(client_login, *args, **kwargs):
@@ -40,6 +42,11 @@ def login(client_callback, client_login, credentials):
 def add_sftp_client(host, client, callback):
     """Add sftp client to dictionary in order to have them accessible to plugins"""
     sftp_clients[host] = client
+    callback(client)
+
+def add_ssh_client(host, client, callback):
+    """Add sftp client to dictionary in order to have them accessible to plugins"""
+    ssh_clients[host] = client
     callback(client)
 
 

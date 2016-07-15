@@ -10,7 +10,7 @@ import pkgutil
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS']
 
 
 def initplugins(placeholders):

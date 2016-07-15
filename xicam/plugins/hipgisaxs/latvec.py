@@ -1,8 +1,6 @@
 import numpy as np
 import itertools
 
-latvecmaxr=4
-latvecmaxz=2
 
 def reciprocalvectors(a, b, c, order=2):
     V = abs(np.dot(a, np.cross(b, c)))
@@ -15,11 +13,11 @@ def reciprocalvectors(a, b, c, order=2):
     return vecs
 
 
-def latticevectors(a, b, c, zoffset, order=2):
+def latticevectors(a, b, c, zoffset, order=2, maxr=100000, maxz=100000):
     mi = np.vstack([a, b, c])
     combs = itertools.product(range(-order, order + 1), repeat=3)
     vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]
-    vecs = [zoffsetvec(vec,zoffset) for vec in vecs if vec[2] >= 0 and np.sqrt(vec[0]**2+vec[1]**2)<=latvecmaxr and vec[2]<=latvecmaxz]
+    vecs = [zoffsetvec(vec,zoffset) for vec in vecs if vec[2] >= 0 and np.sqrt(vec[0]**2+vec[1]**2)<=maxr and vec[2]<=maxz]
     return vecs
 
 def zoffsetvec(vec,zoffset=0):
@@ -27,8 +25,8 @@ def zoffsetvec(vec,zoffset=0):
     return vec
 
 
-def latticelines(a, b, c, zoffset, order=2):
-    vecs = latticevectors(a, b, c, zoffset, order)
+def latticelines(a, b, c, zoffset, order=2, maxr=None, maxz=None):
+    vecs = latticevectors(a, b, c, zoffset, order, maxr, maxz)
 
     lines = []
     for vec in vecs:

@@ -21,7 +21,6 @@ import ui
 import display
 from collectionsmod import UnsortableOrderedDict
 
-
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -30,6 +29,7 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
 
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
@@ -41,7 +41,6 @@ except AttributeError:
 class vector(QtGui.QWidget):
     sigValueChanged = QtCore.Signal()
     sigChanged = sigValueChanged
-
 
     def __init__(self):
         super(vector, self).__init__()
@@ -100,12 +99,10 @@ class vector(QtGui.QWidget):
     def value(self):
         return self.value1.value(), self.value2.value(), self.value3.value()
 
-
     def setValue(self, v):
         self.value1.setValue(v[0])
         self.value2.setValue(v[1])
         self.value3.setValue(v[2])
-
 
     def setEnabled(self, enabled):
         self.value1.setEnabled(enabled)
@@ -118,7 +115,6 @@ class ROlineEdit(QtGui.QLineEdit):
         super(ROlineEdit, self).__init__(*args, **kwargs)
         self.setReadOnly(True)
         self.setFrame(False)
-
 
     def focusOutEvent(self, *args, **kwargs):
         super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
@@ -188,21 +184,21 @@ class featureWidget(QtGui.QWidget):
         self.line.setFrameShadow(QtGui.QFrame.Sunken)
         self.line.setObjectName("line")
         self.horizontalLayout_2.addWidget(self.line)
-        self.pushButton_2 = QtGui.QPushButton(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
-        self.pushButton_2.setSizePolicy(sizePolicy)
-        self.pushButton_2.setStyleSheet("margin:0 0 0 0;")
-        self.pushButton_2.setFlat(True)
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.horizontalLayout_2.addWidget(self.pushButton_2)
-        self.line_2 = QtGui.QFrame(self.frame)
-        self.line_2.setFrameShape(QtGui.QFrame.VLine)
-        self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
-        self.line_2.setObjectName("line_2")
-        self.horizontalLayout_2.addWidget(self.line_2)
+        # self.pushButton_2 = QtGui.QPushButton(self.frame)
+        # sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+        # sizePolicy.setHorizontalStretch(0)
+        # sizePolicy.setVerticalStretch(0)
+        # sizePolicy.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
+        # self.pushButton_2.setSizePolicy(sizePolicy)
+        # self.pushButton_2.setStyleSheet("margin:0 0 0 0;")
+        # self.pushButton_2.setFlat(True)
+        # self.pushButton_2.setObjectName("pushButton_2")
+        # self.horizontalLayout_2.addWidget(self.pushButton_2)
+        # self.line_2 = QtGui.QFrame(self.frame)
+        # self.line_2.setFrameShape(QtGui.QFrame.VLine)
+        # self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
+        # self.line_2.setObjectName("line_2")
+        # self.horizontalLayout_2.addWidget(self.line_2)
         self.txtName = ROlineEdit(self.frame)
         self.txtName.setObjectName("txtName")
         self.horizontalLayout_2.addWidget(self.txtName)
@@ -226,21 +222,23 @@ class featureWidget(QtGui.QWidget):
 
         self.txtName.mousePressEvent = self.mousePressEvent
 
-        self.pushButton_2.setText("O")
+        # self.pushButton_2.setText("O")
 
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
 
-        _ = self.form #force cache form
+        _ = self.form  # force cache form
 
     def delete(self):
         value = QtGui.QMessageBox.question(None, 'Delete this feature?',
                                            'Are you sure you want to delete this feature?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            featuremanager.features = [feature for feature in featuremanager.features if feature is not self]
-            self.deleteLater()
+            featuremanager.features.remove(self)
             ui.showForm(ui.blankForm)
+            self.deleteLater()
+
+        display.redraw()
 
     def mousePressEvent(self, *args, **kwargs):
         self.showSelf()
@@ -250,7 +248,6 @@ class featureWidget(QtGui.QWidget):
 
     def showSelf(self):
         ui.showForm(self.form)
-
 
     def hideothers(self):
         for item in featuremanager.features:
@@ -269,11 +266,9 @@ class featureWidget(QtGui.QWidget):
             self.form.txtName.setText(self.name)
             self.form.txtName.textChanged.connect(self.setName)
 
-
     def setName(self, name):
         self.name = name
         featuremanager.update()
-
 
     def toDict(self):
         return {}
@@ -290,8 +285,8 @@ class substrate(featureWidget):
             self.Material = pTypes.ListParameter(type='list', name='Material',
                                                  values=['Custom...', 'Si (10 keV)', 'Polystyrene (10 keV)',
                                                          'PMMA (10 keV)', 'Air', 'Vacuum'], value=0)
-            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=1, step=.01)
-            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=1, step=.01)
+            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=4.60093997E-06, step=.01)
+            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=3.91313968E-08, step=.01)
             params = [self.Material, self.delta, self.beta]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
@@ -301,7 +296,6 @@ class substrate(featureWidget):
             self._form = self.parameterTree
             self.wireup()
         return self._form
-
 
     def wireup(self):
 
@@ -324,6 +318,9 @@ class substrate(featureWidget):
         if material == 'PMMA (10 keV)':
             self.delta.setValue(0.5)
             self.beta.setValue(0.5)
+        if material == 'Si (10 keV)':
+            self.delta.setValue(4.60093997E-06)
+            self.beta.setValue(3.91313968E-08)
 
         self.setConnected(True)
 
@@ -346,13 +343,13 @@ class layer(featureWidget):
     @property
     def form(self):
         if self._form is None:
-            self.Thickness = pTypes.SimpleParameter(type='float', name='Thickness', value='.000001', step=1e-9,
+            self.Thickness = pTypes.SimpleParameter(type='float', name='Thickness', value=.0000001, step=1e-9,
                                                     suffix='m', siPrefix=True)
             self.Material = pTypes.ListParameter(type='list', name='Material',
                                                  values=['Custom...', 'Si (10 keV)', 'Polystyrene (10 keV)',
                                                          'PMMA (10 keV)', 'Air', 'Vacuum'], value=0)
-            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=1, step=.01)
-            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=1, step=.01)
+            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=4.60093997E-06, step=.01)
+            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=3.91313968E-08, step=.01)
             self.TransVec = VectorParameter(name='Translation')
             params = [self.Thickness, self.Material, self.delta, self.beta, self.TransVec]
 
@@ -363,7 +360,6 @@ class layer(featureWidget):
             self._form = self.parameterTree
             self.wireup()
         return self._form
-
 
     def wireup(self):
 
@@ -389,10 +385,9 @@ class layer(featureWidget):
 
         self.setConnected(True)
 
-
     def toDict(self):
         return UnsortableOrderedDict([('key', self.name),
-                                      ('order', featuremanager.features.index(self) - 1),
+                                      ('order', featuremanager.features.index(self)),
                                       ('material', self.Material.value()),
                                       ('thickness', self.Thickness.value()),
                                       ('transvec', list(self.TransVec.value())),
@@ -460,37 +455,43 @@ class particle(featureWidget):
                                              value=0)
             self.Type.sigValueChanged.connect(self.typeChanged)
 
-
             # SPHERE
-            self.Radius = DistParameter(name='Radius', higKey='radius')
-
+            self.Radius = DistParameter(name='Radius', higKey='radius', value=10)
 
             # BOX
-            self.Length = DistParameter(name='Length (x)', higKey='xsize')
-            self.Width = DistParameter(name='Width (y)', higKey='height')
-            self.Height = DistParameter(name='Height (z)', higKey='ysize')
-
+            self.Length = DistParameter(name='Length (x)', higKey='xsize', value=10)
+            self.Width = DistParameter(name='Width (y)', higKey='ysize', value=10)
+            self.Height = DistParameter(name='Height (z)', higKey='height', value=10)
 
             # CYLINDER
             # (redundant)
 
             # PYRAMID
-            self.BaseAngle = DistParameter(name='Angle with base (deg)', higKey='baseangle')
+            self.BaseAngle = DistParameter(name='Angle with base (deg)', higKey='baseangle', value=15)
+
+            # ROTATIONS
+
+            self.XRotation = pTypes.SimpleParameter(name='X Rotation', value=0, type='float')
+            self.YRotation = pTypes.SimpleParameter(name='Y Rotation', value=0, type='float')
+            self.ZRotation = pTypes.SimpleParameter(name='Z Rotation', value=0, type='float')
 
             # Refractive index
-            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=1, step=.01)
-            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=1, step=.01)
+            self.delta = pTypes.SimpleParameter(type='float', name='delta', value=4.60093997E-06, step=.01)
+            self.beta = pTypes.SimpleParameter(type='float', name='beta', value=3.91313968E-08, step=.01)
             self.RefractiveIndex = pTypes.GroupParameter(name='Refractive Index', children=[self.delta, self.beta])
 
             self.hideAll()
             self.Radius.show()
 
             params = [self.Type, self.Radius, self.Length, self.Width, self.Height, self.BaseAngle,
-                      self.RefractiveIndex]
+                      self.XRotation, self.YRotation, self.ZRotation, self.RefractiveIndex]
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
             self.parameterTree = ParameterTree()
             self.parameterTree.setParameters(self.parameter, showTop=False)
+
+            self.parameter.sigTreeStateChanged.connect(display.redraw)
+
             self._form = self.parameterTree
         return self._form
 
@@ -506,9 +507,8 @@ class particle(featureWidget):
         for param in self.relevantParams():
             param.show()
 
-
     def wireup(self):
-        super(structure, self).wireup()
+        super(particle, self).wireup()
         self.form
         self.setConnected(True)
 
@@ -517,10 +517,8 @@ class particle(featureWidget):
     def showStructure(self):
         ui.showForm(self.structure.form)
 
-
     def showEnsemble(self):
         ui.showForm(self.ensemble.form)
-
 
     def mousePressEvent(self, *args, **kwargs):
         super(particle, self).mousePressEvent(*args, **kwargs)
@@ -538,13 +536,15 @@ class particle(featureWidget):
         elif choice == 'Pyramid':
             return [self.Length, self.Width, self.Height, self.BaseAngle]
 
-
     def toDict(self):
 
         return UnsortableOrderedDict([('name', self.Type.value().lower()),
                                       ('key', self.name),
                                       ('params', [param.toDict() for param in self.relevantParams()]),
-                                      ('refindex',{'delta':self.delta.value(),'beta':self.beta.value()})])
+                                      ('xrot',self.XRotation.value()),
+                                      ('yrot', self.YRotation.value()),
+                                      ('zrot', self.ZRotation.value()),
+                                      ('refindex', {'delta': self.delta.value(), 'beta': self.beta.value()})])
 
 
 class form(QtGui.QWidget):
@@ -582,7 +582,7 @@ class ensemble(form):
     @property
     def form(self):
         if self._form is None:
-            #self.Axis = pTypes.ListParameter(name='Axis', values=['None', 'x', 'y', 'z'], value=0)
+            # self.Axis = pTypes.ListParameter(name='Axis', values=['None', 'x', 'y', 'z'], value=0)
             self.addRotationAction = pTypes.ActionParameter(name='Add Rotation')
             self.addRotationAction.sigActivated.connect(self.addRotation)
 
@@ -597,7 +597,7 @@ class ensemble(form):
 
     def addRotation(self):
         n = len(self.parameter.children())
-        self.parameter.addChild(RotationParameter(name='Rotation '+str(n)))
+        self.parameter.addChild(RotationParameter(name='Rotation ' + str(n)))
 
     def changeAxis(self, _, choice):
         # print choice
@@ -607,7 +607,28 @@ class ensemble(form):
             self.Rotation.show()
 
     def toDict(self):
-        rots = [('rot'+str(self.parameter.children().index(rot)),rot.toDict()) for rot in self.parameter.children() if type(rot) is RotationParameter]
+        # check that all the distributions are the same
+        allsame=True
+        if len(self.parameter.children())>1:
+            disttype=self.parameter.children()[1].AngleDist.DistributionChoice.value()
+            print 'disttype:',disttype
+            for rot in [rot for rot in self.parameter.children() if type(rot) is RotationParameter]:
+                print 'distchoice:',rot.AngleDist.DistributionChoice.value()
+                if not rot.AngleDist.DistributionChoice.value() == disttype:
+                    allsame = False
+        else:
+            return dict()
+
+        if not allsame:
+            from xicam import dialogs
+            dialogs.infodialog("HipGISAXS currently supports only 1 type of orientation distribution at a time. Please edit the ensemble.","Too many distributions")
+            raise NotImplementedError
+
+        stat = {'Uniform':'range','Random':'random','Bragg':'bragg','Gaussian':'gaussian'}
+
+        rots = [('rot' + str(self.parameter.children().index(rot)), rot.toDict()) for rot in self.parameter.children()
+                if type(rot) is RotationParameter]
+        rots = [('stat',stat[disttype])]+rots
         return UnsortableOrderedDict(rots)
 
 
@@ -662,37 +683,69 @@ class structure(form):
     @property
     def form(self):
         if self._form is None:
-            self.LatticeA = VectorParameter(name='A', value=(1, 0, 0))
-            self.LatticeB = VectorParameter(name='B', value=(0, 1, 0))
-            self.LatticeC = VectorParameter(name='C', value=(0, 0, 1))
-            self.LatticeChoice = pTypes.ListParameter(name='Type', type='list', value=2,
+            self.dimensions = pTypes.ListParameter(name='Dimensions', type='list', value='3D',
+                                                   values=['1D', '2D', '3D'])
+
+            # 1-D/2D type
+            self.non3DType = pTypes.ListParameter(name='Type', type='list', values=['Paracrystal', 'Percus Yevick'])
+            self.non3DType.hide()
+            self.domainsize = pTypes.SimpleParameter(name='Domain Size', type='float', value=100)
+            self.domainsize.hide()
+            self.non3Dlattice = pTypes.ListParameter(name='Planar Lattice', type='list', values=['Hexagonal','Cubic'])
+            self.non3Dlattice.hide()
+
+            # 1-D
+            self.xmean = pTypes.SimpleParameter(name='Mean', type='float', value=100)
+            self.xstd = pTypes.SimpleParameter(name='Std', type='float', value=1)
+            self.xspacing = hideableGroupParameter(name='X Spacing', children=[self.xmean, self.xstd])
+            self.xspacing.hide()
+
+            # 2-D
+            self.ymean = pTypes.SimpleParameter(name='Mean', type='float', value=100)
+            self.ystd = pTypes.SimpleParameter(name='Std', type='float', value=1)
+            self.yspacing = hideableGroupParameter(name='Y Spacing', children=[self.ymean, self.ystd])
+            self.yspacing.hide()
+
+            # 3-D
+            self.LatticeA = VectorParameter(name='A', value=(30, 0, 0))
+            self.LatticeB = VectorParameter(name='B', value=(0, 30, 0))
+            self.LatticeC = VectorParameter(name='C', value=(0, 0, 30))
+            self.LatticeChoice = pTypes.ListParameter(name='Type', type='list',
                                                       values=["Custom...", "Simple Cubic", "Body Centered Cubic",
                                                               'Face Centered Cubic', 'Hexagonal'])
             self.Repetition = VectorParameter(name='Repetition', value=(2, 2, 2))
             self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
+            self.Lattice = hideableGroupParameter(name='Lattice', children=[self.LatticeChoice,
+                                                                            self.LatticeA,
+                                                                            self.LatticeB,
+                                                                            self.LatticeC])
+
             self.Basis = ScalableGroup(name='Basis', children=[VectorParameter(name='Point 1')])
             self.Position = VectorParameter(name='Position')
             self.iratio = pTypes.SimpleParameter(name='I Ratio', value=1, type='float')
-            self.transvec = VectorParameter(name='Translation')
 
-            params = [{'name': 'Lattice', 'type': 'group', 'children': [self.LatticeChoice,
-                                                                        self.LatticeA,
-                                                                        self.LatticeB,
-                                                                        self.LatticeC]},
+            params = [self.dimensions,
+                      self.non3DType,
+                      self.non3Dlattice,
+                      self.xspacing,
+                      self.yspacing,
+                      self.domainsize,
+                      self.Lattice,
                       self.Repetition,
                       self.Scaling,
                       self.Basis,
                       self.Position,
                       self.iratio
-            ]
+                      ]
 
             self.parameter = Parameter.create(name='params', type='group', children=params)
 
             self.parameterTree = ParameterTree()
             self.parameterTree.setParameters(self.parameter, showTop=False)
             self._form = self.parameterTree
-        return self._form
 
+            self. parameter.sigTreeStateChanged.connect(display.redraw)
+        return self._form
 
     def wireup(self):
         super(structure, self).wireup()
@@ -700,77 +753,140 @@ class structure(form):
         self.setConnected(True)
 
         self.LatticeChoice.sigValueChanged.connect(self.changeUnitCellType)
+        self.dimensions.sigValueChanged.connect(self.changeDimensions)
 
     def setConnected(self, connect):
 
         for item in [self.LatticeA, self.LatticeB, self.LatticeC]:
             if connect:
-                item.sigValueChanged.connect(self.showUnitCell)
+                #item.sigValueChanged.connect(self.showUnitCell)
                 item.sigValueChanged.connect(self.switchtoCustom)
             else:
-                item.sigValueChanged.disconnect(self.showUnitCell)
+                #item.sigValueChanged.disconnect(self.showUnitCell)
                 item.sigValueChanged.disconnect(self.switchtoCustom)
 
-    def showUnitCell(self):
-        basis = [vecparam.value() for vecparam in self.Basis.children()]
-        print basis
-        display.showLattice(map(float,self.LatticeA.value()), map(float,self.LatticeB.value()), map(float,self.LatticeC.value()), basis=basis)
+    # def showUnitCell(self):
+    #     display.redraw()
+
 
     def switchtoCustom(self):
         self.LatticeChoice.setValue(0)
+
+    def changeDimensions(self, _, choice):
+        self.resetDimensions()
+
+        if choice == '1D':
+            self.xspacing.show()
+            self.non3DType.show()
+            self.domainsize.show()
+            self.non3Dlattice.show()
+        elif choice == '2D':
+            self.xspacing.show()
+            self.yspacing.show()
+            self.non3DType.show()
+            self.domainsize.show()
+            self.non3Dlattice.show()
+        elif choice == '3D':
+            self.Lattice.show()
+            self.Basis.show()
+            self.Scaling.show()
+            self.Repetition.show()
+
+        #self.showUnitCell()
+
+    def resetDimensions(self):
+        self.domainsize.hide()
+        self.non3DType.hide()
+        self.xspacing.hide()
+        self.yspacing.hide()
+        self.Lattice.hide()
+        self.Basis.hide()
+        self.Scaling.hide()
+        self.Repetition.hide()
+        self.non3Dlattice.show()
 
     def changeUnitCellType(self, _, choice):
 
         self.setConnected(False)
 
         if choice == 'Simple Cubic':
-            self.LatticeA.setValue((1, 0, 0))
-            self.LatticeB.setValue((0, 1, 0))
-            self.LatticeC.setValue((0, 0, 1))
+            self.LatticeA.setValue((10, 0, 0))
+            self.LatticeB.setValue((0, 10, 0))
+            self.LatticeC.setValue((0, 0, 10))
 
         elif choice == 'Body Centered Cubic':
-            self.LatticeA.setValue((-.5, .5, .5))
-            self.LatticeB.setValue((.5, .5, .5))
-            self.LatticeC.setValue((-.5, -.5, .5))
+            self.LatticeA.setValue((-5, 5, 5))
+            self.LatticeB.setValue((5, 5, 5))
+            self.LatticeC.setValue((-5, -5, 5))
 
         elif choice == 'Face Centered Cubic':
-            self.LatticeA.setValue((.5, .5, 0))
-            self.LatticeB.setValue((0, .5, .5))
-            self.LatticeC.setValue((.5, 0, .5))
+            self.LatticeA.setValue((5, 5, 0))
+            self.LatticeB.setValue((0, 5, 5))
+            self.LatticeC.setValue((5, 0, 5))
 
         elif choice == 'Hexagonal':
-            self.LatticeA.setValue((1, 0, 0))
-            self.LatticeB.setValue((.5, 3. ** .5 * .5, 0))
-            self.LatticeC.setValue((0, 0, 1))
+            self.LatticeA.setValue((10, 0, 0))
+            self.LatticeB.setValue((5, 3 ** .5 * .5, 0))
+            self.LatticeC.setValue((0, 0, 10))
 
-        self.showUnitCell()
+        #self.showUnitCell()
 
         self.setConnected(True)
 
     def toStructureDict(self):
+
+        if len(self.parent.ensemble.toDict()):
+            ensemble = [('maxgrains', [360, 1, 1])]
+            ensemble.append(('orientations', self.parent.ensemble.toDict()))
+        else:
+            ensemble = [('maxgrains', [1, 1, 1])]
+
         return UnsortableOrderedDict([('key', 'st' + self.parent.name),
-                                      ('iratio',self.iratio.value()),
-                                      ('transvec',self.transvec.value()),
-                                      ('grain', UnsortableOrderedDict([('refindex', {'delta': self.parent.delta.value(),
-                                                                                     'beta': self.parent.delta.value()}),
-                                                                       ('unitcell_key', 'u' + self.parent.name)])),
-                                      ('ensemble', UnsortableOrderedDict([('maxgrains', [1, 1, 1]),
-                                                                          ('orientations',self.parent.ensemble.toDict()
-                                                                           )]))])
+                                      ('iratio', self.iratio.value()),
+                                      ('transvec', list(self.Position.value())),
+                                      ('grain', self.toGrainDict()),
+                                      ('ensemble', UnsortableOrderedDict(ensemble))])
 
     def toUnitCellDict(self):
         return UnsortableOrderedDict([('key', 'u' + self.parent.name),
                                       ('elements', [UnsortableOrderedDict([('shape_key', self.parent.name),
                                                                            ('locations', self.Basis.toArray())])])])
 
-    def toDict(self):
-
-        return UnsortableOrderedDict([('type', self.LatticeChoice.value()),
-                                      ('A', list(self.LatticeA.value())),
-                                      ('B', list(self.LatticeB.value())),
-                                      ('C', list(self.LatticeC.value())),
-                                      ('position', list(self.Position.value())),
-                                      ('basis', self.Basis.toDict())])
+    def toGrainDict(self):
+        z = featuremanager.features.index(self.parent)-1
+        # get next lower layer
+        while type(featuremanager.features[z]) is not layer and z>=0:
+            z-=1
+        if type(featuremanager.features[z]) is layer:
+            layer_key=featuremanager.features[z].name
+        else:
+            layer_key=''
+        grain = [('unitcell_key', 'u' + self.parent.name),
+                 ('layer_key', layer_key)]  # IMPORTANT! How should this be determined?...
+        if self.dimensions.value() == '1D':
+            grain.extend([('type', self.non3DType.value().lower()),
+                          ('lattice',self.non3Dlattice.value().lower()),
+                          ('xspacing', UnsortableOrderedDict([('mean',self.xmean.value()),
+                                                              ('std',self.xstd.value())])),
+                          ('domain', self.domainsize.value())])  # Where does hex/cubic go?...
+        elif self.dimensions.value() == '2D':
+            grain.extend([('type', self.non3DType.value().lower()),
+                          ('lattice',self.non3Dlattice.value().lower()),
+                          ('xspacing', UnsortableOrderedDict([('mean',self.xmean.value()),
+                                                              ('std',self.xstd.value())])),
+                          ('yspacing', UnsortableOrderedDict([('mean',self.ymean.value()),
+                                                              ('std',self.ystd.value())])),
+                          ('domain', self.domainsize.value())])
+        else:
+            grain.extend([('lattice', UnsortableOrderedDict([('a', list(self.LatticeA.value())),
+                                                             ('b', list(self.LatticeB.value())),
+                                                             ('c', list(self.LatticeC.value())),
+                                                             # ('basis', self.Basis.toDict()),
+                                                             ])),
+                          ('scaling', self.Scaling.value()),
+                          ('repetition', list(self.Repetition.value()))
+                          ])
+        return UnsortableOrderedDict(grain)
 
 
 def loadform(path):
@@ -792,13 +908,14 @@ class scattering(form):
             self.Experiment = pTypes.ListParameter(name='Experiment', values=['GISAXS', 'SAXS'], value=0)
             self.Energy = pTypes.SimpleParameter(name='Photon Energy', type='int', value=10000, suffix='eV',
                                                  siPrefix=True, step=100)
-            self.Incidence = StepParameter(name='Incidence Angle(s)')
-            #self.Rotation = StepParameter(name='In-plane Rotation')
-            #self.Tilt = StepParameter(name='Tilt', suffix='deg')
+            self.Incidence = StepParameter(name='Incidence Angle(s)', min=.1, max=0, step=0)
+
+            # self.Rotation = StepParameter(name='In-plane Rotation')
+            # self.Tilt = StepParameter(name='Tilt', suffix='deg')
 
             self.IncidenceAngleVisual = pTypes.SimpleParameter(name='Incidence angle', value=0.120, suffix=' deg',
                                                                type='float')
-            #self.TiltAngleVisual = pTypes.SimpleParameter(name='Tilt Angle', value=0, suffix=' deg', type='float')
+            # self.TiltAngleVisual = pTypes.SimpleParameter(name='Tilt Angle', value=0, suffix=' deg', type='float')
             self.Visualization = pTypes.GroupParameter(name='Beam Visualization (display only)',
                                                        children=[self.IncidenceAngleVisual, self.TiltAngleVisual])
 
@@ -810,7 +927,6 @@ class scattering(form):
             self.parameterTree.setParameters(self.parameter, showTop=False)
             self._form = self.parameterTree
         return self._form
-
 
     def toDict(self):
         return UnsortableOrderedDict([('pathprefix', '.'),
@@ -841,8 +957,8 @@ class detector(form):
                                                             children=[self.Width, self.Height])
             self.setConnected(True)
 
-            self.Qparallel = MinMaxParameter(name='Q Parallel')
-            self.Qz = MinMaxParameter(name='Q Z')
+            self.Qparallel = MinMaxParameter(name='Q Parallel', min=-2, max=2)
+            self.Qz = MinMaxParameter(name='Q Z', min=0, max=4)
             self.Qrange = pTypes.GroupParameter(name='Q Range', children=[self.Qparallel, self.Qz])
 
             self.smearing = pTypes.SimpleParameter(name='Smearing', value=0, type='float')
@@ -850,7 +966,7 @@ class detector(form):
             self.Experiment = pTypes.ListParameter(name='Experiment', values=['GISAXS', 'SAXS'], value=0)
             self.Energy = pTypes.SimpleParameter(name='Photon Energy', type='int', value=10000, suffix='eV',
                                                  siPrefix=True, step=100)
-            self.Incidence = StepParameter(name='Incidence Angle(s)')
+            self.Incidence = StepParameter(name='Incidence Angle(s)', min=.1, max=0, step=0)
 
             params = [self.DetectorResolution, self.Qrange, self.smearing, self.Experiment, self.Incidence]
 
@@ -882,7 +998,6 @@ class detector(form):
     def shapeChanged(self):
         self.DetectorChoice.setValue('Custom...')
 
-
     def toDict(self):
         return UnsortableOrderedDict([('path', '.'),
                                       ('runname', 'BLAH'),
@@ -893,10 +1008,10 @@ class detector(form):
                                       ('smearing', 0),
                                       ('detector', self.DetectorChoice.value()),
                                       ('output', UnsortableOrderedDict([('type', 'qspace'),
-                                                                              ('minpoint', [self.Qparallel.value()[0],
-                                                                                            self.Qz.value()[0]]),
-                                                                              ('maxpoint', [self.Qparallel.value()[0],
-                                                                                            self.Qz.value()[0]])])),
+                                                                        ('minpoint', [self.Qparallel.value()[0],
+                                                                                      self.Qz.value()[0]]),
+                                                                        ('maxpoint', [self.Qparallel.value()[1],
+                                                                                      self.Qz.value()[1]])])),
                                       ('resolution', [self.Width.value(), self.Height.value()])
                                       ])
 
@@ -924,7 +1039,6 @@ class VectorParameter(Parameter):
     def __init__(self, *args, **kwargs):
         super(VectorParameter, self).__init__(*args, **kwargs)
 
-
     def defaultValue(self):
         return (0, 0, 0)
 
@@ -932,7 +1046,18 @@ class VectorParameter(Parameter):
 registerParameterType('Vector', VectorParameter, override=True)
 
 
-class ScalableGroup(pTypes.GroupParameter):
+class hideableGroupParameterItem(pTypes.GroupParameterItem):
+    def optsChanged(self, param, opts):
+        super(hideableGroupParameterItem, self).optsChanged(param, opts)
+        if 'visible' in opts:
+            self.setHidden(not opts['visible'])
+
+
+class hideableGroupParameter(pTypes.GroupParameter):
+    itemClass = hideableGroupParameterItem
+
+
+class ScalableGroup(hideableGroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
@@ -951,24 +1076,83 @@ class ScalableGroup(pTypes.GroupParameter):
         return d
 
 
-class hideableGroupParameterItem(pTypes.GroupParameterItem):
-    def optsChanged(self, param, opts):
-        super(hideableGroupParameterItem, self).optsChanged(param, opts)
-        if 'visible' in opts:
-            self.setHidden(not opts['visible'])
+class RotationDistParameter(pTypes.GroupParameter):
+    itemClass = hideableGroupParameterItem
+
+    def __init__(self, value=None, **opts):
+        opts['type'] = 'bool'
+        opts['value'] = True
+        pTypes.GroupParameter.__init__(self, **opts)
+
+        self.DistributionChoice = pTypes.ListParameter(name='Distribution', type='list', value=0,
+                                                       values=['Uniform', 'Random', 'Gaussian', 'Bragg'])
+        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
+        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
+        self.Mean = pTypes.SimpleParameter(name='Mean', type='float', value=0)
+        self.Variance = pTypes.SimpleParameter(name='Variance', type='float', value=0)
+
+        self.Mean.hide()
+        self.Variance.hide()
+
+        self.DistributionChoice.sigValueChanged.connect(self.distributionChanged)
+
+        self.addChildren([self.DistributionChoice, self.Min, self.Max, self.Mean, self.Variance])
+
+    def distributionChanged(self, _, choice):
+        # print choice
+        if choice == 'Uniform':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.hide()
+            self.Variance.hide()
+        elif choice == 'Random':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.hide()
+            self.Variance.hide()
+        elif choice == 'Gaussian':
+            self.Min.show()
+            self.Max.show()
+            self.Mean.show()
+            self.Variance.show()
+        elif choice == 'Bragg':
+            self.Min.hide()
+            self.Max.hide()
+            self.Mean.hide()
+            self.Variance.hide()
+
+    def toDict(self):
+        d = UnsortableOrderedDict()
+        choice = self.DistributionChoice.value()
+
+        if choice == 'Uniform':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stat'] = 'uniform'
+        elif choice == 'Random':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stat'] = 'random'
+        elif choice == 'Gaussian':
+            d['min'] = self.Min.value()
+            d['max'] = self.Max.value()
+            d['stddev'] = np.sqrt(self.Variance.value())
+            d['mean'] = self.Mean.value()
+            d['stat'] = 'gaussian'
+        return d
 
 
 class DistParameter(pTypes.GroupParameter):
     itemClass = hideableGroupParameterItem
 
-    def __init__(self, **opts):
+    def __init__(self, value=None, **opts):
         opts['type'] = 'bool'
         opts['value'] = True
         pTypes.GroupParameter.__init__(self, **opts)
 
         self.DistributionChoice = pTypes.ListParameter(name='Distribution', type='list', value=0,
                                                        values=['Single value', 'Uniform', 'Random', 'Gaussian'])
-        self.Value = pTypes.SimpleParameter(name=opts['name'], type='float', value=0)
+        self.Value = pTypes.SimpleParameter(name=opts['name'], type='float', value=value)
         self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
         self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
         self.Mean = pTypes.SimpleParameter(name='Mean', type='float', value=0)
@@ -983,8 +1167,7 @@ class DistParameter(pTypes.GroupParameter):
 
         self.DistributionChoice.sigValueChanged.connect(self.distributionChanged)
 
-        self.addChildren([self.DistributionChoice, self.Value, self.Min, self.Max, self.Variance, self.N])
-
+        self.addChildren([self.DistributionChoice, self.Value, self.Min, self.Max, self.Mean, self.Variance, self.N])
 
     def distributionChanged(self, _, choice):
         # print choice
@@ -1046,6 +1229,7 @@ class DistParameter(pTypes.GroupParameter):
             d['stat'] = 'gaussian'
         return d
 
+
 class RotationParameter(pTypes.GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'bool'
@@ -1053,30 +1237,30 @@ class RotationParameter(pTypes.GroupParameter):
         super(RotationParameter, self).__init__(**opts)
 
         self.AxisChoice = pTypes.ListParameter(name='Axis', type='list', value=0,
-                                                       values=['X','Y','Z'])
-        self.AngleDist = DistParameter(name='Angles')
+                                               values=['X', 'Y', 'Z'])
+        self.AngleDist = RotationDistParameter(name='Angles')
         self.delete = pTypes.ActionParameter(name='Remove Rotation')
         self.delete.sigActivated.connect(self.remove)  # Will this work?
 
         self.addChildren([self.AxisChoice, self.AngleDist, self.delete])
 
     def toDict(self):
-        d = dict()
+        d = self.AngleDist.toDict()
         d['axis'] = self.AxisChoice.value().lower()
-        d['angles'] = self.AngleDist.toDict()
         return d
+
 
 class StepParameter(pTypes.GroupParameter):
     itemClass = hideableGroupParameterItem
 
-    def __init__(self, **opts):
+    def __init__(self, min=None, max=None, step=None, **opts):
         opts['type'] = 'bool'
         opts['value'] = True
         pTypes.GroupParameter.__init__(self, **opts)
 
-        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
-        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
-        self.Step = pTypes.SimpleParameter(name='Step', type='float', value=0)
+        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=min)
+        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=max)
+        self.Step = pTypes.SimpleParameter(name='Step', type='float', value=step)
 
         self.addChildren([self.Min, self.Max, self.Step])
 
@@ -1092,19 +1276,18 @@ class StepParameter(pTypes.GroupParameter):
 class MinMaxParameter(pTypes.GroupParameter):
     itemClass = hideableGroupParameterItem
 
-    def __init__(self, **opts):
+    def __init__(self, min=None, max=None, **opts):
         opts['type'] = 'bool'
         opts['value'] = True
         pTypes.GroupParameter.__init__(self, **opts)
 
-        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=0)
-        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=0)
+        self.Min = pTypes.SimpleParameter(name='Minimum', type='float', value=min)
+        self.Max = pTypes.SimpleParameter(name='Maximum', type='float', value=max)
 
         self.addChildren([self.Min, self.Max])
 
     def value(self):
         return [self.Min.value(), self.Max.value()]
-
 
     def toDict(self):
         d = UnsortableOrderedDict()
