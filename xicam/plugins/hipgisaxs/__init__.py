@@ -113,7 +113,7 @@ class plugin(base.plugin):
             self._scatteringForm = customwidgets.scattering()
         return self._scatteringForm
 
-    def writeyaml(self):
+    def genyaml(self):
 
         shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
         layers = [feature.toDict() for feature in featuremanager.features if
@@ -129,6 +129,10 @@ class plugin(base.plugin):
                                                         ('layers', layers),
                                                         ('structures', structures),
                                                         ('computation', self.detectorForm.toDict())])}
+        return out
+
+    def writeyaml(self):
+        out = self.genyaml()
         # with open('test.json', 'w') as outfile:
         #     json.dump(out, outfile, indent=4)
 
@@ -175,17 +179,40 @@ class plugin(base.plugin):
             self.loginwidget.loginRequest(partial(cmanager.login, login_callback, ssh_client), True)
 
     def runDask(self):
-        from distributed import Executor
-        ex = Executor(ip+':'+port)
+        import client.dask_active_executor
 
-        def runhipgisaxs():
-            import subprocess
-            subprocess.Popen('hipgisaxs test.yml')
+        if client.dask_active_executor.active_executor is None:
+            #warning message
+            return
 
+        ae = client.dask_active_executor.active_executor.executor
 
+        def hipgisaxs_func(yaml):
+          import subprocess
+          #import yaml
+          #timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
+          #with open('~/test.yml', 'w') as outfile:
+          #  yaml.dump(out, outfile, indent=4)
 
+          a = subprocess.check_output(["srun", "--job-name=hipgisaxs", "--nodes=1", "--ntasks=1", "--ntasks-per-node=1", "--time=00:30:00", "/bin/bash", "/users/course79/rungisaxs.sh", "/users/course79/test.yml"])
+          return a
 
-        ex.submit(runhipgisaxs)
+        yaml_str = yaml.dump(self.genyaml(), None, indent=4)
+        future_tag = ae.submit(hipgisaxs_func, yaml_str, pure=False)
+
+        import time
+        while future_tag.status == "pending":
+            print "loading..."
+            time.sleep(1)
+
+        if future_tag.status == "failure":
+            print "Failed.."
+            return
+
+        print "Fetching result please wait"
+        result =  future_tag.result()
+        #do something with result
+        print result
 
 
     def loginSuccess(self,client):
