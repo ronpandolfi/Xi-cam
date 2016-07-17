@@ -1268,7 +1268,10 @@ class integrationsubwidget(pg.PlotWidget):
         mask = dimg.transformmask
         if self.integrationfunction is None:
             raise NotImplementedError
-        self.applyintegration(self.integrationfunction,dimg,rois,data,mask,imageitem)
+        try:
+            self.applyintegration(self.integrationfunction,dimg,rois,data,mask,imageitem)
+        except ValueError:
+            print 'Maybe the roi was too far away?'
 
     def replotcallback(self,*args,**kwargs):
         self.sigPlotResult.emit(*args, **kwargs)

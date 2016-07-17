@@ -33,6 +33,8 @@ class PyFAIGeometry(pyFAI.geometry.Geometry):
 class experiment(Parameter):
     def __init__(self, path=None):
 
+        self.imageshape=(1475, 1709)
+
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
@@ -220,6 +222,20 @@ class experiment(Parameter):
 
     def mapHeader(self,xikey):
         return self.headermap[xikey]
+
+    @property
+    def qcorners(self):
+        pass
+        # bl=(0,0)
+        # br=(self.imageshape[0],0)
+        # tl=(0,self.imageshape[1])
+        # tr=self.imageshape
+        # self.getGeometry()
+        # from pyFAI import geometry
+        # l=geometry.Geometry.qFunction()
+        #     qFunction(d1, d2, param=None, path='cython')
+
+
 
 activeExperiment = experiment()
 
