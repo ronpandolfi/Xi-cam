@@ -149,7 +149,7 @@
                         </property>
                         <property name="icon">
                             <iconset>
-                                <normaloff>gui/hipgisaxsicons_4.png</normaloff>gui/hipgisaxsicons_4.png
+                                <normaloff>gui/icons_40.png</normaloff>gui/hipgisaxsicons_4.png
                             </iconset>
                         </property>
                         <property name="iconSize">
@@ -167,7 +167,7 @@
                         </property>
                         <property name="icon">
                             <iconset>
-                                <normaloff>gui/hipgisaxsicons_4.png</normaloff>gui/hipgisaxsicons_4.png
+                                <normaloff>gui/icons_41.png</normaloff>gui/hipgisaxsicons_4.png
                             </iconset>
                         </property>
                         <property name="iconSize">

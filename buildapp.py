@@ -47,8 +47,8 @@ OPTIONS = {'argv_emulation': False,
            'iconfile': 'gui/icon.icns',
            'plist': {
                'CFBundleName': 'Xi-cam',
-               'CFBundleShortVersionString': '1.2.4',  # must be in X.X.X format
-               'CFBundleVersion': '1.2.4',
+               'CFBundleShortVersionString': '1.2.7',  # must be in X.X.X format
+               'CFBundleVersion': '1.2.7',
                'CFBundleIdentifier': 'com.lbnl.xicam',  # optional
                'NSHumanReadableCopyright': '@ 2016',  # optional
                'CFBundleDevelopmentRegion': 'English',  #optional - English is default
@@ -56,12 +56,13 @@ OPTIONS = {'argv_emulation': False,
            'includes': [
                'numpy', 'PySide.QtUiTools.QUiLoader', 'PySide.QtCore', 'PySide.QtGui',
                'PySide.QtXml', 'PIL', 'pipeline.cWarpImage', 'pygments.lexers.python',
-               'pygments.styles.monokai', 'pygments.styles.default', 'ipython', 'ipykernel.datapub', 'six'
+               'pygments.styles.monokai', 'pygments.styles.default', 'ipython', 'ipykernel.datapub', 'six',
+               'distributed', 'cryptography.hazmat.backends.openssl', 'cryptography.hazmat.backends.commoncrypto'
            ],
            'excludes': [
                'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet', 'matplotlib.tests', 'matplotlib.testing'
            ],
-           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'h5py', 'vispy']
+           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'h5py', 'vispy', 'cryptography']
 }
 
 EXT = Extension(name='pipeline.cWarpImage',
@@ -71,7 +72,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 include_dirs=[np.get_include()],
 
 )
-
+import cryptography.hazmat.backends
 
 
 setup(
