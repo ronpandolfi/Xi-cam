@@ -16,15 +16,15 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS']
 def initplugins(placeholders):
     global plugins, modules
 
-    packages = pkgutil.iter_modules(__path__, '.')
+    packages = pkgutil.iter_modules(__path__)
     print 'packages:',packages
-    packages = [pkg for pkg in packages if pkg[1] not in ['.widgets', '.login', '.base', '.explorer', '.__init__']]
+    packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
     print 'packages:', packages
 
     for importer, modname, ispkg in packages:
         try:
             print "Found plugin %s (is a package: %s)" % (modname, ispkg)
-            modules.append(importlib.import_module(modname,'xicam.plugins'))
+            modules.append(importlib.import_module('.'+modname,'xicam.plugins'))
             print "Imported", modules[-1]
         except ImportError as ex:
             msg.logMessage('Module could not be loaded: ' + modname)
@@ -67,7 +67,7 @@ class pluginlink():
         self.instance = None
 
     def enable(self):
-        self.module = reload(sys.modules[self.modulename])
+       #self.module = reload(sys.modules[self.modulename])
         self.plugin = self.module.plugin
         self.instance = self.plugin(self.placeholders)
 

@@ -236,11 +236,7 @@ class dimgViewer(QtGui.QWidget):
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
         Lmax = np.nanmax(self.dimg.rawdata)
 
-        if self.toolbar.actionLog_Intensity.isChecked():
-            self.imgview.getHistogramWidget().item.setLevels(
-                np.log(max(np.nanmin(self.dimg.rawdata * (self.dimg.rawdata > 0)), 1)), np.log(Lmax))
-        else:
-            self.imgview.getHistogramWidget().item.setLevels(np.max(np.nanmin(self.dimg.rawdata), 0), Lmax)
+        self.imgview.autoLevels()
         print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
 
     def cacheLUT(self):
@@ -1478,20 +1474,20 @@ class ImageView(pg.ImageView):
 
             self.ui.histogram.setLevels(levelmin, levelmax)
 
-    def updateImage(self, autoHistogramRange=True): # inject logarithm action
-        ## Redraw image on screen
-        if self.image is None:
-            return
-
-        image = self.getProcessedImage()
-
-        if autoHistogramRange:
-            self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
-        if self.axes['t'] is None:
-            self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
-        else:
-            self.ui.roiPlot.show()
-            self.imageItem.updateImage(np.log(image[self.currentIndex] * (image[self.currentIndex]> 0) + (image[self.currentIndex] < 1)) if self.actionLog_Intensity.isChecked() else image[self.currentIndex])
+    # def updateImage(self, autoHistogramRange=True): # inject logarithm action
+    #     ## Redraw image on screen
+    #     if self.image is None:
+    #         return
+    #
+    #     image = self.getProcessedImage()
+    #
+    #     if autoHistogramRange:
+    #         self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+    #     if self.axes['t'] is None:
+    #         self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
+    #     else:
+    #         self.ui.roiPlot.show()
+    #         self.imageItem.updateImage(np.log(image[self.currentIndex] * (image[self.currentIndex]> 0) + (image[self.currentIndex] < 1)) if self.actionLog_Intensity.isChecked() else image[self.currentIndex])
 
 
 from scipy.signal import fftconvolve

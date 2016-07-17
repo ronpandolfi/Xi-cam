@@ -28,6 +28,7 @@ def logMessage(s,level=20,loggername=None):
     logger.log(level,s)
     if guilogcallable:
         guilogcallable(level,s)
+    print s
 
 def clearMessage():
     statusbar.clearMessage()
