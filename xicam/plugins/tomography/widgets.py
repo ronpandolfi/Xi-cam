@@ -1080,7 +1080,7 @@ class RunViewer(QtGui.QTabWidget):
             button.setIcon(icon)
             button.setIconSize(QtCore.QSize(24, 24))
             button.setFixedSize(32, 32)
-            button.setToolTip('Cancel Current Process')
+            button.setToolTip('Cancel current process')
             w = QtGui.QWidget()
             w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
             w.setContentsMargins(0,0,0,0)

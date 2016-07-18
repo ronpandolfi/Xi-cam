@@ -35,6 +35,13 @@ def loadUi():
     # Load the gui from file
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
 
+    # Add some tool tips
+    functionwidget.addFunctionButton.setToolTip('Add function to pipeline')
+    functionwidget.clearButton.setToolTip('Clear pipeline')
+    functionwidget.fileButton.setToolTip('Save/Load pipeline')
+    functionwidget.moveDownButton.setToolTip('Move selected function down')
+    functionwidget.moveUpButton.setToolTip('Move selected function up')
+
     functionwidget.clearButton.clicked.connect(fmanager.clear_action)
     functionwidget.moveUpButton.clicked.connect(
         lambda: fmanager.swap_functions(fmanager.currentindex,
