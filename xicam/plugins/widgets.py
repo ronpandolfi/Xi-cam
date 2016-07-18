@@ -1316,6 +1316,7 @@ class integrationsubwidget(pg.PlotWidget):
                 self.iscleared = True
             if color is None:
                 color = [255, 255, 255]
+            y[y<=0]=1.E-9
             curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))
 
@@ -1682,21 +1683,25 @@ class frameproptable(pg.TableWidget):
 
         useAsMenu = QtGui.QMenu(u'Use as...',parent=self.contextMenu)
         useAsMenu.addAction('Beam Energy').triggered.connect(self.useAsEnergy)
+        useAsMenu.addAction('Downstream Intensity').triggered.connect(self.useAsI1)
         self.contextMenu.addMenu(useAsMenu)
 
     def setData(self,data):
         if data is None:
             self.setVisible(False)
             return
-        data=data.items()
+        data=sorted(data.items())
         self.setHidden(len(data) == 0)
         super(frameproptable, self).setData(data)
 
     def sizeHint(self):
         return QtCore.QSize(self.parent().width(),self.parent().height()/2)
 
+    def useAsI1(self):
+        config.activeExperiment.setHeaderMap('I1 AI',self.getSelectedKey())
+
     def useAsEnergy(self):
-        print self.getSelectedKey()
+        config.activeExperiment.setHeaderMap('Beam Energy',self.getSelectedKey())
 
     def getSelectedKey(self):
         return self.item(self.selectedIndexes()[0].row(),0).value

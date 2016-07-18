@@ -207,6 +207,7 @@ def scanparas(path, frame=None):
 
 def scanparaslines(lines):
     paras = OrderedDict()
+    keylesslines = 0
     for line in lines:
         cells = filter(None, re.split('[=:]+', line))
 
@@ -216,7 +217,8 @@ def scanparaslines(lines):
             cells[1] = cells[1].split('/')[0]
             paras[key] = cells[1].strip()
         elif cells.__len__() == 1:
-            paras[key] = ''
+            keylesslines += 1
+            paras['Keyless value #'+str(keylesslines)] = key
 
     return paras
 
@@ -1201,6 +1203,21 @@ class diffimage2(object):
 
         return self._headers
 
+
+    @property
+    def displaydata(self):
+        # Not cached
+        if self.logscale:
+            return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
+        return self.transformdata
+
+
+    def implements(self, t):
+        if t == 'MetaArray': return True
+
+    def __getitem__(self, item):
+        return self.displaydata[item]
+
     def __getattr__(self, name):
        if name in self.cache:
            return self.cache[name]
@@ -1358,12 +1375,6 @@ class singlefilediffimage2(diffimage2):
 
         return img
 
-    @property
-    def displaydata(self):
-        # Not cached
-        if self.logscale:
-            return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
-        return self.transformdata
 
     def radialsymmetryfill(self,img):
         centerx = config.activeExperiment.center[0]
@@ -1401,11 +1412,6 @@ class singlefilediffimage2(diffimage2):
         img = img * marginmask + symimg * padmask * (1 - marginmask)
         return img
 
-    def implements(self, t):
-        if t == 'MetaArray': return True
-
-    def __getitem__(self, item):
-        return self.displaydata[item]
 
 class multifilediffimage2(diffimage2):
     ndim = 3
@@ -1457,6 +1463,7 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
+        print 'applyinglog:',self.logscale
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
@@ -1493,6 +1500,14 @@ class datadiffimage2(singlefilediffimage2):
     def __init__(self, data, detector=None, experiment=None):
         super(datadiffimage2, self).__init__(filepath=None, detector=detector, experiment=experiment)
         self._rawdata = np.rot90(data,3)
+
+        # False scale rawdata to avoid log issues
+        if self._rawdata.max()<=1:
+            self._rawdata*=2**32
+
+    @property
+    def headers(self):
+        return dict()
 
 class stackdiffimage2(diffimage2):
     ndim = 3
