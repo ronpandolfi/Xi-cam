@@ -1,15 +1,16 @@
 import os
 import sys
-import logging
-import glob
+import inspect
+import fabio, pyFAI
 import h5py
 import tifffile
+import glob
+import numpy as np
 from fabio.fabioimage import fabioimage
 from fabio import fabioutils
-import numpy as np
-import fabio, pyFAI
 from pyFAI import detectors
-
+import numpy as np
+import logging
 
 logger = logging.getLogger("openimage")
 
@@ -40,12 +41,62 @@ class rawimage(fabioimage):
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
 
-#TODO: merge bl832h5image with spoth5
+class H5image(fabioimage):
+    """
+    HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
+    To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
+    subclass and include 'H5' somewhere in its name.
+    """
 
-class spoth5image(fabioimage):
+    # This does not really work because fabio creates the instance of the class with not connection to the filename
+    # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
+    # def __new__(cls, *args, **kwargs):
+    #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    #                        if 'h5' in image[0] and image[0] != 'H5image']
+    #     for image_class in h5image_classes:
+    #         try:
+    #             print 'Testing class ', image_class[0]
+    #             obj = image_class[1](*args, **kwargs)
+    #             # obj.read(obj.filename)
+    #             print 'Success!'
+    #         except Exception:
+    #             continue
+    #         else:
+    #             cls = image_class[1]
+    #             break
+    #     else:
+    #         raise RuntimeError('H5 format not recognized')
+    #     return super(H5image, cls).__new__(cls) # can call super.__new__ or simply return the instance (obj) and bypass init
+
+    def read(self, filename, frame=None):
+        h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+                           if 'H5' in image[0] and image[0] != 'H5image']
+        for image_class in h5image_classes:
+            try:
+                print 'Opening as ', image_class[0]
+                obj = image_class[1](self.data, self.header)
+                obj.read(filename)
+            #TODO have a specific check that raises a specific error so that only that exception is handled
+            except Exception:
+                continue
+            else:
+                break
+        else:
+            raise RuntimeError('H5 format not recognized')
+        return obj
+
+
+
+fabio.openimage.H5 = H5image
+fabioutils.FILETYPES['h5'] = ['h5']
+fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
+
+
+class spotH5image(fabioimage):
     def _readheader(self,f):
         with h5py.File(f,'r') as h:
             self.header=h.attrs
+
     def read(self,f,frame=None):
         self.filename=f
         if frame is None:
@@ -113,15 +164,10 @@ class spoth5image(fabioimage):
             return False
 
 
-fabio.openimage.spoth5image = spoth5image
-fabioutils.FILETYPES['h5'] = ['spoth5']
-fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'spoth5')
+class ALS832H5image(fabioimage):
 
-
-class ALS832h5image(fabioimage):
-
-    def __init__(self, data=None, header=None):
-        super(ALS832h5image, self).__init__(data=data, header=header)
+    def __init__(self, data=None , header=None):
+        super(ALS832H5image, self).__init__(data=data, header=header)
         self.frames = None
         self.currentframe = 0
         self.header = None
@@ -138,9 +184,9 @@ class ALS832h5image(fabioimage):
     def __exit__(self, *arg, **kwarg):
         self.close()
 
-    def _readheader(self, f):
+    def _readheader(self,f):
         if self._h5 is not None:
-            self.header = dict(self._h5.attrs)
+            self.header=dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
 
     def read(self, f, frame=None):
@@ -253,11 +299,6 @@ class ALS832h5image(fabioimage):
 
     def close(self):
         self._h5.close()
-
-
-fabio.openimage.als832h5 = ALS832h5image
-fabioutils.FILETYPES['h5'] = ['als832h5']
-fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'als832h5')
 
 
 class DXchangeimage(fabioimage):
