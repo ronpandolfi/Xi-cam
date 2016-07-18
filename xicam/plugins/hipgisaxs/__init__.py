@@ -151,7 +151,11 @@ class plugin(base.plugin):
         stdout=stdout.replace('\r\r','\r')        # Hack to fix double carriage returns
         out = np.array([np.fromstring(line, sep=' ') for line in stdout.splitlines()])
         #msg.logMessage(stderr.read())
-        plugins.plugins['Viewer'].instance.opendata(out)
+        try:
+           plugins.plugins['Viewer'].instance.opendata(out)
+        except:
+           print "Unable to load data...."
+ 
 
         # import os
         #
