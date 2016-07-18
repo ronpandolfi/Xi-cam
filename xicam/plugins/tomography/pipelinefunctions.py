@@ -1,5 +1,5 @@
 import numpy as np
-# from skimage.exposure import rescale_intensity
+import numexpr as ne
 
 DTYPE_RANGE = {'uint8': (0, 255),
                'uint16': (0, 65535),
@@ -49,17 +49,27 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8'):
     if imax is None:
         imax = np.max(arr)
 
+    np_cast = getattr(np, str(arr.dtype))
+    imin, imax =  np_cast(imin),  np_cast(imax)
+
     # Determine range of new dtype
     omin, omax = DTYPE_RANGE[dtype]
     omin = 0 if imin >= 0 else omin
+    omin, omax = np_cast(omin), np_cast(omax)
 
-    # rescale pixel intensity values
+    # # rescale pixel intensity values
     arr = np.clip(arr, imin, imax)
-    arr = np.array(((arr - imin) / float(imax - imin))* (omax - omin) + omin, dtype=arr.dtype)
-    # arr = rescale_intensity(arr, in_range=in_range, out_range=dtype)
+    arr = ((arr - imin) / float(imax - imin))* (omax - omin) + omin
+
+    # ne.evaluate('where(arr < imin, imin, arr)', out=arr)
+    # ne.evaluate('where(arr > imax, imax, arr)', out=arr)
+    #
+    # arr = ne.evaluate('((arr - imin) / (imax - imin)) * (omax - omin) + omin', out=arr)
 
     # Cast data to specified type
-    return np.array(arr, dtype=np.dtype(dtype))
+    return arr.astype(np.dtype(dtype))
+
+
 
 
 def array_operation(arr, value, operation='divide'):
@@ -79,11 +89,13 @@ if __name__ == '__main__':
     import tomopy
     from matplotlib.pyplot import imshow, show, figure
     d = tomopy.read_als_832h5('/home/lbluque/TestDatasetsLocal/dleucopodia.h5', ind_tomo=(500, 501, 502, 503))
-    c = convert_data(d[0], imin=0, imax=0)
-    print d[0].dtype
+    # d = np.array(d[0], dtype=np.float32)
+    d = d[0]
+    c = convert_data(d, imin=0, imax=0)
+    print d.dtype
     print c.dtype
     figure(0)
-    imshow(d[0][0])
+    imshow(d[0])
     figure(1)
     imshow(c[0])
     show()
