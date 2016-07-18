@@ -8,6 +8,7 @@ import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
 from fabio import fabioutils
+import fabio, pyFAI
 from pyFAI import detectors
 import numpy as np
 import logging
@@ -86,82 +87,81 @@ class H5image(fabioimage):
         return obj
 
 
-
 fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
-
-class spotH5image(fabioimage):
-    def _readheader(self,f):
-        with h5py.File(f,'r') as h:
-            self.header=h.attrs
-
-    def read(self,f,frame=None):
-        self.filename=f
-        if frame is None:
-            frame = 0
-
-        return self.getframe(frame)
-
-
-    @property
-    def nframes(self):
-        with h5py.File(self.filename,'r') as h:
-            dset=h[h.keys()[0]]
-            ddet=dset[dset.keys()[0]]
-            if self.isburst:
-                frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
-            else:
-                frames = 1
-        return frames
-
-    def __len__(self):
-        return self.nframes
-
-    @nframes.setter
-    def nframes(self,n):
-        pass
-
-    def getframe(self,frame=None):
-        if frame is None:
-            frame = 0
-        f = self.filename
-        with h5py.File(f,'r') as h:
-            dset=h[h.keys()[0]]
-            ddet=dset[dset.keys()[0]]
-            if self.isburst:
-                frames = [key for key in ddet.keys() if '.edf' in key]
-                dfrm=ddet[frames[frame]]
-            elif self.istiled:
-                high = ddet[u'high']
-                low  = ddet[u'low']
-                frames = [high[high.keys()[0]],low[low.keys()[0]]]
-                dfrm = frames[frame]
-            else:
-                dfrm = ddet
-            self.data = dfrm[0]
-        return self
-
-    @property
-    def isburst(self):
-        try:
-            with h5py.File(self.filename,'r') as h:
-                dset=h[h.keys()[0]]
-                ddet=dset[dset.keys()[0]]
-                return not (u'high' in ddet.keys() and u'low' in ddet.keys())
-        except AttributeError:
-            return False
-
-    @property
-    def istiled(self):
-        try:
-            with h5py.File(self.filename,'r') as h:
-                dset=h[h.keys()[0]]
-                ddet=dset[dset.keys()[0]]
-                return u'high' in ddet.keys() and u'low' in ddet.keys()
-        except AttributeError:
-            return False
+#
+# class spotH5image(fabioimage):
+#     def _readheader(self,f):
+#         with h5py.File(f,'r') as h:
+#             self.header=h.attrs
+#
+#     def read(self,f,frame=None):
+#         self.filename=f
+#         if frame is None:
+#             frame = 0
+#
+#         return self.getframe(frame)
+#
+#
+#     @property
+#     def nframes(self):
+#         with h5py.File(self.filename,'r') as h:
+#             dset=h[h.keys()[0]]
+#             ddet=dset[dset.keys()[0]]
+#             if self.isburst:
+#                 frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+#             else:
+#                 frames = 1
+#         return frames
+#
+#     def __len__(self):
+#         return self.nframes
+#
+#     @nframes.setter
+#     def nframes(self,n):
+#         pass
+#
+#     def getframe(self,frame=None):
+#         if frame is None:
+#             frame = 0
+#         f = self.filename
+#         with h5py.File(f,'r') as h:
+#             dset=h[h.keys()[0]]
+#             ddet=dset[dset.keys()[0]]
+#             if self.isburst:
+#                 frames = [key for key in ddet.keys() if '.edf' in key]
+#                 dfrm=ddet[frames[frame]]
+#             elif self.istiled:
+#                 high = ddet[u'high']
+#                 low  = ddet[u'low']
+#                 frames = [high[high.keys()[0]],low[low.keys()[0]]]
+#                 dfrm = frames[frame]
+#             else:
+#                 dfrm = ddet
+#             self.data = dfrm[0]
+#         return self
+#
+#     @property
+#     def isburst(self):
+#         try:
+#             with h5py.File(self.filename,'r') as h:
+#                 dset=h[h.keys()[0]]
+#                 ddet=dset[dset.keys()[0]]
+#                 return not (u'high' in ddet.keys() and u'low' in ddet.keys())
+#         except AttributeError:
+#             return False
+#
+#     @property
+#     def istiled(self):
+#         try:
+#             with h5py.File(self.filename,'r') as h:
+#                 dset=h[h.keys()[0]]
+#                 ddet=dset[dset.keys()[0]]
+#                 return u'high' in ddet.keys() and u'low' in ddet.keys()
+#         except AttributeError:
+#             return False
 
 
 class ALS832H5image(fabioimage):
@@ -301,10 +301,10 @@ class ALS832H5image(fabioimage):
         self._h5.close()
 
 
-class DXchangeimage(fabioimage):
+class DXchangeH5image(fabioimage):
 
     def __init__(self, data=None , header=None):
-        super(DXchangeimage, self).__init__(data=data, header=header)
+        super(DXchangeH5image, self).__init__(data=data, header=header)
         self.currentframe = 0
         self.header = None
         self._h5 = None
@@ -395,11 +395,6 @@ class DXchangeimage(fabioimage):
 
     def close(self):
         self._h5.close()
-
-
-# fabio.openimage.dxchange = DXchangeimage
-# fabioutils.FILETYPES['h5'] = ['dxchange']
-# fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'dxchange')
 
 
 class TiffStack(object):
