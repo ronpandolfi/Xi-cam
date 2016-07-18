@@ -232,7 +232,10 @@ class plugin(base.plugin):
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
         print "result = ", out
         #msg.logMessage(stderr.read())
-        plugins.plugins['Viewer'].instance.opendata(out)
+        try:
+          plugins.plugins['Viewer'].instance.opendata(out)
+        except:
+          print "caught issue.."
 
 
     def loginSuccess(self,client):
