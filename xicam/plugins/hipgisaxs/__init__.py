@@ -186,6 +186,7 @@ class plugin(base.plugin):
 
     def runDask(self):
         import client.dask_active_executor
+        import time
 
         if client.dask_active_executor.active_executor is None:
             #warning message
@@ -193,18 +194,25 @@ class plugin(base.plugin):
 
         ae = client.dask_active_executor.active_executor.executor
 
-        def hipgisaxs_func(yaml):
+        def hipgisaxs_func(yaml_str):
           import subprocess
-          #import yaml
-          #timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
-          #with open('~/test.yml', 'w') as outfile:
-          #  yaml.dump(out, outfile, indent=4)
+          import yaml
+          import time
+          timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
+          filename = os.path.join(os.path.expanduser('~'),"test_remote.yml")
+          
+          with open(filename, 'w') as outfile:
+             outfile.write(yaml_str)
 
-          a = subprocess.check_output(["srun", "--job-name=hipgisaxs", "--nodes=1", "--ntasks=1", "--ntasks-per-node=1", "--time=00:30:00", "/bin/bash", "/users/course79/rungisaxs.sh", "/users/course79/test.yml"])
+          a = subprocess.check_output(["srun", "--job-name=hipgisaxs", "--nodes=1", "--ntasks=1", "--ntasks-per-node=1", "--time=00:30:00", "/bin/bash", "/users/course79/rungisaxs.sh", filename])
           return a
 
-        yaml_str = yaml.dump(self.genyaml(), None, indent=4)
-        future_tag = ae.submit(hipgisaxs_func, yaml_str, pure=False)
+        self.writeyaml()
+
+        with open(os.path.join(os.path.expanduser('~'),'test.yml'), 'r') as outfile:
+          fx_str = outfile.read()
+
+        future_tag = ae.submit(hipgisaxs_func, fx_str, pure=False)
 
         import time
         while future_tag.status == "pending":
@@ -217,8 +225,8 @@ class plugin(base.plugin):
 
         print "Fetching result please wait"
         result =  future_tag.result()
-
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
+        print "result = ", out
         #msg.logMessage(stderr.read())
         plugins.plugins['Viewer'].instance.opendata(out)
 
