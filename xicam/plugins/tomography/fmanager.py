@@ -1,5 +1,5 @@
 import os
-import warnings
+import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
@@ -368,14 +368,17 @@ def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
         init = True
         start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]
         for name, fpartial, argnames, ipartials in partials:
+            ts = time.time()
             fpartial = update_function_partial(fpartial, name, argnames, datawidget,
-                                               slc=(slice(*proj), slice(start, end, sino[2])),
+                                               slc=(slice(*proj), slice(start, end, sino[2]), slice(None, None, None)),
                                                ncore=ncore, input_partials=ipartials)
-            yield 'Running {0} on slices {1} to {2} from a total of {3} slices...\n\n'.format(name, start,
+            yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(name, start,
                                                                                               end, total_sino)
             if init:
-                tomo = fpartial(datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]))))
-                shape = 2*(tomo.shape[2],)
+                tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
+                                                        slice(None, None, None)))
+                tomo = fpartial(tomo)
+                # shape = 2*(tomo.shape[2],)
                 init = False
             elif 'Write' in name:
                 fpartial(tomo, start=write_start)
@@ -388,6 +391,8 @@ def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
                 tomo = fpartial(tomo)
             else:
                 tomo = fpartial(tomo)
+
+            yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
     reset_cor()
 

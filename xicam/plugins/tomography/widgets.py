@@ -1094,7 +1094,13 @@ class RunViewer(QtGui.QTabWidget):
 
     def log2local(self, msg):
         text = self.local_console.toPlainText()
-        self.local_console.setText(msg + text)
+        if '\n' not in msg:
+            self.local_console.setText(msg + '\n\n' + text)
+        else:
+            topline = text.splitlines()[0]
+            print topline
+            tail = '\n'.join(text.splitlines()[1:])
+            self.local_console.setText(topline + msg + tail)
         # self.local_console.insertPlainText(msg)
 
     def sino_indices(self):

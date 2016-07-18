@@ -245,7 +245,7 @@ class ALS832H5image(fabioimage):
 
     def __getitem__(self, item):
         s = []
-        if not isinstance(item, tuple) or not isinstance(item, list):
+        if not isinstance(item, tuple) and not isinstance(item, list):
             item = (item, )
         for n in range(3):
             if n == 0:
@@ -255,18 +255,19 @@ class ALS832H5image(fabioimage):
             elif n == 2:
                 stop = self.data.shape[1]
             if n < len(item) and isinstance(item[n], slice):
-                start = item[n].start if item[n].start is not None else 0
-                step = item[n].step if item[n].step is not None else 1
-                stop = item[n].stop if item[n].stop is not None else stop
+                    start = item[n].start if item[n].start is not None else 0
+                    step = item[n].step if item[n].step is not None else 1
+                    stop = item[n].stop if item[n].stop is not None else stop
             elif n < len(item) and isinstance(item[n], int):
-                if item[n] < 0:
-                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
-                else:
-                    start, stop, step = item[n], item[n] + 1, 1
+                    if item[n] < 0:
+                        start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                    else:
+                        start, stop, step = item[n], item[n] + 1, 1
             else:
                 start, step = 0, 1
 
             s.append((start, stop, step))
+
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
             _arr = self._dgroup[self.frames[i]][0, slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
@@ -411,7 +412,6 @@ class TiffStack(object):
         return len(self.frames)
 
     def getframe(self, frame=0):
-        print self.frames[frame]
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
 
