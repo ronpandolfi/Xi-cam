@@ -45,21 +45,46 @@ class H5image(fabioimage):
     """
     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
     To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
-    subclass and include 'h5' somewhere in its name.
+    subclass and include 'H5' somewhere in its name.
     """
-    def __new__(cls, *args, **kwargs):
+
+    # This does not really work because fabio creates the instance of the class with not connection to the filename
+    # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
+    # def __new__(cls, *args, **kwargs):
+    #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    #                        if 'h5' in image[0] and image[0] != 'H5image']
+    #     for image_class in h5image_classes:
+    #         try:
+    #             print 'Testing class ', image_class[0]
+    #             obj = image_class[1](*args, **kwargs)
+    #             # obj.read(obj.filename)
+    #             print 'Success!'
+    #         except Exception:
+    #             continue
+    #         else:
+    #             cls = image_class[1]
+    #             break
+    #     else:
+    #         raise RuntimeError('H5 format not recognized')
+    #     return super(H5image, cls).__new__(cls) # can call super.__new__ or simply return the instance (obj) and bypass init
+
+    def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-                           if 'h5' in image[0] and image[0] != 'H5image']
+                           if 'H5' in image[0] and image[0] != 'H5image']
         for image_class in h5image_classes:
             try:
-                cls = image_class[1](*args, **kwargs)
-            except Exception as e:
+                print 'Opening as ', image_class[0]
+                obj = image_class[1](self.data, self.header)
+                obj.read(filename)
+            #TODO have a specific check that raises a specific error so that only that exception is handled
+            except Exception:
                 continue
             else:
                 break
         else:
             raise RuntimeError('H5 format not recognized')
-        return cls
+        return obj
+
 
 
 fabio.openimage.H5 = H5image
@@ -67,10 +92,11 @@ fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
 
-class spoth5image(fabioimage):
+class spotH5image(fabioimage):
     def _readheader(self,f):
         with h5py.File(f,'r') as h:
             self.header=h.attrs
+
     def read(self,f,frame=None):
         self.filename=f
         if frame is None:
@@ -138,10 +164,10 @@ class spoth5image(fabioimage):
             return False
 
 
-class bl832h5image(fabioimage):
+class ALS832H5image(fabioimage):
 
     def __init__(self, data=None , header=None):
-        super(bl832h5image, self).__init__(data=data, header=header)
+        super(ALS832H5image, self).__init__(data=data, header=header)
         self.frames = None
         self.header = None
         self._h5 = None
@@ -308,32 +334,3 @@ if __name__ == '__main__':
     # print data.flats.shape
     imshow(arr, cmap='gray')
     show()
-
-
-    class Foo(object):
-        def __init__(self, foo):
-            self.foo = foo
-
-
-    class Bar(object):
-        def __init__(self, bar):
-            self.bar = bar
-
-
-    class Meta(type):
-        def __call__(cls, foobar):
-            if isinstance(foobar, int):
-                cls = Foo
-            else:
-                cls = Bar
-            return type.__call__(cls, foobar)
-
-
-    class FooBar(object):
-        __metaclass__ = Meta
-
-
-    foo = FooBar(1)
-    print type(foo), foo.foo
-    bar = FooBar('hello')
-    print type(bar), bar.bar
