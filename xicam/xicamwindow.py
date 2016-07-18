@@ -166,7 +166,8 @@ class MyMainWindow(QtCore.QObject):
         #convert the following into a class
         self.sessions = ["localhost", "Andromeda", "Daint", "NERSC/Edison"]
         self.session_machines = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.1.7", "edison.nersc.gov"]
-        self.session_address = ["localhost", socket.gethostbyname("andromeda.dhcp.lbl.gov"), "148.187.26.16", ""]
+        #self.session_address = ["localhost", socket.gethostbyname("andromeda.dhcp.lbl.gov"), "148.187.26.16", ""]
+        self.session_address = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.26.16", ""]
         self.session_exec = ["", "/home/hari/runscript.sh", "/users/course79/runscript.sh", "/usr/common/graphics/visit/camera/runscript.sh"]
         self.executors = [ None, None, None, None ]
 
@@ -188,12 +189,15 @@ class MyMainWindow(QtCore.QObject):
         self.ui.menubar.addMenu(self.sessionmenu)
 
         self.daskLoop = client.dask_io_loop.DaskLoop()
-        #create a local active executor
-        local_scheduler = client.dask_local_scheduler.LocalScheduler(self.daskLoop)
-        local_scheduler.execute()
-        self.executors[0] = local_scheduler
-        self.sessionmenu.setTitle("Active Session (localhost)")
-        client.dask_active_executor.active_executor = local_scheduler
+        try:
+          #create a local active executor
+          local_scheduler = client.dask_local_scheduler.LocalScheduler(self.daskLoop)
+          local_scheduler.execute()
+          self.executors[0] = local_scheduler
+          self.sessionmenu.setTitle("Active Session (localhost)")
+          client.dask_active_executor.active_executor = local_scheduler
+        except:
+          print "Issues connecting to localhost"
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes

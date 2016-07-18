@@ -18,7 +18,7 @@ class LocalScheduler():
     print self.dloop.loop
 
     print "Starting scheduler"
-    self.s = Scheduler(loop=self.dloop.loop)
+    self.s = Scheduler("localhost", loop=self.dloop.loop)
     self.s.start(0) #random port
     print "End scheduler"
 
