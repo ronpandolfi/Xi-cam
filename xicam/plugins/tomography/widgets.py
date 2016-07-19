@@ -19,6 +19,7 @@ import pyqtgraph as pg
 import imageio
 import os
 import fmanager
+from pipeline import msg
 
 __author__ = "Ronald J Pandolfi"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
@@ -158,6 +159,7 @@ class TomoViewer(QtGui.QWidget):
             slice_no = self.sinogramViewer.view_spinBox.value()
         self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
+        msg.clearMessage()
 
     def add3DPreview(self, params, recon):
         # pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
@@ -166,6 +168,7 @@ class TomoViewer(QtGui.QWidget):
         recon = np.flipud(recon)
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
+        msg.clearMessage()
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
@@ -175,6 +178,7 @@ class TomoViewer(QtGui.QWidget):
             path = os.path.split(path)[0]
         self.reconstructionViewer.openDataset(path=path)
         self.viewstack.setCurrentWidget(self.reconstructionViewer)
+        msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:

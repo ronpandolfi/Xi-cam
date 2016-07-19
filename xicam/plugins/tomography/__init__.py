@@ -122,11 +122,11 @@ class plugin(base.plugin):
             print 'No dataset open.'
 
     def previewSlice(self):
-        msg.showMessage('Computing slice preview...', timeout=10)
+        msg.showMessage('Computing slice preview...', timeout=0)
         self.currentDataset().runSlicePreview()
 
     def preview3D(self):
-        msg.showMessage('Computing 3D preview...', timeout=10)
+        msg.showMessage('Computing 3D preview...', timeout=0)
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
@@ -136,7 +136,7 @@ class plugin(base.plugin):
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
-            msg.showMessage('Starting tomography reconstruction...', timeout=10)
+            msg.showMessage('Starting tomography reconstruction...', timeout=0)
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),
