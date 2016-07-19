@@ -266,7 +266,10 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     params = OrderedDict()
     funstack = []
     for func in functions:
-        if not func.previewChecked() or func.func_name == 'Write':
+        if not func.previewChecked():
+            continue
+        elif func.func_name == 'Write':
+            params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
             continue
 
         if func.subfunc_name in fixed_funcs:

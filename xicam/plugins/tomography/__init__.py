@@ -18,16 +18,16 @@ op_sys = platform.system()
 
 import os
 import time
-import pipeline
+# import pipeline
 from pipeline import msg
 from PySide import QtCore, QtGui
-from xicam import xglobals
+# from xicam import xglobals
 import widgets as twidgets
-from xicam.plugins import widgets, explorer
+# from xicam.plugins import widgets, explorer
 from xicam.plugins import base
-from PySide import QtUiTools
+# from PySide import QtUiTools
 import fmanager
-from pyqtgraph.parametertree import ParameterTree
+# from pyqtgraph.parametertree import ParameterTree
 import ui
 
 
