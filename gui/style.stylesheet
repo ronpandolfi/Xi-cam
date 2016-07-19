@@ -13,7 +13,7 @@ QWidget {
     outline: 0;
 }
 
-QTreeWidget::item, QTreeWidget::item:{
+QTreeWidget::item{
     height: 30px;
 }
 
