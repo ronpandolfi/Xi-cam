@@ -26,3 +26,7 @@ Write HDF5:
   type: str
 - name: overwrite
   type: bool
+- name: appendaxis
+  type: int
+- name: maxsize
+  type: int

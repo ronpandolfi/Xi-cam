@@ -162,9 +162,6 @@ class TomoViewer(QtGui.QWidget):
         msg.clearMessage()
 
     def add3DPreview(self, params, recon):
-        # pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
-        # if pad > 0:
-        #     recon = recon[:, pad:-pad, pad:-pad]
         recon = np.flipud(recon)
         msg.clearMessage()
         self.viewstack.setCurrentWidget(self.preview3DViewer)
@@ -729,6 +726,8 @@ class ReconstructionViewer(QtGui.QWidget):
         if path is None:
             path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
         if path:
+            if len(path) == 1:
+                path = path[0]
             data = loader.StackImage(path)
             self.stack_viewer.setData(data)
             if isinstance(path, list):

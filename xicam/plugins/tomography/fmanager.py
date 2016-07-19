@@ -383,7 +383,7 @@ def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
                 tomo = fpartial(tomo)
                 # shape = 2*(tomo.shape[2],)
                 init = False
-            elif 'Write' in name:
+            elif 'Tiff' in name:
                 fpartial(tomo, start=write_start)
                 write_start += tomo.shape[0]
             elif 'Reconstruction' in name:

@@ -16,7 +16,7 @@ Functions:
   Upsample: [Upsample]
   Crop: [Crop]
   Convert Data Type: [Convert Data Type]
-  Write: [Tiff Stack] #, Numpy Array, Data Exchange, Write HDF5]
+  Write: [Tiff Stack, Write HDF5] #, Numpy Array, Data Exchange
   Array Operation: [Array Operation]
 Input Functions:
   Reconstruction:

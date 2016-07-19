@@ -15,19 +15,13 @@ op_sys = platform.system()
 # if op_sys == 'Darwin':
 #     from Foundation import NSURL
 
-
 import os
 import time
-# import pipeline
 from pipeline import msg
 from PySide import QtCore, QtGui
-# from xicam import xglobals
 import widgets as twidgets
-# from xicam.plugins import widgets, explorer
 from xicam.plugins import base
-# from PySide import QtUiTools
 import fmanager
-# from pyqtgraph.parametertree import ParameterTree
 import ui
 
 
