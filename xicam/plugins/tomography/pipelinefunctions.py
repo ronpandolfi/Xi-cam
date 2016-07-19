@@ -1,5 +1,5 @@
 import numpy as np
-import numexpr as ne
+# import numexpr as ne
 
 DTYPE_RANGE = {'uint8': (0, 255),
                'uint16': (0, 65535),
