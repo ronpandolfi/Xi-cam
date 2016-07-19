@@ -166,9 +166,9 @@ class TomoViewer(QtGui.QWidget):
         # if pad > 0:
         #     recon = recon[:, pad:-pad, pad:-pad]
         recon = np.flipud(recon)
+        msg.clearMessage()
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
-        msg.clearMessage()
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
@@ -765,7 +765,7 @@ class VolumeViewer(QtGui.QWidget):
     def __init__(self,path=None,data=None,*args,**kwargs):
         super(VolumeViewer, self).__init__()
 
-        self.levels=[0,1]
+        # self.levels=[0,1]
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0,0,0,0)
@@ -783,9 +783,9 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
         self.zregion = SliceWidget(parent=self)
-        self.xregion.item.region.setRegion([0,5000])
-        self.yregion.item.region.setRegion([0,5000])
-        self.zregion.item.region.setRegion([0,5000])
+        self.xregion.item.region.setRegion([0,1000])
+        self.yregion.item.region.setRegion([0,1000])
+        self.zregion.item.region.setRegion([0,1000])
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
@@ -813,12 +813,13 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
             self.sigImageChanged.emit()
-            self.xregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[0]])
-            self.yregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[1]])
-            self.zregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[2]])
+            for i, region in enumerate([self.xregion, self.yregion, self.zregion]):
+                try:
+                    region.item.region.setBounds([0, self.volumeRenderWidget.vol.shape[i]])
+                except RuntimeError as e:
+                    print e.message
 
     def setLevels(self, levels, update=True):
-        print 'levels:',levels
         self.levels=levels
         self.setLookupTable()
 
@@ -920,8 +921,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
 
     def setVolume(self, vol=None, path=None, sliceobj=None):
-        print 'slice:',sliceobj
-
         if vol is None:
             vol=self.vol
 
@@ -939,11 +938,9 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.vol = vol
 
         if slice is not None:
-            print 'preslice:',vol.shape
-            slicevol=self.vol[sliceobj]
-            print 'postslice:',vol.shape
+            slicevol = self.vol[sliceobj]
         else:
-            slicevol=self.vol
+            slicevol = self.vol
 
         # Set whether we are emulating a 3D texture
         emulate_texture = False
@@ -1004,8 +1001,8 @@ class SliceWidget(pg.HistogramLUTWidget):
         #tuple(sorted(LUT.gradient.ticks.values()))
 
     def getSlice(self):
-        bounds=sorted(self.item.gradient.ticks.values())
-        bounds=(bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
+        bounds = sorted(self.item.gradient.ticks.values())
+        bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
 
 
@@ -1102,7 +1099,6 @@ class RunViewer(QtGui.QTabWidget):
             self.local_console.setText(msg + '\n\n' + text)
         else:
             topline = text.splitlines()[0]
-            print topline
             tail = '\n'.join(text.splitlines()[1:])
             self.local_console.setText(topline + msg + tail)
         # self.local_console.insertPlainText(msg)
