@@ -1694,8 +1694,6 @@ class frameproptable(pg.TableWidget):
         self.setHidden(len(data) == 0)
         super(frameproptable, self).setData(data)
 
-        import pyqtgraph.parametertree.ParameterTree
-
     def sizeHint(self):
         return QtCore.QSize(self.parent().width(),self.parent().height()/2)
 

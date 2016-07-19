@@ -13,8 +13,12 @@ QWidget {
     outline: 0;
 }
 
+SpinBox{
+    min-height: 25px;
+}
+
 QTreeWidget::item{
-    height: 30px;
+    min-height: 35px;
 }
 
 QHeaderView::section
