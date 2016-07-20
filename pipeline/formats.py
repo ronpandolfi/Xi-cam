@@ -237,12 +237,6 @@ class ALS832H5image(fabioimage):
     def nframes(self, n):
         pass
 
-    def getsinogram(self, idx=None):
-        if idx is None: idx = self.data.shape[0] // 2
-        self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
-                                                          range(self.nframes))])
-        return self.sinogram
-
     def __getitem__(self, item):
         s = []
         if not isinstance(item, tuple) and not isinstance(item, list):
@@ -275,7 +269,7 @@ class ALS832H5image(fabioimage):
             arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
-        return arr
+        return np.squeeze(arr)
 
     def __len__(self):
         return self.nframes
@@ -335,6 +329,7 @@ class DXchangeH5image(fabioimage):
             self._dgroup = self._find_exchange_group(self._h5)
         self.readheader(f)
         self.currentframe = frame
+        self.nframes = self._dgroup['data'].shape[0]
         self.data = self._dgroup['data'][frame]
         return self
 
@@ -348,27 +343,16 @@ class DXchangeH5image(fabioimage):
     @property
     def flats(self):
         if self._flats is None:
-            self._flats = self._dgroup['data_white']
+            if 'data_white' in self._dgroup:
+                self._flats = self._dgroup['data_white']
         return self._flats
 
     @property
     def darks(self):
         if self._darks is None:
-            self._darks = self._dgroup['data_dark']
+            if 'data_dark' in self._dgroup:
+                self._darks = self._dgroup['data_dark']
         return self._darks
-
-    @property
-    def nframes(self):
-        return len(self.frames)
-
-    @nframes.setter
-    def nframes(self, n):
-        pass
-
-    def getsinogram(self, idx=None):
-        if idx is None: idx = self.data.shape[0]//2
-        self.sinogram = self._dgroup['data'][:, idx, :]
-        return self.sinogram
 
     def __getitem__(self, item):
         return self._dgroup['data'][item]
@@ -422,13 +406,14 @@ class TiffStack(object):
 # Testing
 if __name__ == '__main__':
     from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/TestDatasetsLocal/PtC_Secanel_H2Odrop_8000eV_5X_60nmZP_2s_361proj_15_.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
     # arr = data.__getitem__(slc)
-    arr = data.getsinogram(100)
+    arr = data[:, 0, :]
+    print arr.shape
     # print sorted(data.frames, reverse=True)
     print data.darks.shape
     print data.flats.shape
-    # imshow(arr, cmap='gray')
+    imshow(arr, cmap='gray')
     show()

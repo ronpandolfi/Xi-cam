@@ -974,7 +974,7 @@ class SinogramStack(StackImage):
         return new_obj
 
     def _getimage(self, frame):
-        return self.fabimage.getsinogram(frame).transpose()
+        return self.fabimage[:, frame, :].transpose()
 
 
 class diffimage2(object):
