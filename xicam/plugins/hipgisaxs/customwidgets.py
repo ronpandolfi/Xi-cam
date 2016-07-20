@@ -1136,7 +1136,7 @@ class RotationDistParameter(pTypes.GroupParameter):
         elif choice == 'Gaussian':
             d['min'] = self.Min.value()
             d['max'] = self.Max.value()
-            d['stddev'] = np.sqrt(self.Variance.value())
+            d['std'] = float(np.sqrt(self.Variance.value()))
             d['mean'] = self.Mean.value()
             d['stat'] = 'gaussian'
         return d
@@ -1224,7 +1224,7 @@ class DistParameter(pTypes.GroupParameter):
             d['min'] = self.Min.value()
             d['max'] = self.Max.value()
             d['N'] = self.N.value()
-            d['stddev'] = np.sqrt(self.Variance.value())
+            d['std'] = np.sqrt(self.Variance.value())
             d['mean'] = self.Mean.value()
             d['stat'] = 'gaussian'
         return d

@@ -1183,7 +1183,7 @@ class diffimage2(object):
                                              self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
-            self.cache['remeshmask'] = remeshmask >0
+            self.cache['remeshmask'] = remeshmask > 0
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
@@ -1203,6 +1203,15 @@ class diffimage2(object):
 
         return self._headers
 
+    def queryAlphaI(self):
+        alphai, ok = QtGui.QInputDialog.getDouble(None, u'Incident Angle', u'Enter incident angle (degrees):',
+                                                  decimals=3)
+        if alphai and ok:
+            alphai = np.deg2rad(alphai)
+            self.headers['Alpha'] = alphai
+            return alphai
+
+        return None
 
     @property
     def displaydata(self):
