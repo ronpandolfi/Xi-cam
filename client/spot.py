@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 from time import sleep
+from StringIO import StringIO
+from PIL import Image
 import numpy as np
 from client.newt import NewtClient
 
@@ -158,11 +160,11 @@ class SpotClient(NewtClient):
         r = self.session.head(self.SPOT_URL + '/hdf/download' + path)
         head = r.headers
         if not 'content-length' in head: return 1
-        size = int(head['content-length'])
+        size = float(head['content-length'])
 
         return size
 
-    def download_raw_image(self, dataset, stage, image=None, index=None):
+    def get_raw_image(self, dataset, stage, image=None, index=None):
         """
         Download raw data from an image in a SPOT dataset
 
@@ -181,9 +183,9 @@ class SpotClient(NewtClient):
         else:
             group = os.path.split(images[0])[0] + '/' + image
 
+        r = self.stage_tape_2_disk(dataset, stage)
         path = self.get_stage_path(dataset, stage)
         params = {'group': group}
-        r = self.stage_tape_2_disk(dataset, stage)
         r = self.post(self.SPOT_URL + '/hdf/rawdata' + path, params=params)
         r = self.check_response(r)
         return np.array(r['data'])
@@ -207,22 +209,43 @@ class SpotClient(NewtClient):
         else:
             group = os.path.split(images[0])[0] + '/' + image
 
+        r = self.stage_tape_2_disk(dataset, stage)
         path = self.get_stage_path(dataset, stage)
         params = {'group': group}
-        r = self.stage_tape_2_disk(dataset, stage)
         r = self.post(self.SPOT_URL + '/hdf/image' + path, params=params)
         r = self.check_response(r)
         return r
 
-    def download_image(self, dataset, stage, save_path= None, ext='png', image=None, index=None):
+    def get_image_as(self, dataset, stage, ext='tif', image=None, index=None):
         """
-        Download a specific image in a dataset as png or tif image
+        Download an image in the specified format and return an array of the image
 
         :param dataset: str, name of dataset
         :param stage: str, stage name
+        :param ext: str (optional), extension for image type (tif or png)
         :param image: str, (optional), name of image in dataset
         :param index: int, (optional) index of image in dataset (one of index or image must be given)
-        :return: 2D ndarray
+        :return: None
+        """
+
+        r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
+        url = r['pnglocaion'] if ext == 'png' else r['tiflocaion']  # Careful when spot API fixes this spelling mistake
+        r = s.get(url)
+        img = Image.open(StringIO(r.content))
+        return np.asarray(img)
+
+
+    def download_image(self, dataset, stage, save_path=None, ext='tif', image=None, index=None):
+        """
+        Download and save a specific image in a dataset as png or tif image
+
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param save_path: str (optional) Path to save the image
+        :param ext: str (optional), extension for image type (tif or png)
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: None
         """
         if ext not in ('png', 'tif'):
             raise ValueError('ext can only be png or tif')
@@ -234,8 +257,8 @@ class SpotClient(NewtClient):
             save_path = os.path.join(os.path.expanduser('~'), '{}.{}'.format(name,ext))
 
         r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
-        URL = r['pnglocaion'] if ext == 'png' else r['tiflocaion'] # Careful when spot API fixes this spelling mistake
-        r = self.get(URL)
+        url = r['pnglocaion'] if ext == 'png' else r['tiflocaion'] # Careful when spot API fixes this spelling mistake
+        r = self.get(url)
 
         with open(save_path, 'w') as f:
             for chunk in r:
@@ -335,3 +358,24 @@ class SpotClient(NewtClient):
 class SPOTError(Exception):
     """Raised when SPOT gets angry"""
     pass
+
+if __name__ == '__main__':
+    import time
+    from StringIO import StringIO
+    from PIL import Image
+    from matplotlib.pyplot import imshow, show, figure
+    s = SpotClient()
+    s.login('lbluque', '')
+    # t = time.time()
+    # img = s.get_raw_image('20160630_054009_prefire_3_0amp_scan7', 'raw',  index=0)
+    # print 'Time: ', time.time() - t
+    t = time.time()
+    arr = s.get_image_as('20160630_054009_prefire_3_0amp_scan7', 'raw', ext='tif', index=0)
+    print arr.shape
+    imshow(arr)
+    show()
+    # for i in range(3):
+    #     figure(i)
+    #     imshow(arr[:, :, i])
+    # show()
+    print 'Time: ', time.time() - t
