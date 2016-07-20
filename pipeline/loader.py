@@ -886,9 +886,13 @@ class jpegimageset():
 
 
 class StackImage(object):
+    """
+    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """
+
     ndim = 3
     def __init__(self, filepath=None, data=None):
-        # super(StackImage, self).__init__()
+        super(StackImage, self).__init__()
         self._rawdata = None
         self.filepath = filepath
 
@@ -952,6 +956,10 @@ class StackImage(object):
 
 
 class ProjectionStack(StackImage):
+    """
+    Simply subclass of StackImage for Tomography Projection stacks.
+    """
+
     def __init__(self, filepath=None, data=None):
         super(ProjectionStack, self).__init__(filepath=filepath, data=data)
         self.flats = self.fabimage.flats
@@ -959,6 +967,10 @@ class ProjectionStack(StackImage):
 
 
 class SinogramStack(StackImage):
+    """
+    Simply subclass of StackImage for Tomography Sinogram stacks.
+    """
+
     def __init__(self, filepath=None, data=None):
         super(SinogramStack, self).__init__(filepath=filepath, data=data)
         self._cachesize = 10
@@ -968,6 +980,11 @@ class SinogramStack(StackImage):
 
     @classmethod
     def cast(cls, obj):
+        """
+        Use this to cast a ProjectionStack into a SinogramStack
+        :param obj: PorjectionStack Instance to cas
+        :return:
+        """
         new_obj = copy(obj)
         new_obj.__class__ = cls
         new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]

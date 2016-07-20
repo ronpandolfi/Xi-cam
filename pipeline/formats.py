@@ -1,7 +1,6 @@
 import os
 import sys
 import inspect
-import fabio, pyFAI
 import h5py
 import tifffile
 import glob
@@ -10,7 +9,6 @@ from fabio.fabioimage import fabioimage
 from fabio import fabioutils
 import fabio, pyFAI
 from pyFAI import detectors
-import numpy as np
 import logging
 
 logger = logging.getLogger("openimage")
@@ -165,6 +163,9 @@ fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
 
 class ALS832H5image(fabioimage):
+    """
+    Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
+    """
 
     def __init__(self, data=None , header=None):
         super(ALS832H5image, self).__init__(data=data, header=header)
@@ -197,6 +198,7 @@ class ALS832H5image(fabioimage):
             self._h5 = h5py.File(self.filename, 'r')
             self._dgroup = self._find_dataset_group(self._h5)
             self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+            self.nframes = len(self.frames)
         self.readheader(f)
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
@@ -228,14 +230,6 @@ class ALS832H5image(fabioimage):
         if self._darks is None:
             self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
         return self._darks
-
-    @property
-    def nframes(self):
-        return len(self.frames)
-
-    @nframes.setter
-    def nframes(self, n):
-        pass
 
     def __getitem__(self, item):
         s = []
@@ -297,6 +291,9 @@ class ALS832H5image(fabioimage):
 
 
 class DXchangeH5image(fabioimage):
+    """
+    Fabio Image class for Data-Exchange HDF5 Datasets
+    """
 
     def __init__(self, data=None , header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)
@@ -316,6 +313,7 @@ class DXchangeH5image(fabioimage):
         self.close()
 
     def _readheader(self,f):
+        # TODO What data should be read here?
         if self._h5 is not None:
             self.header={'foo': 'bar'} #dict(self._h5.attrs)
             # self.header.update(**self._dgroup.attrs)
@@ -383,6 +381,9 @@ class DXchangeH5image(fabioimage):
 
 
 class TiffStack(object):
+    """
+    Class to open a list of Tiff Images as a stack
+    """
     def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
         if isinstance(paths, list):
