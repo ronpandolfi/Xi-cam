@@ -4,9 +4,8 @@ from PySide import QtCore, QtGui
 import numpy as np
 from functools import partial
 from copy import deepcopy
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+from pyqtgraph.parametertree import Parameter, ParameterTree
 import fmanager
-from collectionsmod import UnsortableOrderedDict
 import ui
 import fdata
 import introspect
