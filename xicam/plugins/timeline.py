@@ -65,6 +65,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
     def getCurrentTab(self):
         return self.centerwidget.currentWidget().widget
 
+    def currentImage(self):
+        return self.getCurrentTab()
+
     def calibrate(self):
         self.getCurrentTab().calibrate()
 

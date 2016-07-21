@@ -1221,11 +1221,12 @@ class diffimage2(object):
         return self.transformdata
 
 
-    def implements(self, t):
-        if t == 'MetaArray': return True
-
     def asarray(self):
         return self.displaydata
+
+    def view(self,t):
+        if t is np.ndarray:
+            return self.displaydata
 
     def __getitem__(self, item):
         return self.displaydata[item]
@@ -1420,6 +1421,9 @@ class singlefilediffimage2(diffimage2):
         self.imtest(symimg * padmask * (1 - marginmask))
         img = img * marginmask + symimg * padmask * (1 - marginmask)
         return img
+
+    def implements(self, t):
+        if t == 'MetaArray': return True
 
 
 class multifilediffimage2(diffimage2):
