@@ -1490,12 +1490,9 @@ class previewwidget(pg.GraphicsLayoutWidget):
     top-left preview
     """
 
-    def __init__(self, tree):
+    def __init__(self):
         super(previewwidget, self).__init__()
-        self.tree = tree
-        self.model = tree.model()
         self.view = self.addViewBox(lockAspect=True)
-
         self.imageitem = pg.ImageItem()
         self.view.addItem(self.imageitem)
         self.imgdata = None
@@ -1503,16 +1500,18 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
         self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
 
-    def loaditem(self, current, previous):
-
+    def loaditem(self, item):
+        if isinstance(item, str) or isinstance(item, unicode):
+            item = loader.loadimage(item)
         try:
-            path = self.model.filePath(current)
-            if os.path.isfile(path):
-                self.imgdata = loader.loadimage(path)
-                self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)),3),
-                                        autoLevels=True)
+            self.setImage(item)
         except TypeError:
             self.imageitem.clear()
+
+    def setImage(self, imgdata):
+            self.imgdata = imgdata
+            self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                    autoLevels=True)
 
 
 class fileTreeWidget(QtGui.QTreeView):

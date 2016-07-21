@@ -16,19 +16,20 @@ l = QtGui.QVBoxLayout()
 l.setContentsMargins(0, 0, 0, 0)
 l.setSpacing(0)
 
+loginwidget = login.LoginDialog()
+
+preview = widgets.previewwidget()
+w.addWidget(preview)
+
 fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
-loginwidget = login.LoginDialog()
-
 fileexplorer.sigLoginRequest.connect(loginwidget.loginRequest)
 fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
+fileexplorer.sigPreview.connect(preview.loaditem)
 
 l.addWidget(loginwidget)
 l.addWidget(fileexplorer)
-
-preview = widgets.previewwidget(filetree)
-w.addWidget(preview)
 
 booltoolbar = QtGui.QToolBar()
 
@@ -54,7 +55,6 @@ l.addWidget(booltoolbar)
 panelwidget = QtGui.QWidget()
 panelwidget.setLayout(l)
 w.addWidget(panelwidget)
-filetree.currentChanged = preview.loaditem
 w.setSizes([250, w.height() - 250])
 
 leftwidget = w

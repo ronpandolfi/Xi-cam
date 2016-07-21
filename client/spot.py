@@ -230,7 +230,7 @@ class SpotClient(NewtClient):
 
         r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
         url = r['pnglocaion'] if ext == 'png' else r['tiflocaion']  # Careful when spot API fixes this spelling mistake
-        r = s.get(url)
+        r = self.get(url)
         img = Image.open(StringIO(r.content))
         return np.asarray(img)
 
