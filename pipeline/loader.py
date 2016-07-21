@@ -1224,6 +1224,9 @@ class diffimage2(object):
     def implements(self, t):
         if t == 'MetaArray': return True
 
+    def asarray(self):
+        return self.displaydata
+
     def __getitem__(self, item):
         return self.displaydata[item]
 
@@ -1338,9 +1341,6 @@ class singlefilediffimage2(diffimage2):
         self.filepath = filepath
         super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
 
-
-    def asarray(self):
-        return self.displaydata
 
     @property
     def rawdata(self):
