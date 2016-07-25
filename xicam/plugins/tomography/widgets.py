@@ -75,6 +75,7 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
+        self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
         self.viewstack.addWidget(self.preview3DViewer)
 
         self.reconstructionViewer = ReconstructionViewer(parent=self)
@@ -166,6 +167,10 @@ class TomoViewer(QtGui.QWidget):
         msg.clearMessage()
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
+
+        hist = self.preview3DViewer.volumeviewer.getHistogram()
+        max = hist[0][np.argmax(hist[1])]
+        self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
@@ -510,7 +515,7 @@ class ProjectionViewer(QtGui.QWidget):
         v.addLayout(h2)
         v.addWidget(slider)
 
-        l = QtGui.QGridLayout(self) # VBoxLayout(self)
+        l = QtGui.QGridLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
@@ -773,8 +778,6 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
-        self.vol = self.volumeRenderWidget.vol
-
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
@@ -784,9 +787,9 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
         self.zregion = SliceWidget(parent=self)
-        self.xregion.item.region.setRegion([0,1000])
-        self.yregion.item.region.setRegion([0,1000])
-        self.zregion.item.region.setRegion([0,1000])
+        self.xregion.item.region.setRegion([0, 1000])
+        self.yregion.item.region.setRegion([0, 1000])
+        self.zregion.item.region.setRegion([0, 1000])
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
@@ -802,13 +805,17 @@ class VolumeViewer(QtGui.QWidget):
         # self.writevideo()
 
 
+    @property
+    def vol(self):
+        return self.volumeRenderWidget.vol
+
     def getSlice(self):
         xslice=self.xregion.getSlice()
         yslice=self.yregion.getSlice()
         zslice=self.zregion.getSlice()
         return xslice,yslice,zslice
 
-    def setVolume(self,vol=None,path=None):
+    def setVolume(self, vol=None, path=None):
         sliceobj = self.getSlice()
         self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
@@ -820,20 +827,29 @@ class VolumeViewer(QtGui.QWidget):
                 except RuntimeError as e:
                     print e.message
 
+    def moveGradientTick(self, idx, pos):
+        tick = self.HistogramLUTWidget.item.gradient.ticks.keys()[idx]
+        tick.setPos(pos, 0)
+        tick.view().tickMoved(tick, QtCore.QPoint(pos*self.HistogramLUTWidget.item.gradient.length, 0))
+        tick.sigMoving.emit(tick)
+        tick.sigMoved.emit(tick)
+        tick.view().tickMoveFinished(tick)
+
     def setLevels(self, levels, update=True):
         self.levels = levels
         self.setLookupTable()
+        self.HistogramLUTWidget.region.setRegion(levels)
+        if update:
+            self.volumeRenderWidget.update()
 
     def setLookupTable(self, lut=None, update=True):
         try:
             table = self.HistogramLUTWidget.item.gradient.colorMap().color/256.
             pos = self.HistogramLUTWidget.item.gradient.colorMap().pos
-
             #table=np.clip(table*(self.levels[1]-self.levels[0])+self.levels[0],0.,1.)
-            table[:,3]=pos
-            table=np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
-            pos=np.hstack([[0],pos*(self.levels[1]-self.levels[0])+self.levels[0],[1]])
-
+            table[:, 3] = pos
+            table = np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
+            pos = np.hstack([[0], pos*(self.levels[1] - self.levels[0]) + self.levels[0], [1]])
             self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
             print ex
@@ -881,7 +897,7 @@ class VolumeViewer(QtGui.QWidget):
         hist = np.histogram(stepData, **kwds)
 
         return hist[1][:-1], hist[0]
-    #
+
     # @volumeRenderWidget.connect
     # def on_frame(self,event):
     #     self.volumeRenderWidget.cam1.auto_roll
