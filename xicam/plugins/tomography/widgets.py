@@ -12,8 +12,8 @@ from collections import deque
 import numpy as np
 from functools import partial
 from PySide import QtGui, QtCore
-from vispy import scene  # , app, io
-from vispy.color import Colormap  # , BaseColormap, ColorArray
+from vispy import scene
+from vispy.color import Colormap
 from pipeline import loader
 import pyqtgraph as pg
 import imageio
@@ -764,7 +764,7 @@ class VolumeViewer(QtGui.QWidget):
     def __init__(self,path=None,data=None,*args,**kwargs):
         super(VolumeViewer, self).__init__()
 
-        # self.levels=[0,1]
+        self.levels = [0, 1]
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0,0,0,0)
@@ -821,20 +821,20 @@ class VolumeViewer(QtGui.QWidget):
                     print e.message
 
     def setLevels(self, levels, update=True):
-        self.levels=levels
+        self.levels = levels
         self.setLookupTable()
 
     def setLookupTable(self, lut=None, update=True):
         try:
-            table=self.HistogramLUTWidget.item.gradient.colorMap().color/256.
-            pos=self.HistogramLUTWidget.item.gradient.colorMap().pos
+            table = self.HistogramLUTWidget.item.gradient.colorMap().color/256.
+            pos = self.HistogramLUTWidget.item.gradient.colorMap().pos
 
             #table=np.clip(table*(self.levels[1]-self.levels[0])+self.levels[0],0.,1.)
             table[:,3]=pos
             table=np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
             pos=np.hstack([[0],pos*(self.levels[1]-self.levels[0])+self.levels[0],[1]])
 
-            self.volumeRenderWidget.volume.cmap = Colormap(table,controls=pos)
+            self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
             print ex
 
@@ -1042,7 +1042,7 @@ class VolumeVisual(scene.visuals.Volume):
             self._create_vertex_data()
 
 
-scene.visuals.Volume=VolumeVisual
+scene.visuals.Volume = VolumeVisual
 
 
 class RunViewer(QtGui.QTabWidget):

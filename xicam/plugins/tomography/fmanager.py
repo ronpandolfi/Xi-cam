@@ -226,11 +226,11 @@ def set_function_defaults(mdata, funcs):
             set_function_defaults(mdata, funcs=f.input_functions)
 
 
-# def update_function_parameters(funcs):
-#     for f in funcs:
-#         f.updateParamsDict()
-#         if f.input_functions is not None:
-#             update_function_parameters(funcs=f.input_functions)
+def update_function_parameters(funcs):
+    for f in funcs:
+        f.updateParamsDict()
+        if f.input_functions is not None:
+            update_function_parameters(funcs=f.input_functions)
 
 
 def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs=None):
