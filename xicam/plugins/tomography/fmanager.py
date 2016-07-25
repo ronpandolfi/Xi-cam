@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 from copy import deepcopy
-from functools import partial
+from functools import partial, wraps
 
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
@@ -242,24 +242,62 @@ def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs
                                              callback_slot=lambda x: run_preview_recon(*x),
                                              lock=threads.mutex)
     construct_in_background(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
-    # return construct_preview_pipeline(widget, callback, update=update, slc=slc)
 
 
-def correct_center(func):
+def set_center_correction(name, param_dict):
     global cor_offset, cor_scale
-    if func.func_name == 'Padding' and func.getParamDict(update=update)['axis'] == 2:
-        n = func.getParamDict()['npad']
+    if 'Padding' in name and param_dict['axis'] == 2:
+        n = param_dict['npad']
         cor_offset = lambda x: cor_scale(x) + n
-    elif func.func_name == 'Downsample' and func.getParamDict(update=update)['axis'] == 2:
-        s = func.getParamDict(update=update)['level']
+    elif 'Downsample' in name and param_dict['axis'] == 2:
+        s = param_dict['level']
         cor_scale = lambda x: x / 2 ** s
-    elif func.func_name == 'Upsample' and func.getParamDict()['axis'] == 2:
-        s = func.getParamDict(update=update)['level']
+    elif 'Upsample' in name and param_dict['axis'] == 2:
+        s = param_dict['level']
         cor_scale = lambda x: x * 2 ** s
 
 
+def correct_center(f):
+    @wraps(f)
+    def corrected_update(fpartial, fname, param_dict, *args, **kwargs):
+        global cor_scale, cor_offset
+        if fname in ('Padding', 'Downsample', 'Upsample'):
+            set_center_correction(fname, param_dict)
+        p = f(fpartial, fname, param_dict, *args, **kwargs)
+        if 'Reconstruction' in fname:
+            if cor_offset is None:
+                cor_offset = cor_scale
+            p.keywords['center'] = cor_offset(p.keywords['center'])
+            reset_cor()
+        return p
+    return corrected_update
+
+
+@correct_center
+def update_function_partial(fpartial, fname, param_dict, fargs, datawidget, input_partials=None, slc=None, ncore=None):
+    kwargs = fpartial.keywords
+    for key in fargs:
+        if key in 'flats':
+            kwargs[key] = datawidget.getflats(slc=slc)
+        if key in 'darks':
+            kwargs[key] = datawidget.getdarks(slc=slc)
+        if key in 'ncore' and ncore is not None:
+            kwargs[key] = ncore
+    if input_partials is not None:
+        for pname, slices, ipartial in input_partials:
+            if pname is None:
+                continue
+            pargs = []
+            if slices is not None:
+                map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
+            kwargs[pname] = ipartial(*pargs)
+            if param_dict is not None and pname in param_dict.keys():
+                param_dict[pname] = kwargs[pname]
+    return partial(fpartial, *fpartial.args, **kwargs)
+
+
 def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, slc=None):
-    global functions, cor_scale
+    global functions, cor_scale, recon_function
     if fixed_funcs is None:
         fixed_funcs = {}
     lock_function_params(True)  # you probably do not need this anymore but maybe you do...
@@ -271,20 +309,17 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
         elif func.func_name == 'Write':
             params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
             continue
-
+        # fixed_funcs used for parameter range tests to avoid updating the parameter based on the value in UI
         if func.subfunc_name in fixed_funcs:
             params[func.func_name] = {func.subfunc_name: fixed_funcs[func.subfunc_name][0]}
             fpartial = fixed_funcs[func.subfunc_name][1]
         else:
             params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
             fpartial = func.partial
-        # Correct center of rotation
-        if func.func_name in ('Padding', 'Downsample', 'Upsample'):
-            correct_center(func)
 
-        p = update_function_partial(fpartial, func.func_name, func.args_complement, widget,
-                                    param_dict=params[func.func_name][func.subfunc_name],
-                                    input_partials=func.input_partials, slc=slc)
+        p = update_function_partial(fpartial, func.name, params[func.func_name][func.subfunc_name],
+                                    func.args_complement, widget, input_partials=func.input_partials, slc=slc)
+
         funstack.append(p)
         if func.input_functions is not None:
             in_dict = {infunc.func_name: {infunc.subfunc_name: deepcopy(infunc.getParamDict(update=update))}
@@ -292,42 +327,10 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
                                           and infunc.previewChecked()}
             if in_dict:
                 params[func.func_name][func.subfunc_name].update({'Input Functions': in_dict})
+        if func.func_name == 'Reconstruction':
+            recon_function.params.child('center').setValue(p.keywords['center'])
     lock_function_params(False)
     return funstack, widget.getsino(slc), partial(callback, params)
-
-
-def update_function_partial(fpartial, name, argnames, datawidget, param_dict=None, input_partials=None, slc=None,
-                            ncore=None):
-    global recon_function, cor_offset, cor_scale
-    kwargs = {}
-
-    for arg in argnames:
-        if arg in 'flats':
-            kwargs[arg] = datawidget.getflats(slc=slc)
-        if arg in 'darks':
-            kwargs[arg] = datawidget.getdarks(slc=slc)
-        if arg in 'ncore' and ncore is not None:
-            kwargs[arg] = ncore
-    if input_partials is not None:
-        for pname, slices, ipartial in input_partials:
-            pargs = []
-            if slices is not None:
-                map(pargs.append, (map(datawidget.data.fabimage.__getitem__, slices)))
-            kwargs[pname] = ipartial(*pargs)
-            if param_dict is not None and pname in param_dict.keys():
-                param_dict[pname] = kwargs[pname]
-            if pname == 'center':
-                if cor_offset is None:
-                    cor_offset = cor_scale
-                recon_function.params.child('center').setValue(kwargs[pname])
-                kwargs[pname] = cor_offset(kwargs[pname])
-                reset_cor()
-
-    if kwargs:
-        fpartial.keywords.update(kwargs)
-        return partial(fpartial.func, *fpartial.args, **fpartial.keywords)
-    else:
-        return fpartial
 
 
 def run_preview_recon(funstack, initializer, callback):
@@ -341,18 +344,16 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
                    finish_call=None, interrupt_signal=None):
     global functions
     lock_function_params(True)
-    partials, params = [], OrderedDict()
+    funcs, params = [], OrderedDict()
     for f in functions:
         if not f.previewButton.isChecked() and f.func_name != 'Reconstruction':
             continue
-        elif f.func_name in ('Padding', 'Downsample', 'Upsample'):
-            correct_center(f)
-
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
-        partials.append([f.name, deepcopy(f.partial), f.args_complement, deepcopy(f.input_partials)])
+        funcs.append([deepcopy(f.partial), f.name, deepcopy(f.param_dict), f.args_complement,
+                      deepcopy(f.input_partials)])
     lock_function_params(False)
     runnable_it = threads.RunnableIterator(_recon_iter,
-                                           generator_args=(widget, partials, proj, sino, sino_p_chunk, ncore,),
+                                           generator_args=(widget, funcs, proj, sino, sino_p_chunk, ncore,),
                                            callback_slot=update_call, finished_slot=finish_call,
                                            interrupt_signal=interrupt_signal)
     threads.add_to_queue(runnable_it)
@@ -360,7 +361,7 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
 #TODO have current recon parameters in run console or in recon view...
 
 
-def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
+def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
     write_start = sino[0]
     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
     total_sino = (sino[1] - sino[0]) // sino[2]
@@ -370,34 +371,29 @@ def _recon_iter(datawidget, partials, proj, sino, sino_p_chunk, ncore):
     for i in range(nchunk):
         init = True
         start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]
-        for name, fpartial, argnames, ipartials in partials:
+        for fpartial, fname, param_dict, fargs, ipartials in fpartials:
             ts = time.time()
-            fpartial = update_function_partial(fpartial, name, argnames, datawidget,
+            yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(fname, start,
+                                                                                          end, total_sino)
+            fpartial = update_function_partial(fpartial, fname, param_dict, fargs, datawidget,
                                                slc=(slice(*proj), slice(start, end, sino[2]), slice(None, None, None)),
                                                ncore=ncore, input_partials=ipartials)
-            yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(name, start,
-                                                                                              end, total_sino)
             if init:
                 tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
                                                         slice(None, None, None)))
-                tomo = fpartial(tomo)
-                # shape = 2*(tomo.shape[2],)
                 init = False
-            elif 'Tiff' in name:
-                fpartial(tomo, start=write_start)
+            elif 'Tiff' in fname:
+                fpartial.keywords['start'] = write_start
                 write_start += tomo.shape[0]
-            elif 'Reconstruction' in name:
-                # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
-                if ipartials is not None:
-                    ind = next((i for i, names in enumerate(partials) if name in names), None)
-                    partials[ind][1], partials[ind][3] = fpartial, None
-                tomo = fpartial(tomo)
-            else:
-                tomo = fpartial(tomo)
-
+            # elif 'Reconstruction' in fname:
+            #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+            #     # and set the reconstruction partial to the updated one.
+            #     if ipartials is not None:
+            #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
+            #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
+            #     tomo = fpartial(tomo)
+            tomo = fpartial(tomo)
             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-    reset_cor()
 
 
 def get_output_path():
