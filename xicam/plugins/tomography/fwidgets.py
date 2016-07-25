@@ -206,6 +206,10 @@ class FuncWidget(FeatureWidget):
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
+    @partial.setter
+    def partial(self, p):
+        self._partial = p
+
     @property
     def input_partials(self):
         return None
@@ -272,11 +276,11 @@ class FuncWidget(FeatureWidget):
             if widget is None: return
             self.updateParamsDict()
             for i in test.selectedRange():
+                print 'Setting {} to {}'.format(param.name(), i)
                 self.param_dict[param.name()] = i
                 fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
                                                  fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
                                                                                   deepcopy(self.partial)]})
-        print 'done distrubuting range'
 
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
@@ -288,8 +292,6 @@ class ReconFuncWidget(FuncWidget):
         # Input functions
         self.center = None
         self.angles = None
-
-        self.mcenter = lambda: self.param_dict['center']
 
         self.frame_2 = QtGui.QFrame(self)
         self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -316,8 +318,6 @@ class ReconFuncWidget(FuncWidget):
         if 'cutoff' in d.keys() and 'order' in d.keys():
             d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
         kwargs = dict(d, **self.kwargs_complement)
-        if 'center' in kwargs:
-            del kwargs['center']
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -325,7 +325,7 @@ class ReconFuncWidget(FuncWidget):
     def input_partials(self):
         p = []
         if self.center is None or not self.center.previewButton.isChecked():
-            p.append(('center', None, self.mcenter))
+            p.append((None, None, None))
         else:
             if self.center.subfunc_name == 'Phase Correlation':
                 slices = (0, -1)
