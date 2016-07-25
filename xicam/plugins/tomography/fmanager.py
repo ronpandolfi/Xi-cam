@@ -334,8 +334,6 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
                                           and infunc.enabled}
             if in_dict:
                 params[func.func_name][func.subfunc_name].update({'Input Functions': in_dict})
-        if func.func_name == 'Reconstruction':
-            recon_function.params.child('center').setValue(p.keywords['center'])
     lock_function_params(False)
     return funstack, widget.getsino(slc), partial(callback, params)
 

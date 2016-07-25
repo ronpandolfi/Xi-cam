@@ -773,6 +773,8 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
+        self.vol = self.volumeRenderWidget.vol
+
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
@@ -807,8 +809,8 @@ class VolumeViewer(QtGui.QWidget):
         return xslice,yslice,zslice
 
     def setVolume(self,vol=None,path=None):
-        sliceobj=self.getSlice()
-        self.volumeRenderWidget.setVolume(vol,path,sliceobj)
+        sliceobj = self.getSlice()
+        self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
             self.sigImageChanged.emit()
@@ -879,10 +881,6 @@ class VolumeViewer(QtGui.QWidget):
         hist = np.histogram(stepData, **kwds)
 
         return hist[1][:-1], hist[0]
-
-    @property
-    def vol(self):
-        return self.volumeRenderWidget.vol
     #
     # @volumeRenderWidget.connect
     # def on_frame(self,event):
@@ -946,15 +944,14 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
         # Create the volume visuals
         if self.volume is None:
-            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene,emulate_texture=emulate_texture)
-            self.volume.method='translucent'
+            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene, emulate_texture=emulate_texture)
+            self.volume.method = 'translucent'
         else:
             self.volume.set_data(slicevol)
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
-
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2,-vol.shape[1]/2,-vol.shape[0]/2))
+        self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2, -vol.shape[1]/2, -vol.shape[0]/2))
 
     # Implement key presses
     def on_key_press(self, event):
