@@ -304,7 +304,7 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     params = OrderedDict()
     funstack = []
     for func in functions:
-        if not func.previewChecked():
+        if not func.enabled:
             continue
         elif func.func_name == 'Write':
             params[func.func_name] = {func.subfunc_name: deepcopy(func.getParamDict(update=update))}
@@ -324,7 +324,7 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
         if func.input_functions is not None:
             in_dict = {infunc.func_name: {infunc.subfunc_name: deepcopy(infunc.getParamDict(update=update))}
                                           for infunc in func.input_functions if infunc is not None
-                                          and infunc.previewChecked()}
+                                          and infunc.enabled}
             if in_dict:
                 params[func.func_name][func.subfunc_name].update({'Input Functions': in_dict})
         if func.func_name == 'Reconstruction':
@@ -346,7 +346,7 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
     lock_function_params(True)
     funcs, params = [], OrderedDict()
     for f in functions:
-        if not f.previewButton.isChecked() and f.func_name != 'Reconstruction':
+        if not f.enabled and f.func_name != 'Reconstruction':
             continue
         params[f.subfunc_name] = deepcopy(f.getParamDict(update=update))
         funcs.append([deepcopy(f.partial), f.name, deepcopy(f.param_dict), f.args_complement,

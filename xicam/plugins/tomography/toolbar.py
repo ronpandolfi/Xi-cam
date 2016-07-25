@@ -10,19 +10,19 @@ class tomotoolbar(QtGui.QToolBar):
         icon17 = QtGui.QIcon()
         icon17.addPixmap(QtGui.QPixmap("gui/glasses.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_SlicePreview.setIcon(icon17)
-        self.actionRun_SlicePreview.setToolTip('Run slice preview')
+        self.actionRun_SlicePreview.setToolTip('Slice preview')
 
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon17 = QtGui.QIcon()
         icon17.addPixmap(QtGui.QPixmap("gui/3d_glasses.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_3DPreview.setIcon(icon17)
-        self.actionRun_3DPreview.setToolTip('Run 3D preview')
+        self.actionRun_3DPreview.setToolTip('3D preview')
 
         self.actionRun_FullRecon = QtGui.QAction(self)
         icon17 = QtGui.QIcon()
         icon17.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_FullRecon.setIcon(icon17)
-        self.actionRun_FullRecon.setToolTip('Run full reconstruction')
+        self.actionRun_FullRecon.setToolTip('Full reconstruction')
 
         self.actionShow_Mask = QtGui.QAction(self)
         self.actionShow_Mask.setCheckable(True)

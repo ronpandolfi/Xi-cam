@@ -175,15 +175,15 @@ class FuncWidget(FeatureWidget):
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
         self.menu = QtGui.QMenu()
 
-    def previewChecked(self):
-        if self.previewButton.isChecked() or not self.previewButton.isCheckable():
-            return True
-        else:
-            return False
-
     def wireup(self):
         for param in self.params.children():
             param.sigValueChanged.connect(self.paramChanged)
+
+    @property
+    def enabled(self):
+        if self.previewButton.isChecked() or not self.previewButton.isCheckable():
+            return True
+        return False
 
     @property
     def form(self):
