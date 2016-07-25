@@ -151,32 +151,39 @@ def set_function_pipeline(pipeline, setdefaults=False):
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             funcWidget = add_function(func, subfunc)
-            for param, value in subfuncs[subfunc].iteritems():
-                if param == 'Package':
-                    continue
-                elif param == 'Input Functions':
-                    for ipf, sipfs in value.iteritems():
-                        ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
-                        for p, v in sipfs[sipfs.keys()[0]].items():
-                            ifwidget.params.child(p).setValue(v)
-                            if setdefaults: ifwidget.params.child(p).setDefault(v)
-                else:
+            if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
+                funcWidget.enabled = False
+            if 'Parameters' in subfuncs[subfunc]:
+                for param, value in subfuncs[subfunc]['Parameters'].iteritems():
                     child = funcWidget.params.child(param)
                     child.setValue(value)
-                    if setdefaults: child.setDefault(value)
+                    if setdefaults:
+                        child.setDefault(value)
+            if 'Input Functions' in subfuncs[subfunc]:
+                for ipf, sipfs in subfuncs[subfunc]['Input Functions'].iteritems():
+                    for sipf in sipfs:
+                        ifwidget = funcWidget.addInputFunction(ipf, sipf)
+                        if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
+                            ifwidget.enabled = False
+                        if 'Parameters' in sipfs[sipf]:
+                            for p, v in sipfs[sipf]['Parameters'].iteritems():
+                                ifwidget.params.child(p).setValue(v)
+                                if setdefaults: ifwidget.params.child(p).setDefault(v)
+
 
 
 def create_pipeline_dict():
     d = OrderedDict()
     for f in functions:
-        d[f.func_name] = {f.subfunc_name: {p.name() : p.value() for p in f.params.children()}}
+        d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name() : p.value() for p in f.params.children()}}}
+        d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
         if f.func_name == 'Reconstruction':
             d[f.func_name][f.subfunc_name].update({'Package':f.packagename})
         if f.input_functions is not None:
             d[f.func_name][f.subfunc_name]['Input Functions'] = {}
             for ipf in f.input_functions:
                 if ipf is not None:
-                    id = {ipf.subfunc_name: {p.name() : p.value() for p in ipf.params.children()}}
+                    id = {ipf.subfunc_name: {'Parameters': {p.name() : p.value() for p in ipf.params.children()}}}
                     d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
     return d
 
@@ -219,11 +226,11 @@ def set_function_defaults(mdata, funcs):
             set_function_defaults(mdata, funcs=f.input_functions)
 
 
-def update_function_parameters(funcs):
-    for f in funcs:
-        f.updateParamsDict()
-        if f.input_functions is not None:
-            update_function_parameters(funcs=f.input_functions)
+# def update_function_parameters(funcs):
+#     for f in funcs:
+#         f.updateParamsDict()
+#         if f.input_functions is not None:
+#             update_function_parameters(funcs=f.input_functions)
 
 
 def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs=None):

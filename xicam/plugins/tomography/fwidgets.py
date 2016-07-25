@@ -185,6 +185,13 @@ class FuncWidget(FeatureWidget):
             return True
         return False
 
+    @enabled.setter
+    def enabled(self, val):
+        if val and self.previewButton.isCheckable():
+            self.previewButton.setChecked(True)
+        else:
+            self.previewButton.setChecked(False)
+
     @property
     def form(self):
         if self._form is None:
