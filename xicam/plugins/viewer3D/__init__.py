@@ -26,6 +26,7 @@ class plugin(base.plugin):
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
+        self.rightwidget = None
 
         super(plugin, self).__init__(*args, **kwargs)
 

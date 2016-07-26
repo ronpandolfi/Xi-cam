@@ -50,7 +50,7 @@ class ThreeDViewer(QtGui.QWidget, ):
         super(ThreeDViewer, self).__init__(parent=parent)
 
         self.combo_box = QtGui.QComboBox(self)
-        self.combo_box.addItems(['Image Stack', '3D Render'])
+        self.combo_box.addItems(['Image Stack', '3D Volume'])
         self.stack_viewer = StackViewer()
         self.threeD_viewer = VolumeViewer()
 
@@ -58,12 +58,45 @@ class ThreeDViewer(QtGui.QWidget, ):
         self.view_stack.addWidget(self.stack_viewer)
         self.view_stack.addWidget(self.threeD_viewer)
 
-        layout = QtGui.QGridLayout(self)
-        layout.addWidget(self.combo_box, 0, 0, 1, 1)
-        layout.addWidget(self.view_stack, 1, 0, 1, 2)
+        hlayout = QtGui.QHBoxLayout()
+        self.subsample_spinbox = QtGui.QSpinBox()
+        self.subsample_label = QtGui.QLabel('Subsample Level:')
+        self.loadVolumeButton = QtGui.QToolButton()
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/check_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.loadVolumeButton.setIcon(icon)
+        self.loadVolumeButton.setToolTip('Generate Volume')
+        hlayout.addWidget(self.combo_box)
+        hlayout.addSpacing(2)
+        hlayout.addWidget(self.subsample_label)
+        hlayout.addWidget(self.subsample_spinbox)
+        hlayout.addWidget(self.loadVolumeButton)
+        hlayout.addStretch()
+        layout = QtGui.QVBoxLayout(self)
+        layout.addLayout(hlayout)
+        layout.addWidget(self.view_stack)
+
+        self.subsample_spinbox.hide()
+        self.subsample_label.hide()
+        self.loadVolumeButton.hide()
 
         self.stack_viewer.setData(loader.StackImage(paths))
         self.combo_box.activated.connect(self.view_stack.setCurrentIndex)
+        self.view_stack.currentChanged.connect(self.toggleInputs)
+        self.loadVolumeButton.clicked.connect(self.loadVolume)
+
+    def toggleInputs(self, index):
+        if self.view_stack.currentWidget() is self.threeD_viewer:
+            self.subsample_label.show()
+            self.subsample_spinbox.show()
+            self.loadVolumeButton.show()
+        else:
+            self.subsample_label.hide()
+            self.subsample_spinbox.hide()
+            self.loadVolumeButton.hide()
+
+    def loadVolume(self):
+        print 'LOAD THAT VOLUME'
 
 
 class VolumeViewer(QtGui.QWidget):
