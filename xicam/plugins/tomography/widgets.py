@@ -828,7 +828,7 @@ class VolumeViewer(QtGui.QWidget):
                     print e.message
 
     def moveGradientTick(self, idx, pos):
-        tick = self.HistogramLUTWidget.item.gradient.ticks.keys()[idx]
+        tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]
         tick.setPos(pos, 0)
         tick.view().tickMoved(tick, QtCore.QPoint(pos*self.HistogramLUTWidget.item.gradient.length, 0))
         tick.sigMoving.emit(tick)
@@ -967,7 +967,9 @@ class VolumeRenderWidget(scene.SceneCanvas):
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2, -vol.shape[1]/2, -vol.shape[0]/2))
+        scale = 3*(.0075,) # This works for now but might be different for different resolutions
+        translate = map(lambda x: -scale[0]*x/2, reversed(vol.shape))
+        self.volume.transform = scene.STTransform(translate=translate, scale=scale)
 
     # Implement key presses
     def on_key_press(self, event):
@@ -1278,6 +1280,7 @@ class ArrayDeque(deque):
             return super(ArrayDeque, self).__getitem__(item)
 
 
+# Testing
 if __name__ == '__main__':
     import sys, time
     app = QtGui.QApplication(sys.argv)
