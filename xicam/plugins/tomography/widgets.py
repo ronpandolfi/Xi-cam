@@ -260,6 +260,7 @@ class StackViewer(ImageView):
     """
     PG ImageView subclass to view projections or sinograms of a tomography dataset
     """
+
     def __init__(self, data=None, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
 

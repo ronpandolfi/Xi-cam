@@ -41,14 +41,37 @@ import pyqtgraph as pg
 import imageio
 import os
 
+# TODO refactor general widgets to be part of plugins.widgets to be shared in a more organized fashion
+from ..tomography.widgets import StackViewer
 
 
-class volumeViewer(QtGui.QWidget):
+class ThreeDViewer(QtGui.QWidget, ):
+    def __init__(self, paths, parent=None):
+        super(ThreeDViewer, self).__init__(parent=parent)
+
+        self.combo_box = QtGui.QComboBox(self)
+        self.combo_box.addItems(['Image Stack', '3D Render'])
+        self.stack_viewer = StackViewer()
+        self.threeD_viewer = VolumeViewer()
+
+        self.view_stack = QtGui.QStackedWidget(self)
+        self.view_stack.addWidget(self.stack_viewer)
+        self.view_stack.addWidget(self.threeD_viewer)
+
+        layout = QtGui.QGridLayout(self)
+        layout.addWidget(self.combo_box, 0, 0, 1, 1)
+        layout.addWidget(self.view_stack, 1, 0, 1, 2)
+
+        self.stack_viewer.setData(loader.StackImage(paths))
+        self.combo_box.activated.connect(self.view_stack.setCurrentIndex)
+
+
+class VolumeViewer(QtGui.QWidget):
 
     sigImageChanged=QtCore.Signal()
 
     def __init__(self,path=None,data=None,*args,**kwargs):
-        super(volumeViewer, self).__init__(*args,**kwargs)
+        super(VolumeViewer, self).__init__(*args, **kwargs)
 
         self.levels=[0,1]
 

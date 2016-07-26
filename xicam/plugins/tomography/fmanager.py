@@ -3,10 +3,8 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial, wraps
-
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
-
 import fdata
 import fwidgets
 import reconpkg
@@ -363,7 +361,6 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
                                            interrupt_signal=interrupt_signal)
     threads.add_to_queue(runnable_it)
     return params
-#TODO have current recon parameters in run console or in recon view...
 
 
 def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
@@ -390,6 +387,7 @@ def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
             elif 'Tiff' in fname:
                 fpartial.keywords['start'] = write_start
                 write_start += tomo.shape[0]
+            # This needs to be fixed so that the center is only detected once &not re-detected in each chunk
             # elif 'Reconstruction' in fname:
             #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
             #     # and set the reconstruction partial to the updated one.
