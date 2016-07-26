@@ -216,22 +216,23 @@ class plugin(base.plugin):
         with open(os.path.join(os.path.expanduser('~'),'test.yml'), 'r') as outfile:
           fx_str = outfile.read()
 
+        msg.showMessage('Submitting job to remote executor...')
         future_tag = ae.submit(hipgisaxs_func, fx_str, pure=False)
+        msg.showMessage('Job received. Submitting to queue...')
 
         import time
         while future_tag.status == "pending":
-            print "loading..."
+            #msg.showMessage("Waiting for response from server...",timeout=5)
             time.sleep(1)
 
         if future_tag.status == "failure":
-            print "Failed.."
+            msg.showMessage("Execution failed.",timeout=5)
             return
 
-        print "Fetching result please wait"
-        result =  future_tag.result()
+        msg.showMessage("Execution complete. Fetching result...",timeout=5)
+        result = future_tag.result()
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
         print "result = ", out
-        #msg.logMessage(stderr.read())
 
         plugins.plugins['Viewer'].instance.opendata(out)
 

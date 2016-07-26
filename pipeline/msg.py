@@ -12,8 +12,8 @@ guilogcallable = None
 def showMessage(s,timeout=0):
     if statusbar is not None:
         statusbar.showMessage(s,timeout)
-    else:
-        logMessage(s)
+
+    logMessage(s)
 
 def logMessage(s,level=20,loggername=None):
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
