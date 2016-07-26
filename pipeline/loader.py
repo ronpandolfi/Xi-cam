@@ -2,7 +2,6 @@
 
 import fabio
 from fabio import fabioutils
-import numpy
 import pyfits
 import os
 import numpy as np
@@ -928,6 +927,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
+    def asVolume(self, level=1):
+        for i, j in enumerate(range(0, self.shape[0], level)):
+            img = self._getimage(j)[::level, ::level].transpose()
+            if i == 0:  # allocate array:
+                shape = (np.ceil(float(self.shape[0])/level), img.shape[0], img.shape[1])
+                vol = np.empty(shape, dtype=self.rawdata.dtype)
+            vol[i] = img
+        return vol
 
     def _getframe(self, frame=None): # keeps 3 frames in cache at most
         if frame is None: frame=self.currentframe
@@ -945,8 +952,8 @@ class StackImage(object):
 
     def invalidatecache(self):
         self.cache = dict()
-        print 'cache cleared'
 
+    # This needs more thought to get some slices out of there
     def __getitem__(self, item):
         return self._getframe(item)
 

@@ -36,7 +36,7 @@ import numpy as np
 from PySide import QtGui,QtCore
 from vispy import app, scene, io
 from vispy.color import Colormap, BaseColormap,ColorArray
-from pipeline import loader
+from pipeline import loader, msg
 import pyqtgraph as pg
 import imageio
 import os
@@ -52,11 +52,11 @@ class ThreeDViewer(QtGui.QWidget, ):
         self.combo_box = QtGui.QComboBox(self)
         self.combo_box.addItems(['Image Stack', '3D Volume'])
         self.stack_viewer = StackViewer()
-        self.threeD_viewer = VolumeViewer()
+        self.volume_viewer = VolumeViewer()
 
         self.view_stack = QtGui.QStackedWidget(self)
         self.view_stack.addWidget(self.stack_viewer)
-        self.view_stack.addWidget(self.threeD_viewer)
+        self.view_stack.addWidget(self.volume_viewer)
 
         hlayout = QtGui.QHBoxLayout()
         self.subsample_spinbox = QtGui.QSpinBox()
@@ -77,16 +77,19 @@ class ThreeDViewer(QtGui.QWidget, ):
         layout.addWidget(self.view_stack)
 
         self.subsample_spinbox.hide()
+        self.subsample_spinbox.setValue(8)
         self.subsample_label.hide()
         self.loadVolumeButton.hide()
 
-        self.stack_viewer.setData(loader.StackImage(paths))
+        self.stack_image = loader.StackImage(paths)
+        self.volume = None
+        self.stack_viewer.setData(self.stack_image)
         self.combo_box.activated.connect(self.view_stack.setCurrentIndex)
         self.view_stack.currentChanged.connect(self.toggleInputs)
         self.loadVolumeButton.clicked.connect(self.loadVolume)
 
     def toggleInputs(self, index):
-        if self.view_stack.currentWidget() is self.threeD_viewer:
+        if self.view_stack.currentWidget() is self.volume_viewer:
             self.subsample_label.show()
             self.subsample_spinbox.show()
             self.loadVolumeButton.show()
@@ -96,7 +99,10 @@ class ThreeDViewer(QtGui.QWidget, ):
             self.loadVolumeButton.hide()
 
     def loadVolume(self):
-        print 'LOAD THAT VOLUME'
+        msg.showMessage('Generating volume...')
+        level = self.subsample_spinbox.value()
+        self.volume = self.stack_image.asVolume(level=level)
+        self.volume_viewer.setVolume(vol=self.volume, slicevol=False)
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -104,29 +110,29 @@ class VolumeViewer(QtGui.QWidget):
     sigImageChanged=QtCore.Signal()
 
     def __init__(self,path=None,data=None,*args,**kwargs):
-        super(VolumeViewer, self).__init__(*args, **kwargs)
+        super(VolumeViewer, self).__init__()
 
-        self.levels=[0,1]
+        self.levels = [0, 1]
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0,0,0,0)
         l.setSpacing(0)
 
-        self.volumeRenderWidget=volumeRenderWidget()
+        self.volumeRenderWidget=VolumeRenderWidget()
         l.addWidget(self.volumeRenderWidget.native)
 
-        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self)
+        self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
         l.addWidget(self.HistogramLUTWidget)
 
-        self.xregion = SliceWidget()
-        self.yregion = SliceWidget()
-        self.zregion = SliceWidget()
-        self.xregion.item.region.setRegion([0,5000])
-        self.yregion.item.region.setRegion([0,5000])
-        self.zregion.item.region.setRegion([0,5000])
+        self.xregion = SliceWidget(parent=self)
+        self.yregion = SliceWidget(parent=self)
+        self.zregion = SliceWidget(parent=self)
+        self.xregion.item.region.setRegion([0, 1000])
+        self.yregion.item.region.setRegion([0, 1000])
+        self.zregion.item.region.setRegion([0, 1000])
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
@@ -136,11 +142,15 @@ class VolumeViewer(QtGui.QWidget):
 
         self.setLayout(l)
 
-        self.setVolume(vol=data,path=path)
+        # self.setVolume(vol=data,path=path)
 
         # self.volumeRenderWidget.export('video.mp4',fps=25,duration=10.)
         # self.writevideo()
 
+
+    @property
+    def vol(self):
+        return self.volumeRenderWidget.vol
 
     def getSlice(self):
         xslice=self.xregion.getSlice()
@@ -148,32 +158,46 @@ class VolumeViewer(QtGui.QWidget):
         zslice=self.zregion.getSlice()
         return xslice,yslice,zslice
 
-    def setVolume(self,vol=None,path=None):
-        sliceobj=self.getSlice()
-        self.volumeRenderWidget.setVolume(vol,path,sliceobj)
+    def setVolume(self, vol=None, path=None, slicevol=True):
+        if slicevol:
+            sliceobj = self.getSlice()
+        else:
+            sliceobj = 3*(slice(0, None),)
+
+        self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
             self.sigImageChanged.emit()
-            self.xregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[0]])
-            self.yregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[1]])
-            self.zregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[2]])
+            for i, region in enumerate([self.xregion, self.yregion, self.zregion]):
+                try:
+                    region.item.region.setBounds([0, self.volumeRenderWidget.vol.shape[i]])
+                except RuntimeError as e:
+                    print e.message
+
+    def moveGradientTick(self, idx, pos):
+        tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]
+        tick.setPos(pos, 0)
+        tick.view().tickMoved(tick, QtCore.QPoint(pos*self.HistogramLUTWidget.item.gradient.length, 0))
+        tick.sigMoving.emit(tick)
+        tick.sigMoved.emit(tick)
+        tick.view().tickMoveFinished(tick)
 
     def setLevels(self, levels, update=True):
-        print 'levels:',levels
-        self.levels=levels
+        self.levels = levels
         self.setLookupTable()
+        self.HistogramLUTWidget.region.setRegion(levels)
+        if update:
+            self.volumeRenderWidget.update()
 
     def setLookupTable(self, lut=None, update=True):
         try:
-            table=self.HistogramLUTWidget.item.gradient.colorMap().color/256.
-            pos=self.HistogramLUTWidget.item.gradient.colorMap().pos
-
+            table = self.HistogramLUTWidget.item.gradient.colorMap().color/256.
+            pos = self.HistogramLUTWidget.item.gradient.colorMap().pos
             #table=np.clip(table*(self.levels[1]-self.levels[0])+self.levels[0],0.,1.)
-            table[:,3]=pos
-            table=np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
-            pos=np.hstack([[0],pos*(self.levels[1]-self.levels[0])+self.levels[0],[1]])
-
-            self.volumeRenderWidget.volume.cmap = Colormap(table,controls=pos)
+            table[:, 3] = pos
+            table = np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
+            pos = np.hstack([[0], pos*(self.levels[1] - self.levels[0]) + self.levels[0], [1]])
+            self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
             print ex
 
@@ -221,10 +245,6 @@ class VolumeViewer(QtGui.QWidget):
 
         return hist[1][:-1], hist[0]
 
-    @property
-    def vol(self):
-        return self.volumeRenderWidget.vol
-    #
     # @volumeRenderWidget.connect
     # def on_frame(self,event):
     #     self.volumeRenderWidget.cam1.auto_roll
@@ -234,10 +254,11 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget.events.draw.connect(lambda e: writer.append_data(self.render()))
         self.volumeRenderWidget.events.close.connect(lambda e: writer.close())
 
-class volumeRenderWidget(scene.SceneCanvas):
 
-    def __init__(self,vol=None,path=None,size=(800,600),show=False):
-        super(volumeRenderWidget, self).__init__(keys='interactive',size=size,show=show)
+class VolumeRenderWidget(scene.SceneCanvas):
+
+    def __init__(self,vol=None, path=None, size=(800,600), show=False):
+        super(VolumeRenderWidget, self).__init__(keys='interactive', size=size, show=show)
 
         # Prepare canvas
         self.measure_fps()
@@ -251,10 +272,6 @@ class volumeRenderWidget(scene.SceneCanvas):
         self.setVolume(vol,path)
         self.volume=None
 
-
-
-
-
         # Create three cameras (Fly, Turntable and Arcball)
         fov = 60.
         self.cam1 = scene.cameras.FlyCamera(parent=self.view.scene, fov=fov, name='Fly')
@@ -263,9 +280,7 @@ class volumeRenderWidget(scene.SceneCanvas):
         self.view.camera = self.cam2  # Select turntable at first
 
 
-    def setVolume(self,vol = None, path = None, sliceobj = None):
-        print 'slice:',sliceobj
-
+    def setVolume(self, vol=None, path=None, sliceobj=None):
         if vol is None:
             vol=self.vol
 
@@ -276,38 +291,32 @@ class volumeRenderWidget(scene.SceneCanvas):
                 vol=loader.loadimage(path)
             else:
                 vol=loader.loadtiffstack(path)
-            self.vol=vol
 
         if vol is None:
             return
 
+        self.vol = vol
+
         if slice is not None:
-            print 'preslice:',vol.shape
-            slicevol=self.vol[sliceobj]
-            print 'postslice:',vol.shape
+            slicevol = self.vol[sliceobj]
         else:
-            slicevol=self.vol
-
-
+            slicevol = self.vol
 
         # Set whether we are emulating a 3D texture
         emulate_texture = False
 
         # Create the volume visuals
         if self.volume is None:
-            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene,emulate_texture=emulate_texture)
-            self.volume.method='translucent'
+            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene, emulate_texture=emulate_texture)
+            self.volume.method = 'translucent'
         else:
             self.volume.set_data(slicevol)
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
-
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2,-vol.shape[1]/2,-vol.shape[0]/2))
-
-
-
-
+        scale = 3*(.0075,) # This works for now but might be different for different resolutions
+        translate = map(lambda x: -scale[0]*x/2, reversed(vol.shape))
+        self.volume.transform = scene.STTransform(translate=translate, scale=scale)
 
     # Implement key presses
     def on_key_press(self, event):
@@ -353,9 +362,10 @@ class SliceWidget(pg.HistogramLUTWidget):
         #tuple(sorted(LUT.gradient.ticks.values()))
 
     def getSlice(self):
-        bounds=sorted(self.item.gradient.ticks.values())
-        bounds=(bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
+        bounds = sorted(self.item.gradient.ticks.values())
+        bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
+
 
 class VolumeVisual(scene.visuals.Volume):
     def set_data(self, vol, clim=None):
@@ -396,4 +406,4 @@ class VolumeVisual(scene.visuals.Volume):
         if self._index_buffer is None:
             self._create_vertex_data()
 
-scene.visuals.Volume=VolumeVisual
+scene.visuals.Volume = VolumeVisual
