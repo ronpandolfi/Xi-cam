@@ -10,7 +10,7 @@ class plugin(base.plugin):
     name = 'MOTD'
     hidden = True
 
-    MOTD = """<div align='center'><img src='{}/gui/camera.jpg' width='200'/><h1 style='font-family:Zero Threes;'>Welcome to Xi-cam</h1><br />Please cite Xi-cam in published work: <br />Pandolfi, R., Kumar, D., Venkatakrishnan, S., Hexemer, A.
+    MOTD = """<div align='center'><img src='{}/gui/camera.jpg' width='200'/><h1 style='font-family:Zero Threes;'>Welcome to Xi-cam</h1><br />Please cite Xi-cam in published work: <br />Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A.
 (under preparation)</div>""".format(os.getcwd())
 
     def __init__(self, *args, **kwargs):

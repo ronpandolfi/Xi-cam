@@ -388,20 +388,42 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
 
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
-    q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
-
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1)  # TODO: get incoming angle from header
+    qsquared=qpar**2 + qvrt**2
 
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1) # TODO: get incoming angle from header
-    print 'maxq:',np.sqrt(np.max(qpar**2 + qvrt**2))/10.
-    q = np.arange(len(qprofile))*np.sqrt(np.max(qpar**2 + qvrt**2))/len(qprofile)/10.
+    remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
+
+    f2d=AI.getFit2D()
+    f2d['centerX']=remeshcenter[0]
+    f2d['centerY']=remeshcenter[1]
+    AI.setFit2D(**f2d)
+    AIdict=AI.getPyFAI()
+
+    q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+
+
+
+
+    q = np.arange(len(qprofile))*np.sqrt(np.max(qsquared))/len(qprofile)/10.
 
     return q, qprofile, color, requestkey
 
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
-    np.save('data.npy',data)
-    np.save('mask.npy',mask)
+    AI = pyFAI.AzimuthalIntegrator()
+    AI.setPyFAI(**AIdict)
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1)  # TODO: get incoming angle from header
+    qsquared=qpar**2 + qvrt**2
+
+    remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
+
+    f2d=AI.getFit2D()
+    f2d['centerX']=remeshcenter[0]
+    f2d['centerY']=remeshcenter[1]
+    AI.setFit2D(**f2d)
+    AIdict=AI.getPyFAI()
+
     return chiintegratepyFAI(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
 def remeshxintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):

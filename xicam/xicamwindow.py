@@ -31,23 +31,26 @@ import client.dask_io_loop
 import client.dask_local_scheduler
 import client.dask_remote_scheduler
 import client.dask_active_executor
+import threads
+
 
 class ComboBoxAction(QtGui.QWidgetAction):
-    def __init__(self,title,parent=None) : 
+    def __init__(self, title, parent=None):
         QtGui.QWidgetAction.__init__(self, parent)
-        pWidget = QtGui.QWidget ();
+        pWidget = QtGui.QWidget();
         pLayout = QtGui.QHBoxLayout();
-        pLabel = QtGui.QLabel (title);
-        pLayout.addWidget (pLabel);
+        pLabel = QtGui.QLabel(title);
+        pLayout.addWidget(pLabel);
 
         pComboBox = QtGui.QComboBox();
-        pLayout.addWidget (pComboBox);
-        pWidget.setLayout (pLayout);
+        pLayout.addWidget(pComboBox);
+        pWidget.setLayout(pLayout);
 
         self.setDefaultWidget(pWidget);
 
-    #def comboBox (self):
-    #    return self.pComboBox
+        # def comboBox (self):
+        #    return self.pComboBox
+
 
 class Login(QtGui.QDialog):
     def __init__(self, machineName="", parent=None):
@@ -88,13 +91,12 @@ class MyMainWindow(QtCore.QObject):
         # Load the gui from file
         self.app = app
         guiloader = QUiLoader()
-        #print os.getcwd()
+        # print os.getcwd()
         f = QtCore.QFile("gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
         self.ui.closeEvent = self.closeEvent
-
 
         # STYLE
         # self.app.setStyle('Plastique')
@@ -103,17 +105,12 @@ class MyMainWindow(QtCore.QObject):
         app.setStyleSheet(qdarkstyle.load_stylesheet() + style)
         app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False)
 
-
-
         # INITIAL GLOBALS
         self.viewerprevioustab = -1
         self.timelineprevioustab = -1
         self.experiment = config.experiment()
         self.folderwatcher = watcher.newfilewatcher()
         self.plugins = []
-
-
-
 
         # ACTIONS
         # Wire up action buttons
@@ -123,8 +120,7 @@ class MyMainWindow(QtCore.QObject):
         # Grab status bar
         msg.statusbar = self.ui.statusbar
         msg.showMessage('Ready...')
-        xglobals.statusbar = self.ui.statusbar # TODO: Deprecate this by replacing all statusbar calls with msg module
-
+        xglobals.statusbar = self.ui.statusbar  # TODO: Deprecate this by replacing all statusbar calls with msg module
 
         # PLUG-INS
 
@@ -142,14 +138,12 @@ class MyMainWindow(QtCore.QObject):
 
         self.ui.menubar.addMenu(plugins.buildactivatemenu(pluginmode))
 
-
-
         # TESTING
         ##
         # self.openimages(['../samples/AgB_00016.edf'])
         # self.openimages(['/Users/rp/Data/LaB6_Ant1_dc002p.mar3450'])
 
-        #self.calibrate()
+        # self.calibrate()
         # self.updatepreprocessing()
         ##
         testmenu = QtGui.QMenu('Testing')
@@ -160,44 +154,45 @@ class MyMainWindow(QtCore.QObject):
 
         self.ui.menubar.addMenu(testmenu)
 
-        #DASK WORKFLOW
-        #TODO turn this into a class
+        # DASK WORKFLOW
+        # TODO turn this into a class
 
-        #convert the following into a class
+        # convert the following into a class
         self.sessions = ["localhost", "Andromeda", "Daint", "NERSC/Edison"]
         self.session_machines = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.1.7", "edison.nersc.gov"]
-        #self.session_address = ["localhost", socket.gethostbyname("andromeda.dhcp.lbl.gov"), "148.187.26.16", ""]
+        # self.session_address = ["localhost", socket.gethostbyname("andromeda.dhcp.lbl.gov"), "148.187.26.16", ""]
         self.session_address = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.26.16", ""]
-        self.session_exec = ["", "/home/hari/runscript.sh", "/users/course79/runscript.sh", "/usr/common/graphics/visit/camera/runscript.sh"]
-        self.executors = [ None, None, None, None ]
+        self.session_exec = ["", "/home/hari/runscript.sh", "/users/course79/runscript.sh",
+                             "/usr/common/graphics/visit/camera/runscript.sh"]
+        self.executors = [None, None, None, None]
 
         self.sessionmenu = QtGui.QMenu('Sessions')
 
-        #comboBoxAction = ComboBoxAction("Active Session", self.sessionmenu);
+        # comboBoxAction = ComboBoxAction("Active Session", self.sessionmenu);
 
         self.actionGroup = QtGui.QActionGroup(self.sessionmenu)
         for i in self.sessions:
-          action = QtGui.QAction(i, self.sessionmenu, checkable=True)
-          if i == "localhost":
-            action.setChecked(True)
-          action.triggered.connect(self.activesessionchanged)
-          self.actionGroup.addAction(action)
-          self.sessionmenu.addAction(action)
+            action = QtGui.QAction(i, self.sessionmenu, checkable=True)
+            if i == "localhost":
+                action.setChecked(True)
+            action.triggered.connect(self.activesessionchanged)
+            self.actionGroup.addAction(action)
+            self.sessionmenu.addAction(action)
 
-        #self.comboBoxAction.comboBox().activated.connect(self.activesessionchanged)
-        #self.sessionmenu.addAction(comboBoxAction)
+        # self.comboBoxAction.comboBox().activated.connect(self.activesessionchanged)
+        # self.sessionmenu.addAction(comboBoxAction)
         self.ui.menubar.addMenu(self.sessionmenu)
 
         self.daskLoop = client.dask_io_loop.DaskLoop()
         try:
-          #create a local active executor
-          local_scheduler = client.dask_local_scheduler.LocalScheduler(self.daskLoop)
-          local_scheduler.execute()
-          self.executors[0] = local_scheduler
-          self.sessionmenu.setTitle("Active Session (localhost)")
-          client.dask_active_executor.active_executor = local_scheduler
+            # create a local active executor
+            local_scheduler = client.dask_local_scheduler.LocalScheduler(self.daskLoop)
+            local_scheduler.execute()
+            self.executors[0] = local_scheduler
+            self.sessionmenu.setTitle("Active Session (localhost)")
+            client.dask_active_executor.active_executor = local_scheduler
         except:
-          print "Issues connecting to localhost"
+            print "Issues connecting to localhost"
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
@@ -211,44 +206,46 @@ class MyMainWindow(QtCore.QObject):
        return QtCore.QObject.eventFilter(self,obj, ev)
 
     def closeAllConnections(self):
-      print "closing all connections"
-      #self.daskLoop.loop.start()
-      #self.daskLoop.loop.close()
-      #self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
-      #stop any existing executors
-      for e in range(len(self.executors)):
-        if self.executors[e] is not None:
-          self.executors[e].close()
-      self.daskLoop.loop.stop()
-      self.daskLoop.loop.close()
-      #self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
+        print "closing all connections"
+        # self.daskLoop.loop.start()
+        # self.daskLoop.loop.close()
+        # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
+        # stop any existing executors
+        for e in range(len(self.executors)):
+            if self.executors[e] is not None:
+                self.executors[e].close()
+        self.daskLoop.loop.stop()
+        self.daskLoop.loop.close()
+        # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
 
     def activesessionchanged(self):
-        #w = self
+        # w = self
         obj = 0
-        for (i,ac) in enumerate(self.actionGroup.actions()):
-          if self.sender().text() == ac.text():
-            obj = i
-            break
+        for (i, ac) in enumerate(self.actionGroup.actions()):
+            if self.sender().text() == ac.text():
+                obj = i
+                break
 
-        if self.executors[obj] != None :
-          client.dask_active_executor.active_executor = self.executors[obj]
-          self.sessionMenu.setText("Active Session ({0})".format(self.session_machines[obj]))
+        if self.executors[obj] != None:
+            client.dask_active_executor.active_executor = self.executors[obj]
+            self.sessionMenu.setText("Active Session ({0})".format(self.session_machines[obj]))
         else:
-          #setup connection
-          login = Login(self.session_machines[obj])
-          if login.exec_() == QtGui.QDialog.Accepted:
-              username = str(login.textName.text())
-              machine = str(login.textMachine.text())
-              password = str(login.textPass.text())
-              print username, machine#, password
-              self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop, password, self.session_address[obj], self.session_exec[obj])
-              self.sessionmenu.setTitle("Active Session ({0})".format(self.session_machines[obj]))
+            # setup connection
+            login = Login(self.session_machines[obj])
+            if login.exec_() == QtGui.QDialog.Accepted:
+                username = str(login.textName.text())
+                machine = str(login.textMachine.text())
+                password = str(login.textPass.text())
+                print username, machine  # , password
+                self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop,
+                                                                                   password, self.session_address[obj],
+                                                                                   self.session_exec[obj])
+                self.sessionmenu.setTitle("Active Session ({0})".format(self.session_machines[obj]))
 
-              import time
-              time.sleep(5)
-              self.executors[obj].execute()
-              client.dask_active_executor.active_executor = self.executors[obj]
+                import time
+                time.sleep(5)
+                self.executors[obj].execute()
+                client.dask_active_executor.active_executor = self.executors[obj]
 
     def singletest(self):
         self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
@@ -261,21 +258,19 @@ class MyMainWindow(QtCore.QObject):
         self.openfiles(sorted(glob.glob('/home/rp/data/YL1031/YL1031*.edf')))
 
     def tilttest(self):
-        config.activeExperiment.setvalue('Detector Distance',2.46269726489*79*.001)
-        config.activeExperiment.setvalue('Detector Rotation',4.69729438873 * 360./(2.*np.pi)-180.)
-        config.activeExperiment.setvalue('Detector Tilt',0.503226642865/(2.*np.pi)*360.)
-        config.activeExperiment.setvalue('Wavelength',0.97621599151*1.e-10)
-        config.activeExperiment.setvalue('Center X',969.878684978)
-        config.activeExperiment.setvalue('Center Y',2048-2237.93277884)
+        config.activeExperiment.setvalue('Detector Distance', 2.46269726489 * 79 * .001)
+        config.activeExperiment.setvalue('Detector Rotation', 4.69729438873 * 360. / (2. * np.pi) - 180.)
+        config.activeExperiment.setvalue('Detector Tilt', 0.503226642865 / (2. * np.pi) * 360.)
+        config.activeExperiment.setvalue('Wavelength', 0.97621599151 * 1.e-10)
+        config.activeExperiment.setvalue('Center X', 969.878684978)
+        config.activeExperiment.setvalue('Center Y', 2048 - 2237.93277884)
         self.openfiles(['/home/rp/Downloads/lab6_041016_rct5_0001.tif'])
-
 
     def closeEvent(self, ev):  # Never called???
         ev.accept()
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)
-
 
     @staticmethod
     def load_image(path):
@@ -284,7 +279,6 @@ class MyMainWindow(QtCore.QObject):
         """
         # Load an image path with fabio
         return pipeline.loader.loadpath(path)[0]
-
 
     def dialogopen(self):
         """
@@ -329,7 +323,7 @@ class MyMainWindow(QtCore.QObject):
         """
         Calibrate using the currently active tab
         """
-        #self.currentImageTab().load()
+        # self.currentImageTab().load()
         plugins.base.activeplugin.calibrate()
 
     def openimages(self, paths):
@@ -343,8 +337,8 @@ class MyMainWindow(QtCore.QObject):
         self.app.processEvents()
         # Make an image tab for that file and add it to the tab view
         # newimagetab = viewer.imageTabTracker([path], self.experiment, self)
-        #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
-        #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
+        # tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
+        # tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
         if len(paths) > 1:
             plugins.plugins['Timeline'].instance.openfiles(paths)
         else:
@@ -352,15 +346,12 @@ class MyMainWindow(QtCore.QObject):
 
         self.ui.statusbar.showMessage('Ready...')
 
-
-
     def loadexperiment(self):
         """
         replot the current tab (tab plotting checks if this is active)
         """
         path, _ = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir, "*.exp")
         self.experiment = config.experiment(path)
-
 
     def updateexperiment(self):
         self.experiment.save()
@@ -405,9 +396,6 @@ class MyMainWindow(QtCore.QObject):
         """
         pane = self.ui.propertytable
         pane.setHidden(not pane.isHidden())
-
-
-
 
     def openwatchfolder(self):
         """
