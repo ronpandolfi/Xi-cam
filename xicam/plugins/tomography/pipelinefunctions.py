@@ -1,5 +1,5 @@
 import numpy as np
-# import numexpr as ne
+import numexpr as ne
 
 DTYPE_RANGE = {'uint8': (0, 255),
                'uint16': (0, 65535),
@@ -29,13 +29,14 @@ def crop(arr, p11, p12, p21, p22, axis=0):
     return arr[slc]
 
 
-def convert_data(arr, imin=None, imax=None, dtype='uint8'):
+def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
     """
     Convert an image or 3D array to another datatype
     :param arr: ndarray, data array
     :param dtype: dataype keyword
     :param imin,
     :param imax,
+    :param intcast: datatype to cast ints to
     :return: ndarry, converted to dtype
     """
 
@@ -44,10 +45,14 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8'):
         raise ValueError('dtype keyword {0} not in allowed keywords {1}'.format(dtype, allowed_dtypes))
 
     # Determine range to cast values
+    minset=False
     if imin is None:
         imin = np.min(arr)
+        minset=True
+    maxset=False
     if imax is None:
         imax = np.max(arr)
+        maxset=True
 
     np_cast = getattr(np, str(arr.dtype))
     imin, imax =  np_cast(imin),  np_cast(imax)
@@ -57,18 +62,27 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8'):
     omin = 0 if imin >= 0 else omin
     omin, omax = np_cast(omin), np_cast(omax)
 
-    # # rescale pixel intensity values
-    arr = np.clip(arr, imin, imax)
-    arr = ((arr - imin) / float(imax - imin))* (omax - omin) + omin
-
-    # ne.evaluate('where(arr < imin, imin, arr)', out=arr)
-    # ne.evaluate('where(arr > imax, imax, arr)', out=arr)
-    #
-    # arr = ne.evaluate('((arr - imin) / (imax - imin)) * (omax - omin) + omin', out=arr)
+    if arr.dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16,
+                     np.uint32, np.uint64, np.bool_, np.int_, np.intc, np.intp]:
+        int_cast = getattr(np, str(intcast))
+        out = np.empty(arr.shape, dtype=int_cast)
+        imin = int_cast(imin)
+        imax = int_cast(imax)
+        df = int_cast(imax) - int_cast(imin)
+    else:
+        out = np.empty(arr.shape, dtype=arr.dtype)
+        df = imax - imin
+    if not minset:
+        if np.min(arr) < imin:
+            arr = ne.evaluate('where(arr < imin, imin, arr)', out=out)
+    if not maxset:
+        if np.max(arr) > imax:
+            arr = ne.evaluate('where(arr > imax, imax, arr)', out=out)
+    ne.evaluate('(arr - imin) / df', truediv=True, out=out)
+    ne.evaluate("out * (omax - omin) + omin", out=out)
 
     # Cast data to specified type
-    return arr.astype(np.dtype(dtype))
-
+    return out.astype(np.dtype(dtype), copy=False)
 
 
 
@@ -76,13 +90,13 @@ def array_operation(arr, value, operation='divide'):
     if operation not in ('add', 'subtract', 'multiply', 'divide'):
         raise ValueError('Operation {} is not a valid array operation'.format(operation))
     elif operation == 'add':
-        return arr + value
+        return ne.evaluate('arr + value')
     elif operation == 'subtract':
-        return arr - value
+        return ne.evaluate('arr - value', truediv=True)
     elif operation == 'multiply':
-        return arr*value
+        return ne.evaluate('arr * value')
     elif operation == 'divide':
-        return arr/value
+        return ne.evaluate('arr / value')
 
 
 if __name__ == '__main__':
