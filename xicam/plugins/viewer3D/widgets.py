@@ -223,8 +223,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (np.ceil(self.vol.shape[0] / targetImageSize),
-                    np.ceil(self.vol.shape[1] / targetImageSize))
+            step = (np.ceil(float(self.vol.shape[0]) / targetImageSize),
+                    np.ceil(float(self.vol.shape[1]) / targetImageSize))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
