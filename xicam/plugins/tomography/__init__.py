@@ -65,7 +65,6 @@ class plugin(base.plugin):
             e.accept()
 
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
 
     def currentChanged(self, index):
@@ -113,7 +112,7 @@ class plugin(base.plugin):
         try:
             return self.centerwidget.currentWidget() #.widget
         except AttributeError:
-            print 'No dataset open.'
+            pass
 
     def previewSlice(self):
         msg.showMessage('Computing slice preview...', timeout=0)
@@ -130,7 +129,7 @@ class plugin(base.plugin):
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
-            msg.showMessage('Starting tomography reconstruction...', timeout=0)
+            msg.showMessage('Computing reconstruction...', timeout=0)
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),
@@ -141,12 +140,13 @@ class plugin(base.plugin):
                                                interrupt_signal=self.console.local_cancelButton.clicked)
             self.recon_start_time = time.time()
         else:
-            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-                                                                          'Are you sure you want to start another one?',
-                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if r is QtGui.QMessageBox.Yes:
-                QtGui.QMessageBox.information(self, 'Reconstruction request',
-                                              'Then you should wait until the first one finishes.')
+            print 'Beep'
+            # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+            #                                                               'Are you sure you want to start another one?',
+            #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            # if r is QtGui.QMessageBox.Yes:
+            #     QtGui.QMessageBox.information(self, 'Reconstruction request',
+            #                                   'Then you should wait until the first one finishes.')
 
     def fullReconstructionFinished(self):
         run_time = time.time() - self.recon_start_time

@@ -369,13 +369,15 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
 def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
     write_start = sino[0]
     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-    total_sino = (sino[1] - sino[0]) // sino[2]
+    total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
     if total_sino < sino_p_chunk:
         sino_p_chunk = total_sino
 
     for i in range(nchunk):
         init = True
-        start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]
+        start, end = i*sino[2]*sino_p_chunk + sino[0], (i + 1)*sino[2]*sino_p_chunk + sino[0]
+        end = end if end < sino[1] else sino[1]
+
         for fpartial, fname, param_dict, fargs, ipartials in fpartials:
             ts = time.time()
             yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(fname, start,
