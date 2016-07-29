@@ -181,8 +181,8 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
     tan_2t = np.tan(angles[:, 0])
     tan_al = np.tan(angles[:, 1])
     x = tan_2t * sdd
-    px = sdd * tan_2t / pixel_size[0] + center[0]
-    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] + center[1]
+    px = sdd * tan_2t / pixel_size[0] #+ center[0]
+    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] #+ center[1]
     pixels = np.zeros((px.size, 2))
     pixels[:,0] = px
     pixels[:,1] = py
@@ -231,7 +231,6 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984e-9, refgamma=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
-
     if alpha is not None: alpha = np.deg2rad(alpha)
     if beta is not None: beta = np.deg2rad(beta)
     if gamma is not None: gamma = np.deg2rad(gamma)
