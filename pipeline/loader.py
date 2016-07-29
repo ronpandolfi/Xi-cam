@@ -1177,6 +1177,8 @@ class diffimage2(object):
             if alphai is None:
                 return self.data
 
+            config.activeExperiment.setvalue('Incidence Angle (GIXS)',np.rad2deg(alphai))
+
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
             remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,

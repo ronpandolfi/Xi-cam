@@ -78,8 +78,8 @@ class Login(QtGui.QDialog):
         else:
             self.close()
 
+
 class MyMainWindow(QtCore.QObject):
-    
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
 
@@ -199,11 +199,10 @@ class MyMainWindow(QtCore.QObject):
         self.ui.installEventFilter(self)
 
     def eventFilter(self, obj, ev):
-       #print self, ev.type()
-       if ev.type() == QtCore.QEvent.Close:
-         self.closeAllConnections()
-
-       return QtCore.QObject.eventFilter(self,obj, ev)
+        # print self, ev.type()
+        if ev.type() == QtCore.QEvent.Close:
+            self.closeAllConnections()
+        return QtCore.QObject.eventFilter(self, obj, ev)
 
     def closeAllConnections(self):
         print "closing all connections"

@@ -5,7 +5,7 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.optimize import root
 import sgexclusions
-
+from xicam import config
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
     if isinstance(a, np.ndarray) and isinstance(b, np.ndarray) and \
@@ -204,8 +204,8 @@ class peak(object):
         tan_2t = np.tan(self.twotheta)
         tan_al = np.tan(self.alphaf)
         x= tan_2t * sdd
-        self.x = sdd * tan_2t / pixels + center[0]
-        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels + center[1]
+        self.x = sdd * tan_2t / pixels# + config.activeExperiment.center[0]
+        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels# + config.activeExperiment.center[1]
         
     def isAt(self, pos):
         if np.isnan(self.twotheta): return False
@@ -216,8 +216,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar)
-        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt)
+        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar/1e10)
+        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt/1e10)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -277,7 +277,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
     nu = 1 - np.complex(refgamma,refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
-    alphai = np.deg2rad(0.18)
+    alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
     k = 2 * np.pi / wavelen
     peaks = list()
     for hkl in HKL:

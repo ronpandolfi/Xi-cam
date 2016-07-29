@@ -54,6 +54,7 @@ class experiment(Parameter):
                       {'name': 'Energy', 'type': 'float', 'value': 10000, 'siPrefix': True, 'suffix': 'eV'},
                       {'name': 'Wavelength', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm'},
                       # {'name': 'View Mask', 'type': 'action'},
+                      {'name': 'Incidence Angle (GIXS)','type':'float','value':0.1,'suffix':'o'},
                       {'name': 'Notes', 'type': 'text', 'value': ''}]
             super(experiment, self).__init__(name='Experiment Properties', type='group', children=config)
 
