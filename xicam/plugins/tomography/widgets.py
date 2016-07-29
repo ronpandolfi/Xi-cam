@@ -153,7 +153,7 @@ class TomoViewer(QtGui.QWidget):
 
     def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
         fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
-                                interrupt_signal=interrupt_signal, finish_call=msg.clearMessage)
+                                interrupt_signal=interrupt_signal)
 
     def addSlicePreview(self, params, recon, slice_no=None):
         if slice_no is None:
@@ -178,6 +178,7 @@ class TomoViewer(QtGui.QWidget):
             path = os.path.split(path)[0]
         self.reconstructionViewer.openDataset(path=path)
         self.viewstack.setCurrentWidget(self.reconstructionViewer)
+        msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:
