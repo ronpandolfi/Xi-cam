@@ -142,10 +142,10 @@ def load_function_pipeline(yaml_file, setdefaults=False):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
-        set_function_pipeline(pipeline, setdefaults=setdefaults)
+        set_pipeline_from_yaml(pipeline, setdefaults=setdefaults)
 
-
-def set_function_pipeline(pipeline, setdefaults=False):
+# TODO check why the functions are being updated so many times when seting pipeline here and set_pipeline_from_preview
+def set_pipeline_from_yaml(pipeline, setdefaults=False):
     clear_functions()
     # Way too many for loops, oops
     for func, subfuncs in pipeline.iteritems():
@@ -168,8 +168,33 @@ def set_function_pipeline(pipeline, setdefaults=False):
                         if 'Parameters' in sipfs[sipf]:
                             for p, v in sipfs[sipf]['Parameters'].iteritems():
                                 ifwidget.params.child(p).setValue(v)
-                                if setdefaults: ifwidget.params.child(p).setDefault(v)
+                                if setdefaults:
+                                    ifwidget.params.child(p).setDefault(v)
+                        ifwidget.updateParamsDict()
+            funcWidget.updateParamsDict()
 
+
+def set_pipeline_from_preview(pipeline, setdefaults=False):
+    clear_functions()
+    for func, subfuncs in pipeline.iteritems():
+        for subfunc in subfuncs:
+            funcWidget = add_function(func, subfunc)
+            for param, value in subfuncs[subfunc].iteritems():
+                if param == 'Package':
+                    continue
+                elif param == 'Input Functions':
+                    for ipf, sipfs in value.iteritems():
+                        ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
+                        [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                        if setdefaults:
+                            [ifwidget.params.child(p).setDefault(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                        ifwidget.updateParamsDict()
+                else:
+                    child = funcWidget.params.child(param)
+                    child.setValue(value)
+                    if setdefaults:
+                        child.setDefault(value)
+                funcWidget.updateParamsDict()
 
 
 def create_pipeline_dict():
@@ -233,7 +258,7 @@ def update_function_parameters(funcs):
             update_function_parameters(funcs=f.input_functions)
 
 
-def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs=None):
+def pipeline_preview_action(widget, callback, finish_call=None, update=True, slc=None, fixed_funcs=None):
     global functions
 
     if len(functions) < 1:
@@ -247,6 +272,7 @@ def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs
 
     construct_in_background = threads.method(construct_preview_pipeline,
                                              callback_slot=lambda x: run_preview_recon(*x),
+                                             finished_slot=finish_call,
                                              lock=threads.mutex)
     construct_in_background(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
 
@@ -338,6 +364,7 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     return funstack, widget.getsino(slc), partial(callback, params)
 
 
+# TODO Since this is already being called on a background thread it can probably just be called without the Runnable
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(reduce, method_args=((lambda f1, f2: f2(f1)), funstack, initializer),

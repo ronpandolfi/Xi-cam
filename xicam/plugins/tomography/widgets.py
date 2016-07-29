@@ -149,11 +149,11 @@ class TomoViewer(QtGui.QWidget):
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
         fmanager.cor_scale = lambda x: x//8
-        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc)
+        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
 
     def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
         fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
-                                interrupt_signal=interrupt_signal)
+                                interrupt_signal=interrupt_signal, finish_call=msg.clearMessage)
 
     def addSlicePreview(self, params, recon, slice_no=None):
         if slice_no is None:
@@ -164,10 +164,8 @@ class TomoViewer(QtGui.QWidget):
 
     def add3DPreview(self, params, recon):
         recon = np.flipud(recon)
-        msg.clearMessage()
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
-
         hist = self.preview3DViewer.volumeviewer.getHistogram()
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
@@ -180,7 +178,6 @@ class TomoViewer(QtGui.QWidget):
             path = os.path.split(path)[0]
         self.reconstructionViewer.openDataset(path=path)
         self.viewstack.setCurrentWidget(self.reconstructionViewer)
-        msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:
@@ -708,7 +705,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
-        fmanager.set_function_pipeline(current_data, setdefaults=True)
+        fmanager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 class ReconstructionViewer(QtGui.QWidget):
@@ -1168,7 +1165,7 @@ class Preview3DViewer(QtGui.QSplitter):
         self.volumeviewer.setVolume(vol=recon)
 
     def defaultsButtonClicked(self):
-        fmanager.set_function_pipeline(self.funcdata)
+        fmanager.set_pipeline_from_preview(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):
