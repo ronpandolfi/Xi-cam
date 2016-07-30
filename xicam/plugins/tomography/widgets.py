@@ -1140,15 +1140,26 @@ class Preview3DViewer(QtGui.QSplitter):
         self.setOrientation(QtCore.Qt.Horizontal)
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
-        self.functiontree = DataTreeWidget()
-        self.functiontree.setHeaderHidden(True)
-        self.functiontree.clear()
-        self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set Pipeline")
-        l.addWidget(self.functiontree)
-        l.addWidget(self.setPipelineButton)
+        self.pipelinetree = DataTreeWidget()
+        self.pipelinetree.setHeaderHidden(True)
+        self.pipelinetree.clear()
+
+        self.setPipelineButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/check_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setPipelineButton.setIcon(icon)
+        self.setPipelineButton.setToolTip('Set as pipeline')
+
+        ly = QtGui.QVBoxLayout()
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
+        ly.addWidget(self.pipelinetree)
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(self.setPipelineButton)
+        ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.setLayout(l)
+        panel.setLayout(ly)
 
         self.volumeviewer = VolumeViewer()
 
@@ -1158,12 +1169,15 @@ class Preview3DViewer(QtGui.QSplitter):
         self.funcdata = None
 
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.hide()
 
     def setPreview(self, recon, funcdata):
-        self.functiontree.setData(funcdata, hideRoot=True)
+        self.pipelinetree.setData(funcdata, hideRoot=True)
         self.funcdata = funcdata
-        self.functiontree.show()
+        self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
+        self.setPipelineButton.show()
 
     def defaultsButtonClicked(self):
         fmanager.set_pipeline_from_preview(self.funcdata)
