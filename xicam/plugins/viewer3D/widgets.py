@@ -99,10 +99,11 @@ class ThreeDViewer(QtGui.QWidget, ):
             self.loadVolumeButton.hide()
 
     def loadVolume(self):
-        msg.showMessage('Generating volume...')
+        msg.showMessage('Generating volume...', timeout=5)
         level = self.subsample_spinbox.value()
         self.volume = self.stack_image.asVolume(level=level)
         self.volume_viewer.setVolume(vol=self.volume, slicevol=False)
+        msg.clearMessage()
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -114,18 +115,18 @@ class VolumeViewer(QtGui.QWidget):
 
         self.levels = [0, 1]
 
-        l = QtGui.QHBoxLayout()
-        l.setContentsMargins(0,0,0,0)
-        l.setSpacing(0)
+        ly = QtGui.QHBoxLayout()
+        ly.setContentsMargins(0,0,0,0)
+        ly.setSpacing(0)
 
         self.volumeRenderWidget=VolumeRenderWidget()
-        l.addWidget(self.volumeRenderWidget.native)
+        ly.addWidget(self.volumeRenderWidget.native)
 
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        l.addWidget(self.HistogramLUTWidget)
+        ly.addWidget(self.HistogramLUTWidget)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -136,11 +137,11 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
-        l.addWidget(self.xregion)
-        l.addWidget(self.yregion)
-        l.addWidget(self.zregion)
+        ly.addWidget(self.xregion)
+        ly.addWidget(self.yregion)
+        ly.addWidget(self.zregion)
 
-        self.setLayout(l)
+        self.setLayout(ly)
 
         # self.setVolume(vol=data,path=path)
 
@@ -161,6 +162,7 @@ class VolumeViewer(QtGui.QWidget):
     def setVolume(self, vol=None, path=None, slicevol=True):
         if slicevol:
             sliceobj = self.getSlice()
+            print 'Got slice', sliceobj
         else:
             sliceobj = 3*(slice(0, None),)
 
@@ -170,7 +172,7 @@ class VolumeViewer(QtGui.QWidget):
             self.sigImageChanged.emit()
             for i, region in enumerate([self.xregion, self.yregion, self.zregion]):
                 try:
-                    region.item.region.setBounds([0, self.volumeRenderWidget.vol.shape[i]])
+                    region.item.region.setRegion([0, vol.shape[i]])
                 except RuntimeError as e:
                     print e.message
 
@@ -281,16 +283,16 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
 
     def setVolume(self, vol=None, path=None, sliceobj=None):
-        if vol is None:
-            vol=self.vol
 
-        if path is not None:
+        if path is not None and vol is None:
             if '*' in path:
-                vol=loader.loadimageseries(path)
+                vol = loader.loadimageseries(path)
             elif os.path.splitext(path)[-1]=='.npy':
-                vol=loader.loadimage(path)
+                vol = loader.loadimage(path)
             else:
-                vol=loader.loadtiffstack(path)
+                vol = loader.loadtiffstack(path)
+        elif vol is None:
+            vol = self.vol
 
         if vol is None:
             return
@@ -314,7 +316,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        scale = 3*(.0075,) # This works for now but might be different for different resolutions
+        scale = 3*(2.0/self.vol.shape[1],)
         translate = map(lambda x: -scale[0]*x/2, reversed(vol.shape))
         self.volume.transform = scene.STTransform(translate=translate, scale=scale)
 

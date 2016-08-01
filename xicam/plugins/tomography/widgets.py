@@ -772,18 +772,18 @@ class VolumeViewer(QtGui.QWidget):
 
         self.levels = [0, 1]
 
-        l = QtGui.QHBoxLayout()
-        l.setContentsMargins(0,0,0,0)
-        l.setSpacing(0)
+        ly = QtGui.QHBoxLayout()
+        ly.setContentsMargins(0,0,0,0)
+        ly.setSpacing(0)
 
         self.volumeRenderWidget=VolumeRenderWidget()
-        l.addWidget(self.volumeRenderWidget.native)
+        ly.addWidget(self.volumeRenderWidget.native)
 
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        l.addWidget(self.HistogramLUTWidget)
+        ly.addWidget(self.HistogramLUTWidget)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -794,11 +794,11 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
-        l.addWidget(self.xregion)
-        l.addWidget(self.yregion)
-        l.addWidget(self.zregion)
+        ly.addWidget(self.xregion)
+        ly.addWidget(self.yregion)
+        ly.addWidget(self.zregion)
 
-        self.setLayout(l)
+        self.setLayout(ly)
 
         # self.setVolume(vol=data,path=path)
 
