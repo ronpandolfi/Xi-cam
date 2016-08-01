@@ -12,7 +12,7 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools
+from pipeline import pathtools, msg
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -397,7 +397,6 @@ class SFTPFileView(QtGui.QTreeWidget):
 
     def getSelectedFilePaths(self):
         paths = [item.path for item in self.selectedItems()]
-        print paths
         return paths
 
     def deleteSelection(self):
@@ -524,6 +523,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         item = self.itemFromIndex(current)
         try:
             if item.childCount() == 0:
+                msg.showMessage('Loading preview...')
                 dataset = item.parent().parent().text(0)
                 stage = item.parent().text(0)
                 #TODO decorate this instead
@@ -628,12 +628,6 @@ class FileExplorer(QtGui.QWidget):
     def setPathLabel(self, path):
         self.path_label.setText(path)
 
-    # def getRawDatasetList(self):
-    #     widget = self.file_view
-    #     items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
-    #     items = [i.text() for i in items]
-    #     return items
-
     def getSelectedFilePaths(self):
         return self.file_view.getSelectedFilePaths()
 
@@ -687,17 +681,17 @@ class SpotDatasetExplorer(QtGui.QWidget):
     def getSelectedFilePath(self):
         return os.path.join(*self.file_view.getStagesAndDatasets())
 
-    # def getRawDatasetList(self):
-    #     widget = self.file_view
-    #     items = []
-    #
-    #     parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
-    #     child_items = []
-    #     for item in parent_items:
-    #         child_items += [item.child(i) for i in range(item.childCount())]
-    #     for item in child_items:
-    #         items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
-    #     return items
+    def getRawDatasetList(self):
+        widget = self.file_view
+        items = []
+
+        parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
+        child_items = []
+        for item in parent_items:
+            child_items += [item.child(i) for i in range(item.childCount())]
+        for item in child_items:
+            items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
+        return items
 
 
 class MultipleFileExplorer(QtGui.QTabWidget):
@@ -808,7 +802,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             pass
 
     def itemSelected(self, item):
-        print item
+        msg.clearMessage() #
         self.sigPreview.emit(item)
 
     def addHPCTab(self, system):

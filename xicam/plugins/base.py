@@ -18,6 +18,7 @@ l.setSpacing(0)
 
 loginwidget = login.LoginDialog()
 
+import os
 preview = widgets.previewwidget()
 w.addWidget(preview)
 

@@ -1492,26 +1492,50 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def __init__(self):
         super(previewwidget, self).__init__()
-        self.view = self.addViewBox(lockAspect=True)
+        self.view = self.addViewBox(lockAspect=True, enableMouse=False, enableMenu=False)
         self.imageitem = pg.ImageItem()
-        self.view.addItem(self.imageitem)
+        self.textitem = pg.TextItem()
         self.imgdata = None
         self.setMinimumHeight(250)
 
+        self.view.addItem(self.imageitem)
+        self.view.addItem(self.textitem)
+        self.textitem.hide()
         self.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+
+        # def textItemBounds(axis, frac=1.0, orthoRange=None):
+        #     b = self.textitem.boundingRect()
+        #     sx, sy = self.view.viewPixelSize()
+        #     x, y = sx*b.width(), sy*b.height()
+        #     if axis == 0: return (-x/2, x/2)
+        #     if axis == 1: return (0, y)
+        #
+        # self.textitem.dataBounds = textItemBounds
 
     def loaditem(self, item):
         if isinstance(item, str) or isinstance(item, unicode):
-            item = loader.loadimage(item)
+            if os.path.isfile(item) or os.path.isdir(item):
+                item = loader.loadimage(item)
+            else:
+                self.setText(item)
+                return
         try:
             self.setImage(item)
         except TypeError:
             self.imageitem.clear()
 
     def setImage(self, imgdata):
-            self.imgdata = imgdata
-            self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
-                                    autoLevels=True)
+        self.imageitem.clear()
+        self.textitem.hide()
+        self.imgdata = imgdata
+        self.imageitem.setImage(np.rot90(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), 3),
+                                autoLevels=True)
+
+    def setText(self, text):
+        self.textitem.setText(text)
+        self.textitem.setFont(QtGui.QFont('Zero Three'))  # Not working for some reason
+        self.imageitem.clear()
+        self.textitem.show()
 
 
 class fileTreeWidget(QtGui.QTreeView):
