@@ -478,9 +478,11 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
     def getDatasets(self, query):
+        msg.showMessage('Searching SPOT database...')
         runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
                                           method_kwargs=self.search_params,
-                                          callback_slot=self.createDatasetDictionary)
+                                          callback_slot=self.createDatasetDictionary,
+                                          finished_slot=msg.clearMessage)
         threads.add_to_queue(runnable)
 
     def createDatasetDictionary(self, data):
