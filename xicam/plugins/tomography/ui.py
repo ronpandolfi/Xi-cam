@@ -147,7 +147,7 @@ def loadUi():
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    return leftmodes, centerwidget, rightmodes, bottomwidget, toolbar
+    return leftmodes, centerwidget, rightwidget, bottomwidget, toolbar
 
 
 def showform(widget):

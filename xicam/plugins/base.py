@@ -60,8 +60,6 @@ w.setSizes([250, w.height() - 250])
 leftwidget = QtGui.QTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
 
-rightwidget = QtGui.QTabWidget()
-
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
@@ -87,6 +85,7 @@ class plugin(QtCore.QObject):
             self.leftwidget = leftwidget
             self.booltoolbar = booltoolbar
             self.filetree = filetree
+
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
