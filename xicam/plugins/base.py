@@ -65,7 +65,7 @@ rightwidget = QtGui.QTabWidget()
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
-    sigUpdateExperiment = QtCore.Signal()
+
     hidden = False
 
     def __init__(self, placeholders):
@@ -78,19 +78,7 @@ class plugin(QtCore.QObject):
 
         if not hasattr(self, 'rightwidget'):
             # TODO this property table and configtree should not be defaults in base plugin.
-            w = QtGui.QWidget()
-            l = QtGui.QVBoxLayout()
-            l.setContentsMargins(0, 0, 0, 0)
-            configtree = ParameterTree()
-            configtree.setParameters(config.activeExperiment, showTop=False)
-            config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
-            l.addWidget(configtree)
-            self.propertytable = widgets.frameproptable()
-            l.addWidget(self.propertytable)
-            w.setLayout(l)
-
             self.rightwidget = rightwidget
-            self.rightwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File), '')
 
         if not hasattr(self, 'bottomwidget'):
             self.bottomwidget = None
@@ -154,15 +142,18 @@ class plugin(QtCore.QObject):
                 self.leftwidget.tabBar().hide()
 
         if self.rightwidget is rightwidget:
-            if self.rightwidget.count() > 1:
-                for idx in range(self.rightwidget.count() - 1):
-                    self.rightwidget.removeTab(idx + 1)
+            if self.rightwidget.count() > 0:
+                for idx in range(self.rightwidget.count()):
+                    self.rightwidget.removeTab(idx)
             if hasattr(self, 'rightmodes'):
                 for widget, icon in self.rightmodes:
                     self.rightwidget.addTab(widget, icon, '')
-                self.rightwidget.tabBar().show()
+                if self.rightwidget.count() > 1:
+                    self.rightwidget.tabBar().show()
+                else:
+                    self.rightwidget.tabBar().hide()
             else:
-                self.rightwidget.tabBar().hide()
+                self.rightwidget.hide()
 
         global activeplugin
         activeplugin = self
