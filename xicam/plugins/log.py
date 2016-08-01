@@ -13,7 +13,7 @@ class plugin(base.plugin):
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QListWidget()
         self.rightwidget = None
-        self.leftwidget = None
+        self.featureform = None
         self.bottomwidget = None
         self.toolbar = None
 

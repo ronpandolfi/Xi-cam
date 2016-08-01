@@ -49,21 +49,21 @@ class plugin(base.plugin):
 
 
         # WIREUP CONTROLS
-        self.leftwidget.addFeatureButton.clicked.connect(featuremanager.addLayer)
-        self.leftwidget.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
-        self.leftwidget.addParticleButton.clicked.connect(featuremanager.addParticle)
-        #self.leftwidget.showComputationButton.clicked.connect(self.showComputation)
-        self.leftwidget.showDetectorButton.clicked.connect(self.showDetector)
-        self.leftwidget.addParticleButton.setMenu(ui.particlemenu)
-        self.leftwidget.runLocal.clicked.connect(self.runLocal)
-        self.leftwidget.runRemote.clicked.connect(self.runRemote)
-        self.leftwidget.runDask.clicked.connect(self.runDask)
+        self.featureform.addFeatureButton.clicked.connect(featuremanager.addLayer)
+        self.featureform.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
+        self.featureform.addParticleButton.clicked.connect(featuremanager.addParticle)
+        #self.featureform.showComputationButton.clicked.connect(self.showComputation)
+        self.featureform.showDetectorButton.clicked.connect(self.showDetector)
+        self.featureform.addParticleButton.setMenu(ui.particlemenu)
+        self.featureform.runLocal.clicked.connect(self.runLocal)
+        self.featureform.runRemote.clicked.connect(self.runRemote)
+        self.featureform.runDask.clicked.connect(self.runDask)
 
 
         # inject loginwidget
         from xicam.plugins import login
         self.loginwidget=login.LoginDialog()
-        self.leftwidget.layout().addWidget(self.loginwidget)
+        self.featureform.layout().addWidget(self.loginwidget)
 
 
         # SETUP DISPLAY
