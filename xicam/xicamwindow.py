@@ -335,8 +335,8 @@ class MyMainWindow(QtCore.QObject):
         self.app.processEvents()
         # Make an image tab for that file and add it to the tab view
         # newimagetab = viewer.imageTabTracker([path], self.experiment, self)
-        # tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
-        # tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
+        #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
+        #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
         plugins.base.activeplugin.openfiles(paths)
 
         self.ui.statusbar.showMessage('Ready...')
