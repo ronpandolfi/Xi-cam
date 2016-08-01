@@ -37,15 +37,15 @@ class rawimage(fabioimage):
         self.data = data
         return self
 
-
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
+
 
 class H5image(fabioimage):
     """
     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
     To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
-    subclass and include 'H5' somewhere in its name.
+    subclass and include 'H5image' somewhere in its name.
     """
 
     # This does not really work because fabio creates the instance of the class with not connection to the filename
@@ -66,42 +66,52 @@ class H5image(fabioimage):
     #             break
     #     else:
     #         raise RuntimeError('H5 format not recognized')
-    #     return super(H5image, cls).__new__(cls) # can call super.__new__ or simply return the instance (obj) and bypass init
+    #     return super(H5image, cls).__new__(cls)
+    #  can call super.__new__ or simply return the instance (obj) and bypass init
 
     def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-                           if 'H5' in image[0] and image[0] != 'H5image']
+                           if 'H5image' in image[0] and image[0] != 'H5image']
         for image_class in h5image_classes:
             try:
-                print 'Opening as ', image_class[0]
                 obj = image_class[1](self.data, self.header)
                 obj.read(filename)
-            #TODO have a specific check that raises a specific error so that only that exception is handled
-            except Exception:
+            except H5ReadError:
+                # Skip exception and try the next H5 image class
                 continue
             else:
+                # If not error was thrown break out of loop
                 break
         else:
-            raise RuntimeError('H5 format not recognized')
-        return obj
+            # If for loop finished without breaking raise ReadError
+            raise H5ReadError('H5 format not recognized')
+        return obj  # return the successfully read object
 
-
-
+# Register H5image class to fabioimages
 fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
 
-class spotH5image(fabioimage):
-    def _readheader(self,f):
-        with h5py.File(f,'r') as h:
-            self.header=h.attrs
+class ALS733H5image(fabioimage):
+    def _readheader(self, f):
+        fname = f.name  # get filename from file object
+        with h5py.File(fname, 'r') as h:
+            self.header= dict(h.attrs)
 
     def read(self,f,frame=None):
+        self.readheader(f)
+
+        # Check header for unique attributes
+        try:
+            if self.header['facility'] != 'als' or self.header['end_station'] != 'bl733':
+                raise H5ReadError
+        except KeyError:
+            raise H5ReadError
+
         self.filename=f
         if frame is None:
             frame = 0
-
         return self.getframe(frame)
 
 
@@ -183,7 +193,7 @@ class ALS832H5image(fabioimage):
     def __exit__(self, *arg, **kwarg):
         self.close()
 
-    def _readheader(self,f):
+    def _readheader(self, f):
         if self._h5 is not None:
             self.header=dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
@@ -193,10 +203,19 @@ class ALS832H5image(fabioimage):
         if frame is None:
             frame = 0
         if self._h5 is None:
-            self._h5 = h5py.File(self.filename, 'r')
-            self._dgroup = self._find_dataset_group(self._h5)
+
+            # Check header for unique attributes
+            try:
+                self._h5 = h5py.File(self.filename, 'r')
+                self._dgroup = self._find_dataset_group(self._h5)
+                self.readheader(f)
+                if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
+                    raise H5ReadError
+            except KeyError:
+                raise H5ReadError
+
             self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
-        self.readheader(f)
+
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm[0]
@@ -212,9 +231,9 @@ class ALS832H5image(fabioimage):
                 else:
                     return self._find_dataset_group(h5object[keys[0]])
             else:
-                raise Exception('Unable to find dataset group')
+                raise H5ReadError('Unable to find dataset group')
         else:
-            raise Exception('Unable to find dataset group')
+            raise H5ReadError('Unable to find dataset group')
 
     @property
     def flats(self):
@@ -300,6 +319,10 @@ class ALS832H5image(fabioimage):
 
 
 class TiffStack(object):
+    """
+    Class for stacking several individual tiffs and viewing as a 3D image in an pyqtgraph ImageView
+    """
+
     def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
         if isinstance(paths, list):
@@ -319,6 +342,13 @@ class TiffStack(object):
 
     def close(self):
         pass
+
+
+class H5ReadError(IOError):
+    """
+    Exception class raised when checking for the specific schema/structure of an HDF5 file.
+    """
+    pass
 
 
 # Testing
