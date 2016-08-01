@@ -25,7 +25,9 @@ def load():
     blankForm.setAlignment(QtCore.Qt.AlignCenter)
     showForm(blankForm)
 
-    return leftwidget, centerwidget, rightwidget
+    leftmodes = [(leftwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+
+    return centerwidget, leftmodes, rightwidget, leftwidget
 
 
 def showForm(form):

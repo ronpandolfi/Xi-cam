@@ -10,9 +10,9 @@ if op_sys == 'Darwin':
         print 'NSURL not found. Drag and drop may not work correctly'
 
 import base
-from PySide import QtGui
+from PySide import QtGui, QtCore
 import os
-
+from pyqtgraph.parametertree import ParameterTree
 import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
@@ -20,8 +20,22 @@ from pipeline import loader
 from xicam import config
 import fabio
 
+# Globals so Timeline can share the same rightmodes
+rightwidget = QtGui.QWidget()
+l = QtGui.QVBoxLayout()
+l.setContentsMargins(0, 0, 0, 0)
+configtree = ParameterTree()
+configtree.setParameters(config.activeExperiment, showTop=False)
+l.addWidget(configtree)
+propertytable = widgets.frameproptable()
+l.addWidget(propertytable)
+rightwidget.setLayout(l)
+rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+
 class plugin(base.plugin):
     name = 'Viewer'
+    sigUpdateExperiment = QtCore.Signal()
+    config.activeExperiment.sigTreeStateChanged.connect(sigUpdateExperiment)
 
     def __init__(self, *args, **kwargs):
 
@@ -31,6 +45,7 @@ class plugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+        self.rightmodes = rightmodes
         self.bottomwidget = widgets.integrationwidget(self.getCurrentTab)
 
         self.toolbar = widgets.toolbar.difftoolbar()

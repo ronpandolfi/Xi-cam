@@ -8,7 +8,7 @@ from xicam.plugins import explorer, login
 
 activeplugin = None
 
-# DEFAULTS
+# Base DEFAULTS
 w = QtGui.QSplitter()
 w.setOrientation(QtCore.Qt.Vertical)
 w.setContentsMargins(0, 0, 0, 0)
@@ -60,10 +60,12 @@ w.setSizes([250, w.height() - 250])
 leftwidget = QtGui.QTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
 
+rightwidget = QtGui.QTabWidget()
+
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
-    sigUpdateExperiment = QtCore.Signal()
+
     hidden = False
 
     def __init__(self, placeholders):
@@ -75,34 +77,16 @@ class plugin(QtCore.QObject):
             self.centerwidget = None
 
         if not hasattr(self, 'rightwidget'):
-            w = QtGui.QWidget()
-            l = QtGui.QVBoxLayout()
-            l.setContentsMargins(0, 0, 0, 0)
-
-            configtree = ParameterTree()
-            configtree.setParameters(config.activeExperiment, showTop=False)
-            config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
-            l.addWidget(configtree)
-
-            self.propertytable = widgets.frameproptable()
-            #
-            # propertytable.verticalHeader().hide()
-            # propertytable.horizontalHeader().hide()
-
-            # propertytable.horizontalHeader().setStretchLastSection(True)
-            l.addWidget(self.propertytable)
-            w.setLayout(l)
-            self.rightwidget = w
+            # TODO this property table and configtree should not be defaults in base plugin.
+            self.rightwidget = rightwidget
 
         if not hasattr(self, 'bottomwidget'):
             self.bottomwidget = None
 
         if not hasattr(self, 'leftwidget'):
             self.leftwidget = leftwidget
-            self.filetree = filetree
             self.booltoolbar = booltoolbar
-            self.loginwidget = loginwidget
-
+            self.filetree = filetree
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
@@ -116,7 +100,6 @@ class plugin(QtCore.QObject):
     def openSelected(self, operation=None, operationname=None):
         indices = self.filetree.selectedIndexes()
         paths = [self.filetree.filetreemodel.filePath(index) for index in indices]
-
         self.openfiles(paths, operation, operationname)
 
     def openfiles(self, files, operation=None, operationname=None):
@@ -146,13 +129,31 @@ class plugin(QtCore.QObject):
             if widget is None and placeholder is not None:
                 placeholder.hide()
 
-        if isinstance(self.leftwidget, QtGui.QTabWidget) and self.leftwidget.count() > 1:
-            for idx in range(self.leftwidget.count() - 1):
-                self.leftwidget.removeTab(idx + 1)
-        if hasattr(self, 'leftmodes'):
-            for widget, icon in self.leftmodes:
-                self.leftwidget.addTab(widget, icon, '')
+        global leftwidget, rightwidget  # if these will become attributes then the check will need to be different
+        if self.leftwidget is leftwidget:
+            if self.leftwidget.count() > 1:
+                for idx in range(self.leftwidget.count() - 1):
+                    self.leftwidget.removeTab(idx + 1)
+            if hasattr(self, 'leftmodes'):
+                for widget, icon in self.leftmodes:
+                    self.leftwidget.addTab(widget, icon, '')
+                self.leftwidget.tabBar().show()
+            else:
+                self.leftwidget.tabBar().hide()
 
+        if self.rightwidget is rightwidget:
+            if self.rightwidget.count() > 0:
+                for idx in range(self.rightwidget.count()):
+                    self.rightwidget.removeTab(idx)
+            if hasattr(self, 'rightmodes'):
+                for widget, icon in self.rightmodes:
+                    self.rightwidget.addTab(widget, icon, '')
+                if self.rightwidget.count() > 1:
+                    self.rightwidget.tabBar().show()
+                else:
+                    self.rightwidget.tabBar().hide()
+            else:
+                self.rightwidget.hide()
 
         global activeplugin
         activeplugin = self

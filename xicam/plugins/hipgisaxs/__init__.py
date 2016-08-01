@@ -28,8 +28,7 @@ class plugin(base.plugin):
         self.sftp_client = dict()
 
 
-        self.leftwidget, self.centerwidget, self.rightwidget = ui.load()
-
+        self.centerwidget, self.leftmodes, self.rightwidget, self.featureform = ui.load()
 
         # INIT FORMS
         self.computationForm = None
@@ -155,7 +154,7 @@ class plugin(base.plugin):
            plugins.plugins['Viewer'].instance.opendata(out)
         except:
            print "Unable to load data...."
- 
+
 
         # import os
         #
@@ -204,7 +203,7 @@ class plugin(base.plugin):
           import time
           timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
           filename = os.path.join(os.path.expanduser('~'),"test_remote.yml")
-          
+
           with open(filename, 'w') as outfile:
              outfile.write(yaml_str)
 
