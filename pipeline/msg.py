@@ -9,13 +9,19 @@ stdch = logging.StreamHandler(sys.stdout)
 
 guilogcallable = None
 
+DEBUG = logging.DEBUG
+INFO = logging.INFO
+WARNING = logging.WARNING
+ERROR = logging.ERROR
+CRITICAL = logging.CRITICAL
+
 def showMessage(s,timeout=0):
     if statusbar is not None:
         statusbar.showMessage(s,timeout)
 
     logMessage(s)
 
-def logMessage(s,level=20,loggername=None):
+def logMessage(s,level=INFO,loggername=None):
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
     if loggername is not None:
         loggername = inspect.stack()[1][3]
@@ -32,3 +38,4 @@ def logMessage(s,level=20,loggername=None):
 
 def clearMessage():
     statusbar.clearMessage()
+

@@ -402,13 +402,6 @@ class dimgViewer(QtGui.QWidget):
         self.dimg.mirrorsymmetrymode = self.ismirrorsymmetry
         self.dimg.logscale = self.islogintensity
 
-
-
-        if self.ismaskshown:
-            self.maskoverlay()
-        else:
-            self.maskimage.clear()
-
         if returnimg:
             return self.dimg
         else:
@@ -417,6 +410,11 @@ class dimgViewer(QtGui.QWidget):
         self.drawcenter()
 
         self.replot()
+
+        if self.ismaskshown:
+            self.maskoverlay()
+        else:
+            self.maskimage.clear()
 
         # if not iscake and not isremesh:
         #     self.imageitem.setRect(QtCore.QRect(0, 0, self.dimg.rawdata.shape[0], self.dimg.rawdata.shape[1]))

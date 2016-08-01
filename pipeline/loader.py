@@ -1009,7 +1009,7 @@ class diffimage2(object):
             self.experiment = config.activeExperiment
 
 
-
+        self.getAlphaI()
 
 
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
@@ -1160,24 +1160,30 @@ class diffimage2(object):
 
         return self.cache['cake']
 
+    def getAlphaI(self):
+        if "Sample Alpha Stage" in self.headers:
+            alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
+        elif "Alpha" in self.headers:
+            alphai = np.deg2rad(float(self.headers['Alpha']))
+        elif "Sample Theta" in self.headers:
+            alphai = np.deg2rad(float(self.headers['Sample Theta']))
+        elif "samtilt" in self.headers:
+            alphai = np.deg2rad(float(self.headers['samtilt']))
+        else:
+            alphai = self.queryAlphaI()
+        if alphai is None:
+            return 0
+
+        config.activeExperiment.setvalue('Incidence Angle (GIXS)', np.rad2deg(alphai))
+
+        return alphai
+
     def remesh(self,img,mask):
         if not self.iscached('remesh'):
             print 'headers:', self.headers
             # read incident angle
-            if "Sample Alpha Stage" in self.headers:
-                alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
-            elif "Alpha" in self.headers:
-                alphai = np.deg2rad(float(self.headers['Alpha']))
-            elif "Sample Theta" in self.headers:
-                alphai = np.deg2rad(float(self.headers['Sample Theta']))
-            elif "samtilt" in self.headers:
-                alphai = np.deg2rad(float(self.headers['samtilt']))
-            else:
-                alphai = self.queryAlphaI()
-            if alphai is None:
-                return self.data
 
-            config.activeExperiment.setvalue('Incidence Angle (GIXS)',np.rad2deg(alphai))
+            alphai=self.getAlphaI()
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)

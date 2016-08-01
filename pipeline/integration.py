@@ -5,6 +5,7 @@ import multiprocessing
 import time
 import pyFAI
 import remesh
+from pipeline import msg
 
 
 def radialintegrate(dimg, cut=None):
@@ -390,7 +391,11 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1)  # TODO: get incoming angle from header
+    print config.activeExperiment
+    alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
+    msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
+
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, alphai)  # TODO: get incoming angle from header
     qsquared=qpar**2 + qvrt**2
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
@@ -400,6 +405,7 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     f2d['centerY']=remeshcenter[1]
     AI.setFit2D(**f2d)
     AIdict=AI.getPyFAI()
+    msg.logMessage('remesh corrected calibration: '+str(AIdict))
 
     q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
