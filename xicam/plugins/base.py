@@ -88,6 +88,7 @@ class plugin(QtCore.QObject):
 
 
 
+
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
 
