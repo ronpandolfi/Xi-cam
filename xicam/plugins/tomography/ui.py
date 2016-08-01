@@ -62,8 +62,7 @@ def loadUi():
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
-    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
-                                                           'yaml/tomography/default_pipeline.yml'))
+    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
     filefuncmenu.addActions([openaction, saveaction, refreshaction])
 
     functionwidget.fileButton.setMenu(filefuncmenu)
@@ -135,14 +134,14 @@ def loadUi():
 
     rightwidget.addWidget(propertytable)
     propertytable.hide()
-
+    rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
     blankform = QtGui.QLabel('Select a function from\n below to set parameters...')
     blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    return leftmodes, centerwidget, rightwidget, bottomwidget, toolbar
+    return leftmodes, centerwidget, rightmodes, bottomwidget, toolbar
 
 
 def showform(widget):
