@@ -87,6 +87,7 @@ class plugin(QtCore.QObject):
             self.filetree = filetree
 
 
+
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
 
