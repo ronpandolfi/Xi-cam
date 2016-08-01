@@ -70,23 +70,25 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 QtCore.QThread.currentThread(),
         #                                                                 self._callback_slot.__name__)
         try:
-            if self.lock is not None: self.lock.lock()
+            if self.lock is not None:
+                self.lock.lock()
             value = self._method(*self.method_args, **self.method_kwargs)
             if value is None:
                 value = False
             self.emitter.sigRetValue.emit(value)
         except Exception as ex:
-            raise ex
             print 'Error: ', ex.message
         else:
             self.emitter.sigFinished.emit()
         finally:
-            if self.lock is not None: self.lock.unlock()
+            if self.lock is not None:
+                self.lock.unlock()
 
 
 class RunnableIterator(RunnableMethod):
     """
-    Runnable that will loop through an iterator and emit a signal representing the progress of a generator method
+    Runnable that will loop through an iterator and emit a signal representing the progress of a
+    iterator or generator method
     """
 
     def __init__(self, generator, generator_args=(), generator_kwargs={},
@@ -135,6 +137,46 @@ class RunnableIterator(RunnableMethod):
         finally:
             if self.lock is not None: self.lock.unlock()
 
+
+def method(function, callback_slot=None, finished_slot=None, lock=None, *args, **kwargs):
+    """
+    Decorator for functions/methods to run as RunnableMethods on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_method = threads.method(method_to_decorate, ...) Do not pass args or kwargs yet.
+    then simply run it: decorated_iterator(*args, **kwargs)
+    :param function: function/method to run on a background thread
+    :param callback_slot: slot to call with the return value of the function
+    :param finished_slot: slot to recieve finished signal when function completes
+    :param lock: (mutex) simple lock if multiple access needs to be prevented
+    :return: decorated method
+    """
+    def runnable_method(*args, **kwargs):
+        runnable = RunnableMethod(function, method_args=args, method_kwargs=kwargs,
+                                    callback_slot=callback_slot, finished_slot=finished_slot,
+                                    lock=lock)
+        add_to_queue(runnable)
+    return runnable_method
+
+
+def iterator(generator, callback_slot=None, finished_slot=None, interrupt_signal=None, lock=None, *args, **kwargs):
+    """
+    Decorator for iterators/generators to run as RunnableIterators on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_iterator = threads.iterator(iterator_to_decorate, ...) Do not pass args or kwargs yet.
+    then simply run it: decorated_iterator(*args, **kwargs)
+    :param generator: iterator/generator to be decorated
+    :param callback_slot: slot to call with the yield value or next value of iterator
+    :param finished_slot: slot to receive finished signal when iterator finishes
+    :param interrupt_signal: signal to break out of iterator loop prematurely
+    :param lock: (mutex) simple lock if multiple access needs to be prevented
+    :return: decorated iterator
+    """
+    def runnable_iterator(*args, **kwargs):
+        runnable = RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
+                                    callback_slot=callback_slot, finished_slot=finished_slot,
+                                    interrupt_signal=interrupt_signal, lock=lock)
+        add_to_queue(runnable)
+    return runnable_iterator
 
 
 class Worker(QtCore.QObject):

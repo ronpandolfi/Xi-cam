@@ -10,7 +10,7 @@ Crop:
 - name: axis
   type: int
   limits: [0, 2]
-Convert Data:
+Convert Data Type:
 - name: dtype
   type: list
   values:
@@ -19,7 +19,17 @@ Convert Data:
   - int16
   - float32
   - float64
-- name: min
+- name: imin
   type: float
-- name: max
+- name: imax
   type: float
+Array Operation:
+- name: value
+  type: float
+- name: operation
+  type: list
+  values:
+  - add
+  - subtract
+  - multiply
+  - divide

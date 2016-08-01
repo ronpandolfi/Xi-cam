@@ -57,7 +57,8 @@ w.addWidget(panelwidget)
 filetree.currentChanged = preview.loaditem
 w.setSizes([250, w.height() - 250])
 
-leftwidget = w
+leftwidget = QtGui.QTabWidget()
+leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
 
 
 class plugin(QtCore.QObject):
@@ -102,6 +103,7 @@ class plugin(QtCore.QObject):
             self.booltoolbar = booltoolbar
             self.loginwidget = loginwidget
 
+
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
 
@@ -143,6 +145,14 @@ class plugin(QtCore.QObject):
                 placeholder.show()
             if widget is None and placeholder is not None:
                 placeholder.hide()
+
+        if isinstance(self.leftwidget, QtGui.QTabWidget) and self.leftwidget.count() > 1:
+            for idx in range(self.leftwidget.count() - 1):
+                self.leftwidget.removeTab(idx + 1)
+        if hasattr(self, 'leftmodes'):
+            for widget, icon in self.leftmodes:
+                self.leftwidget.addTab(widget, icon, '')
+
 
         global activeplugin
         activeplugin = self

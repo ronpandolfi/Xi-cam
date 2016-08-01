@@ -2,7 +2,6 @@
 
 import fabio
 from fabio import fabioutils
-import numpy
 import pyfits
 import os
 import numpy as np
@@ -886,13 +885,19 @@ class jpegimageset():
 
 
 class StackImage(object):
+    """
+    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """
+
     ndim = 3
     def __init__(self, filepath=None, data=None):
-        # super(StackImage, self).__init__()
+        super(StackImage, self).__init__()
         self._rawdata = None
         self.filepath = filepath
 
         if filepath is not None:
+            if (isinstance(filepath, list) and len(filepath) == 1):
+                filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
             else:
@@ -922,6 +927,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
+    def asVolume(self, level=1):
+        for i, j in enumerate(range(0, self.shape[0], level)):
+            img = self._getimage(j)[::level, ::level].transpose()
+            if i == 0:  # allocate array:
+                shape = (np.ceil(float(self.shape[0])/level), img.shape[0], img.shape[1])
+                vol = np.empty(shape, dtype=self.rawdata.dtype)
+            vol[i] = img
+        return vol
 
     def _getframe(self, frame=None): # keeps 3 frames in cache at most
         if frame is None: frame=self.currentframe
@@ -939,8 +952,8 @@ class StackImage(object):
 
     def invalidatecache(self):
         self.cache = dict()
-        print 'cache cleared'
 
+    # This needs more thought to get some slices out of there
     def __getitem__(self, item):
         return self._getframe(item)
 
@@ -952,6 +965,10 @@ class StackImage(object):
 
 
 class ProjectionStack(StackImage):
+    """
+    Simply subclass of StackImage for Tomography Projection stacks.
+    """
+
     def __init__(self, filepath=None, data=None):
         super(ProjectionStack, self).__init__(filepath=filepath, data=data)
         self.flats = self.fabimage.flats
@@ -959,6 +976,10 @@ class ProjectionStack(StackImage):
 
 
 class SinogramStack(StackImage):
+    """
+    Simply subclass of StackImage for Tomography Sinogram stacks.
+    """
+
     def __init__(self, filepath=None, data=None):
         super(SinogramStack, self).__init__(filepath=filepath, data=data)
         self._cachesize = 10
@@ -968,13 +989,18 @@ class SinogramStack(StackImage):
 
     @classmethod
     def cast(cls, obj):
+        """
+        Use this to cast a ProjectionStack into a SinogramStack
+        :param obj: PorjectionStack Instance to cas
+        :return:
+        """
         new_obj = copy(obj)
         new_obj.__class__ = cls
         new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
         return new_obj
 
     def _getimage(self, frame):
-        return self.fabimage.getsinogram(frame).transpose()
+        return self.fabimage[:, frame, :].transpose()
 
 
 class diffimage2(object):

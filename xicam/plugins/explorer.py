@@ -30,7 +30,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = pathtools.getRoot()
+        self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
@@ -559,7 +559,9 @@ class FileExplorer(QtGui.QWidget):
         self.file_view = file_view
         self.path_label = QtGui.QLineEdit(self)
         self.back_button = QtGui.QToolButton(self)
+        self.back_button.setToolTip('Back')
         self.refresh_button = QtGui.QToolButton(self)
+        self.refresh_button.setToolTip('Refresh')
 
         for button, icon_file in zip((self.back_button, self.refresh_button), ('gui/back.png', 'gui/refresh_2.png')):
             icon = QtGui.QIcon()
@@ -895,6 +897,7 @@ class TabBarPlus(QtGui.QTabBar):
         super(TabBarPlus, self).__init__(parent)
 
         self.plus_button = QtGui.QPushButton(" + ")
+        self.plus_button.setToolTip('Add browser location')
         self.plus_button.setParent(self)
         self.plus_button.setMaximumSize(32, 32)
         self.plus_button.setMinimumSize(32, 32)

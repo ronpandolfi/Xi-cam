@@ -292,7 +292,6 @@ class MyMainWindow(QtCore.QObject):
         """
         when a file is opened, check if there is calibration and offer to use the image as calibrant
         """
-        print(filenames)
         if filenames is not u'':
             if config.activeExperiment.iscalibrated or len(filenames) > 1:
                 self.openimages(filenames)
@@ -338,10 +337,7 @@ class MyMainWindow(QtCore.QObject):
         # newimagetab = viewer.imageTabTracker([path], self.experiment, self)
         # tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         # tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
-        if len(paths) > 1:
-            plugins.plugins['Timeline'].instance.openfiles(paths)
-        else:
-            plugins.base.activeplugin.openfiles(paths)
+        plugins.base.activeplugin.openfiles(paths)
 
         self.ui.statusbar.showMessage('Ready...')
 
