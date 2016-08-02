@@ -7,7 +7,8 @@ import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
 from fabio import fabioutils
-import fabio, pyFAI
+import fabio
+import pyFAI
 from pyFAI import detectors
 import logging
 
@@ -36,15 +37,15 @@ class rawimage(fabioimage):
         self.data = data
         return self
 
-
 fabio.openimage.rawimage = rawimage
 fabioutils.FILETYPES['raw'] = ['raw']
+
 
 class H5image(fabioimage):
     """
     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
     To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
-    subclass and include 'H5' somewhere in its name.
+    subclass and include 'H5image' somewhere in its name.
     """
 
     # This does not really work because fabio creates the instance of the class with not connection to the filename
@@ -65,102 +66,106 @@ class H5image(fabioimage):
     #             break
     #     else:
     #         raise RuntimeError('H5 format not recognized')
-    #     return super(H5image, cls).__new__(cls) # can call super.__new__ or simply return the instance (obj) and bypass init
+    #     return super(H5image, cls).__new__(cls)
+    #  can call super.__new__ or simply return the instance (obj) and bypass init
 
     def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-                           if 'H5' in image[0] and image[0] != 'H5image']
+                           if 'H5image' in image[0] and image[0] != 'H5image']
         for image_class in h5image_classes:
             try:
-                print 'Opening as ', image_class[0]
                 obj = image_class[1](self.data, self.header)
                 obj.read(filename)
-            #TODO have a specific check that raises a specific error so that only that exception is handled
-            except Exception:
+            except H5ReadError:
+                # Skip exception and try the next H5 image class
                 continue
             else:
+                # If not error was thrown break out of loop
                 break
         else:
-            raise RuntimeError('H5 format not recognized')
-        return obj
+            # If for loop finished without breaking raise ReadError
+            raise H5ReadError('H5 format not recognized')
+        return obj  # return the successfully read object
 
-
+# Register H5image class to fabioimages
 fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
-#
-# class spotH5image(fabioimage):
-#     def _readheader(self,f):
-#         with h5py.File(f,'r') as h:
-#             self.header=h.attrs
-#
-#     def read(self,f,frame=None):
-#         self.filename=f
-#         if frame is None:
-#             frame = 0
-#
-#         return self.getframe(frame)
-#
-#
-#     @property
-#     def nframes(self):
-#         with h5py.File(self.filename,'r') as h:
-#             dset=h[h.keys()[0]]
-#             ddet=dset[dset.keys()[0]]
-#             if self.isburst:
-#                 frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
-#             else:
-#                 frames = 1
-#         return frames
-#
-#     def __len__(self):
-#         return self.nframes
-#
-#     @nframes.setter
-#     def nframes(self,n):
-#         pass
-#
-#     def getframe(self,frame=None):
-#         if frame is None:
-#             frame = 0
-#         f = self.filename
-#         with h5py.File(f,'r') as h:
-#             dset=h[h.keys()[0]]
-#             ddet=dset[dset.keys()[0]]
-#             if self.isburst:
-#                 frames = [key for key in ddet.keys() if '.edf' in key]
-#                 dfrm=ddet[frames[frame]]
-#             elif self.istiled:
-#                 high = ddet[u'high']
-#                 low  = ddet[u'low']
-#                 frames = [high[high.keys()[0]],low[low.keys()[0]]]
-#                 dfrm = frames[frame]
-#             else:
-#                 dfrm = ddet
-#             self.data = dfrm[0]
-#         return self
-#
-#     @property
-#     def isburst(self):
-#         try:
-#             with h5py.File(self.filename,'r') as h:
-#                 dset=h[h.keys()[0]]
-#                 ddet=dset[dset.keys()[0]]
-#                 return not (u'high' in ddet.keys() and u'low' in ddet.keys())
-#         except AttributeError:
-#             return False
-#
-#     @property
-#     def istiled(self):
-#         try:
-#             with h5py.File(self.filename,'r') as h:
-#                 dset=h[h.keys()[0]]
-#                 ddet=dset[dset.keys()[0]]
-#                 return u'high' in ddet.keys() and u'low' in ddet.keys()
-#         except AttributeError:
-#             return False
 
+class ALS733H5image(fabioimage):
+    def _readheader(self, f):
+        fname = f.name  # get filename from file object
+        with h5py.File(fname, 'r') as h:
+            self.header= dict(h.attrs)
+
+    def read(self,f,frame=None):
+        self.readheader(f)
+
+        # Check header for unique attributes
+        try:
+            if self.header['facility'] != 'als' or self.header['end_station'] != 'bl733':
+                raise H5ReadError
+        except KeyError:
+            raise H5ReadError
+
+        self.filename=f
+        if frame is None:
+            frame = 0
+        return self.getframe(frame)
+
+
+    @property
+    def nframes(self):
+        with h5py.File(self.filename,'r') as h:
+            dset=h[h.keys()[0]]
+            ddet=dset[dset.keys()[0]]
+            if self.isburst:
+                frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+            else:
+                frames = 1
+        return frames
+
+    def __len__(self):
+        return self.nframes
+
+    @nframes.setter
+    def nframes(self,n):
+        pass
+
+    def getframe(self,frame=None):
+        if frame is None:
+            frame = 0
+        f = self.filename
+        with h5py.File(f,'r') as h:
+            dset=h[h.keys()[0]]
+            ddet=dset[dset.keys()[0]]
+            if self.isburst:
+                frames = [key for key in ddet.keys() if '.edf' in key]
+                dfrm=ddet[frames[frame]]
+            elif self.istiled:
+                high = ddet[u'high']
+                low  = ddet[u'low']
+                frames = [high[high.keys()[0]],low[low.keys()[0]]]
+                dfrm = frames[frame]
+            else:
+                dfrm = ddet
+            self.data = dfrm[0]
+        return self
+
+
+    @property
+    def istiled(self):
+        try:
+            with h5py.File(self.filename,'r') as h:
+                dset=h[h.keys()[0]]
+                ddet=dset[dset.keys()[0]]
+                return u'high' in ddet.keys() and u'low' in ddet.keys()
+        except AttributeError:
+            return False
+
+
+class ALS832H5image(fabioimage):
 
 class ALS832H5image(fabioimage):
     """
@@ -185,7 +190,7 @@ class ALS832H5image(fabioimage):
     def __exit__(self, *arg, **kwarg):
         self.close()
 
-    def _readheader(self,f):
+    def _readheader(self, f):
         if self._h5 is not None:
             self.header=dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
@@ -195,11 +200,19 @@ class ALS832H5image(fabioimage):
         if frame is None:
             frame = 0
         if self._h5 is None:
-            self._h5 = h5py.File(self.filename, 'r')
-            self._dgroup = self._find_dataset_group(self._h5)
+
+            # Check header for unique attributes
+            try:
+                self._h5 = h5py.File(self.filename, 'r')
+                self._dgroup = self._find_dataset_group(self._h5)
+                self.readheader(f)
+                if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
+                    raise H5ReadError
+            except KeyError:
+                raise H5ReadError
+
             self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
-            self.nframes = len(self.frames)
-        self.readheader(f)
+
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm[0]
@@ -215,9 +228,9 @@ class ALS832H5image(fabioimage):
                 else:
                     return self._find_dataset_group(h5object[keys[0]])
             else:
-                raise Exception('Unable to find dataset group')
+                raise H5ReadError('Unable to find dataset group')
         else:
-            raise Exception('Unable to find dataset group')
+            raise H5ReadError('Unable to find dataset group')
 
     @property
     def flats(self):
@@ -230,6 +243,20 @@ class ALS832H5image(fabioimage):
         if self._darks is None:
             self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
         return self._darks
+
+    @property
+    def nframes(self):
+        return len(self.frames)
+
+    @nframes.setter
+    def nframes(self, n):
+        pass
+
+    def getsinogram(self, idx=None):
+        if idx is None: idx = self.data.shape[0]//2
+        self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
+                                                                  range(self.nframes))])
+        return self.sinogram
 
     def __getitem__(self, item):
         s = []
@@ -382,8 +409,9 @@ class DXchangeH5image(fabioimage):
 
 class TiffStack(object):
     """
-    Class to open a list of Tiff Images as a stack
+    Class for stacking several individual tiffs and viewing as a 3D image in an pyqtgraph ImageView
     """
+
     def __init__(self, paths, header=None):
         super(TiffStack, self).__init__()
         if isinstance(paths, list):
@@ -404,6 +432,13 @@ class TiffStack(object):
         pass
 
 
+class H5ReadError(IOError):
+    """
+    Exception class raised when checking for the specific schema/structure of an HDF5 file.
+    """
+    pass
+
+
 # Testing
 if __name__ == '__main__':
     from matplotlib.pyplot import imshow, show
@@ -411,10 +446,9 @@ if __name__ == '__main__':
     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
     # arr = data.__getitem__(slc)
-    arr = data[:, 0, :]
-    print arr.shape
+    arr = data.getsinogram(100)
     # print sorted(data.frames, reverse=True)
-    print data.darks.shape
-    print data.flats.shape
+    # print data.darks.shape
+    # print data.flats.shape
     imshow(arr, cmap='gray')
     show()
