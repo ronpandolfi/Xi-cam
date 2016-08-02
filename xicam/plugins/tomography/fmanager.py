@@ -390,7 +390,6 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
                                            interrupt_signal=interrupt_signal)
     threads.add_to_queue(runnable_it)
     return params
-#TODO have current recon parameters in run console or in recon view...
 
 
 def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):

@@ -1028,43 +1028,38 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    # sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.local_cancelButton = QtGui.QToolButton()
-        self.remote_cancelButton = QtGui.QToolButton()
-
         # Text Browser for local run console
-        self.local_console = QtGui.QTextEdit() #Browser()
+        self.local_console, self.local_cancelButton = self.addConsole('Local')
         self.local_console.setObjectName('Local')
 
-        # Text Brower for remote run console
-        self.remote_console = QtGui.QTextEdit()
-        self.remote_console.setObjectName('Remote')
-
-        for console, button in zip((self.local_console, self.remote_console),
-                                   (self.local_cancelButton, self.remote_cancelButton)):
-            console.setReadOnly(True)
-            console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-            button.setIcon(icon)
-            button.setIconSize(QtCore.QSize(24, 24))
-            button.setFixedSize(32, 32)
-            button.setToolTip('Cancel current process')
-            w = QtGui.QWidget()
-            w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-            w.setContentsMargins(0,0,0,0)
-            l = QtGui.QGridLayout()
-            l.setContentsMargins(0,0,0,0)
-            l.setSpacing(0)
-            l.addWidget(console, 0, 0, 2, 2)
-            l.addWidget(button, 1, 2, 1, 1)
-            w.setLayout(l)
-            self.addTab(w, console.objectName())
+    def addConsole(self, name):
+        console = QtGui.QTextEdit()
+        button = QtGui.QToolButton()
+        console.setObjectName(name)
+        console.setReadOnly(True)
+        console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        button.setIcon(self.icon)
+        button.setIconSize(QtCore.QSize(24, 24))
+        button.setFixedSize(32, 32)
+        button.setToolTip('Cancel running process')
+        w = QtGui.QWidget()
+        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        w.setContentsMargins(0, 0, 0, 0)
+        l = QtGui.QGridLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        l.setSpacing(0)
+        l.addWidget(console, 0, 0, 2, 2)
+        l.addWidget(button, 1, 2, 1, 1)
+        w.setLayout(l)
+        self.addTab(w, console.objectName())
+        return console, button
 
     def log2local(self, msg):
         text = self.local_console.toPlainText()
@@ -1085,14 +1080,6 @@ class RunViewer(QtGui.QTabWidget):
         return (self.reconsettings.child('Start Projection').value(),
                 self.reconsettings.child('End Projection').value(),
                 self.reconsettings.child('Step Projection').value())
-
-    def runButtonClicked(self):
-        self.sigRunClicked.emit(self.proj_indices(), self.sino_indices(),
-                                self.reconsettings.child('Output Name').value(),
-                                self.reconsettings.child('Ouput Format').value(),
-                                self.localsettings.child('Sinogram Chunks').value(),
-                                self.localsettings.child('Cores').value(),
-                                self.log2local)
 
 
 class Preview3DViewer(QtGui.QSplitter):
