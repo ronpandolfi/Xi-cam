@@ -50,7 +50,7 @@ class OOMTabItem(QtGui.QWidget):
                     print self.kwargs['paths']
                     imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
                     imgdata = self.kwargs['operation'](imgdata)
-                    dimg = loader.diffimage(filepath=self.kwargs['paths'][0], data=imgdata)
+                    dimg = loader.datadiffimage2(data=imgdata)
                     self.kwargs['dimg'] = dimg
 
             self.widget = self.itemclass(*self.args, **self.kwargs)
@@ -605,6 +605,7 @@ class dimgViewer(QtGui.QWidget):
         xglobals.hardresetpool()
 
         self.replot()
+        self.drawcenter()
 
     @debugtools.timeit
     def refinecenter(self):
@@ -1574,7 +1575,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def __init__(self):
         super(previewwidget, self).__init__()
-        self.view = self.addViewBox(lockAspect=True, enableMouse=False, enableMenu=False)
+        self.view = self.addViewBox(lockAspect=True, enableMenu=False)
         self.imageitem = pg.ImageItem()
         self.textitem = pg.TextItem()
         self.imgdata = None
@@ -1615,7 +1616,7 @@ class previewwidget(pg.GraphicsLayoutWidget):
 
     def setText(self, text):
         self.textitem.setText(text)
-        self.textitem.setFont(QtGui.QFont('Zero Three'))  # Not working for some reason
+        self.textitem.setFont(QtGui.QFont('Zero Threes'))  # Not working for some reason
         self.imageitem.clear()
         self.textitem.show()
 

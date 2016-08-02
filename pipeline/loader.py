@@ -1026,7 +1026,7 @@ class diffimage2(object):
         if self.experiment is None:
             self.experiment = config.activeExperiment
 
-        self.getAlphaI()
+        config.activeExperiment.setvalue('Incidence Angle (GIXS)', np.rad2deg(self.getAlphaI()))
 
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()

@@ -58,10 +58,22 @@ panelwidget.setLayout(l)
 w.addWidget(panelwidget)
 w.setSizes([250, w.height() - 250])
 
-leftwidget = QtGui.QTabWidget()
+
+
+class IconTabBar(QtGui.QTabBar):
+    def tabSizeHint(self, index):
+        return QtCore.QSize(32+12, 32+12)
+
+class IconTabWidget(QtGui.QTabWidget):
+    def __init__(self):
+        super(IconTabWidget, self).__init__()
+        self.setTabBar(IconTabBar())
+        self.setIconSize(QtCore.QSize(32, 32))
+
+leftwidget = IconTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
 
-rightwidget = QtGui.QTabWidget()
+rightwidget = IconTabWidget()
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'

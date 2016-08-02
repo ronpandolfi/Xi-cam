@@ -252,9 +252,9 @@ class plugin(base.plugin):
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
         dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
-                                   directory=unicode(os.path.dirname(self.getCurrentTab().paths[0])),
+                                   directory=unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)),
                                    filter=u"EDF (*.edf)")
-        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
+        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
         print filename
         if ok and filename:
