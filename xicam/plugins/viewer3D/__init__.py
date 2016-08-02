@@ -51,9 +51,7 @@ class plugin(base.plugin):
         e.accept()
 
     def currentChanged(self, index):
-        for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
-            tab.unload()
-        self.centerwidget.currentWidget().load()
+        pass
 
     def tabCloseRequested(self, index):
         self.centerwidget.widget(index).deleteLater()
