@@ -6,7 +6,7 @@ from functools import partial, wraps
 
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
-
+from pipeline import msg
 import fdata
 import fwidgets
 import reconpkg
@@ -236,13 +236,17 @@ def set_function_defaults(mdata, funcs):
         if f.subfunc_name in fdata.als832defaults:
             for p in f.params.children():
                 if p.name() in fdata.als832defaults[f.subfunc_name]:
-                    v = mdata[fdata.als832defaults[f.subfunc_name][p.name()]['name']]
-                    t = fdata.PARAM_TYPES[fdata.als832defaults[f.subfunc_name][p.name()]['type']]
-                    v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
-                    if 'conversion' in fdata.als832defaults[f.subfunc_name][p.name()]:
-                        v *= fdata.als832defaults[f.subfunc_name][p.name()]['conversion']
-                    p.setDefault(v)
-                    p.setValue(v)
+                    try:
+                        v = mdata[fdata.als832defaults[f.subfunc_name][p.name()]['name']]
+                        t = fdata.PARAM_TYPES[fdata.als832defaults[f.subfunc_name][p.name()]['type']]
+                        v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
+                        if 'conversion' in fdata.als832defaults[f.subfunc_name][p.name()]:
+                            v *= fdata.als832defaults[f.subfunc_name][p.name()]['conversion']
+                        p.setDefault(v)
+                        p.setValue(v)
+                    except KeyError as e:
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message))
+
         elif f.func_name == 'Write':
             outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
             f.params.child('fname').setValue(outname)

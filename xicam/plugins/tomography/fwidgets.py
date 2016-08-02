@@ -282,7 +282,8 @@ class FuncWidget(FeatureWidget):
             widget = ui.centerwidget.currentWidget()
             if widget is None: return
             self.updateParamsDict()
-            msg.showMessage('Computing previews for {} range...'.format(param.name()), timeout=0)
+            msg.showMessage('Computing previews for {}:{} parameter range...'.format(self.subfunc_name,
+                                                                                     param.name()), timeout=0)
             for i in test.selectedRange():
                 self.param_dict[param.name()] = i
                 fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,

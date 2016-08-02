@@ -14,7 +14,7 @@ class tomotoolbar(QtGui.QToolBar):
 
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon17 = QtGui.QIcon()
-        icon17.addPixmap(QtGui.QPixmap("gui/3d_glasses.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon17.addPixmap(QtGui.QPixmap("gui/3d.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_3DPreview.setIcon(icon17)
         self.actionRun_3DPreview.setToolTip('3D preview')
 
