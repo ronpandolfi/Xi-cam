@@ -114,14 +114,13 @@ class ALS733H5image(fabioimage):
             frame = 0
         return self.getframe(frame)
 
-
     @property
     def nframes(self):
-        with h5py.File(self.filename,'r') as h:
-            dset=h[h.keys()[0]]
-            ddet=dset[dset.keys()[0]]
+        with h5py.File(self.filename, 'r') as h:
+            dset = h[h.keys()[0]]
+            ddet = dset[dset.keys()[0]]
             if self.isburst:
-                frames=sum(map(lambda key:'.edf' in key,ddet.keys()))
+                frames = sum(map(lambda key: '.edf' in key, ddet.keys()))
             else:
                 frames = 1
         return frames
@@ -130,42 +129,49 @@ class ALS733H5image(fabioimage):
         return self.nframes
 
     @nframes.setter
-    def nframes(self,n):
+    def nframes(self, n):
         pass
 
-    def getframe(self,frame=None):
+    def getframe(self, frame=None):
         if frame is None:
             frame = 0
         f = self.filename
-        with h5py.File(f,'r') as h:
-            dset=h[h.keys()[0]]
-            ddet=dset[dset.keys()[0]]
+        with h5py.File(f, 'r') as h:
+            dset = h[h.keys()[0]]
+            ddet = dset[dset.keys()[0]]
             if self.isburst:
                 frames = [key for key in ddet.keys() if '.edf' in key]
-                dfrm=ddet[frames[frame]]
+                dfrm = ddet[frames[frame]]
             elif self.istiled:
                 high = ddet[u'high']
-                low  = ddet[u'low']
-                frames = [high[high.keys()[0]],low[low.keys()[0]]]
+                low = ddet[u'low']
+                frames = [high[high.keys()[0]], low[low.keys()[0]]]
                 dfrm = frames[frame]
             else:
                 dfrm = ddet
             self.data = dfrm[0]
         return self
 
+    @property
+    def isburst(self):
+        try:
+            with h5py.File(self.filename, 'r') as h:
+                dset = h[h.keys()[0]]
+                ddet = dset[dset.keys()[0]]
+                return not (u'high' in ddet.keys() and u'low' in ddet.keys())
+        except AttributeError:
+            return False
 
     @property
     def istiled(self):
         try:
-            with h5py.File(self.filename,'r') as h:
-                dset=h[h.keys()[0]]
-                ddet=dset[dset.keys()[0]]
+            with h5py.File(self.filename, 'r') as h:
+                dset = h[h.keys()[0]]
+                ddet = dset[dset.keys()[0]]
                 return u'high' in ddet.keys() and u'low' in ddet.keys()
         except AttributeError:
             return False
 
-
-class ALS832H5image(fabioimage):
 
 class ALS832H5image(fabioimage):
     """
