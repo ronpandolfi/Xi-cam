@@ -55,6 +55,13 @@ class plugin(base.plugin):
                                      self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
                                      capture=self.capture, removecosmics=self.removecosmics)
 
+
+        self.spacegroupwidget = spacegroupwidget()
+        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
+        sgicon = QtGui.QIcon()
+        sgicon.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rightmodes.append((self.spacegroupwidget,sgicon))
+
         super(plugin, self).__init__(*args, **kwargs)
 
         self.sigUpdateExperiment.connect(self.redrawcurrent)
@@ -68,9 +75,7 @@ class plugin(base.plugin):
         self.booltoolbar.actionDivide.triggered.connect(self.dividemode)
         self.booltoolbar.actionAverage.triggered.connect(self.averagemode)
 
-        self.spacegroupwidget = spacegroupwidget()
-        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
-        self.placeholders[1].addWidget(self.spacegroupwidget)
+
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)

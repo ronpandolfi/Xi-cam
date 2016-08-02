@@ -19,6 +19,7 @@ from pipeline.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
 import warnings
+from pipeline import msg
 # try:
 #     import libtiff
 # except IOError:
@@ -1187,6 +1188,7 @@ class diffimage2(object):
         return self.cache['cake']
 
     def getAlphaI(self):
+        alphai=None
         if "Sample Alpha Stage" in self.headers:
             alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
         elif "Alpha" in self.headers:
@@ -1196,13 +1198,9 @@ class diffimage2(object):
         elif "samtilt" in self.headers:
             alphai = np.deg2rad(float(self.headers['samtilt']))
         else:
-            alphai = self.queryAlphaI()
+            msg.logMessage('No incidence angle found in headers. Consider mapping key to internal variable.')
         if alphai is None:
             return 0
-
-        config.activeExperiment.setvalue('Incidence Angle (GIXS)', np.rad2deg(alphai))
-
-        return alphai
 
     def remesh(self,img,mask):
         if not self.iscached('remesh'):
@@ -1464,9 +1462,10 @@ class multifilediffimage2(diffimage2):
     ndim = 3
     def __init__(self, filepaths, detector=None, experiment=None):
         self.filepaths = sorted(list(filepaths))
+        self.currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache=dict()
-        self.currentframe = 0
+
 
         self.dtype = self.rawdata.dtype
         self.max = np.max(self.rawdata)
@@ -1474,9 +1473,15 @@ class multifilediffimage2(diffimage2):
         self.shape = self.rawdata.shape[0],self.rawdata.shape[1],len(filepaths)
         self.size = np.product(self.shape)
 
+    @property
+    def headers(self):
+        if self._headers is None:
+            self._headers = loadparas(self.filepaths[self.currentframe])
+
+        return self._headers
 
     def xvals(self,_):
-        return numpy.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
+        return np.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
 
     def first(self):
         if len(self.filepaths) > 0:

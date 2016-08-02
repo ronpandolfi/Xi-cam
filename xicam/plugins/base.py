@@ -60,6 +60,7 @@ w.setSizes([250, w.height() - 250])
 leftwidget = QtGui.QTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
 
+rightwidget = QtGui.QTabWidget()
 
 class plugin(QtCore.QObject):
     name = 'Unnamed Plugin'
