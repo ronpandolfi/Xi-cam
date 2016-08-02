@@ -1,10 +1,9 @@
 #! /usr/bin/env python
 
 import os
-from PySide import QtCore, QtGui
-from .. import base
-from .. import widgets
-import widgets as twidgets
+from PySide import QtGui
+from  xicam.plugins import base
+from widgets import ThreeDViewer
 
 import platform
 op_sys = platform.system()
@@ -33,7 +32,7 @@ class plugin(base.plugin):
     def openfiles(self, paths):
         print paths
         self.activate()
-        widget = widgets.OOMTabItem(itemclass=twidgets.ThreeDViewer, paths=paths)
+        widget = ThreeDViewer(paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
 

@@ -150,7 +150,7 @@ class ALS733H5image(fabioimage):
             else:
                 dfrm = ddet
             self.data = dfrm[0]
-        return self
+        return self.data
 
     @property
     def isburst(self):
