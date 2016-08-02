@@ -62,6 +62,8 @@ class plugin(base.plugin):
 
         self.bottomwidget = None
 
+        self.leftwidget = None
+
         self.toolbar = None
 
         super(plugin, self).__init__(*args, **kwargs)

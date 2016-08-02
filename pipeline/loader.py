@@ -5,7 +5,7 @@ from fabio import fabioutils
 import pyfits
 import os
 import numpy as np
-#from nexpy.api import nexus as nx
+# from nexpy.api import nexus as nx
 from copy import copy
 from pyFAI import detectors
 import pyFAI
@@ -27,9 +27,8 @@ from pipeline import msg
 
 import numpy as nx
 
-import detectors # injects pyFAI with custom detectors
+import detectors  # injects pyFAI with custom detectors
 import formats  # injects fabio with custom formats
-
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
@@ -41,8 +40,6 @@ def loadsingle(path):
 
 
 def loadimage(path):
-
-
     data = None
     try:
         ext = os.path.splitext(path)[1]
@@ -59,7 +56,7 @@ def loadimage(path):
 
 
             elif ext == '.fits':
-                data = np.rot90(np.fliplr(pyfits.open(path)[2].data),2)
+                data = np.rot90(np.fliplr(pyfits.open(path)[2].data), 2)
                 return data
             elif ext in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
@@ -75,7 +72,7 @@ def loadimage(path):
                 data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
                 return data
             elif ext == '.npy':
-                return np.load( path)
+                return np.load(path)
             else:
                 data = fabio.open(path).data
                 return data
@@ -92,7 +89,7 @@ def readenergy(path):
                 head = pyfits.open(path)
                 # print head[0].header.keys()
                 paras = scanparaslines(str(head[0].header).split('\r'))
-                #print paras
+                # print paras
             elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 pass
                 # nxroot = nx.load(path)
@@ -111,7 +108,6 @@ def readenergy(path):
         print('IO Error reading energy: ' + path)
 
     return None
-
 
 
 def readvariation(path):
@@ -178,11 +174,11 @@ def loadparas(path):
             try:
                 frame = int(re.search('\d+(?=.tif)', path).group(0))
                 paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
-                textheader=scanparas(paraspath, frame)
+                textheader = scanparas(paraspath, frame)
             except AttributeError:
-                textheader=dict()
+                textheader = dict()
 
-            return merge_dicts(fimg.header,textheader)
+            return merge_dicts(fimg.header, textheader)
 
     except IOError:
         print('Unexpected read error in loadparas')
@@ -205,6 +201,7 @@ def scanparas(path, frame=None):
 
     return paras
 
+
 def scanparaslines(lines):
     paras = OrderedDict()
     keylesslines = 0
@@ -218,7 +215,7 @@ def scanparaslines(lines):
             paras[key] = cells[1].strip()
         elif cells.__len__() == 1:
             keylesslines += 1
-            paras['Keyless value #'+str(keylesslines)] = key
+            paras['Keyless value #' + str(keylesslines)] = key
 
     return paras
 
@@ -266,7 +263,6 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
         I1 = float(paras1[config.activeExperiment.mapHeader('I1 AI')])
         I2 = float(paras2[config.activeExperiment.mapHeader('I1 AI')])
 
-
     deltaX = round((positionX2 - positionX1) / 0.172)
     deltaY = round((positionY2 - positionY1) / 0.172)
     padtop2 = 0
@@ -304,7 +300,7 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
                       'constant')
 
     with numpy.errstate(divide='ignore'):
-        data = (d1/I1 + d2/I2) / (mask2 + mask1) * (I1+I2)/2.
+        data = (d1 / I1 + d2 / I2) / (mask2 + mask1) * (I1 + I2) / 2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)
 
@@ -369,7 +365,7 @@ def loadpath(path):
         try:
             if '_lo_' in path:
                 path2 = path.replace('_lo_', '_hi_')
-            else: # '_hi_' in path:
+            else:  # '_hi_' in path:
                 path2 = path.replace('_hi_', '_lo_')
             return loadstitched(path, path2)
         except Exception as ex:
@@ -379,38 +375,44 @@ def loadpath(path):
 
 
 def loadxfs(path):
-    return np.loadtxt(path,skiprows=16,converters={0:lambda s: int(s.split(':')[0])*60*60+int(s.split(':')[1])*60+int(s.split(':')[2])})
+    return np.loadtxt(path, skiprows=16, converters={
+        0: lambda s: int(s.split(':')[0]) * 60 * 60 + int(s.split(':')[1]) * 60 + int(s.split(':')[2])})
+
 
 def convertto8bit(image):
     display_min = image.min()
     display_max = image.max()
-    #image = np.array(image, copy=False)
-    #image.clip(display_min, display_max, out=image)
-    #image -= display_min
-    np.true_divide(image,(display_max - display_min + 1) / 256.,out=image,casting='unsafe')
+    # image = np.array(image, copy=False)
+    # image.clip(display_min, display_max, out=image)
+    # image -= display_min
+    np.true_divide(image, (display_max - display_min + 1) / 256., out=image, casting='unsafe')
     return image.astype(np.uint8)
 
+
 def loadtiffstack(path):
-    print 'Loading', path +'...'
-    data = np.swapaxes(libtiff.TIFF3D.open(path).read_image(),0,1)
+    print 'Loading', path + '...'
+    data = np.swapaxes(libtiff.TIFF3D.open(path).read_image(), 0, 1)
     print 'Sub-sampling array...'
-    #data = convertto8bit(data)
-    print 'Load complete. Size:',np.shape(data)
-    data=data[::4,::4,::4]
+    # data = convertto8bit(data)
+    print 'Load complete. Size:', np.shape(data)
+    data = data[::4, ::4, ::4]
     return data.astype(np.float32)
 
+
 def loadimageseries(pattern):
-    print 'Loading',pattern+'...'
-    files=glob.glob(pattern)
-    data=np.dstack([fabio.open(f).data for f in files])
+    print 'Loading', pattern + '...'
+    files = glob.glob(pattern)
+    data = np.dstack([fabio.open(f).data for f in files])
     print 'Log scaling data...'
     data = (np.log(data * (data > 0) + (data < 1)))
     print 'Converting to 8-bit and re-scaling...'
     data = convertto8bit(data)
-    print 'Load complete. Size:',np.shape(data)
+    print 'Load complete. Size:', np.shape(data)
     return data
 
+
 import integration, remesh, center_approx, variation, pathtools
+
 
 class diffimage():
     def __init__(self, filepath=None, data=None, detector=None, experiment=None):
@@ -439,10 +441,6 @@ class diffimage():
         if self.experiment is None:
             self.experiment = config.activeExperiment
 
-
-
-
-
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()
         self.cachecheck = None
@@ -454,9 +452,6 @@ class diffimage():
         # Set experiment energy
         if 'Beamline Energy' in self.params:
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
-
-
-
 
     def checkcache(self):
         pass
@@ -586,7 +581,7 @@ class diffimage():
         return key in self.cache
 
     def cachedetector(self):
-        _=self.detector
+        _ = self.detector
 
     @property
     def cake(self):
@@ -632,7 +627,7 @@ class diffimage():
                                              self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
-            self.cache['remeshmask'] = remeshmask >0
+            self.cache['remeshmask'] = remeshmask > 0
             self.cache['remeshqx'] = x
             self.cache['remeshqy'] = y
 
@@ -647,7 +642,6 @@ class diffimage():
             return alphai
 
         return None
-
 
     def __del__(self):
         # TODO: do more here!
@@ -674,13 +668,13 @@ class diffimage():
         iscake = False
         return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
 
-    @debugtools.timeit  #0.07s on Izanami
+    @debugtools.timeit  # 0.07s on Izanami
     def variation(self, operationindex, roi):
         if operationindex not in self._variation or roi is not None:
             nxpath = pathtools.path2nexus(self.filepath)
             if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
-                #print v
+                # print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
                     print 'successful variation load!'
@@ -713,12 +707,11 @@ class diffimage():
 
         return self.cache['radialintegration']
 
-
     def __getattr__(self, name):
-       if name in self.cache:
-           return self.cache[name]
-       else:
-           raise AttributeError('diffimage has no attribute: ' + name)
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 class imageseries():
@@ -760,7 +753,7 @@ class imageseries():
         return self.getDiffImage(self.paths.keys()[item])
 
     def getDiffImage(self, key):
-        #print self.paths.keys()
+        # print self.paths.keys()
 
         return diffimage(filepath=self.paths[key], experiment=self.experiment)
 
@@ -784,7 +777,7 @@ class imageseries():
     # def roi(self,value):
     # self._roi=value
 
-    def scan(self, operationindex,roi=None):
+    def scan(self, operationindex, roi=None):
         if len(self.paths) < 3:
             return None
 
@@ -834,7 +827,6 @@ class imageseries():
 
         return self._jpegs
 
-
     @staticmethod
     def path2frame(path):
         try:
@@ -845,6 +837,7 @@ class imageseries():
             print 'Path has no frame number:', path
 
         return None
+
 
 from PIL import Image
 
@@ -891,6 +884,7 @@ class StackImage(object):
     """
 
     ndim = 3
+
     def __init__(self, filepath=None, data=None):
         super(StackImage, self).__init__()
         self._rawdata = None
@@ -918,7 +912,7 @@ class StackImage(object):
         self.dtype = raw.dtype
         self.max = np.max(raw)
         self.min = np.min(raw)
-        self.shape = len(self.fabimage),raw.shape[0],raw.shape[1]
+        self.shape = len(self.fabimage), raw.shape[0], raw.shape[1]
         self.size = np.product(self.shape)
 
     @property
@@ -932,15 +926,15 @@ class StackImage(object):
         for i, j in enumerate(range(0, self.shape[0], level)):
             img = self._getimage(j)[::level, ::level].transpose()
             if i == 0:  # allocate array:
-                shape = (np.ceil(float(self.shape[0])/level), img.shape[0], img.shape[1])
+                shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
             vol[i] = img
         return vol
 
-    def _getframe(self, frame=None): # keeps 3 frames in cache at most
-        if frame is None: frame=self.currentframe
+    def _getframe(self, frame=None):  # keeps 3 frames in cache at most
+        if frame is None: frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
-            frame = 0 #frame[1].step
+            frame = 0  # frame[1].step
         self.currentframe = frame
         if frame not in self._framecache:
             # del the first cached item
@@ -1005,7 +999,6 @@ class SinogramStack(StackImage):
 
 
 class diffimage2(object):
-
     def __init__(self, detector=None, experiment=None):
 
         """
@@ -1013,8 +1006,6 @@ class diffimage2(object):
         :param detector: pyFAI.detectors.Detector
         :param experiment: xicam.config.experiment
         """
-
-
 
         print 'Loading ' + '...'
 
@@ -1035,16 +1026,14 @@ class diffimage2(object):
         if self.experiment is None:
             self.experiment = config.activeExperiment
 
-
         self.getAlphaI()
-
 
         ### All object I want to save that depend on config parameters must be cached in here instead!!!!
         self.cache = dict()
         self.cachecheck = None
 
     def __len__(self):
-        if hasattr(self,'filepaths'):
+        if hasattr(self, 'filepaths'):
             return len(self.filepaths)
         else:
             return 1
@@ -1058,9 +1047,6 @@ class diffimage2(object):
             self.experiment.setvalue('Energy', self.params['Beamline Energy'])
         elif 'mono' in self.params:
             self.experiment.setvalue('Energy', self.params['mono'])
-
-
-
 
     def checkcache(self):
         pass
@@ -1118,7 +1104,7 @@ class diffimage2(object):
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
             if hasattr(detector, 'MAX_SHAPE'):
-                #print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
+                # print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
                     print 'Detector found: ' + name
@@ -1132,7 +1118,6 @@ class diffimage2(object):
                         detector.set_binning(binning)
                         return name, detector
         return None, None
-
 
     @detector.setter
     def detector(self, value):
@@ -1171,13 +1156,13 @@ class diffimage2(object):
         return key in self.cache
 
     def cachedetector(self):
-        _=self.detector
+        _ = self.detector
 
-    def cake(self,img,mask):
+    def cake(self, img, mask):
         self.cachedetector()
         if not self.iscached('cake'):
-            cake, x, y = integration.cake(img, self.experiment,mask=mask)
-            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment, mask = mask)
+            cake, x, y = integration.cake(img, self.experiment, mask=mask)
+            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment, mask=mask)
             cakemask = cakemask > 0
 
             self.cache['cake'] = cake
@@ -1188,7 +1173,7 @@ class diffimage2(object):
         return self.cache['cake']
 
     def getAlphaI(self):
-        alphai=None
+        alphai = 0
         if "Sample Alpha Stage" in self.headers:
             alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
         elif "Alpha" in self.headers:
@@ -1199,15 +1184,15 @@ class diffimage2(object):
             alphai = np.deg2rad(float(self.headers['samtilt']))
         else:
             msg.logMessage('No incidence angle found in headers. Consider mapping key to internal variable.')
-        if alphai is None:
-            return 0
+            alphai=0
+        return alphai
 
-    def remesh(self,img,mask):
+    def remesh(self, img, mask):
         if not self.iscached('remesh'):
             print 'headers:', self.headers
             # read incident angle
 
-            alphai=self.getAlphaI()
+            alphai = self.getAlphaI()
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
@@ -1252,22 +1237,21 @@ class diffimage2(object):
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
 
-
     def asarray(self):
         return self.displaydata
 
-    def view(self,t):
+    def view(self, t):
         if t is np.ndarray:
             return self.displaydata
 
     def __getitem__(self, item):
         return self.displaydata[item]
 
-    def __getattr__(self, name):
-       if name in self.cache:
-           return self.cache[name]
-       else:
-           raise AttributeError('diffimage has no attribute: ' + name)
+    # def __getattr__(self, name):
+    #     if name in self.cache:
+    #         return self.cache[name]
+    #     else:
+    #         raise AttributeError('diffimage has no attribute: ' + name)
 
 
 # class singlefilediffimage2(diffimage2):
@@ -1369,20 +1353,20 @@ class diffimage2(object):
 # rawdata, transformdata, displaydata
 
 class singlefilediffimage2(diffimage2):
-    ndim=2
+    ndim = 2
+
     def __init__(self, filepath, detector=None, experiment=None):
         self.filepath = filepath
         super(singlefilediffimage2, self).__init__(detector=detector, experiment=experiment)
-
 
     @property
     def rawdata(self):
         # 'Permanently' cached
         if self._rawdata is None:
-             rawdata, mask = loadpath(self.filepath)
-             print rawdata, mask
-             self._rawdata = np.rot90(rawdata,3)
-             if mask is not None: self.experiment.mask = np.rot90(mask,3)
+            rawdata, mask = loadpath(self.filepath)
+            print rawdata, mask
+            self._rawdata = np.rot90(rawdata, 3)
+            if mask is not None: self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
 
     @property
@@ -1395,10 +1379,9 @@ class singlefilediffimage2(diffimage2):
             img = self.mirrorsymmetryfill(img)
 
         if self.cakemode:
-            img = self.cake(img,self.mask)
+            img = self.cake(img, self.mask)
         elif self.remeshmode:
-            img = self.remesh(img,self.mask)
-
+            img = self.remesh(img, self.mask)
 
         return img
 
@@ -1413,12 +1396,11 @@ class singlefilediffimage2(diffimage2):
         if self.cakemode:
             img = self.cakemask
         elif self.remeshmode:
-            img = self.remesh(img, self.mask)>0
+            img = self.remesh(img, self.mask) > 0
 
         return img
 
-
-    def radialsymmetryfill(self,img):
+    def radialsymmetryfill(self, img):
         centerx = config.activeExperiment.center[0]
         centery = config.activeExperiment.center[1]
         symimg = np.rot90(img.copy(), 2)
@@ -1430,14 +1412,13 @@ class singlefilediffimage2(diffimage2):
 
         marginmask = config.activeExperiment.mask
 
-
         x, y = np.indices(img.shape)
         padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
 
         img = img * marginmask + symimg * padmask * (1 - marginmask)
         return img
 
-    def mirrorsymmetryfill(self,img):
+    def mirrorsymmetryfill(self, img):
         centerx = config.activeExperiment.getvalue('Center X')
         symimg = np.flipud(img.copy())
         self.imtest(symimg)
@@ -1460,17 +1441,17 @@ class singlefilediffimage2(diffimage2):
 
 class multifilediffimage2(diffimage2):
     ndim = 3
+
     def __init__(self, filepaths, detector=None, experiment=None):
         self.filepaths = sorted(list(filepaths))
         self.currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
-        self._framecache=dict()
-
+        self._framecache = dict()
 
         self.dtype = self.rawdata.dtype
         self.max = np.max(self.rawdata)
         self.min = np.min(self.rawdata)
-        self.shape = self.rawdata.shape[0],self.rawdata.shape[1],len(filepaths)
+        self.shape = self.rawdata.shape[0], self.rawdata.shape[1], len(filepaths)
         self.size = np.product(self.shape)
 
     @property
@@ -1480,7 +1461,7 @@ class multifilediffimage2(diffimage2):
 
         return self._headers
 
-    def xvals(self,_):
+    def xvals(self, _):
         return np.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
 
     def first(self):
@@ -1515,19 +1496,19 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
-        print 'applyinglog:',self.logscale
+        print 'applyinglog:', self.logscale
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
 
-    def _getframe(self,frame=None): # keeps 3 frames in cache at most
-        #print 'frame:',frame
-        if frame is None: frame=self.currentframe
-        if type(frame) is list: frame=frame[1].step
+    def _getframe(self, frame=None):  # keeps 3 frames in cache at most
+        # print 'frame:',frame
+        if frame is None: frame = self.currentframe
+        if type(frame) is list: frame = frame[1].step
         self.currentframe = frame
         if not frame in self._framecache:
-            if len(self._framecache)>2: del self._framecache.keys()[0] #del the first cached item
-            self._framecache[frame]=np.rot90(loadimage(self.filepaths[frame]),3)
+            if len(self._framecache) > 2: del self._framecache.keys()[0]  # del the first cached item
+            self._framecache[frame] = np.rot90(loadimage(self.filepaths[frame]), 3)
         return self._framecache[frame]
 
     def calcVariation(self, i, operationindex, roi):
@@ -1551,32 +1532,34 @@ class datadiffimage2(singlefilediffimage2):
 
     def __init__(self, data, detector=None, experiment=None):
         super(datadiffimage2, self).__init__(filepath=None, detector=detector, experiment=experiment)
-        self._rawdata = np.rot90(data,3)
+        self._rawdata = np.rot90(data, 3)
 
         # False scale rawdata to avoid log issues
-        if self._rawdata.max()<=1:
-            self._rawdata*=2**32
+        if self._rawdata.max() <= 1:
+            self._rawdata *= 2 ** 32
 
     @property
     def headers(self):
         return dict()
 
+
 class stackdiffimage2(diffimage2):
     ndim = 3
+
     def __init__(self, filepath, detector=None, experiment=None):
         self.filepath = filepath
         super(stackdiffimage2, self).__init__(detector=detector, experiment=experiment)
 
         self.fabimage = fabio.open(filepath)
 
-        self._framecache=dict()
-        self.currentframe=0
+        self._framecache = dict()
+        self.currentframe = 0
 
         raw = self.rawdata
         self.dtype = raw.dtype
         self.max = np.max(raw)
         self.min = np.min(raw)
-        self.shape = len(self.fabimage),raw.shape[0],raw.shape[1]
+        self.shape = len(self.fabimage), raw.shape[0], raw.shape[1]
         self.size = np.product(self.shape)
 
     @property
@@ -1608,15 +1591,15 @@ class stackdiffimage2(diffimage2):
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
 
-    def _getframe(self,frame=None): # keeps 3 frames in cache at most
-        if frame is None: frame=self.currentframe
+    def _getframe(self, frame=None):  # keeps 3 frames in cache at most
+        if frame is None: frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
-            frame= frame[1].step
-        frame = min(frame,len(self))
+            frame = frame[1].step
+        frame = min(frame, len(self))
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache)>2: del self._framecache[self._framecache.keys()[0]] #del the first cached item
-            self._framecache[frame]=np.rot90(self.fabimage.getframe(frame).data,3)
+            if len(self._framecache) > 2: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            self._framecache[frame] = np.rot90(self.fabimage.getframe(frame).data, 3)
         return self._framecache[frame]
 
     def __getitem__(self, item):
@@ -1624,11 +1607,11 @@ class stackdiffimage2(diffimage2):
 
 
 def loaddiffimage(src):
-    if type(src) in [unicode,str]:
+    if type(src) in [unicode, str]:
         return singlefilediffimage2(src)
-    elif type(src) is list and len(src)==1 and os.path.splitext(src[0])[-1]=='.h5':
+    elif type(src) is list and len(src) == 1 and os.path.splitext(src[0])[-1] == '.h5':
         return stackdiffimage2(src[0])
-    elif type(src) is list and len(src)==1:
+    elif type(src) is list and len(src) == 1:
         return singlefilediffimage2(src[0])
     elif type(src) is list:
         return multifilediffimage2(src)

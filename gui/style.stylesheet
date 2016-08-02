@@ -17,7 +17,7 @@ SpinBox{
     min-height: 25px;
 }
 
-QTreeWidget::item{
+ParameterTree::item{
     min-height: 35px;
 }
 

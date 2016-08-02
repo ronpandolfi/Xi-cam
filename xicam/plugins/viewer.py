@@ -21,16 +21,11 @@ from xicam import config
 import fabio
 
 # Globals so Timeline can share the same rightmodes
-rightwidget = QtGui.QWidget()
-l = QtGui.QVBoxLayout()
-l.setContentsMargins(0, 0, 0, 0)
 configtree = ParameterTree()
 configtree.setParameters(config.activeExperiment, showTop=False)
-l.addWidget(configtree)
-propertytable = widgets.frameproptable()
-l.addWidget(propertytable)
-rightwidget.setLayout(l)
-rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+
+
+rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
 class plugin(base.plugin):
     name = 'Viewer'
@@ -48,11 +43,13 @@ class plugin(base.plugin):
         self.rightmodes = rightmodes
         self.bottomwidget = widgets.integrationwidget(self.getCurrentTab)
 
+
+
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                     self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
+                                     self.roi, self.arccut, self.polymask,
                                      capture=self.capture, removecosmics=self.removecosmics)
 
 
@@ -61,6 +58,9 @@ class plugin(base.plugin):
         sgicon = QtGui.QIcon()
         sgicon.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
+
+        self.propertytable = widgets.frameproptable()
+        self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
         super(plugin, self).__init__(*args, **kwargs)
 

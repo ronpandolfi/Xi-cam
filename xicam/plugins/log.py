@@ -15,6 +15,7 @@ class plugin(base.plugin):
         self.rightwidget = None
         self.featureform = None
         self.bottomwidget = None
+        self.leftwidget = None
         self.toolbar = None
 
         msg.guilogcallable=self.log

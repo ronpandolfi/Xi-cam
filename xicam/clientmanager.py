@@ -11,7 +11,7 @@ globus_client = client.globus.GlobusClient
 ssh_client = client.ssh.SSHClient
 
 # Singleton instance of spot_client
-#spot_client = client.spot.SpotClient()
+spot_client = client.spot.SpotClient()
 
 # Dicts to hold client instances
 sftp_clients = {}
