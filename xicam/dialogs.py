@@ -21,6 +21,14 @@ def savedatadialog(data, mask=None, guesspath="", caption="Save data to EDF", he
 
     return filename, ok
 
+def infodialog(msg,shortmsg):
+    msgBox = QtGui.QMessageBox()
+    msgBox.setText(msg)
+    msgBox.setInformativeText(shortmsg)
+    msgBox.setStandardButtons(QtGui.QMessageBox.Close)
+    msgBox.setDefaultButton(QtGui.QMessageBox.Close)
+
+    response = msgBox.exec_()
 
 def checkoverwrite(path):
     return True

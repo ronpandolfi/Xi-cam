@@ -96,7 +96,7 @@ def writeimage(image, path, headers=None, suffix='',ext=None):
             fabimg = edfimage.edfimage(np.rot90(image), header=headers)
             fabimg.write(path)
         elif ext.lower() == '.tif':
-            fabimg = tifimage.tifimage(np.rot90(image), header=headers)
+            fabimg = tifimage.tifimage(np.rot90((image.astype(float)/image.max()*2**16).astype(np.int16)), header=headers)
             fabimg.write(path)
         elif ext.lower() == '.png':
             raise NotImplementedError

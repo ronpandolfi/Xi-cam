@@ -58,9 +58,11 @@ class plugin(base.plugin):
 
         self.rightwidget = None
 
-        self.leftwidget = None
+        self.featureform = None
 
         self.bottomwidget = None
+
+        self.leftwidget = None
 
         self.toolbar = None
 

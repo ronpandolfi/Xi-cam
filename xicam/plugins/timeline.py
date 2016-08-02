@@ -9,7 +9,7 @@ if op_sys == 'Darwin':
         print 'NSURL not found. Drag and drop may not work correctly'
 
 
-import base
+import base, viewer
 from PySide import QtGui
 import os
 # from moviepy.editor import VideoClip
@@ -20,6 +20,7 @@ import widgets
 
 class plugin(base.plugin):  ##### Inherit viewer instead!!!
     name = 'Timeline'
+    sigUpdateExperiment = viewer.plugin.sigUpdateExperiment
 
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QTabWidget()
@@ -27,6 +28,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
+        # Share right modes with viewer
+        self.rightmodes = viewer.rightmodes
 
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
@@ -64,6 +68,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
 
     def getCurrentTab(self):
         return self.centerwidget.currentWidget().widget
+
+    def currentImage(self):
+        return self.getCurrentTab()
 
     def calibrate(self):
         self.getCurrentTab().calibrate()

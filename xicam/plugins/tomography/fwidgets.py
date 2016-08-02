@@ -4,9 +4,8 @@ from PySide import QtCore, QtGui
 import numpy as np
 from functools import partial
 from copy import deepcopy
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+from pyqtgraph.parametertree import Parameter, ParameterTree
 import fmanager
-from collectionsmod import UnsortableOrderedDict
 import ui
 import fdata
 import introspect
@@ -69,6 +68,7 @@ class FeatureWidget(QtGui.QWidget):
         else:
             icon.addPixmap(QtGui.QPixmap("gui/eye.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.previewButton.setCheckable(False)
+            self.previewButton.setChecked(True)
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
         self.previewButton.setChecked(True)
@@ -180,6 +180,19 @@ class FuncWidget(FeatureWidget):
             param.sigValueChanged.connect(self.paramChanged)
 
     @property
+    def enabled(self):
+        if self.previewButton.isChecked() or not self.previewButton.isCheckable():
+            return True
+        return False
+
+    @enabled.setter
+    def enabled(self, val):
+        if val and self.previewButton.isCheckable():
+            self.previewButton.setChecked(True)
+        else:
+            self.previewButton.setChecked(False)
+
+    @property
     def form(self):
         if self._form is None:
             self._form = ParameterTree(showHeader=False)
@@ -199,6 +212,10 @@ class FuncWidget(FeatureWidget):
         kwargs = dict(self.param_dict, **self.kwargs_complement)
         self._partial = partial(self._function, **kwargs)
         return self._partial
+
+    @partial.setter
+    def partial(self, p):
+        self._partial = p
 
     @property
     def input_partials(self):
@@ -262,30 +279,26 @@ class FuncWidget(FeatureWidget):
             return
 
         if test.exec_():
-            widget = ui.centerwidget.currentWidget().widget
+            widget = ui.centerwidget.currentWidget()
             if widget is None: return
-            p = []
+            self.updateParamsDict()
             for i in test.selectedRange():
-                self.updateParamsDict()
+                print 'Setting {} to {}'.format(param.name(), i)
                 self.param_dict[param.name()] = i
-                p.append(fmanager.pipeline_preview_action(widget,
-                                                          ui.centerwidget.currentWidget().widget.addSlicePreview,
-                                                          update=False))
-            map(lambda p: fmanager.run_preview_recon(*p), p)
-
+                fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
+                                                 fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
+                                                                                  deepcopy(self.partial)]})
 
 class ReconFuncWidget(FuncWidget):
     def __init__(self, function, subfunction, package):
         super(ReconFuncWidget, self).__init__(function, subfunction, package, checkable=False)
 
-        self.kwargs_complement['algorithm'] = subfunction.lower()
         self.packagename = package.__name__
+        self.kwargs_complement['algorithm'] = subfunction.lower()
 
         # Input functions
         self.center = None
         self.angles = None
-
-        self.mcenter = lambda: self.param_dict['center']
 
         self.frame_2 = QtGui.QFrame(self)
         self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
@@ -304,15 +317,14 @@ class ReconFuncWidget(FuncWidget):
         self.menu.addMenu(self.submenu)
 
         self.input_functions = [self.center, self.angles]
+        self.addInputFunction('Projection Angles', 'Projection Angles', package=reconpkg.packages['tomopy'])
 
     @property
     def partial(self):
         d = deepcopy(self.param_dict)
-        filter_par = [d['cutoff'], d['order']]
-        d['filter_par'] = filter_par
-        del d['cutoff'], d['order']
+        if 'cutoff' in d.keys() and 'order' in d.keys():
+            d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
         kwargs = dict(d, **self.kwargs_complement)
-        if 'center' in kwargs: del kwargs['center']
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -320,12 +332,12 @@ class ReconFuncWidget(FuncWidget):
     def input_partials(self):
         p = []
         if self.center is None or not self.center.previewButton.isChecked():
-            p.append(('center', None, self.mcenter))
+            p.append((None, None, None))
         else:
             if self.center.subfunc_name == 'Phase Correlation':
-                slices = ((0, None, None),(-1, None, None))
+                slices = (0, -1)
             else:
-                slices = ((None, ui.centerwidget.currentWidget().widget.sinogramViewer.currentIndex),)
+                slices = (slice(None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
 
             if self.center.subfunc_name == 'Nelder-Mead':
                 p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
@@ -338,22 +350,22 @@ class ReconFuncWidget(FuncWidget):
         self.center = None
         self.input_functions = [self.center, self.angles]
 
-    def addInputFunction(self, func, subfunc):
+    def addInputFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
         fwidget = self.angles if func == 'Projection Angles' else self.center
         if fwidget is not None and fwidget.subfunc_name != 'Manual':
-            value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
-                                               '{} input function already in pipeline\n'
-                                               'Do you want to replace it?'.format(func),
-                                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if value is QtGui.QMessageBox.No:
-                return
-            else:
-                try:
-                    fwidget.deleteLater()
-                except AttributeError:
+            if func != 'Projection Angles':
+                value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
+                                                   '{} input function already in pipeline\n'
+                                                   'Do you want to replace it?'.format(func),
+                                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+                if value is QtGui.QMessageBox.No:
+                    return
+            try:
+                fwidget.deleteLater()
+            except AttributeError:
                     pass
         checkable = False if func == 'Projection Angles' else True
-        fwidget = FuncWidget(func, subfunc, package=reconpkg.packages['tomopy'], checkable=checkable)
+        fwidget = FuncWidget(func, subfunc, package=package, checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
@@ -378,6 +390,29 @@ class ReconFuncWidget(FuncWidget):
 
     def menuRequested(self, pos):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
+
+
+class AstraReconFuncWidget(ReconFuncWidget):
+    def __init__(self, function, subfunction, package):
+        super(AstraReconFuncWidget, self).__init__(function, subfunction, reconpkg.tomopy)
+        self.kwargs_complement['algorithm'] = reconpkg.tomopy.astra
+        self.kwargs_complement['options'] = {}
+        self.kwargs_complement['options']['method'] = subfunction.replace(' ', '_')
+        if 'CUDA' in subfunction:
+            self.kwargs_complement['options']['proj_type'] = 'cuda'
+        else:
+            self.kwargs_complement['options']['proj_type'] = 'linear'
+
+    @property
+    def partial(self):
+        d = deepcopy(self.param_dict)
+        kwargs = deepcopy(self.kwargs_complement)
+        if 'center' in d:
+            del d['center']
+        kwargs['options'].update(d)
+        self._partial = partial(self._function, **kwargs)
+        return self._partial
+
 
 
 class TestRangeDialog(QtGui.QDialog):

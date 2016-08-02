@@ -35,6 +35,13 @@ def loadUi():
     # Load the gui from file
     functionwidget = QUiLoader().load('gui/tomographyleft.ui')
 
+    # Add some tool tips
+    functionwidget.addFunctionButton.setToolTip('Add function to pipeline')
+    functionwidget.clearButton.setToolTip('Clear pipeline')
+    functionwidget.fileButton.setToolTip('Save/Load pipeline')
+    functionwidget.moveDownButton.setToolTip('Move selected function down')
+    functionwidget.moveUpButton.setToolTip('Move selected function up')
+
     functionwidget.clearButton.clicked.connect(fmanager.clear_action)
     functionwidget.moveUpButton.clicked.connect(
         lambda: fmanager.swap_functions(fmanager.currentindex,
@@ -62,8 +69,7 @@ def loadUi():
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
-    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline(
-                                                           'yaml/tomography/default_pipeline.yml'))
+    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
     filefuncmenu.addActions([openaction, saveaction, refreshaction])
 
     functionwidget.fileButton.setMenu(filefuncmenu)
@@ -83,6 +89,8 @@ def loadUi():
     l.addWidget(functionwidget)
 
     leftwidget.setLayout(l)
+    icon = QtGui.QIcon(QtGui.QPixmap("gui/function.png"))
+    leftmodes = [(leftwidget, icon)]
 
     rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
@@ -98,9 +106,9 @@ def loadUi():
               # {'name': 'Ouput Format', 'type': 'list', 'values': ['TIFF (.tiff)'], 'default': 'TIFF (.tiff)'},
               # {'name': 'Output Name', 'type': 'str'},
               # {'name': 'Browse', 'type': 'action'},
-              {'name': 'Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(), 'limits':[1, cpu_count()]},
-              {'name': 'Sinogram Chunks', 'type': 'int', 'value': 1},
-              {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 0}]
+              {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
+              {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
+               'limits':[1, cpu_count()]}]
 
     configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
     configtree.setParameters(configparams, showTop=False)
@@ -109,20 +117,19 @@ def loadUi():
     #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
     #                                               configparams.param('Output Name').value())[0])))
 
-    sinostart = configparams.param('Start Sinogram')
-    sinoend = configparams.param('End Sinogram')
-    sinostep = configparams.param('Step Sinogram')
-    nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-    chunks = configparams.param('Sinogram Chunks')
-    sinos = configparams.param('Sinograms/Chunk')
-    chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-    sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
-    chunks.sigValueChanged.connect(chunkschanged)
-    sinos.sigValueChanged.connect(sinoschanged)
-    sinostart.sigValueChanged.connect(chunkschanged)
-    sinoend.sigValueChanged.connect(chunkschanged)
-    sinostep.sigValueChanged.connect(chunkschanged)
-    chunks.setValue(1)
+    # sinostart = configparams.param('Start Sinogram')
+    # sinoend = configparams.param('End Sinogram')
+    # sinostep = configparams.param('Step Sinogram')
+    # nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
+    # sinos = configparams.param('Sinograms/Chunk')
+    # chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
+    # sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
+    # chunks.sigValueChanged.connect(chunkschanged)
+    # sinos.sigValueChanged.connect(sinoschanged)
+    # sinostart.sigValueChanged.connect(chunkschanged)
+    # sinoend.sigValueChanged.connect(chunkschanged)
+    # sinostep.sigValueChanged.connect(chunkschanged)
+    # chunks.setValue(1)
 
     rightwidget.addWidget(configtree)
 
@@ -133,14 +140,14 @@ def loadUi():
 
     rightwidget.addWidget(propertytable)
     propertytable.hide()
-
+    rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
     blankform = QtGui.QLabel('Select a function from\n below to set parameters...')
     blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
     blankform.setAlignment(QtCore.Qt.AlignCenter)
     showform(blankform)
 
-    return leftwidget, centerwidget, rightwidget, bottomwidget, toolbar
+    return leftmodes, centerwidget, rightwidget, bottomwidget, toolbar
 
 
 def showform(widget):

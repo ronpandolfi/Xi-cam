@@ -76,7 +76,7 @@ class plugin(base.plugin):
                 if xglobals.lastroi is not None:
                     # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
                     cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T
-                    x, y, _ = dimg.integrate(cut=cut)
+                    x, y, _, _ = dimg.integrate(cut=cut)
                     data = np.array([x, y])
                     if not writer.writearray(data, path, suffix='_roi'):
                         break

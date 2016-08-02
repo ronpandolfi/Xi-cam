@@ -1,4 +1,4 @@
-
+#TODO it might be wiser to use the inspect module here
 
 def get_arg_count(function):
     return function.__code__.co_argcount

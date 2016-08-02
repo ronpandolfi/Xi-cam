@@ -1,4 +1,7 @@
 import yaml
+import reconpkg
+
+PARAM_TYPES = {'int': int, 'float': float}
 
 # Load yaml with names of all available functions in pipeline
 with open('yaml/tomography/functions.yml','r') as stream:
@@ -7,8 +10,8 @@ with open('yaml/tomography/functions.yml','r') as stream:
 # Load parameter data for available functions
 parameter_files = ('tomopy_function_parameters.yml',
                    'aux_function_parameters.yml',
-                   'dataexchange_function_parameters.yml')
-                   #'astra_function_parameters.yml',
+                   'dataexchange_function_parameters.yml',
+                   'astra_function_parameters.yml')
                    #'mbir_function_parameters.yml')
 parameters = {}
 
@@ -24,9 +27,10 @@ with open('yaml/tomography/function_names.yml','r') as stream:
 for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
     names[algorithm] = ['recon', 'tomopy']
 
-# for algorithm in funcs['Functions']['Reconstruction']['Astra']:
-#     names[algorithm] = 'recon'
+for algorithm in funcs['Functions']['Reconstruction']['Astra']:
+    names[algorithm] = ['recon', 'astra']
 
-# Load the default pipeline file
-with open('yaml/tomography/bl832_function_defaults.yml','r') as stream:
+# Load dictionary with function parameters to be retrieved from metadatas
+with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
+

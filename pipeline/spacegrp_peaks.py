@@ -5,7 +5,7 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.optimize import root
 import sgexclusions
-
+from xicam import config
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
     if isinstance(a, np.ndarray) and isinstance(b, np.ndarray) and \
@@ -181,8 +181,8 @@ def angles_to_pixels(angles, center, sdd, pixel_size=None):
     tan_2t = np.tan(angles[:, 0])
     tan_al = np.tan(angles[:, 1])
     x = tan_2t * sdd
-    px = sdd * tan_2t / pixel_size[0] + center[0]
-    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] + center[1]
+    px = sdd * tan_2t / pixel_size[0] #+ center[0]
+    py = np.sqrt(sdd ** 2 + x ** 2) * tan_al  / pixel_size[1] #+ center[1]
     pixels = np.zeros((px.size, 2))
     pixels[:,0] = px
     pixels[:,1] = py
@@ -204,8 +204,8 @@ class peak(object):
         tan_2t = np.tan(self.twotheta)
         tan_al = np.tan(self.alphaf)
         x= tan_2t * sdd
-        self.x = sdd * tan_2t / pixels + center[0]
-        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels + center[1]
+        self.x = sdd * tan_2t / pixels# + config.activeExperiment.center[0]
+        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels# + config.activeExperiment.center[1]
         
     def isAt(self, pos):
         if np.isnan(self.twotheta): return False
@@ -216,8 +216,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar)
-        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt)
+        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar/1e10)
+        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt/1e10)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -231,7 +231,6 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984e-9, refgamma=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
-
     if alpha is not None: alpha = np.deg2rad(alpha)
     if beta is not None: beta = np.deg2rad(beta)
     if gamma is not None: gamma = np.deg2rad(gamma)
@@ -277,11 +276,11 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
     nu = 1 - np.complex(refgamma,refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
-    alphai = np.deg2rad(0.2)
+    alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
     k = 2 * np.pi / wavelen
     peaks = list()
     for hkl in HKL:
-        if hkl[2] < 0: continue
+        #if hkl[2] < 0: continue
         if not sgexclusions.check(hkl,space_grp): continue
         if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]

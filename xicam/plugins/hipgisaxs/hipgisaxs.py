@@ -44,7 +44,7 @@ class mainwindow():
         ui.mainwindow.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
         ui.mainwindow.addParticleButton.clicked.connect(featuremanager.addParticle)
         ui.mainwindow.showScatteringButton.clicked.connect(self.showScattering)
-        ui.mainwindow.showComputationButton.clicked.connect(self.showComputation)
+        ui.mainwindow.showComp50utationButton.clicked.connect(self.showComputation)
         ui.mainwindow.showDetectorButton.clicked.connect(self.showDetector)
         ui.mainwindow.addParticleButton.setMenu(ui.particlemenu)
         ui.mainwindow.runLocal.clicked.connect(self.runLocal)
