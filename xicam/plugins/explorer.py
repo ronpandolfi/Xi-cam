@@ -12,7 +12,7 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools
+from pipeline import pathtools, msg
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -24,6 +24,7 @@ class LocalFileView(QtGui.QTreeView):
     sigOpen = QtCore.Signal(list)
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
@@ -82,6 +83,11 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.sigOpen.emit([path])
 
+    def currentChanged(self, current, previous):
+        path = self.file_model.filePath(current)
+        if os.path.isfile(path):
+            self.sigItemPreview.emit(path)
+
     def getSelectedFilePaths(self):
         paths = [self.file_model.filePath(index) for index in self.selectedIndexes()]
         return paths
@@ -121,6 +127,7 @@ class RemoteFileView(QtGui.QListWidget):
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -154,6 +161,9 @@ class RemoteFileView(QtGui.QListWidget):
         if len(file_name.split('.')) == 1:
             path = self.path + '/' + str(file_name)
             self.refresh(path=path)
+
+    def currentChanged(self, current, previous):
+        pass
 
     def getSelectedFilePaths(self):
         paths = ['{0}/{1}'.format(self.path, item.text()) for item in self.selectedItems()]
@@ -299,6 +309,7 @@ class SFTPFileView(QtGui.QTreeWidget):
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, sftp_client, parent=None):
         super(SFTPFileView, self).__init__(parent=parent)
@@ -380,9 +391,11 @@ class SFTPFileView(QtGui.QTreeWidget):
         if item.childCount() == 0:
             item.getChildren()
 
+    def currentChanged(self, current, previous):
+        pass
+
     def getSelectedFilePaths(self):
         paths = [item.path for item in self.selectedItems()]
-        print paths
         return paths
 
     def deleteSelection(self):
@@ -428,6 +441,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(object)
 
 
     def __init__(self, spot_client, parent=None):
@@ -463,9 +477,11 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
     def getDatasets(self, query):
+        msg.showMessage('Searching SPOT database...')
         runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
                                           method_kwargs=self.search_params,
-                                          callback_slot=self.createDatasetDictionary)
+                                          callback_slot=self.createDatasetDictionary,
+                                          finished_slot=msg.clearMessage)
         threads.add_to_queue(runnable)
 
     def createDatasetDictionary(self, data):
@@ -503,6 +519,21 @@ class SpotDatasetView(QtGui.QTreeWidget):
             child = QtGui.QTreeWidgetItem([value], parent=self)
             child.setIcon(0, icon)
             item.addChild(child)
+
+    def currentChanged(self, current, previous):
+        item = self.itemFromIndex(current)
+        try:
+            if item.childCount() == 0:
+                msg.showMessage('Loading preview...')
+                dataset = item.parent().parent().text(0)
+                stage = item.parent().text(0)
+                #TODO decorate this instead
+                get_preview = threads.RunnableMethod(self.client.get_image_as, method_args=(dataset, stage),
+                                                     method_kwargs={'index': 0}, callback_slot=self.sigItemPreview.emit)
+                threads.add_to_queue(get_preview)
+        except AttributeError:
+            pass
+
 
     def getStagesAndDatasets(self):
         dsets_stages = [(item.parent().parent().text(0), item.parent().text(0))
@@ -600,12 +631,6 @@ class FileExplorer(QtGui.QWidget):
     def setPathLabel(self, path):
         self.path_label.setText(path)
 
-    # def getRawDatasetList(self):
-    # widget = self.file_view
-    #     items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
-    #     items = [i.text() for i in items]
-    #     return items
-
     def getSelectedFilePaths(self):
         return self.file_view.getSelectedFilePaths()
 
@@ -659,17 +684,17 @@ class SpotDatasetExplorer(QtGui.QWidget):
     def getSelectedFilePath(self):
         return os.path.join(*self.file_view.getStagesAndDatasets())
 
-        # def getRawDatasetList(self):
-        # widget = self.file_view
-        # items = []
-        #
-        #     parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
-        #     child_items = []
-        #     for item in parent_items:
-        #         child_items += [item.child(i) for i in range(item.childCount())]
-        #     for item in child_items:
-        #         items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
-        #     return items
+    def getRawDatasetList(self):
+        widget = self.file_view
+        items = []
+
+        parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
+        child_items = []
+        for item in parent_items:
+            child_items += [item.child(i) for i in range(item.childCount())]
+        for item in child_items:
+            items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
+        return items
 
 
 class MultipleFileExplorer(QtGui.QTabWidget):
@@ -683,6 +708,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpen = QtCore.Signal(list)
+    sigPreview = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -750,6 +776,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
+        file_explorer.file_view.sigItemPreview.connect(self.itemSelected)
         self.wireExplorerSignals(file_explorer)
         idx = len(self.explorers) - 1
         tab = self.insertTab(idx, file_explorer, name)
@@ -776,6 +803,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
             explorer.file_view.sigTransfer.connect(self.handleTransferActions)
         except AttributeError:
             pass
+
+    def itemSelected(self, item):
+        msg.clearMessage() #
+        self.sigPreview.emit(item)
 
     def addHPCTab(self, system):
         # # NERSC tabs based on NEWT API
