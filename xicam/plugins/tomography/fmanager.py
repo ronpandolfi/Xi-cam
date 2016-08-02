@@ -428,9 +428,3 @@ def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
             #     tomo = fpartial(tomo)
             tomo = fpartial(tomo)
             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-
-def get_output_path():
-    global functions
-    write_funcs = [f for f in functions if f.func_name == 'Write']
-    return write_funcs[-1].params.child('fname').value()

@@ -53,7 +53,6 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Reconstruction View')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -77,9 +76,6 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
         self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
         self.viewstack.addWidget(self.preview3DViewer)
-
-        self.reconstructionViewer = ReconstructionViewer(parent=self)
-        self.viewstack.addWidget(self.reconstructionViewer)
 
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -172,12 +168,6 @@ class TomoViewer(QtGui.QWidget):
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
-        path = fmanager.get_output_path()
-        # if not extension was given assume it is a tiff directory.
-        if '.' not in path:
-            path = os.path.split(path)[0]
-        self.reconstructionViewer.openDataset(path=path)
-        self.viewstack.setCurrentWidget(self.reconstructionViewer)
         msg.clearMessage()
 
     def onManualCenter(self, active):
@@ -707,35 +697,6 @@ class PreviewViewer(QtGui.QSplitter):
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
         fmanager.set_pipeline_from_preview(current_data, setdefaults=True)
-
-
-class ReconstructionViewer(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(ReconstructionViewer, self).__init__(parent=parent)
-        self.stack_viewer = StackViewer()
-        self.path_edit = QtGui.QLineEdit(parent=self)
-        self.path_edit.setReadOnly(True)
-        self.browse_button = QtGui.QPushButton(parent=self)
-        self.browse_button.setText('Select Reconstruction')
-
-        layout = QtGui.QGridLayout(self)
-        layout.addWidget(self.path_edit, 0, 0, 1, 1)
-        layout.addWidget(self.browse_button, 0, 1, 1, 1)
-        layout.addWidget(self.stack_viewer, 1, 0, 2, 2)
-
-        self.browse_button.clicked.connect(self.openDataset)
-
-    def openDataset(self, path=None):
-        if path is None:
-            path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
-        if path:
-            if len(path) == 1:
-                path = path[0]
-            data = loader.StackImage(path)
-            self.stack_viewer.setData(data)
-            if isinstance(path, list):
-                path = os.path.split(path[0])[0]
-            self.path_edit.setText(path)
 
 
 """
