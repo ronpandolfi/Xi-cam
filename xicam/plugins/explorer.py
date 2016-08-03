@@ -172,10 +172,9 @@ class RemoteFileView(QtGui.QListWidget):
     def getSelectedFile(self):
         return str(self.currentItem().text())
 
+    @threads.method(callback_slot=lambda self: self.fillList)
     def getDirContents(self, path, *args):
-        runnable = threads.RunnableMethod(self.client.get_dir_contents, method_args=(path,) + args,
-                                          callback_slot=self.fillList)
-        threads.add_to_queue(runnable)
+        self.client.get_dir_contents(path, *args)
 
     def fillList(self, value):
         self.clear()
@@ -335,19 +334,23 @@ class SFTPFileView(QtGui.QTreeWidget):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
 
+    @threads.method(callback_slot=lambda self: self.pathChanged.emit(self.path))
     def refresh(self, path=None):
         self.clear()
         if path is not None:
             self.path = path
             self.client.cd(path)
-        runnable = threads.RunnableMethod(self.client.walktree,
-                                          method_args=(self.path,
-                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
-                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'dir'),
-                                                       lambda: None),
-                                          method_kwargs={'recurse': False},
-                                          finished_slot=lambda: self.pathChanged.emit(self.path))
-        threads.add_to_queue(runnable)
+        self.client.walktree(self.path, lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
+                             lambda x: self.sigAddTopLevelItem.emit(x, 'dir'), lambda: None, recurse=False)
+        return self
+        # runnable = threads.RunnableMethod(self.client.walktree,
+        #                                   method_args=(self.path,
+        #                                                lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
+        #                                                lambda x: self.sigAddTopLevelItem.emit(x, 'dir'),
+        #                                                lambda: None),
+        #                                   method_kwargs={'recurse': False},
+        #                                   finished_slot=lambda: self.pathChanged.emit(self.path))
+        # threads.add_to_queue(runnable)
         # Or on gui thread
         # self.client.walktree(self.path,
         # lambda x: self.createTopLevelItem(x, 'file'),
@@ -476,14 +479,19 @@ class SpotDatasetView(QtGui.QTreeWidget):
         save_path = [os.path.join(tempfile.gettempdir(), file_name)]
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
+    #TODO this looks hacky, need to find a cleaner solution
+    @threads.method(callback_slot=lambda x: x[0].createDatasetDictionary(x[1]), finished_slot=msg.clearMessage)
     def getDatasets(self, query):
         msg.showMessage('Searching SPOT database...')
-        runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
-                                          method_kwargs=self.search_params,
-                                          callback_slot=self.createDatasetDictionary,
-                                          finished_slot=msg.clearMessage)
-        threads.add_to_queue(runnable)
+        r = self.client.search(query, **self.search_params)
+        # runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
+        #                                   method_kwargs=self.search_params,
+        #                                   callback_slot=self.createDatasetDictionary,
+        #                                   finished_slot=msg.clearMessage)
+        # threads.add_to_queue(runnable)
+        return self, r
 
+    @QtCore.Slot(dict)
     def createDatasetDictionary(self, data):
         tree_data = {}
         for index in range(len(data)):
@@ -527,10 +535,8 @@ class SpotDatasetView(QtGui.QTreeWidget):
                 msg.showMessage('Loading preview...')
                 dataset = item.parent().parent().text(0)
                 stage = item.parent().text(0)
-                #TODO decorate this instead
-                get_preview = threads.RunnableMethod(self.client.get_image_as, method_args=(dataset, stage),
-                                                     method_kwargs={'index': 0}, callback_slot=self.sigItemPreview.emit)
-                threads.add_to_queue(get_preview)
+                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit)(self.client.get_image_as)
+                bg_get_preview(dataset, stage, index=0)
         except AttributeError:
             pass
 
@@ -1013,26 +1019,25 @@ class JobTable(QtGui.QTableWidget):
     @QtCore.Slot(str, object, list, dict)
     def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc)
-        runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
-                                            callback_slot=job_entry.progress, finished_slot=finish_slot,
-                                            interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        bg_generator = threads.iterator(callback_slot=job_entry.progress,
+                                        finished_slot=finish_slot,
+                                        interrupt_signal=job_entry.sigCancel)(generator)
+        bg_generator(*args, **kwargs)
 
     def addSFTPJob(self, job_desc, method, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc)
         kwargs['callback'] = job_entry.progressRaw
-        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs, finished_slot=finish_slot)
-        threads.add_to_queue(runnable)
+        bg_method = threads.method(finished_slot=finish_slot)(method)
+        bg_method(*args, **kwargs)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
         job_entry.sigRemove.connect(self.removeJob)
         job_entry.pulseStart()
-        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
-                                          finished_slot=job_entry.pulseStop,
-                                          interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        bg_method = threads.method(finished_slot=job_entry.pulseStop, interrupt_signal=job_entry.sigCancel)(method)
+        bg_method(*args, **kwargs)
+
 
     def removeJob(self, jobentry):
         jobentry.cancel()
@@ -1122,16 +1127,10 @@ class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
         self.sigAddChildFile.connect(self.addChildFile)
         self.sigAddChildDir.connect(self.addChildDir)
 
+    @threads.method()
     def getChildren(self):
-        runnable = threads.RunnableMethod(self.client.walktree,
-                                          method_args=(self.path,
-                                                       self.sigAddChildFile.emit,
-                                                       self.sigAddChildDir.emit,
-                                                       self.handleUnknown),
-                                          method_kwargs={'recurse': False})
-        threads.add_to_queue(runnable)
-        # or on gui thread
-        # self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
+        self.client.walktree(self.path, self.sigAddChildFile.emit, self.sigAddChildDir.emit,
+                             self.handleUnknown, recurse=False)
 
     def addChildFile(self, path):
         name = os.path.split(path)[-1]

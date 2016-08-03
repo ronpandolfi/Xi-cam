@@ -3,7 +3,8 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial, wraps
-
+import types
+import numpy as np
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
 from pipeline import msg
@@ -262,6 +263,7 @@ def update_function_parameters(funcs):
             update_function_parameters(funcs=f.input_functions)
 
 
+@threads.method(callback_slot=lambda x: run_preview_recon(*x), lock=threads.mutex)
 def pipeline_preview_action(widget, callback, finish_call=None, update=True, slc=None, fixed_funcs=None):
     global functions
 
@@ -273,12 +275,7 @@ def pipeline_preview_action(widget, callback, finish_call=None, update=True, slc
         return None, None, None
     if fixed_funcs is None:
         fixed_funcs = {}
-
-    construct_in_background = threads.method(construct_preview_pipeline,
-                                             callback_slot=lambda x: run_preview_recon(*x),
-                                             finished_slot=finish_call,
-                                             lock=threads.mutex)
-    construct_in_background(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
+    return construct_preview_pipeline(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
 
 
 def set_center_correction(name, param_dict):
@@ -369,11 +366,11 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
 
 
 # TODO Since this is already being called on a background thread it can probably just be called without the Runnable
+@QtCore.Slot(list, np.ndarray, types.FunctionType)
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
-        runnable = threads.RunnableMethod(reduce, method_args=((lambda f1, f2: f2(f1)), funstack, initializer),
-                                          callback_slot=callback, lock=threads.mutex)
-        threads.add_to_queue(runnable)
+        bg_reduce = threads.method(callback_slot=callback, lock=threads.mutex)(reduce)
+        bg_reduce(lambda f1, f2: f2(f1), funstack, initializer)  # fold
 
 
 def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
@@ -388,11 +385,9 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
         funcs.append([deepcopy(f.partial), f.name, deepcopy(f.param_dict), f.args_complement,
                       deepcopy(f.input_partials)])
     lock_function_params(False)
-    runnable_it = threads.RunnableIterator(_recon_iter,
-                                           generator_args=(widget, funcs, proj, sino, sino_p_chunk, ncore,),
-                                           callback_slot=update_call, finished_slot=finish_call,
-                                           interrupt_signal=interrupt_signal)
-    threads.add_to_queue(runnable_it)
+    bg_recon_iter = threads.iterator(callback_slot=update_call, finished_slot=finish_call,
+                                     interrupt_signal=interrupt_signal)(_recon_iter)
+    bg_recon_iter(widget, funcs, proj, sino, sino_p_chunk, ncore)
     return params
 
 

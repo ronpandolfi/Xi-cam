@@ -1065,10 +1065,14 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        runnable_it = threads.RunnableIterator(variation.variationiterator,
-                                               generator_args=(self.simg, self.operationindex),
-                                               callback_slot=lambda ret: self.plotvariation(*ret), finished_slot=self.testfinish)
-        threads.add_to_queue(runnable_it)
+        bg_variation = threads.iterator(callback_slot=lambda ret: self.plotvariation(*ret),
+                                      finished_slot=self.testfinish)(variation.variationiterator)
+        bg_variation(self.simg, self.operationindex)
+
+        # runnable_it = threads.RunnableIterator(variation.variationiterator,
+        #                                        generator_args=(self.simg, self.operationindex),
+        #                                        callback_slot=lambda ret: self.plotvariation(*ret), finished_slot=self.testfinish)
+        # threads.add_to_queue(runnable_it)
 
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
@@ -1083,12 +1087,14 @@ class timelineViewer(dimgViewer):
                     # variation = self.simg.scan(self.operationindex, roi)
                     # self.plotvariation(variation, [0, 255, 255])
                     # Run on thread queue
-                    runnable_it = threads.RunnableIterator(variation.variationiterator,
-                                                           generator_args=(self.simg, self.operationindex),
-                                                           generator_kwargs={'roi':roi,'color':[0,255,255]},    # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
-                                                           callback_slot=lambda ret: self.plotvariation(*ret),
-                                                           finished_slot=self.testfinish)
-                    threads.add_to_queue(runnable_it)
+                    # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
+                    bg_variation(self.simg, self.operationindex, roi=roi, color=[0, 255, 255])
+                    # runnable_it = threads.RunnableIterator(variation.variationiterator,
+                    #                                        generator_args=(self.simg, self.operationindex),
+                    #                                        generator_kwargs={'roi':roi,'color':[0,255,255]},
+                    #                                        callback_slot=lambda ret: self.plotvariation(*ret),
+                    #                                        finished_slot=self.testfinish)
+                    # threads.add_to_queue(runnable_it)
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:
