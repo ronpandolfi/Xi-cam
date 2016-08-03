@@ -134,7 +134,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_40.png</normaloff>gui/icons_40.png</iconset>
+         <normaloff>gui/icons_36.png</normaloff>gui/icons_36.png</iconset>
        </property>
        <property name="iconSize">
         <size>
