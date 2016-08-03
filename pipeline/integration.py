@@ -94,7 +94,7 @@ def pixel_2Dintegrate(dimg, mask=None):
         mask = np.zeros_like(dimg.rawdata)
 
     # mask data
-    data = dimg.transformdata * (1 - mask)
+    data = dimg.transformdata * (mask)
 
     # calculate data radial profile
     x, y = np.indices(data.shape)
@@ -102,7 +102,7 @@ def pixel_2Dintegrate(dimg, mask=None):
     r = r.astype(np.int)
 
     tbin = np.bincount(r.ravel(), data.ravel())
-    nr = np.bincount(r.ravel(), (1 - mask).ravel())
+    nr = np.bincount(r.ravel(), (mask).ravel())
     radialprofile = tbin / nr
 
     return radialprofile

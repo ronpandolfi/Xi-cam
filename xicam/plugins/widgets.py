@@ -580,7 +580,7 @@ class dimgViewer(QtGui.QWidget):
         self.findcenter(skipdraw=True)
         print 'center?:', config.activeExperiment.center
 
-        radialprofile = integration.pixel_2Dintegrate(self.dimg)
+        radialprofile = integration.pixel_2Dintegrate(self.dimg,mask=self.dimg.mask)
 
         peaks = np.array(peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
 
