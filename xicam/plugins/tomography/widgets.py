@@ -53,7 +53,6 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Reconstruction View')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -77,9 +76,6 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
         self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
         self.viewstack.addWidget(self.preview3DViewer)
-
-        self.reconstructionViewer = ReconstructionViewer(parent=self)
-        self.viewstack.addWidget(self.reconstructionViewer)
 
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -149,7 +145,7 @@ class TomoViewer(QtGui.QWidget):
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
         fmanager.cor_scale = lambda x: x//8
-        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc)
+        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
 
     def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
         fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
@@ -164,22 +160,14 @@ class TomoViewer(QtGui.QWidget):
 
     def add3DPreview(self, params, recon):
         recon = np.flipud(recon)
-        msg.clearMessage()
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
-
         hist = self.preview3DViewer.volumeviewer.getHistogram()
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
-        path = fmanager.get_output_path()
-        # if not extension was given assume it is a tiff directory.
-        if '.' not in path:
-            path = os.path.split(path)[0]
-        self.reconstructionViewer.openDataset(path=path)
-        self.viewstack.setCurrentWidget(self.reconstructionViewer)
         msg.clearMessage()
 
     def onManualCenter(self, active):
@@ -260,7 +248,6 @@ class StackViewer(ImageView):
     """
     PG ImageView subclass to view projections or sinograms of a tomography dataset
     """
-
     def __init__(self, data=None, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
 
@@ -709,36 +696,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
-        fmanager.set_function_pipeline(current_data, setdefaults=True)
-
-
-class ReconstructionViewer(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(ReconstructionViewer, self).__init__(parent=parent)
-        self.stack_viewer = StackViewer()
-        self.path_edit = QtGui.QLineEdit(parent=self)
-        self.path_edit.setReadOnly(True)
-        self.browse_button = QtGui.QPushButton(parent=self)
-        self.browse_button.setText('Select Reconstruction')
-
-        layout = QtGui.QGridLayout(self)
-        layout.addWidget(self.path_edit, 0, 0, 1, 1)
-        layout.addWidget(self.browse_button, 0, 1, 1, 1)
-        layout.addWidget(self.stack_viewer, 1, 0, 2, 2)
-
-        self.browse_button.clicked.connect(self.openDataset)
-
-    def openDataset(self, path=None):
-        if path is None:
-            path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
-        if path:
-            if len(path) == 1:
-                path = path[0]
-            data = loader.StackImage(path)
-            self.stack_viewer.setData(data)
-            if isinstance(path, list):
-                path = os.path.split(path[0])[0]
-            self.path_edit.setText(path)
+        fmanager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 """
@@ -772,18 +730,18 @@ class VolumeViewer(QtGui.QWidget):
 
         self.levels = [0, 1]
 
-        ly = QtGui.QHBoxLayout()
-        ly.setContentsMargins(0,0,0,0)
-        ly.setSpacing(0)
+        l = QtGui.QHBoxLayout()
+        l.setContentsMargins(0,0,0,0)
+        l.setSpacing(0)
 
         self.volumeRenderWidget=VolumeRenderWidget()
-        ly.addWidget(self.volumeRenderWidget.native)
+        l.addWidget(self.volumeRenderWidget.native)
 
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        ly.addWidget(self.HistogramLUTWidget)
+        l.addWidget(self.HistogramLUTWidget)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -794,11 +752,11 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
-        ly.addWidget(self.xregion)
-        ly.addWidget(self.yregion)
-        ly.addWidget(self.zregion)
+        l.addWidget(self.xregion)
+        l.addWidget(self.yregion)
+        l.addWidget(self.zregion)
 
-        self.setLayout(ly)
+        self.setLayout(l)
 
         # self.setVolume(vol=data,path=path)
 
@@ -1070,43 +1028,38 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    # sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.local_cancelButton = QtGui.QToolButton()
-        self.remote_cancelButton = QtGui.QToolButton()
-
         # Text Browser for local run console
-        self.local_console = QtGui.QTextEdit() #Browser()
+        self.local_console, self.local_cancelButton = self.addConsole('Local')
         self.local_console.setObjectName('Local')
 
-        # Text Brower for remote run console
-        self.remote_console = QtGui.QTextEdit()
-        self.remote_console.setObjectName('Remote')
-
-        for console, button in zip((self.local_console, self.remote_console),
-                                   (self.local_cancelButton, self.remote_cancelButton)):
-            console.setReadOnly(True)
-            console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-            button.setIcon(icon)
-            button.setIconSize(QtCore.QSize(24, 24))
-            button.setFixedSize(32, 32)
-            button.setToolTip('Cancel current process')
-            w = QtGui.QWidget()
-            w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-            w.setContentsMargins(0,0,0,0)
-            l = QtGui.QGridLayout()
-            l.setContentsMargins(0,0,0,0)
-            l.setSpacing(0)
-            l.addWidget(console, 0, 0, 2, 2)
-            l.addWidget(button, 1, 2, 1, 1)
-            w.setLayout(l)
-            self.addTab(w, console.objectName())
+    def addConsole(self, name):
+        console = QtGui.QTextEdit()
+        button = QtGui.QToolButton()
+        console.setObjectName(name)
+        console.setReadOnly(True)
+        console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        button.setIcon(self.icon)
+        button.setIconSize(QtCore.QSize(24, 24))
+        button.setFixedSize(32, 32)
+        button.setToolTip('Cancel running process')
+        w = QtGui.QWidget()
+        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        w.setContentsMargins(0, 0, 0, 0)
+        l = QtGui.QGridLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        l.setSpacing(0)
+        l.addWidget(console, 0, 0, 2, 2)
+        l.addWidget(button, 1, 2, 1, 1)
+        w.setLayout(l)
+        self.addTab(w, console.objectName())
+        return console, button
 
     def log2local(self, msg):
         text = self.local_console.toPlainText()
@@ -1128,14 +1081,6 @@ class RunViewer(QtGui.QTabWidget):
                 self.reconsettings.child('End Projection').value(),
                 self.reconsettings.child('Step Projection').value())
 
-    def runButtonClicked(self):
-        self.sigRunClicked.emit(self.proj_indices(), self.sino_indices(),
-                                self.reconsettings.child('Output Name').value(),
-                                self.reconsettings.child('Ouput Format').value(),
-                                self.localsettings.child('Sinogram Chunks').value(),
-                                self.localsettings.child('Cores').value(),
-                                self.log2local)
-
 
 class Preview3DViewer(QtGui.QSplitter):
     def __init__(self, paths=None, data=None, *args, **kwargs):
@@ -1143,15 +1088,26 @@ class Preview3DViewer(QtGui.QSplitter):
         self.setOrientation(QtCore.Qt.Horizontal)
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
-        self.functiontree = DataTreeWidget()
-        self.functiontree.setHeaderHidden(True)
-        self.functiontree.clear()
-        self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set Pipeline")
-        l.addWidget(self.functiontree)
-        l.addWidget(self.setPipelineButton)
+        self.pipelinetree = DataTreeWidget()
+        self.pipelinetree.setHeaderHidden(True)
+        self.pipelinetree.clear()
+
+        self.setPipelineButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/check_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setPipelineButton.setIcon(icon)
+        self.setPipelineButton.setToolTip('Set as pipeline')
+
+        ly = QtGui.QVBoxLayout()
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
+        ly.addWidget(self.pipelinetree)
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(self.setPipelineButton)
+        ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.setLayout(l)
+        panel.setLayout(ly)
 
         self.volumeviewer = VolumeViewer()
 
@@ -1161,15 +1117,18 @@ class Preview3DViewer(QtGui.QSplitter):
         self.funcdata = None
 
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.hide()
 
     def setPreview(self, recon, funcdata):
-        self.functiontree.setData(funcdata, hideRoot=True)
+        self.pipelinetree.setData(funcdata, hideRoot=True)
         self.funcdata = funcdata
-        self.functiontree.show()
+        self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
+        self.setPipelineButton.show()
 
     def defaultsButtonClicked(self):
-        fmanager.set_function_pipeline(self.funcdata)
+        fmanager.set_pipeline_from_preview(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):

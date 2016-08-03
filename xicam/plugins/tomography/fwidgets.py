@@ -10,6 +10,7 @@ import ui
 import fdata
 import introspect
 import reconpkg
+from xicam import msg
 
 
 try:
@@ -248,7 +249,6 @@ class FuncWidget(FeatureWidget):
             if param.name() in defaults:
                 if isinstance(defaults[param.name()], unicode):
                     defaults[param.name()] = str(defaults[param.name()])
-                # elif defaults[param.name()] is None:
                 param.setDefault(defaults[param.name()])
                 param.setValue(defaults[param.name()])
 
@@ -282,8 +282,9 @@ class FuncWidget(FeatureWidget):
             widget = ui.centerwidget.currentWidget()
             if widget is None: return
             self.updateParamsDict()
+            msg.showMessage('Computing previews for {}:{} parameter range...'.format(self.subfunc_name,
+                                                                                     param.name()), timeout=0)
             for i in test.selectedRange():
-                print 'Setting {} to {}'.format(param.name(), i)
                 self.param_dict[param.name()] = i
                 fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
                                                  fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
