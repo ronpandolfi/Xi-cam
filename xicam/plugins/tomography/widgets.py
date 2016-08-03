@@ -609,7 +609,7 @@ class PreviewViewer(QtGui.QSplitter):
         self.deleteButton = QtGui.QToolButton(self)
         self.deleteButton.setToolTip('Delete this preview')
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.deleteButton.setIcon(icon)
 
         self.setPipelineButton = QtGui.QToolButton(self)
