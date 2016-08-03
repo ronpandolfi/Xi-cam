@@ -35,9 +35,11 @@ class GlobusClient(User):
             access_token = r.json()['access_token']
             self.authentication = {'Authorization': 'Globus-Goauthtoken %s'
                                    % access_token}
-            super(GlobusClient, self).login(username)
+            return super(GlobusClient, self).login(username)
+            return self
         else:
             self.authentication = None
+            raise GLOBUSError('Bad Authentication: Unable to log in')
 
     def add_standard_endpoints(self):
         """

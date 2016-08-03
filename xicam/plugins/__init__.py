@@ -2,20 +2,36 @@ from collections import OrderedDict
 from PySide import QtGui
 import sys
 from xicam import xglobals
+import importlib
+from pipeline import msg
+import os
+import pkgutil
 
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS']
 
 
 def initplugins(placeholders):
-    import MOTD, viewer, timeline, library, fluctuationscattering, xas, ipythonconsole, spoth5file, hipgisaxs, batch, viewer3D, tomography
-
     global plugins, modules
-    modules = [MOTD, viewer, timeline, library, ipythonconsole, fluctuationscattering, xas, viewer3D, spoth5file, hipgisaxs, batch, tomography]
+
+    packages = pkgutil.iter_modules(__path__)
+    print 'packages:',packages
+    packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
+    print 'packages:', packages
+
+    for importer, modname, ispkg in packages:
+        try:
+            print "Found plugin %s (is a package: %s)" % (modname, ispkg)
+            modules.append(importlib.import_module('.'+modname,'xicam.plugins'))
+            print "Imported", modules[-1]
+        except ImportError as ex:
+            msg.logMessage('Module could not be loaded: ' + modname)
+            msg.logMessage(ex.message)
 
     for module in modules:
+        print module.__name__
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
@@ -38,6 +54,7 @@ def buildactivatemenu(modewidget):
 
 class pluginlink():
     def __init__(self, module, placeholders):
+        print module
         self.plugin = module.plugin
         self.modulename = module.__name__
         self.module = module
@@ -50,7 +67,7 @@ class pluginlink():
         self.instance = None
 
     def enable(self):
-        self.module = reload(sys.modules[self.modulename])
+       #self.module = reload(sys.modules[self.modulename])
         self.plugin = self.module.plugin
         self.instance = self.plugin(self.placeholders)
 

@@ -1,40 +1,77 @@
 Normalization:
-  Regular: {}
+  Regular:
+    Enabled: True
+Outlier Removal:
+  Remove Outliers:
+    Parameters:
+      dif: 0.03
+    Enabled: True
 Negative Logarithm:
-  Negative Logarithm: {}
+  Negative Logarithm:
+    Enabled: True
 Stripe Removal:
   Fourier-Wavelet:
-    level: 8
-    wname: db5
-    sigma: 4
-    pad: True
-Pad:
-  Pad:
-    axis: 2
-    mode: edge
-    npad: 531
+    Parameters:
+      level: 8
+      wname: db5
+      sigma: 4
+      pad: True
+    Enabled: True
+Padding:
+  Padding:
+    Parameters:
+      axis: 2
+      mode: edge
+      npad: 531
+    Enabled: True
 Reconstruction:
   Gridrec:
-    cutoff: 0.25
-    order: 2
-    filter_name: butterworth
+    Parameters:
+      cutoff: 0.25
+      order: 2
+      filter_name: butterworth
     Package: tomopy
     Input Functions:
-      Projection Angles:
-        Projection Angles: {}
       Center Detection:
-        Phase Correlation: {}
+        Phase Correlation:
+          Enabled: True
+      Projection Angles:
+        Projection Angles:
+          Parameters:
+            ang1: 270
+            ang2: 90
 Crop:
   Crop:
-    p11: 531
-    p12: 531
-    p21: 531
-    p22: 531
+    Parameters:
+      p11: 531
+      p12: 531
+      p21: 531
+      p22: 531
+    Enabled: True
+Array Operation:
+  Array Operation:
+    Parameters:
+      operation: divide
+    Enabled: True
 Circular Mask:
   Circular Mask:
-    ratio: 1.0
-    val: 0
-    axis: 0
+    Parameters:
+      ratio: 1.0
+      val: 0
+      axis: 0
+    Enabled: True
+Ring Removal:
+  Polar Mean Filter:
+    Enabled: False
+Convert Data Type:
+  Convert Data Type:
+    Parameters:
+      dtype: uint8
+      imin: -10
+      imax: 30
+    Enabled: False
 Write:
   Tiff Stack:
-    digit: 4
+    Parameters:
+      digit: 4
+    Enabled: True

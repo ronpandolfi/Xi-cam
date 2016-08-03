@@ -9,8 +9,8 @@ import time
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
-# Error is raised if this import is removed probably due to some circular import between xglobals and here
-from client import spot, globus
+# Error is raised if this import is removed probably due to some circular with this module and something???
+from client import spot, globus, sftp
 
 
 QtCore.Signal = QtCore.Signal
@@ -70,7 +70,8 @@ class RunnableMethod(QtCore.QRunnable):
         #                                                                 QtCore.QThread.currentThread(),
         #                                                                 self._callback_slot.__name__)
         try:
-            if self.lock is not None: self.lock.lock()
+            if self.lock is not None:
+                self.lock.lock()
             value = self._method(*self.method_args, **self.method_kwargs)
             if value is None:
                 value = False
@@ -80,7 +81,8 @@ class RunnableMethod(QtCore.QRunnable):
         else:
             self.emitter.sigFinished.emit()
         finally:
-            if self.lock is not None: self.lock.unlock()
+            if self.lock is not None:
+                self.lock.unlock()
 
 
 class RunnableIterator(RunnableMethod):

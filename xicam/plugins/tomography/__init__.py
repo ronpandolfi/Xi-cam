@@ -16,17 +16,12 @@ op_sys = platform.system()
 #     from Foundation import NSURL
 
 import os
-import numpy as np
-import pipeline
-from pipeline import loader
+import time
+from pipeline import msg
 from PySide import QtCore, QtGui
-from xicam import xglobals
 import widgets as twidgets
-from xicam.plugins import widgets, explorer
 from xicam.plugins import base
-from PySide import QtUiTools
 import fmanager
-from pyqtgraph.parametertree import ParameterTree
 import ui
 
 
@@ -37,7 +32,7 @@ class plugin(base.plugin):
     name = "Tomography"
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
+        self.leftmodes, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
         self.functionwidget = ui.functionwidget
         self.console = self.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)
@@ -57,6 +52,7 @@ class plugin(base.plugin):
         super(plugin, self).__init__(*args, **kwargs)
 
         self._recon_running = False
+        self.recon_start_time = 0
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -65,22 +61,23 @@ class plugin(base.plugin):
             else:
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
-                print(fname)
                 self.openfiles([fname])
             e.accept()
 
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
 
     def currentChanged(self, index):
         self.toolbar.actionCenter.setChecked(False)
-        for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
-            tab.unload()
+        # for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
+        #     tab.unload()
         try:
-            self.centerwidget.currentWidget().load()
-            self.currentDataset().sigReconFinished.connect(self.fullReconstructionFinished)
-            self.setPipelineValues(self.currentDataset())
+            # self.centerwidget.currentWidget().load()
+            current_dataset = self.currentDataset()
+            if current_dataset is not None:
+                current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
+                current_dataset.wireupCenterSelection(fmanager.recon_function)
+                self.setPipelineValues(current_dataset)
         except AttributeError as e:
             print e.message
 
@@ -101,52 +98,59 @@ class plugin(base.plugin):
         ui.propertytable.hide()
         self.centerwidget.widget(index).deleteLater()
 
-    def openfiles(self, paths,*args,**kwargs):
+    def openfiles(self, paths, *args, **kwargs):
+        msg.showMessage('Loading file...', timeout=10)
         self.activate()
         if type(paths) is list:
             paths = paths[0]
 
-        widget = widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
+        widget = twidgets.TomoViewer(paths=paths) #widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
     def currentDataset(self):
         try:
-            return self.centerwidget.currentWidget().widget
+            return self.centerwidget.currentWidget() #.widget
         except AttributeError:
-            print 'No dataset open.'
+            pass
 
     def previewSlice(self):
+        msg.showMessage('Computing slice preview...', timeout=0)
         self.currentDataset().runSlicePreview()
 
     def preview3D(self):
+        msg.showMessage('Computing 3D preview...', timeout=0)
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
         if not self._recon_running:
             self._recon_running = True
             self.console.local_console.clear()
+            start = ui.configparams.child('Start Sinogram').value()
+            end = ui.configparams.child('End Sinogram').value()
+            step =  ui.configparams.child('Step Sinogram').value()
+            msg.showMessage('Computing reconstruction...', timeout=0)
             self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
                                                 ui.configparams.child('End Projection').value(),
                                                 ui.configparams.child('Step Projection').value()),
-                                               (ui.configparams.child('Start Sinogram').value(),
-                                                ui.configparams.child('End Sinogram').value(),
-                                                ui.configparams.child('Step Sinogram').value()),
-                                               ui.configparams.child('Sinogram Chunks').value(),
-                                               ui.configparams.child('Cores').value(),
-                                               self.console.log2local,
-                                               self.console.local_cancelButton.clicked)
-
+                                               (start, end, step),
+                                               ui.configparams.child('Sinograms/Chunk').value(),
+                                               ui.configparams.child('CPU Cores').value(),
+                                               update_call=self.console.log2local,
+                                               interrupt_signal=self.console.local_cancelButton.clicked)
+            self.recon_start_time = time.time()
         else:
-            r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-                                                                          'Are you sure you want to start another one?',
-                                          (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            if r is QtGui.QMessageBox.Yes:
-                QtGui.QMessageBox.information(self, 'Reconstruction request',
-                                              'Then you should wait until the first one finishes.')
+            print 'Beep'
+            # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+            #                                                               'Are you sure you want to start another one?',
+            #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+            # if r is QtGui.QMessageBox.Yes:
+            #     QtGui.QMessageBox.information(self, 'Reconstruction request',
+            #                                   'Then you should wait until the first one finishes.')
 
     def fullReconstructionFinished(self):
-        self.console.log2local('Reconstruction complete.')
+        run_time = time.time() - self.recon_start_time
+        self.console.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
         self._recon_running = False
 
     def manualCenter(self, value):

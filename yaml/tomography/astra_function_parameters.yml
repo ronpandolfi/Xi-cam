@@ -1,0 +1,76 @@
+BP:
+  - name: center
+    type: float
+    suffix: px
+FBP:
+  - name: center
+    type: float
+    suffix: px
+SIRT:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+SART:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+ART:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+BP_CUDA:
+  - name: center
+    type: float
+    suffix: px
+FBP_CUDA:
+  - name: center
+    type: float
+    suffix: px
+SIRT_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+SART_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+ART_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
