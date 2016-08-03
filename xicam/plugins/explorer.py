@@ -594,7 +594,8 @@ class FileExplorer(QtGui.QWidget):
         self.refresh_button = QtGui.QToolButton(self)
         self.refresh_button.setToolTip('Refresh')
 
-        for button, icon_file in zip((self.back_button, self.refresh_button), ('gui/back.png', 'gui/refresh_2.png')):
+        for button, icon_file in zip((self.back_button, self.refresh_button),
+                                     ('gui/icons_44.png', 'gui/icons_57.png')):
             icon = QtGui.QIcon()
             icon.addPixmap(QtGui.QPixmap(icon_file), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             button.setIcon(icon)

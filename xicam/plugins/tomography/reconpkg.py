@@ -1,19 +1,19 @@
-import warnings
+from pipeline import msg
 
 packages = {}
 try:
     import tomopy
     packages['tomopy'] = tomopy
-    print 'tomopy module loaded'
+    msg.logMessage('tomopy module loaded')
 except ImportError:
-    warnings.warn('tomopy module not available')
+    msg.logMessage('tomopy module not available', level=30)  # 30 -> warning
     packages['tomopy'] = None
     tomopy = None
 try:
     import astra
     packages['astra'] = astra
-    print 'astra module loaded'
+    msg.logMessage('Astra module loaded')
 except ImportError:
-    warnings.warn('astra module not available')
+    msg.logMessage('astra module not available', level=30)
     packages['astra'] = None
     astra = None

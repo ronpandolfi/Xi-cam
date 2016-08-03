@@ -59,15 +59,15 @@ def loadUi():
 
     filefuncmenu = QtGui.QMenu()
     icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/open_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     openaction = QtGui.QAction(icon, 'Open', filefuncmenu,)
     openaction.triggered.connect(fmanager.open_pipeline_file)
     icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/save.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
     saveaction.triggered.connect(lambda :fmanager.save_function_pipeline(fmanager.create_pipeline_dict()))
     icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon.addPixmap(QtGui.QPixmap("gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
     refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
     filefuncmenu.addActions([openaction, saveaction, refreshaction])
@@ -89,7 +89,7 @@ def loadUi():
     l.addWidget(functionwidget)
 
     leftwidget.setLayout(l)
-    icon = QtGui.QIcon(QtGui.QPixmap("gui/function.png"))
+    icon = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
     leftmodes = [(leftwidget, icon)]
 
     rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)

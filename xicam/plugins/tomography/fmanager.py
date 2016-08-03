@@ -3,8 +3,10 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial, wraps
+
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
+from pipeline import msg
 import fdata
 import fwidgets
 import reconpkg
@@ -140,10 +142,10 @@ def load_function_pipeline(yaml_file, setdefaults=False):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
-        set_function_pipeline(pipeline, setdefaults=setdefaults)
+        set_pipeline_from_yaml(pipeline, setdefaults=setdefaults)
 
-
-def set_function_pipeline(pipeline, setdefaults=False):
+# TODO check why the functions are being updated so many times when seting pipeline here and set_pipeline_from_preview
+def set_pipeline_from_yaml(pipeline, setdefaults=False):
     clear_functions()
     # Way too many for loops, oops
     for func, subfuncs in pipeline.iteritems():
@@ -166,8 +168,33 @@ def set_function_pipeline(pipeline, setdefaults=False):
                         if 'Parameters' in sipfs[sipf]:
                             for p, v in sipfs[sipf]['Parameters'].iteritems():
                                 ifwidget.params.child(p).setValue(v)
-                                if setdefaults: ifwidget.params.child(p).setDefault(v)
+                                if setdefaults:
+                                    ifwidget.params.child(p).setDefault(v)
+                        ifwidget.updateParamsDict()
+            funcWidget.updateParamsDict()
 
+
+def set_pipeline_from_preview(pipeline, setdefaults=False):
+    clear_functions()
+    for func, subfuncs in pipeline.iteritems():
+        for subfunc in subfuncs:
+            funcWidget = add_function(func, subfunc)
+            for param, value in subfuncs[subfunc].iteritems():
+                if param == 'Package':
+                    continue
+                elif param == 'Input Functions':
+                    for ipf, sipfs in value.iteritems():
+                        ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
+                        [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                        if setdefaults:
+                            [ifwidget.params.child(p).setDefault(v) for p, v in sipfs[sipfs.keys()[0]].items()]
+                        ifwidget.updateParamsDict()
+                else:
+                    child = funcWidget.params.child(param)
+                    child.setValue(value)
+                    if setdefaults:
+                        child.setDefault(value)
+                funcWidget.updateParamsDict()
 
 
 def create_pipeline_dict():
@@ -209,13 +236,17 @@ def set_function_defaults(mdata, funcs):
         if f.subfunc_name in fdata.als832defaults:
             for p in f.params.children():
                 if p.name() in fdata.als832defaults[f.subfunc_name]:
-                    v = mdata[fdata.als832defaults[f.subfunc_name][p.name()]['name']]
-                    t = fdata.PARAM_TYPES[fdata.als832defaults[f.subfunc_name][p.name()]['type']]
-                    v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
-                    if 'conversion' in fdata.als832defaults[f.subfunc_name][p.name()]:
-                        v *= fdata.als832defaults[f.subfunc_name][p.name()]['conversion']
-                    p.setDefault(v)
-                    p.setValue(v)
+                    try:
+                        v = mdata[fdata.als832defaults[f.subfunc_name][p.name()]['name']]
+                        t = fdata.PARAM_TYPES[fdata.als832defaults[f.subfunc_name][p.name()]['type']]
+                        v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
+                        if 'conversion' in fdata.als832defaults[f.subfunc_name][p.name()]:
+                            v *= fdata.als832defaults[f.subfunc_name][p.name()]['conversion']
+                        p.setDefault(v)
+                        p.setValue(v)
+                    except KeyError as e:
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message))
+
         elif f.func_name == 'Write':
             outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
             f.params.child('fname').setValue(outname)
@@ -231,7 +262,7 @@ def update_function_parameters(funcs):
             update_function_parameters(funcs=f.input_functions)
 
 
-def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs=None):
+def pipeline_preview_action(widget, callback, finish_call=None, update=True, slc=None, fixed_funcs=None):
     global functions
 
     if len(functions) < 1:
@@ -245,6 +276,7 @@ def pipeline_preview_action(widget, callback, update=True, slc=None, fixed_funcs
 
     construct_in_background = threads.method(construct_preview_pipeline,
                                              callback_slot=lambda x: run_preview_recon(*x),
+                                             finished_slot=finish_call,
                                              lock=threads.mutex)
     construct_in_background(widget, callback, update=update, slc=slc, fixed_funcs=fixed_funcs)
 
@@ -336,6 +368,7 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     return funstack, widget.getsino(slc), partial(callback, params)
 
 
+# TODO Since this is already being called on a background thread it can probably just be called without the Runnable
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:
         runnable = threads.RunnableMethod(reduce, method_args=((lambda f1, f2: f2(f1)), funstack, initializer),
@@ -366,13 +399,15 @@ def run_full_recon(widget, proj, sino, sino_p_chunk, ncore, update_call=None,
 def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
     write_start = sino[0]
     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-    total_sino = (sino[1] - sino[0]) // sino[2]
+    total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
     if total_sino < sino_p_chunk:
         sino_p_chunk = total_sino
 
     for i in range(nchunk):
         init = True
-        start, end = i * sino_p_chunk + sino[0], (i + 1) * sino_p_chunk + sino[0]
+        start, end = i*sino[2]*sino_p_chunk + sino[0], (i + 1)*sino[2]*sino_p_chunk + sino[0]
+        end = end if end < sino[1] else sino[1]
+
         for fpartial, fname, param_dict, fargs, ipartials in fpartials:
             ts = time.time()
             yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(fname, start,
@@ -387,7 +422,6 @@ def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
             elif 'Tiff' in fname:
                 fpartial.keywords['start'] = write_start
                 write_start += tomo.shape[0]
-            # This needs to be fixed so that the center is only detected once &not re-detected in each chunk
             # elif 'Reconstruction' in fname:
             #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
             #     # and set the reconstruction partial to the updated one.
@@ -397,9 +431,3 @@ def _recon_iter(datawidget, fpartials, proj, sino, sino_p_chunk, ncore):
             #     tomo = fpartial(tomo)
             tomo = fpartial(tomo)
             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-
-def get_output_path():
-    global functions
-    write_funcs = [f for f in functions if f.func_name == 'Write']
-    return write_funcs[-1].params.child('fname').value()

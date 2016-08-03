@@ -8,13 +8,13 @@ class tomotoolbar(QtGui.QToolBar):
 
         self.actionRun_SlicePreview = QtGui.QAction(self)
         icon17 = QtGui.QIcon()
-        icon17.addPixmap(QtGui.QPixmap("gui/glasses.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon17.addPixmap(QtGui.QPixmap("gui/icons_50.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_SlicePreview.setIcon(icon17)
         self.actionRun_SlicePreview.setToolTip('Slice preview')
 
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon17 = QtGui.QIcon()
-        icon17.addPixmap(QtGui.QPixmap("gui/3d_glasses.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon17.addPixmap(QtGui.QPixmap("gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_3DPreview.setIcon(icon17)
         self.actionRun_3DPreview.setToolTip('3D preview')
 

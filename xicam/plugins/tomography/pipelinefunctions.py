@@ -11,7 +11,6 @@ DTYPE_RANGE = {'uint8': (0, 255),
 def crop(arr, p11, p12, p21, p22, axis=0):
     """
     Crops a 3D array along a given axis. Equivalent to slicing the array
-
     :param arr: ndarray
     :param p11: int, first point along first axis
     :param p12: int, second point along first axis
@@ -33,7 +32,6 @@ def crop(arr, p11, p12, p21, p22, axis=0):
 def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
     """
     Convert an image or 3D array to another datatype
-
     :param arr: ndarray, data array
     :param dtype: dataype keyword
     :param imin,
@@ -89,14 +87,6 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
 
 
 def array_operation(arr, value, operation='divide'):
-    """
-    Simple array operations
-
-    :param arr:
-    :param value:
-    :param operation:
-    :return:
-    """
     if operation not in ('add', 'subtract', 'multiply', 'divide'):
         raise ValueError('Operation {} is not a valid array operation'.format(operation))
     elif operation == 'add':
