@@ -1313,7 +1313,7 @@ class integrationsubwidget(pg.PlotWidget):
                                           args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
                                           callback=self.replotcallback)
     def movPosLine(self, qx,qz,dimg=None):
-        raise NotImplementedError
+        pass #raise NotImplementedError
 
     def plotresult(self, result):
 
@@ -1423,6 +1423,10 @@ class remeshqintegrationwidget(integrationsubwidget):
         super(remeshqintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
+    def movPosLine(self,qx,qz,dimg=None):
+        self.posLine.setPos(np.sqrt(qx**2+qz**2))
+        self.posLine.show()
+
 class remeshchiintegrationwidget(integrationsubwidget):
 
     isremesh=True
@@ -1432,6 +1436,10 @@ class remeshchiintegrationwidget(integrationsubwidget):
     def __init__(self):
         super(remeshchiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
+
+    def movPosLine(self, qx, qz, dimg=None):
+        self.posLine.setPos(np.rad2deg(np.arctan2(qz, qx)))
+        self.posLine.show()
 
 class remeshxintegrationwidget(integrationsubwidget):
 

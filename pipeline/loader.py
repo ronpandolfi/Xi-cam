@@ -1194,7 +1194,7 @@ class diffimage2(object):
             print 'headers:', self.headers
             # read incident angle
 
-            alphai = self.getAlphaI()
+            alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)

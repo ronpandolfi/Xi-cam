@@ -389,14 +389,18 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
 
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
+
+    from matplotlib import pylab as plt
+
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    print config.activeExperiment
+
     alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
     msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
 
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, alphai)  # TODO: get incoming angle from header
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))  # TODO: get incoming angle from header
     qsquared=qpar**2 + qvrt**2
+
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
 
@@ -419,7 +423,11 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, .1)  # TODO: get incoming angle from header
+
+    alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
+    msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
+
+    qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))  # TODO: get incoming angle from header
     qsquared=qpar**2 + qvrt**2
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
