@@ -227,14 +227,14 @@ def add_to_queue(runnable):
 
 #TODO: allow threads to be compatibile with debugging
 # Application globals
+queue = Queue.Queue()
+worker = Worker(queue)
+mutex = QtCore.QMutex()
+worker_thread = QtCore.QThread()
+worker.moveToThread(worker_thread)
+worker_thread.started.connect(worker.run)
+
 import sys
 if not sys.gettrace():
     print 'Loading thread queue...'
-    global queue, worker, worker_thread, mutex
-    queue = Queue.Queue()
-    worker = Worker(queue)
-    mutex = QtCore.QMutex()
-    worker_thread = QtCore.QThread()
-    worker.moveToThread(worker_thread)
-    worker_thread.started.connect(worker.run)
     worker_thread.start()
