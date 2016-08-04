@@ -198,7 +198,7 @@ def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, exce
     return wrap_runnable_iterator
 
 
-class Worker(QtCore.QObject):
+class Worker(QtCore.QThread):
     """
     Daemon worker that contains a Queue and QThreadPool for running jobs
     """
@@ -208,45 +208,39 @@ class Worker(QtCore.QObject):
         self.queue = queue
         self.pool = QtCore.QThreadPool.globalInstance()  # Should I use globalInstance() or a seperate instance?
         self.pool.setMaxThreadCount(mp.cpu_count())
-        self._stop = False
 
     def __del__(self):
         self.queue.join()
 
-    def stopWork(self):
-        self._stop = True
+    def stop(self):
+        self.queue.put(None)
+        self.wait()
 
     def run(self):
         """
         Continuously get Runnables from queue and running them on available threads as long as stop flag is false
         """
-        while not self._stop:
+        while True:
             runnable = self.queue.get()
             # print "Worker got item {} off queue".format(type(item))
+            if runnable is None:
+                break
             self.pool.start(runnable, runnable._priority)
             self.queue.task_done()
             time.sleep(0.1)
-
 
 def add_to_queue(runnable):
     global queue
     try:
         queue.put(runnable)
     except Exception as e:
-        print 'Error: ', e.message
+        from pipeline import msg
+        msg.logMessage(e, level=40)
+        raise e
 
 
-#TODO: allow threads to be compatibile with debugging
 # Application globals
 queue = Queue.Queue()
 worker = Worker(queue)
 mutex = QtCore.QMutex()
-worker_thread = QtCore.QThread()
-worker.moveToThread(worker_thread)
-worker_thread.started.connect(worker.run)
-
-
-#  Only start worker if no debugger is being used
-if not sys.gettrace():
-    print 'Loading thread queue...'
-    worker_thread.start()
+worker.start()
