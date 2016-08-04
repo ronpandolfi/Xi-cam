@@ -470,6 +470,8 @@ class diffimage():
                     debugtools.frustration()
                     raise IOError('File moved, corrupted, or deleted. Load failed')
 
+
+
     @property
     def mask(self):
         if self.experiment.mask is not None:
@@ -1192,7 +1194,7 @@ class diffimage2(object):
             print 'headers:', self.headers
             # read incident angle
 
-            alphai = self.getAlphaI()
+            alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)
@@ -1247,11 +1249,11 @@ class diffimage2(object):
     def __getitem__(self, item):
         return self.displaydata[item]
 
-    # def __getattr__(self, name):
-    #     if name in self.cache:
-    #         return self.cache[name]
-    #     else:
-    #         raise AttributeError('diffimage has no attribute: ' + name)
+    def __getattr__(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            raise AttributeError('diffimage has no attribute: ' + name)
 
 
 # class singlefilediffimage2(diffimage2):
