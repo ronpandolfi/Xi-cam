@@ -96,7 +96,6 @@ class MyMainWindow(QtCore.QObject):
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
-        self.ui.closeEvent = self.closeEvent
 
         # STYLE
         # self.app.setStyle('Plastique')
@@ -199,9 +198,13 @@ class MyMainWindow(QtCore.QObject):
         self.ui.installEventFilter(self)
 
     def eventFilter(self, obj, ev):
-        # print self, ev.type()
-        if ev.type() == QtCore.QEvent.Close:
-            self.closeAllConnections()
+        if obj is self.ui:  # if the object is from the MainWindow
+            if ev.type() == QtCore.QEvent.Close:
+                self.closeAllConnections()
+                threads.worker.stop()  # ask worker to stop nicely
+                return True
+            else:
+                return False
         return QtCore.QObject.eventFilter(self, obj, ev)
 
     def closeAllConnections(self):
@@ -264,9 +267,6 @@ class MyMainWindow(QtCore.QObject):
         config.activeExperiment.setvalue('Center X', 969.878684978)
         config.activeExperiment.setvalue('Center Y', 2048 - 2237.93277884)
         self.openfiles(['/home/rp/Downloads/lab6_041016_rct5_0001.tif'])
-
-    def closeEvent(self, ev):  # Never called???
-        ev.accept()
 
     def changetimelineoperation(self, index):
         self.currentTimelineTab().tab.setvariationmode(index)

@@ -479,17 +479,11 @@ class SpotDatasetView(QtGui.QTreeWidget):
         save_path = [os.path.join(tempfile.gettempdir(), file_name)]
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
-    #TODO this looks hacky, need to find a cleaner solution
-    @threads.method(callback_slot=lambda x: x[0].createDatasetDictionary(x[1]), finished_slot=msg.clearMessage)
     def getDatasets(self, query):
         msg.showMessage('Searching SPOT database...')
-        r = self.client.search(query, **self.search_params)
-        # runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
-        #                                   method_kwargs=self.search_params,
-        #                                   callback_slot=self.createDatasetDictionary,
-        #                                   finished_slot=msg.clearMessage)
-        # threads.add_to_queue(runnable)
-        return self, r
+        search = threads.method(callback_slot=self.createDatasetDictionary,
+                                finished_slot=msg.clearMessage)(self.client.search)
+        search(query, **self.search_params)
 
     @QtCore.Slot(dict)
     def createDatasetDictionary(self, data):
@@ -535,11 +529,11 @@ class SpotDatasetView(QtGui.QTreeWidget):
                 msg.showMessage('Loading preview...')
                 dataset = item.parent().parent().text(0)
                 stage = item.parent().text(0)
-                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit)(self.client.get_image_as)
+                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit,
+                                                except_slot=self.handleException)(self.client.get_image_as)
                 bg_get_preview(dataset, stage, index=0)
         except AttributeError:
             pass
-
 
     def getStagesAndDatasets(self):
         dsets_stages = [(item.parent().parent().text(0), item.parent().text(0))
@@ -581,8 +575,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         kwargs = {}
         return desc, method, args, kwargs
 
-    def handlePreviewAction(self):
-        print "Not implemented!"
+    def handleException(self, ex, tb):
+        msg.showMessage('Unable to fetch preview from SPOT.')
+        msg.logMessage(ex, level=40)
 
 
 class FileExplorer(QtGui.QWidget):
