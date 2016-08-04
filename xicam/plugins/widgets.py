@@ -1068,12 +1068,6 @@ class timelineViewer(dimgViewer):
         bg_variation = threads.iterator(callback_slot=lambda ret: self.plotvariation(*ret),
                                       finished_slot=self.testfinish)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
-
-        # runnable_it = threads.RunnableIterator(variation.variationiterator,
-        #                                        generator_args=(self.simg, self.operationindex),
-        #                                        callback_slot=lambda ret: self.plotvariation(*ret), finished_slot=self.testfinish)
-        # threads.add_to_queue(runnable_it)
-
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
         # variation = self.simg.scan(self.operationindex)
@@ -1089,12 +1083,6 @@ class timelineViewer(dimgViewer):
                     # Run on thread queue
                     # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
                     bg_variation(self.simg, self.operationindex, roi=roi, color=[0, 255, 255])
-                    # runnable_it = threads.RunnableIterator(variation.variationiterator,
-                    #                                        generator_args=(self.simg, self.operationindex),
-                    #                                        generator_kwargs={'roi':roi,'color':[0,255,255]},
-                    #                                        callback_slot=lambda ret: self.plotvariation(*ret),
-                    #                                        finished_slot=self.testfinish)
-                    # threads.add_to_queue(runnable_it)
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:
@@ -1103,7 +1091,6 @@ class timelineViewer(dimgViewer):
 
     def plotvariation(self, variationx, variationy, color=None):
         # variation=variation[0]
-        print color
         if variationx == None:
             return
 

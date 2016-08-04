@@ -529,11 +529,11 @@ class SpotDatasetView(QtGui.QTreeWidget):
                 msg.showMessage('Loading preview...')
                 dataset = item.parent().parent().text(0)
                 stage = item.parent().text(0)
-                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit)(self.client.get_image_as)
+                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit,
+                                                except_slot=self.handleException)(self.client.get_image_as)
                 bg_get_preview(dataset, stage, index=0)
         except AttributeError:
             pass
-
 
     def getStagesAndDatasets(self):
         dsets_stages = [(item.parent().parent().text(0), item.parent().text(0))
@@ -575,8 +575,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         kwargs = {}
         return desc, method, args, kwargs
 
-    def handlePreviewAction(self):
-        print "Not implemented!"
+    def handleException(self, ex, tb):
+        msg.showMessage('Unable to fetch preview from SPOT.')
+        msg.logMessage(ex, level=40)
 
 
 class FileExplorer(QtGui.QWidget):
