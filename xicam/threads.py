@@ -227,7 +227,7 @@ class Worker(QtCore.QThread):
                 break
             self.pool.start(runnable, runnable._priority)
             self.queue.task_done()
-            time.sleep(0.1)
+
 
 def add_to_queue(runnable):
     global queue
