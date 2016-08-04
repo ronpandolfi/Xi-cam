@@ -289,17 +289,17 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
         padleft1 = int(abs(deltaX))
         padright2 = int(abs(deltaX))
 
-    d2 = numpy.pad(data2, ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
-    d1 = numpy.pad(data1, ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
+    d2 = np.pad(data2, ((padtop2, padbottom2), (padleft2, padright2)), 'constant')
+    d1 = np.pad(data1, ((padtop1, padbottom1), (padleft1, padright1)), 'constant')
 
-    mask2 = numpy.pad(1 - finddetectorbyfilename(filepath2, data2).calc_mask(),
+    mask2 = np.pad(1 - finddetectorbyfilename(filepath2, data2).calc_mask(),
                       ((padtop2, padbottom2), (padleft2, padright2)),
                       'constant')
-    mask1 = numpy.pad(1 - finddetectorbyfilename(filepath1, data1).calc_mask(),
+    mask1 = np.pad(1 - finddetectorbyfilename(filepath1, data1).calc_mask(),
                       ((padtop1, padbottom1), (padleft1, padright1)),
                       'constant')
 
-    with numpy.errstate(divide='ignore'):
+    with np.errstate(divide='ignore'):
         data = (d1 / I1 + d2 / I2) / (mask2 + mask1) * (I1 + I2) / 2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)
@@ -1191,10 +1191,10 @@ class diffimage2(object):
 
     def remesh(self, img, mask):
         if not self.iscached('remesh'):
-            print 'headers:', self.headers
             # read incident angle
 
             alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
+            msg.logMessage('Using incidence angle value: ' + str(alphai))
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
                                              self.experiment.getGeometry(), alphai)

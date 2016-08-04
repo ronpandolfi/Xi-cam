@@ -153,7 +153,6 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 #@debugtools.timeit
 def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
-    centeroverride = None # TODO: reimplement for remeshing
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
@@ -166,9 +165,6 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
         AI = pyFAI.AzimuthalIntegrator()
         AI.setPyFAI(**AIdict)
 
-    if centeroverride is not None:
-        AI.set_poni1(centeroverride[0])
-        AI.set_poni2(centeroverride[1])
     # Always do mask with 1-valid, 0's excluded
     dimg = None
 
@@ -208,12 +204,14 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
         mask = mask.astype(bool) & cut.astype(bool)
     #        data *= cut
 
+    np.save('test.npy',mask)
+
     xres = 2000
     (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method='lut_ocl')  #pyfai uses 0-valid mask
     # Truncate last 3 points, which typically have very high error?
 
-    radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
-    q = q[:len(radialprofile)] / 10.0
+    #radialprofile = np.trim_zeros(radialprofile[:-3], 'b')
+    q = q/10.#[:len(radialprofile)] / 10.0
 
     return q, radialprofile, color, requestkey
 
@@ -427,7 +425,6 @@ def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey
     alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
     msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
 
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))  # TODO: get incoming angle from header
     qsquared=qpar**2 + qvrt**2
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
@@ -454,11 +451,11 @@ def remeshxintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
         print 'cut:', cut.shape
         mask &= cut.astype(bool)
 
-    center = np.where(qvrt == qvrt.min())
-    qx = qvrt[center[1]]
+    center = np.where(np.abs(qpar) == np.abs(qpar).min())
+    qx = qpar[:,center[0][0]]/10.
 
     maskeddata = np.ma.masked_array(data, mask=1 - mask)
-    xprofile = np.ma.average(maskeddata, axis=0)
+    xprofile = np.ma.average(maskeddata, axis=1)
 
     return qx, xprofile, color, requestkey
 
@@ -476,9 +473,10 @@ def remeshzintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
         print 'cut:', cut.shape
         mask &= cut.astype(bool)
 
-    q = np.arange(1000) * np.max(AI.qArray(data.shape[::-1]))
+    center = np.where(np.abs(qvrt) == np.abs(qvrt).min())
+    qx = -qvrt[center[1][0]]/10.
 
     maskeddata = np.ma.masked_array(data, mask=1 - mask)
-    zprofile = np.ma.average(maskeddata, axis=0)
+    xprofile = np.ma.average(maskeddata, axis=0)
 
-    return q, zprofile, color, requestkey
+    return qx, xprofile, color, requestkey

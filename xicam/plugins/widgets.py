@@ -379,8 +379,7 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
         # self.coordslabel.setVisible(False)
-        if hasattr(self.plotwidget, 'qintegration'):
-            self.plotwidget.qintegration.posLine.setVisible(False)
+        self.plotwidget.hidePosLine()
 
     def enterEvent(self, evt):
         """
@@ -494,7 +493,7 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in verticalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.transformdata.shape[1]],
+                                      bounds=[0, self.dimg.transformdata.shape[0]],
                                       values=[self.getcenter()[0] - 10,
                                               10 + self.getcenter()[0]])
         for line in region.lines:
@@ -519,8 +518,8 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in horizontalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.transformdata.shape[0]],
-                                      values=[10 - self.getcenter()[1],
+                                      bounds=[0, self.dimg.transformdata.shape[1]],
+                                      values=[self.getcenter()[1]-10,
                                               10 + self.getcenter()[1]])
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
@@ -603,6 +602,8 @@ class dimgViewer(QtGui.QWidget):
 
 #        self.refinecenter()
         xglobals.hardresetpool()
+
+        self.dimg.invalidatecache()
 
         self.replot()
         self.drawcenter()
@@ -1251,6 +1252,10 @@ class integrationwidget(QtGui.QTabWidget):
         imageitem = viewer.imageitem
         self.widget(self.currentIndex()).replot(dimg,rois,imageitem)
 
+    def hidePosLine(self):
+        if self.currentIndex() > -1:
+            self.widget(self.currentIndex()).posLine.hide()
+
 
 class integrationsubwidget(pg.PlotWidget):
     integrationfunction = None
@@ -1451,15 +1456,23 @@ class remeshxintegrationwidget(integrationsubwidget):
         super(remeshxintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
+    def movPosLine(self, qx,qz,dimg=None):
+        self.posLine.setPos(qx)
+        self.posLine.show()
+
 class remeshzintegrationwidget(integrationsubwidget):
 
     isremesh=True
     sigPlotResult = QtCore.Signal(object)
-    integratefunction = staticmethod(integration.remeshzintegrate)
+    integrationfunction = staticmethod(integration.remeshzintegrate)
 
     def __init__(self):
         super(remeshzintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
+
+    def movPosLine(self, qx,qz,dimg=None):
+        self.posLine.setPos(qz)
+        self.posLine.show()
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
