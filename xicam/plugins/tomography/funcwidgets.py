@@ -1,141 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from PySide import QtCore, QtGui
-import numpy as np
-from functools import partial
 from copy import deepcopy
+from functools import partial
+
+import numpy as np
+from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import fmanager
-import ui
-import fdata
+
+import configdata
 import introspect
+import manager
 import reconpkg
+import ui
 from xicam import msg
-
-
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
-
-
-class FeatureWidget(QtGui.QWidget):
-    def __init__(self, name='', checkable=True, parent=None):
-        self.name = name
-
-        self._form = None
-
-        super(FeatureWidget, self).__init__(parent=parent)
-
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.verticalLayout = QtGui.QVBoxLayout(self)
-        self.verticalLayout.setSpacing(0)
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.frame = QtGui.QFrame(self)
-        self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame.setFrameShadow(QtGui.QFrame.Raised)
-        self.horizontalLayout_2 = QtGui.QHBoxLayout(self.frame)
-        self.horizontalLayout_2.setSpacing(0)
-        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.previewButton = QtGui.QPushButton(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.previewButton.sizePolicy().hasHeightForWidth())
-        self.previewButton.setSizePolicy(sizePolicy)
-        self.previewButton.setStyleSheet("margin:0 0 0 0;")
-        self.previewButton.setText("")
-        icon = QtGui.QIcon()
-        if checkable:
-            icon.addPixmap(QtGui.QPixmap("gui/icons_48.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
-            self.previewButton.setCheckable(True)
-        else:
-            icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            self.previewButton.setCheckable(False)
-            self.previewButton.setChecked(True)
-        self.previewButton.setIcon(icon)
-        self.previewButton.setFlat(True)
-        self.previewButton.setChecked(True)
-        self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.previewButton.setObjectName("pushButton")
-        self.horizontalLayout_2.addWidget(self.previewButton)
-        self.line = QtGui.QFrame(self.frame)
-        self.line.setFrameShape(QtGui.QFrame.VLine)
-        self.line.setFrameShadow(QtGui.QFrame.Sunken)
-        self.line.setObjectName("line")
-        self.horizontalLayout_2.addWidget(self.line)
-        self.txtName = ROlineEdit(self.frame)
-        self.txtName.setObjectName("txtName")
-        self.horizontalLayout_2.addWidget(self.txtName)
-        self.txtName.setText(name)
-        self.line_3 = QtGui.QFrame(self.frame)
-        self.line_3.setFrameShape(QtGui.QFrame.VLine)
-        self.line_3.setFrameShadow(QtGui.QFrame.Sunken)
-        self.line_3.setObjectName("line_3")
-        self.horizontalLayout_2.addWidget(self.line_3)
-        self.closeButton = QtGui.QPushButton(self.frame)
-        self.closeButton.setStyleSheet("margin:0 0 0 0;")
-        self.closeButton.setText("")
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.closeButton.setIcon(icon1)
-        self.closeButton.setFlat(True)
-        self.closeButton.setObjectName("pushButton_3")
-        self.closeButton.clicked.connect(self.delete)
-        self.horizontalLayout_2.addWidget(self.closeButton)
-        self.verticalLayout.addWidget(self.frame)
-        self.txtName.sigClicked.connect(self.mouseClicked)
-
-        self.frame.setFrameShape(QtGui.QFrame.Box)
-        self.frame.setCursor(QtCore.Qt.ArrowCursor)
-
-    def delete(self):
-        value = QtGui.QMessageBox.question(None, 'Delete this feature?',
-                                           'Are you sure you want to delete this function?',
-                                           (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-        if value is QtGui.QMessageBox.Yes:
-            fmanager.functions = [feature for feature in fmanager.functions if feature is not self]
-            self.deleteLater()
-            ui.showform(ui.blankform)
-
-    def hideothers(self):
-        for item in fmanager.functions:
-            if hasattr(item, 'frame_2') and item is not self and self in fmanager.functions:
-                    item.frame_2.hide()
-
-    def mouseClicked(self):
-        self.showSelf()
-        self.hideothers()
-        self.setFocus()
-        try:
-            fmanager.currentindex = fmanager.functions.index(self)
-        except ValueError:
-            pass
-        self.previewButton.setFocus()
-
-    def showSelf(self):
-        ui.showform(self.form)
-
-    def setName(self, name):
-        self.name = name
-        fmanager.update()
+from xicam.plugins.tomography.features.widgets import FeatureWidget
 
 
 class FuncWidget(FeatureWidget):
@@ -147,11 +25,10 @@ class FuncWidget(FeatureWidget):
 
         self.func_name = function
         self.subfunc_name = subfunction
-        self._formpath = 'gui/guiLayer.ui'
         self._form = None
         self._partial = None
-        self._function = getattr(package, fdata.names[self.subfunc_name][0])
-        self.params = Parameter.create(name=self.name, children=fdata.parameters[self.subfunc_name], type='group')
+        self._function = getattr(package, configdata.names[self.subfunc_name][0])
+        self.params = Parameter.create(name=self.name, children=configdata.parameters[self.subfunc_name], type='group')
         self.param_dict = {}
         self.input_functions = None
         self.setDefaults()
@@ -286,8 +163,8 @@ class FuncWidget(FeatureWidget):
                                                                                      param.name()), timeout=0)
             for i in test.selectedRange():
                 self.param_dict[param.name()] = i
-                fmanager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
-                                                 fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
+                manager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
+                                                fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
                                                                                   deepcopy(self.partial)]})
 
 class ReconFuncWidget(FuncWidget):
@@ -314,7 +191,7 @@ class ReconFuncWidget(FuncWidget):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
-        ui.buildfunctionmenu(self.submenu, fdata.funcs['Input Functions'][function], self.addInputFunction)
+        ui.buildfunctionmenu(self.submenu, configdata.funcs['Input Functions'][function], self.addInputFunction)
         self.menu.addMenu(self.submenu)
 
         self.input_functions = [self.center, self.angles]
@@ -509,24 +386,3 @@ class TestListRangeDialog(QtGui.QDialog):
     def selectedRange(self):
         return str(self.lineEdit.text()).split(' ')
 
-
-class ROlineEdit(QtGui.QLineEdit):
-    sigClicked = QtCore.Signal()
-    def __init__(self, *args, **kwargs):
-        super(ROlineEdit, self).__init__(*args, **kwargs)
-        self.setReadOnly(True)
-        self.setFrame(False)
-
-    def focusOutEvent(self, *args, **kwargs):
-        super(ROlineEdit, self).focusOutEvent(*args, **kwargs)
-        self.setCursor(QtCore.Qt.ArrowCursor)
-
-    def mousePressEvent(self, *args, **kwargs):
-        super(ROlineEdit, self).mousePressEvent(*args, **kwargs)
-        self.sigClicked.emit()
-
-    def mouseDoubleClickEvent(self, *args, **kwargs):
-        super(ROlineEdit, self).mouseDoubleClickEvent(*args, **kwargs)
-        self.setFrame(True)
-        self.setFocus()
-        self.selectAll()

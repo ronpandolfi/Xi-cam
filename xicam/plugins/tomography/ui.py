@@ -7,8 +7,8 @@ from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
 import toolbar as ttoolbar
-import fdata
-import fmanager
+import configdata
+import manager
 import widgets
 
 blankform = None
@@ -42,16 +42,16 @@ def loadUi():
     functionwidget.moveDownButton.setToolTip('Move selected function down')
     functionwidget.moveUpButton.setToolTip('Move selected function up')
 
-    functionwidget.clearButton.clicked.connect(fmanager.clear_action)
+    functionwidget.clearButton.clicked.connect(manager.clear_action)
     functionwidget.moveUpButton.clicked.connect(
-        lambda: fmanager.swap_functions(fmanager.currentindex,
-                                        fmanager.currentindex - 1))
+        lambda: manager.swap_functions(manager.currentindex,
+                                       manager.currentindex - 1))
     functionwidget.moveDownButton.clicked.connect(
-        lambda: fmanager.swap_functions(fmanager.currentindex,
-                                        fmanager.currentindex + 1))
+        lambda: manager.swap_functions(manager.currentindex,
+                                       manager.currentindex + 1))
 
     addfunctionmenu = QtGui.QMenu()
-    buildfunctionmenu(addfunctionmenu, fdata.funcs['Functions'], fmanager.add_action)
+    buildfunctionmenu(addfunctionmenu, configdata.funcs['Functions'], manager.add_action)
 
     functionwidget.addFunctionButton.setMenu(addfunctionmenu)
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -61,15 +61,15 @@ def loadUi():
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     openaction = QtGui.QAction(icon, 'Open', filefuncmenu,)
-    openaction.triggered.connect(fmanager.open_pipeline_file)
+    openaction.triggered.connect(manager.open_pipeline_file)
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
-    saveaction.triggered.connect(lambda :fmanager.save_function_pipeline(fmanager.create_pipeline_dict()))
+    saveaction.triggered.connect(lambda :manager.save_function_pipeline(manager.create_pipeline_dict()))
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
-    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
+    refreshaction.triggered.connect(lambda: manager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
     filefuncmenu.addActions([openaction, saveaction, refreshaction])
 
     functionwidget.fileButton.setMenu(filefuncmenu)
@@ -84,7 +84,6 @@ def loadUi():
     paramtree = pt.ParameterTree()
     paramformstack = QtGui.QStackedWidget()
     paramformstack.addWidget(paramtree)
-    paramformstack.setFixedHeight(160)
     l.addWidget(paramformstack)
     l.addWidget(functionwidget)
 
@@ -116,21 +115,6 @@ def loadUi():
     #     lambda: configparams.param('Output Name').setValue(
     #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
     #                                               configparams.param('Output Name').value())[0])))
-
-    # sinostart = configparams.param('Start Sinogram')
-    # sinoend = configparams.param('End Sinogram')
-    # sinostep = configparams.param('Step Sinogram')
-    # nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-    # sinos = configparams.param('Sinograms/Chunk')
-    # chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-    # sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
-    # chunks.sigValueChanged.connect(chunkschanged)
-    # sinos.sigValueChanged.connect(sinoschanged)
-    # sinostart.sigValueChanged.connect(chunkschanged)
-    # sinoend.sigValueChanged.connect(chunkschanged)
-    # sinostep.sigValueChanged.connect(chunkschanged)
-    # chunks.setValue(1)
-
     rightwidget.addWidget(configtree)
 
     propertytable = pg.TableWidget() #QtGui.QTableView()
@@ -187,5 +171,4 @@ def setconfigparams(sino, proj):
     configparams.child('End Projection').setLimits([0, proj])
     configparams.child('Start Projection').setLimits([0, proj])
     configparams.child('Step Projection').setLimits([0, proj])
-    # configparams.child('Output Name').setValue(outname)
 

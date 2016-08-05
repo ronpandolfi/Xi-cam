@@ -21,9 +21,9 @@ from pipeline import msg
 from PySide import QtCore, QtGui
 import widgets as twidgets
 from xicam.plugins import base
-import fmanager
 import ui
-
+from features.manager import FeatureManager
+from features.widgets import FeatureWidget
 
 class plugin(base.plugin):
     """
@@ -38,10 +38,14 @@ class plugin(base.plugin):
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+        f1, f2 = FeatureWidget('One'), FeatureWidget('Two')
+        test = [f1,f2, FeatureWidget('Three')]
+        self.manager = FeatureManager(self.functionwidget.functionsList, ui.paramformstack, feature_widgets=test)
+        self.manager.swapFeatures(f1, f2)
         # SETUP FEATURES
-        fmanager.layout = self.functionwidget.functionsList
-        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
-        fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml', setdefaults=True)
+        # manager.layout = self.functionwidget.functionsList
+        # self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
+        # manager.load_function_pipeline('yaml/tomography/default_pipeline.yml', setdefaults=True)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -76,7 +80,7 @@ class plugin(base.plugin):
             current_dataset = self.currentDataset()
             if current_dataset is not None:
                 current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
-                current_dataset.wireupCenterSelection(fmanager.recon_function)
+                current_dataset.wireupCenterSelection(manager.recon_function)
                 self.setPipelineValues(current_dataset)
         except AttributeError as e:
             print e.message
@@ -87,11 +91,11 @@ class plugin(base.plugin):
         ui.propertytable.show()
         ui.setconfigparams(int(widget.data.header['nslices']),
                            int(widget.data.header['nangles']))
-        fmanager.set_function_defaults(widget.data.header, funcs=fmanager.functions)
-        fmanager.update_function_parameters(funcs=fmanager.functions)
-        recon = fmanager.recon_function
-        if recon is not None:
-            recon.setCenterParam(self.currentDataset().cor)
+        # manager.set_function_defaults(widget.data.header, funcs=manager.functions)
+        # manager.update_function_parameters(funcs=manager.functions)
+        # recon = manager.recon_function
+        # if recon is not None:
+        #     recon.setCenterParam(self.currentDataset().cor)
 
     def tabCloseRequested(self, index):
         ui.propertytable.clear()

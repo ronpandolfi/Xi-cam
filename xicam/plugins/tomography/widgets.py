@@ -18,7 +18,7 @@ from pipeline import loader
 import pyqtgraph as pg
 import imageio
 import os
-import fmanager
+import manager
 from pipeline import msg
 
 __author__ = "Ronald J Pandolfi"
@@ -140,16 +140,16 @@ class TomoViewer(QtGui.QWidget):
 
     def runSlicePreview(self):
         slice_no = self.sinogramViewer.view_spinBox.value()
-        fmanager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
+        manager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        fmanager.cor_scale = lambda x: x//8
-        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
+        manager.cor_scale = lambda x: x // 8
+        manager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
 
     def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
-        fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
-                                interrupt_signal=interrupt_signal)
+        manager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
+                               interrupt_signal=interrupt_signal)
 
     def addSlicePreview(self, params, recon, slice_no=None):
         if slice_no is None:
@@ -696,7 +696,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
-        fmanager.set_pipeline_from_preview(current_data, setdefaults=True)
+        manager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 """
@@ -1128,7 +1128,7 @@ class Preview3DViewer(QtGui.QSplitter):
         self.setPipelineButton.show()
 
     def defaultsButtonClicked(self):
-        fmanager.set_pipeline_from_preview(self.funcdata)
+        manager.set_pipeline_from_preview(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):
