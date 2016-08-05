@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__author__ = "Ronald J Pandolfi"
+__author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
 __license__ = ""
@@ -17,10 +17,11 @@ op_sys = platform.system()
 
 import os
 import time
-from pipeline import msg
-from PySide import QtCore, QtGui
-import widgets as twidgets
+from PySide import QtGui
+import yamlmod
 from xicam.plugins import base
+from pipeline import msg
+import widgets as twidgets
 import ui
 import config
 from fncwidgets import FunctionManager
@@ -34,15 +35,18 @@ class plugin(base.plugin):
     name = "Tomography"
     def __init__(self, *args, **kwargs):
 
-        self.leftmodes, self.centerwidget, self.rightwidget, self.bottomwidget, self.toolbar = ui.loadUi()
-        self.functionwidget = ui.functionwidget
-        self.console = self.bottomwidget
+        self.ui = ui.UIform()
+        self.ui.setupUi()
+        self.centerwidget = self.ui.centerwidget
+        self.toolbar = self.ui.toolbar
+        self.leftmodes = self.ui.leftmodes
+        self.rightmodes = self.ui.rightmodes
+        self.bottomwidget = self.ui.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # Setup FunctionManager
-        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
-        self.manager = FunctionManager(self.functionwidget.functionsList, ui.paramformstack,
+        self.manager = FunctionManager(self.ui.functionwidget.functionsList, self.ui.param_form,
                                        blank_form='Select a function from\n below to set parameters...')
         config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
 
@@ -52,9 +56,13 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         self.toolbar.connecttriggers(self.previewSlice, self.preview3D, self.fullReconstruction, self.manualCenter)
+        self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
+                        lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
+                        lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
+                                self.clearPipeline)
+
         super(plugin, self).__init__(*args, **kwargs)
 
-        self._recon_running = False
         self.recon_start_time = 0
 
     def dropEvent(self, e):
@@ -72,22 +80,55 @@ class plugin(base.plugin):
 
     def currentChanged(self, index):
         self.toolbar.actionCenter.setChecked(False)
-        # for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
-        #     tab.unload()
         try:
-            # self.centerwidget.currentWidget().load()
             current_dataset = self.currentDataset()
             if current_dataset is not None:
                 current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
-                current_dataset.wireupCenterSelection(manager.recon_function)
+                current_dataset.wireupCenterSelection(self.manager.recon_function)
                 self.setPipelineValues(current_dataset)
         except AttributeError as e:
-            print e.message
+            msg.logMessage(e, level=40)
+
+    def openfiles(self, paths, *args, **kwargs):
+        msg.showMessage('Loading file...', timeout=10)
+        self.activate()
+        if type(paths) is list:
+            paths = paths[0]
+
+        widget = twidgets.TomoViewer(paths=paths)
+        self.centerwidget.addTab(widget, os.path.basename(paths))
+        self.centerwidget.setCurrentWidget(widget)
+
+    def loadPipeline(self):
+        open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
+                                                      os.path.expanduser('~'), selectedFilter='*.yml')[0]
+        if open_file != '':
+            config.load_pipeline(open_file, self.manager)
+
+    def savePipeline(self):
+        save_file = QtGui.QFileDialog.getSaveFileName(None, 'Save tomography pipeline file as',
+                                                      os.path.expanduser('~'), selectedFilter='*.yml')[0]
+
+        save_file = save_file.split('.')[0] + '.yml'
+        with open(save_file, 'w') as yml:
+            yamlmod.ordered_dump(self.manager.pipeline_dict, yml)
+
+    def clearPipeline(self):
+        value = QtGui.QMessageBox.question(None, 'Delete functions', 'Are you sure you want to clear ALL functions?',
+                                           (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
+        if value is QtGui.QMessageBox.Yes:
+            self.manager.removeAllFeatures()
+
+    def resetPipeline(self):
+        value = QtGui.QMessageBox.question(None, 'Reset functions', 'Do you want to reset to default functions?',
+                                           (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
+        if value is QtGui.QMessageBox.Yes:
+            config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
 
     def setPipelineValues(self, widget):
-        ui.propertytable.setData(widget.data.header.items())
-        ui.propertytable.setHorizontalHeaderLabels(['Parameter', 'Value'])
-        ui.propertytable.show()
+        self.ui.property_table.setData(widget.data.header.items())
+        self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.ui.property_table.show()
         ui.setconfigparams(int(widget.data.header['nslices']),
                            int(widget.data.header['nangles']))
         # manager.set_function_defaults(widget.data.header, funcs=manager.functions)
@@ -97,25 +138,15 @@ class plugin(base.plugin):
         #     recon.setCenterParam(self.currentDataset().cor)
 
     def tabCloseRequested(self, index):
-        ui.propertytable.clear()
-        ui.propertytable.hide()
+        self.ui.property_table.clear()
+        self.ui.property_table.hide()
         self.centerwidget.widget(index).deleteLater()
-
-    def openfiles(self, paths, *args, **kwargs):
-        msg.showMessage('Loading file...', timeout=10)
-        self.activate()
-        if type(paths) is list:
-            paths = paths[0]
-
-        widget = twidgets.TomoViewer(paths=paths) #widgets.OOMTabItem(itemclass=twidgets.TomoViewer, paths=paths)
-        self.centerwidget.addTab(widget, os.path.basename(paths))
-        self.centerwidget.setCurrentWidget(widget)
 
     def currentDataset(self):
         try:
-            return self.centerwidget.currentWidget() #.widget
+            return self.centerwidget.currentWidget()
         except AttributeError:
-            pass
+            return None
 
     def previewSlice(self):
         msg.showMessage('Computing slice preview...', timeout=0)
@@ -128,7 +159,7 @@ class plugin(base.plugin):
     def fullReconstruction(self):
         if not self._recon_running:
             self._recon_running = True
-            self.console.local_console.clear()
+            self.bottomwidget.local_console.clear()
             start = ui.configparams.child('Start Sinogram').value()
             end = ui.configparams.child('End Sinogram').value()
             step =  ui.configparams.child('Step Sinogram').value()
@@ -139,8 +170,8 @@ class plugin(base.plugin):
                                                (start, end, step),
                                                ui.configparams.child('Sinograms/Chunk').value(),
                                                ui.configparams.child('CPU Cores').value(),
-                                               update_call=self.console.log2local,
-                                               interrupt_signal=self.console.local_cancelButton.clicked)
+                                               update_call=self.bottomwidget.log2local,
+                                               interrupt_signal=self.bottomwidget.local_cancelButton.clicked)
             self.recon_start_time = time.time()
         else:
             print 'Beep'
@@ -153,7 +184,7 @@ class plugin(base.plugin):
 
     def fullReconstructionFinished(self):
         run_time = time.time() - self.recon_start_time
-        self.console.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
+        self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
         self._recon_running = False
 
     def manualCenter(self, value):

@@ -169,6 +169,7 @@ class FeatureManager(object):
         self._llayout = list_layout
         self._flayout = form_layout
         self.features = []
+        self.selectedFeature = None
 
         if feature_widgets is not None:
             for feature in feature_widgets:
@@ -191,6 +192,27 @@ class FeatureManager(object):
     def count(self):
         return len(self.features)
 
+    @property
+    def nextFeature(self):
+        try:
+            index = self.features.index(self.selectedFeature)
+        except (ValueError, IndexError):
+            return None
+        if index > 0:
+            return self.features[index - 1]
+        else:
+            return self.selectedFeature
+
+    @property
+    def previousFeature(self):
+        if self.selectedFeature is None:
+            return None
+        index = self.features.index(self.selectedFeature)
+        if index < self.count - 1:
+            return self.features[index + 1]
+        else:
+            return self.selectedFeature
+
     def addFeature(self, feature):
         self.features.append(feature)
         self._llayout.addWidget(feature)
@@ -203,6 +225,7 @@ class FeatureManager(object):
         self.collapseAllFeatures()
         self.showForm(feature.form)
         feature.expand()
+        self.selectedFeature = feature
 
     def collapseAllFeatures(self):
         for feature in self.features:
@@ -214,11 +237,14 @@ class FeatureManager(object):
     def removeFeature(self, feature):
         self.features.remove(feature)
         feature.deleteLater()
-        self.update()
+        del feature
+        self.showForm(self.blank_form)
 
     def removeAllFeatures(self):
         for feature in self.features:
-            self.removeFeature(feature)
+            feature.deleteLater()
+            del feature
+        self.features = []
 
     def clearLayouts(self):
         for feature in self.features:
@@ -227,11 +253,10 @@ class FeatureManager(object):
 
     def update(self):
         self.clearLayouts()
-        self.showForm(self.blank_form)
         for feature in self.features:
             self._llayout.addWidget(feature)
             self._flayout.addWidget(feature.form)
-        self.collapseAllFeatures()
+        self.showForm(self.selectedFeature.form)
 
     def swapFeatures(self, f1, f2):
         idx_1, idx_2 = self.features.index(f1), self.features.index(f2)

@@ -27,7 +27,6 @@ class FunctionWidget(fw.FeatureWidget):
         self.func_name = name
         self.subfunc_name = subname
         self.input_functions = None
-        print 'GOT PACKAGE ', package
         self._function = getattr(package, config.names[self.subfunc_name][0])
         self.param_dict = {}
         self._partial = None
@@ -399,7 +398,6 @@ class FunctionManager(fw.FeatureManager):
         self.cor_offset = None
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
-        self.functions = self.features  # rename for readability
         self.pipeline_yaml = {}
 
     # TODO fix this astra check raise error if package not available
@@ -419,7 +417,7 @@ class FunctionManager(fw.FeatureManager):
     @property
     def pipeline_dict(self):
         d = OrderedDict()
-        for f in self.functions:
+        for f in self.features:
             d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
             d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
             if f.func_name == 'Reconstruction':
@@ -433,7 +431,7 @@ class FunctionManager(fw.FeatureManager):
         return d
 
     def updateParameters(self):
-        for function in self.functions:
+        for function in self.features:
             function.updateParamsDict()
 
     def setCenterCorrection(self, name, param_dict):
