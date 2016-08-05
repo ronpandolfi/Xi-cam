@@ -8,8 +8,8 @@ import numpy as np
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
 from pipeline import msg
-import configdata
-import funcwidgets
+import config
+import fncwidgets
 import reconpkg
 import ui
 import yamlmod
@@ -76,9 +76,9 @@ def add_action(function, subfunction):
 def add_function(function, subfunction):
     global functions, recon_function, currentindex
     try:
-        package = reconpkg.packages[configdata.names[subfunction][1]]
+        package = reconpkg.packages[config.names[subfunction][1]]
     except KeyError:
-        package = eval(configdata.names[subfunction][1])
+        package = eval(config.names[subfunction][1])
     # if not hasattr(package, fdata.names[subfunction][0]):
     #     warnings.warn('{0} function not available in {1}'.format(subfunction, package))
     #     return
@@ -86,12 +86,12 @@ def add_function(function, subfunction):
     currentindex = len(functions)
     if function == 'Reconstruction':
         if reconpkg.astra is not None and package == reconpkg.astra:
-            func = funcwidgets.AstraReconFuncWidget(function, subfunction, package)
+            func = fncwidgets.AstraReconFuncWidget(function, subfunction, package)
         else:
-            func = funcwidgets.ReconFuncWidget(function, subfunction, package)
+            func = fncwidgets.ReconFunctionWidget(function, subfunction, package)
         recon_function = func
     else:
-        func = funcwidgets.FuncWidget(function, subfunction, package)
+        func = fncwidgets.FunctionWidget(function, subfunction, package)
     functions.append(func)
     update()
     return func
@@ -234,15 +234,15 @@ def set_function_defaults(mdata, funcs):
     for f in funcs:
         if f is None:
             continue
-        if f.subfunc_name in configdata.als832defaults:
+        if f.subfunc_name in config.als832defaults:
             for p in f.params.children():
-                if p.name() in configdata.als832defaults[f.subfunc_name]:
+                if p.name() in config.als832defaults[f.subfunc_name]:
                     try:
-                        v = mdata[configdata.als832defaults[f.subfunc_name][p.name()]['name']]
-                        t = configdata.PARAM_TYPES[configdata.als832defaults[f.subfunc_name][p.name()]['type']]
+                        v = mdata[config.als832defaults[f.subfunc_name][p.name()]['name']]
+                        t = config.PARAM_TYPES[config.als832defaults[f.subfunc_name][p.name()]['type']]
                         v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
-                        if 'conversion' in configdata.als832defaults[f.subfunc_name][p.name()]:
-                            v *= configdata.als832defaults[f.subfunc_name][p.name()]['conversion']
+                        if 'conversion' in config.als832defaults[f.subfunc_name][p.name()]:
+                            v *= config.als832defaults[f.subfunc_name][p.name()]['conversion']
                         p.setDefault(v)
                         p.setValue(v)
                     except KeyError as e:
@@ -365,7 +365,6 @@ def construct_preview_pipeline(widget, callback, fixed_funcs=None, update=True, 
     return funstack, widget.getsino(slc), partial(callback, params)
 
 
-# TODO Since this is already being called on a background thread it can probably just be called without the Runnable
 @QtCore.Slot(list, np.ndarray, types.FunctionType)
 def run_preview_recon(funstack, initializer, callback):
     if funstack is not None:

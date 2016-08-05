@@ -2,37 +2,37 @@
 
 from copy import deepcopy
 from functools import partial
-
+from collections import OrderedDict
 import numpy as np
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-import configdata
+import config
 import introspect
 import manager
 import reconpkg
 import ui
 from xicam import msg
-from xicam.plugins.tomography.features.widgets import FeatureWidget
+import ftrwidgets as fw
+import yamlmod
 
 
-class FuncWidget(FeatureWidget):
-    def __init__(self, function, subfunction, package, checkable=True, parent=None):
-        self.name = function
-        if function != subfunction:
-            self.name += ' (' + subfunction + ')'
-        super(FuncWidget, self).__init__(self.name, checkable=checkable, parent=parent)
+class FunctionWidget(fw.FeatureWidget):
+    def __init__(self, name, subname, package, checkable=True, parent=None):
+        self.name = name
+        if name != subname:
+            self.name += ' (' + subname + ')'
+        super(FunctionWidget, self).__init__(self.name, checkable=checkable, parent=parent)
 
-        self.func_name = function
-        self.subfunc_name = subfunction
-        self._form = None
-        self._partial = None
-        self._function = getattr(package, configdata.names[self.subfunc_name][0])
-        self.params = Parameter.create(name=self.name, children=configdata.parameters[self.subfunc_name], type='group')
-        self.param_dict = {}
+        self.func_name = name
+        self.subfunc_name = subname
         self.input_functions = None
-        self.setDefaults()
-        self.updateParamsDict()
+        print 'GOT PACKAGE ', package
+        self._function = getattr(package, config.names[self.subfunc_name][0])
+        self.param_dict = {}
+        self._partial = None
+
+        self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
 
         # Create dictionary with keys and default values that are not shown in the functions form
         self.kwargs_complement = introspect.get_arg_defaults(self._function)
@@ -45,6 +45,11 @@ class FuncWidget(FeatureWidget):
         s = set(self.param_dict.keys() + self.kwargs_complement.keys())
         self.args_complement = [i for i in self.args_complement if i not in s]
 
+        self.form = ParameterTree(showHeader=False)
+        self.form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.form.customContextMenuRequested.connect(self.paramMenuRequested)
+        self.form.setParameters(self.params, showTop=True)
+
         self.parammenu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
         action.triggered.connect(self.testParamTriggered)
@@ -53,7 +58,9 @@ class FuncWidget(FeatureWidget):
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
         self.menu = QtGui.QMenu()
 
-    def wireup(self):
+        self.setDefaults()
+        self.updateParamsDict()
+
         for param in self.params.children():
             param.sigValueChanged.connect(self.paramChanged)
 
@@ -70,19 +77,12 @@ class FuncWidget(FeatureWidget):
         else:
             self.previewButton.setChecked(False)
 
-    @property
-    def form(self):
-        if self._form is None:
-            self._form = ParameterTree(showHeader=False)
-            self._form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            self._form.customContextMenuRequested.connect(self.paramMenuRequested)
-            self._form.setParameters(self.params, showTop=True)
-            self.wireup()
-        return self._form
-
     def updateParamsDict(self):
         for param in self.params.children():
             self.param_dict.update({param.name(): param.value()})
+        if self.input_functions is not None:
+            for ipf in self.input_functions:
+                ipf.updateParamsDict()
         return self.param_dict
 
     @property
@@ -167,31 +167,31 @@ class FuncWidget(FeatureWidget):
                                                 fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
                                                                                   deepcopy(self.partial)]})
 
-class ReconFuncWidget(FuncWidget):
-    def __init__(self, function, subfunction, package):
-        super(ReconFuncWidget, self).__init__(function, subfunction, package, checkable=False)
+class ReconFunctionWidget(FunctionWidget):
+    def __init__(self, name, subname, package):
+        super(ReconFunctionWidget, self).__init__(name, subname, package, checkable=False)
 
         self.packagename = package.__name__
-        self.kwargs_complement['algorithm'] = subfunction.lower()
+        self.kwargs_complement['algorithm'] = subname.lower()
 
         # Input functions
         self.center = None
         self.angles = None
 
-        self.frame_2 = QtGui.QFrame(self)
-        self.frame_2.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.frame_2.setFrameShadow(QtGui.QFrame.Raised)
-        self.frame_2_layout = QtGui.QVBoxLayout(self.frame_2)
-        self.frame_2_layout.setContentsMargins(5, 5, 5, 5)
-        self.frame_2_layout.setSpacing(0)
-        self.verticalLayout.addWidget(self.frame_2)
-        self.frame_2.hide()
+        self.subframe = QtGui.QFrame(self)
+        self.subframe.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.subframe.setFrameShadow(QtGui.QFrame.Raised)
+        self.subframe_layout = QtGui.QVBoxLayout(self.subframe)
+        self.subframe_layout.setContentsMargins(5, 5, 5, 5)
+        self.subframe_layout.setSpacing(0)
+        self.verticalLayout.addWidget(self.subframe)
+        self.subframe.hide()
 
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
-        ui.buildfunctionmenu(self.submenu, configdata.funcs['Input Functions'][function], self.addInputFunction)
+        ui.buildfunctionmenu(self.submenu, config.funcs['Input Functions'][name], self.addInputFunction)
         self.menu.addMenu(self.submenu)
 
         self.input_functions = [self.center, self.angles]
@@ -243,13 +243,13 @@ class ReconFuncWidget(FuncWidget):
             except AttributeError:
                     pass
         checkable = False if func == 'Projection Angles' else True
-        fwidget = FuncWidget(func, subfunc, package=package, checkable=checkable)
+        fwidget = FunctionWidget(func, subfunc, package=package, checkable=checkable)
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
         h.addWidget(fwidget)
         fwidget.destroyed.connect(indent.deleteLater)
-        self.frame_2_layout.addLayout(h)
+        self.subframe_layout.addLayout(h)
         if func == 'Projection Angles':
             self.angles = fwidget
         else:
@@ -259,8 +259,8 @@ class ReconFuncWidget(FuncWidget):
         return fwidget
 
     def mouseClicked(self):
-        super(ReconFuncWidget, self).mouseClicked()
-        self.frame_2.show()
+        super(ReconFunctionWidget, self).mouseClicked()
+        self.subframe.show()
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -270,13 +270,13 @@ class ReconFuncWidget(FuncWidget):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
 
-class AstraReconFuncWidget(ReconFuncWidget):
-    def __init__(self, function, subfunction, package):
-        super(AstraReconFuncWidget, self).__init__(function, subfunction, reconpkg.tomopy)
+class AstraReconFuncWidget(ReconFunctionWidget):
+    def __init__(self, name, subname, package):
+        super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.tomopy)
         self.kwargs_complement['algorithm'] = reconpkg.tomopy.astra
         self.kwargs_complement['options'] = {}
-        self.kwargs_complement['options']['method'] = subfunction.replace(' ', '_')
-        if 'CUDA' in subfunction:
+        self.kwargs_complement['options']['method'] = subname.replace(' ', '_')
+        if 'CUDA' in subname:
             self.kwargs_complement['options']['proj_type'] = 'cuda'
         else:
             self.kwargs_complement['options']['proj_type'] = 'linear'
@@ -334,11 +334,10 @@ class TestRangeDialog(QtGui.QDialog):
             self.spinBox_2.setValue(prange[1])
             self.spinBox_3.setValue(prange[2])
 
-
-        self.setWindowTitle(_translate("Dialog", "Set parameter range", None))
-        self.label.setText(_translate("Dialog", "Start", None))
-        self.label_2.setText(_translate("Dialog", "End", None))
-        self.label_3.setText(_translate("Dialog", "Step", None))
+        self.setWindowTitle("Set parameter range")
+        self.label.setText("Start")
+        self.label_2.setText("End")
+        self.label_3.setText("Step")
 
     def selectedRange(self):
         # return the end as selected end + step so that the range includes the end
@@ -365,7 +364,7 @@ class TestListRangeDialog(QtGui.QDialog):
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        self.setWindowTitle(_translate("Dialog", "Set parameter range", None))
+        self.setWindowTitle('Set parameter range')
 
         self.options = options
         self.comboBox.addItems(options)
@@ -386,3 +385,65 @@ class TestListRangeDialog(QtGui.QDialog):
     def selectedRange(self):
         return str(self.lineEdit.text()).split(' ')
 
+
+
+class FunctionManager(fw.FeatureManager):
+    """
+    Class to manage tomography workflow/pipeline FunctionWidgets
+    """
+
+    def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
+        super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
+                                              blank_form=blank_form)
+
+        self.cor_offset = None
+        self.cor_scale = lambda x: x  # dummy
+        self.recon_function = None
+        self.functions = self.features  # rename for readability
+        self.pipeline_yaml = {}
+
+    # TODO fix this astra check raise error if package not available
+    def addFunction(self, function, subfunction, package):
+        if function == 'Reconstruction':
+            if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
+                func_widget = AstraReconFuncWidget(function, subfunction, package)
+            else:
+                func_widget = ReconFunctionWidget(function, subfunction, package)
+            self.recon_function = func_widget
+        else:
+            func_widget = FunctionWidget(function, subfunction, package)
+
+        self.addFeature(func_widget)
+        return func_widget  #TODO why do i return this?
+
+    @property
+    def pipeline_dict(self):
+        d = OrderedDict()
+        for f in self.functions:
+            d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
+            d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
+            if f.func_name == 'Reconstruction':
+                d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
+            if f.input_functions is not None:
+                d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+                for ipf in f.input_functions:
+                    if ipf is not None:
+                        id = {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}
+                        d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
+        return d
+
+    def updateParameters(self):
+        for function in self.functions:
+            function.updateParamsDict()
+
+    def setCenterCorrection(self, name, param_dict):
+        global cor_offset, cor_scale
+        if 'Padding' in name and param_dict['axis'] == 2:
+            n = param_dict['npad']
+            cor_offset = lambda x: cor_scale(x) + n
+        elif 'Downsample' in name and param_dict['axis'] == 2:
+            s = param_dict['level']
+            cor_scale = lambda x: x / 2 ** s
+        elif 'Upsample' in name and param_dict['axis'] == 2:
+            s = param_dict['level']
+            cor_scale = lambda x: x * 2 ** s

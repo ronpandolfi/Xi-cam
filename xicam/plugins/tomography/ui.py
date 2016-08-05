@@ -1,13 +1,12 @@
 import os
 from functools import partial
-import numpy as np
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
 import toolbar as ttoolbar
-import configdata
+import config
 import manager
 import widgets
 
@@ -51,7 +50,7 @@ def loadUi():
                                        manager.currentindex + 1))
 
     addfunctionmenu = QtGui.QMenu()
-    buildfunctionmenu(addfunctionmenu, configdata.funcs['Functions'], manager.add_action)
+    buildfunctionmenu(addfunctionmenu, config.funcs['Functions'], manager.add_action)
 
     functionwidget.addFunctionButton.setMenu(addfunctionmenu)
     functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)

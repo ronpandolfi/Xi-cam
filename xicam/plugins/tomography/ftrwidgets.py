@@ -1,19 +1,17 @@
 from PySide import QtGui, QtCore
 
-from xicam.plugins.tomography import ui
-
 
 class FeatureWidget(QtGui.QWidget):
 
-    sigShowForm = QtCore.Signal(QtGui.QWidget)
+    sigClicked = QtCore.Signal(QtGui.QWidget)
     sigDelete = QtCore.Signal(QtGui.QWidget)
 
 
-    def __init__(self, name='', checkable=True, parent=None):
+    def __init__(self, name='', checkable=True, subfeatures=None, parent=None):
         super(FeatureWidget, self).__init__(parent=parent)
 
         self.name = name
-        self.form = QtGui.QLabel(self.name)#QtGui.QWidget()
+        self.form = QtGui.QLabel(self.name) # default form
 
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -23,6 +21,7 @@ class FeatureWidget(QtGui.QWidget):
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+
         self.frame = QtGui.QFrame(self)
         self.frame.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frame.setFrameShadow(QtGui.QFrame.Raised)
@@ -38,6 +37,7 @@ class FeatureWidget(QtGui.QWidget):
         self.previewButton.setStyleSheet("margin:0 0 0 0;")
         self.previewButton.setText("")
         icon = QtGui.QIcon()
+
         if checkable:
             icon.addPixmap(QtGui.QPixmap("gui/icons_48.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
@@ -73,9 +73,32 @@ class FeatureWidget(QtGui.QWidget):
         self.horizontalLayout_2.addWidget(self.closeButton)
         self.verticalLayout.addWidget(self.frame)
         self.txtName.sigClicked.connect(self.mouseClicked)
-
         self.frame.setFrameShape(QtGui.QFrame.Box)
         self.frame.setCursor(QtCore.Qt.ArrowCursor)
+
+        self.subframe = QtGui.QFrame(self)
+        self.subframe.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.subframe.setFrameShadow(QtGui.QFrame.Raised)
+        self.subframe_layout = QtGui.QGridLayout(self.subframe)
+        self.subframe_layout.setContentsMargins(0, 0, 0, 0)
+        self.subframe_layout.setSpacing(0)
+        self.verticalLayout.addWidget(self.subframe)
+        self.subframe.hide()
+
+        if subfeatures is not None:
+            for subfeature in subfeatures:
+                self.addSubFeature(subfeature)
+
+        self.collapse()
+
+    def addSubFeature(self, feature):
+        r = self.subframe_layout.rowCount()
+        spacerItem = QtGui.QSpacerItem(20, 20, QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Minimum)
+        self.subframe_layout.addItem(spacerItem, r, 0, 1, 1)
+        if isinstance(feature, QtGui.QLayout):
+            self.subframe_layout.addLayout(feature, r, 2, 1, 1)
+        elif isinstance(feature, QtGui.QWidget):
+            self.subframe_layout.addWidget(feature, r, 2, 1, 1)
 
     def delete(self):
         self.sigDelete.emit(self)
@@ -86,16 +109,17 @@ class FeatureWidget(QtGui.QWidget):
         #     manager.functions = [feature for feature in manager.functions if feature is not self]
         #     self.deleteLater()
         #     ui.showform(ui.blankform)
-        pass
 
-    def hideothers(self):
-        # for item in manager.functions:
-        #     if hasattr(item, 'frame_2') and item is not self and self in manager.functions:
-        #             item.frame_2.hide()
-        pass
+    def collapse(self):
+        if self.subframe is not None:
+            self.subframe.hide()
+
+    def expand(self):
+        if self.subframe is not None:
+            self.subframe.show()
 
     def mouseClicked(self):
-        self.sigShowForm.emit(self.form)
+        self.sigClicked.emit(self)
         self.setFocus()
         self.previewButton.setFocus()
         # self.hideothers()
@@ -132,3 +156,84 @@ class ROlineEdit(QtGui.QLineEdit):
         self.setFrame(True)
         self.setFocus()
         self.selectAll()
+
+
+class FeatureManager(object):
+    """
+    Feature Manager class to manage a list of FeatureWidgets and show the list in an appropriate layout and their
+    corresponding forms in another layout. list layout must have an addWidget, removeWidget methods. Form layout
+    must in addition have a setCurrentWidget method
+    """
+
+    def __init__(self, list_layout, form_layout, feature_widgets=None, blank_form=None):
+        self._llayout = list_layout
+        self._flayout = form_layout
+        self.features = []
+
+        if feature_widgets is not None:
+            for feature in feature_widgets:
+                self.addFeature(feature)
+
+        if blank_form is not None:
+            if isinstance(blank_form, str):
+                self.blank_form = QtGui.QLabel(blank_form)
+            else:
+                self.blank_form = blank_form
+        else:
+            self.blank_form = QtGui.QLabel('Select a feature to view its form')
+        self.blank_form.setAlignment(QtCore.Qt.AlignCenter)
+        self.blank_form.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
+
+        self._flayout.addWidget(self.blank_form)
+        self.showForm(self.blank_form)
+
+    @property
+    def count(self):
+        return len(self.features)
+
+    def addFeature(self, feature):
+        self.features.append(feature)
+        self._llayout.addWidget(feature)
+        self._flayout.addWidget(feature.form)
+        feature.sigClicked.connect(self.featureClicked)
+        feature.sigDelete.connect(self.removeFeature)
+
+    @QtCore.Slot(QtGui.QWidget)
+    def featureClicked(self, feature):
+        self.collapseAllFeatures()
+        self.showForm(feature.form)
+        feature.expand()
+
+    def collapseAllFeatures(self):
+        for feature in self.features:
+            feature.collapse()
+
+    def showForm(self, form):
+        self._flayout.setCurrentWidget(form)
+
+    def removeFeature(self, feature):
+        self.features.remove(feature)
+        feature.deleteLater()
+        self.update()
+
+    def removeAllFeatures(self):
+        for feature in self.features:
+            self.removeFeature(feature)
+
+    def clearLayouts(self):
+        for feature in self.features:
+            self._flayout.removeWidget(feature)
+            self._llayout.removeWidget(feature)
+
+    def update(self):
+        self.clearLayouts()
+        self.showForm(self.blank_form)
+        for feature in self.features:
+            self._llayout.addWidget(feature)
+            self._flayout.addWidget(feature.form)
+        self.collapseAllFeatures()
+
+    def swapFeatures(self, f1, f2):
+        idx_1, idx_2 = self.features.index(f1), self.features.index(f2)
+        self.features[idx_1], self.features[idx_2] = self.features[idx_2], self.features[idx_1]
+        self.update()

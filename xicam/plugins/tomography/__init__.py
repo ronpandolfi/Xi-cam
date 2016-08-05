@@ -22,8 +22,10 @@ from PySide import QtCore, QtGui
 import widgets as twidgets
 from xicam.plugins import base
 import ui
-from features.manager import FeatureManager
-from features.widgets import FeatureWidget
+import config
+from fncwidgets import FunctionManager
+
+DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
 
 class plugin(base.plugin):
     """
@@ -38,14 +40,11 @@ class plugin(base.plugin):
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        f1, f2 = FeatureWidget('One'), FeatureWidget('Two')
-        test = [f1,f2, FeatureWidget('Three')]
-        self.manager = FeatureManager(self.functionwidget.functionsList, ui.paramformstack, feature_widgets=test)
-        self.manager.swapFeatures(f1, f2)
-        # SETUP FEATURES
-        # manager.layout = self.functionwidget.functionsList
-        # self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
-        # manager.load_function_pipeline('yaml/tomography/default_pipeline.yml', setdefaults=True)
+        # Setup FunctionManager
+        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
+        self.manager = FunctionManager(self.functionwidget.functionsList, ui.paramformstack,
+                                       blank_form='Select a function from\n below to set parameters...')
+        config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
