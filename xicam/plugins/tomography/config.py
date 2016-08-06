@@ -1,4 +1,5 @@
 import os
+from collections import OrderedDict
 import yaml
 import yamlmod
 from pipeline import msg
@@ -128,3 +129,19 @@ def set_als832_defaults(mdata, funcs):
 
         if f.input_functions is not None:
             set_als832_defaults(mdata, funcs=f.input_functions)
+
+
+def extract_pipeline_dict(funwidget_list):
+    d = OrderedDict()
+    for f in funwidget_list:
+        d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
+        d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
+        if f.func_name == 'Reconstruction':
+            d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
+        if f.input_functions is not None:
+            d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            for ipf in f.input_functions:
+                if ipf is not None:
+                    id = {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}
+                    d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
+    return d

@@ -6,7 +6,6 @@ class FeatureWidget(QtGui.QWidget):
     sigClicked = QtCore.Signal(QtGui.QWidget)
     sigDelete = QtCore.Signal(QtGui.QWidget)
 
-
     def __init__(self, name='', checkable=True, subfeatures=None, parent=None):
         super(FeatureWidget, self).__init__(parent=parent)
 
@@ -106,8 +105,6 @@ class FeatureWidget(QtGui.QWidget):
         #                                    'Are you sure you want to delete this function?',
         #                                    (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         # if value is QtGui.QMessageBox.Yes:
-        #     manager.functions = [feature for feature in manager.functions if feature is not self]
-        #     self.deleteLater()
         #     ui.showform(ui.blankform)
 
     def collapse(self):
@@ -122,18 +119,6 @@ class FeatureWidget(QtGui.QWidget):
         self.sigClicked.emit(self)
         self.setFocus()
         self.previewButton.setFocus()
-        # self.hideothers()
-        # try:
-        #     manager.currentindex = manager.functions.index(self)
-        # except ValueError:
-        #     pass
-
-    # def showSelf(self):
-    #     ui.showform(self.form)
-
-    # def setName(self, name):
-    #     self.name = name
-    #     # manager.update()
 
 
 class ROlineEdit(QtGui.QLineEdit):
@@ -213,13 +198,6 @@ class FeatureManager(object):
         else:
             return self.selectedFeature
 
-    def addFeature(self, feature):
-        self.features.append(feature)
-        self._llayout.addWidget(feature)
-        self._flayout.addWidget(feature.form)
-        feature.sigClicked.connect(self.featureClicked)
-        feature.sigDelete.connect(self.removeFeature)
-
     @QtCore.Slot(QtGui.QWidget)
     def featureClicked(self, feature):
         self.collapseAllFeatures()
@@ -227,18 +205,26 @@ class FeatureManager(object):
         feature.expand()
         self.selectedFeature = feature
 
+    @QtCore.Slot(QtGui.QWidget)
+    def removeFeature(self, feature):
+        self.features.remove(feature)
+        feature.deleteLater()
+        del feature
+        self.showForm(self.blank_form)
+
+    def addFeature(self, feature):
+        self.features.append(feature)
+        self._llayout.addWidget(feature)
+        self._flayout.addWidget(feature.form)
+        feature.sigClicked.connect(self.featureClicked)
+        feature.sigDelete.connect(self.removeFeature)
+
     def collapseAllFeatures(self):
         for feature in self.features:
             feature.collapse()
 
     def showForm(self, form):
         self._flayout.setCurrentWidget(form)
-
-    def removeFeature(self, feature):
-        self.features.remove(feature)
-        feature.deleteLater()
-        del feature
-        self.showForm(self.blank_form)
 
     def removeAllFeatures(self):
         for feature in self.features:

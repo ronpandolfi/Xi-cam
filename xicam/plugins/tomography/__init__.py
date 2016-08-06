@@ -60,6 +60,9 @@ class plugin(base.plugin):
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
                                 self.clearPipeline)
+        ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
+                               config.names, self.manager.addFunction)
+
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -78,6 +81,22 @@ class plugin(base.plugin):
     def dragEnterEvent(self, e):
         e.accept()
 
+    def openfiles(self, paths, *args, **kwargs):
+        msg.showMessage('Loading file...', timeout=10)
+        self.activate()
+        if type(paths) is list:
+            paths = paths[0]
+
+        widget = twidgets.TomoViewer(paths=paths)
+        self.centerwidget.addTab(widget, os.path.basename(paths))
+        self.centerwidget.setCurrentWidget(widget)
+
+    def currentDataset(self):
+        try:
+            return self.centerwidget.currentWidget()
+        except AttributeError:
+            return None
+
     def currentChanged(self, index):
         self.toolbar.actionCenter.setChecked(False)
         try:
@@ -88,16 +107,6 @@ class plugin(base.plugin):
                 self.setPipelineValues(current_dataset)
         except AttributeError as e:
             msg.logMessage(e, level=40)
-
-    def openfiles(self, paths, *args, **kwargs):
-        msg.showMessage('Loading file...', timeout=10)
-        self.activate()
-        if type(paths) is list:
-            paths = paths[0]
-
-        widget = twidgets.TomoViewer(paths=paths)
-        self.centerwidget.addTab(widget, os.path.basename(paths))
-        self.centerwidget.setCurrentWidget(widget)
 
     def loadPipeline(self):
         open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
@@ -111,7 +120,9 @@ class plugin(base.plugin):
 
         save_file = save_file.split('.')[0] + '.yml'
         with open(save_file, 'w') as yml:
-            yamlmod.ordered_dump(self.manager.pipeline_dict, yml)
+            pipeline = config.extract_pipeline_dict(self.manager.features)
+            print pipeline
+            yamlmod.ordered_dump(pipeline, yml)
 
     def clearPipeline(self):
         value = QtGui.QMessageBox.question(None, 'Delete functions', 'Are you sure you want to clear ALL functions?',
@@ -129,8 +140,7 @@ class plugin(base.plugin):
         self.ui.property_table.setData(widget.data.header.items())
         self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.ui.property_table.show()
-        ui.setconfigparams(int(widget.data.header['nslices']),
-                           int(widget.data.header['nangles']))
+        self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
         # manager.set_function_defaults(widget.data.header, funcs=manager.functions)
         # manager.update_function_parameters(funcs=manager.functions)
         # recon = manager.recon_function
@@ -142,11 +152,8 @@ class plugin(base.plugin):
         self.ui.property_table.hide()
         self.centerwidget.widget(index).deleteLater()
 
-    def currentDataset(self):
-        try:
-            return self.centerwidget.currentWidget()
-        except AttributeError:
-            return None
+    def manualCenter(self, value):
+        self.currentDataset().onManualCenter(value)
 
     def previewSlice(self):
         msg.showMessage('Computing slice preview...', timeout=0)
@@ -157,35 +164,31 @@ class plugin(base.plugin):
         self.currentDataset().run3DPreview()
 
     def fullReconstruction(self):
-        if not self._recon_running:
-            self._recon_running = True
-            self.bottomwidget.local_console.clear()
-            start = ui.configparams.child('Start Sinogram').value()
-            end = ui.configparams.child('End Sinogram').value()
-            step =  ui.configparams.child('Step Sinogram').value()
-            msg.showMessage('Computing reconstruction...', timeout=0)
-            self.currentDataset().runFullRecon((ui.configparams.child('Start Projection').value(),
-                                                ui.configparams.child('End Projection').value(),
-                                                ui.configparams.child('Step Projection').value()),
-                                               (start, end, step),
-                                               ui.configparams.child('Sinograms/Chunk').value(),
-                                               ui.configparams.child('CPU Cores').value(),
-                                               update_call=self.bottomwidget.log2local,
-                                               interrupt_signal=self.bottomwidget.local_cancelButton.clicked)
-            self.recon_start_time = time.time()
-        else:
-            print 'Beep'
-            # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-            #                                                               'Are you sure you want to start another one?',
-            #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-            # if r is QtGui.QMessageBox.Yes:
-            #     QtGui.QMessageBox.information(self, 'Reconstruction request',
-            #                                   'Then you should wait until the first one finishes.')
+        self.bottomwidget.local_console.clear()
+        start = self.ui.config_params.child('Start Sinogram').value()
+        end = self.ui.config_params.child('End Sinogram').value()
+        step =  self.ui.config_params.child('Step Sinogram').value()
+        self.currentDataset().runFullRecon((self.ui.config_params.child('Start Projection').value(),
+                                            self.ui.config_params.child('End Projection').value(),
+                                            self.ui.config_params.child('Step Projection').value()),
+                                           (start, end, step),
+                                           self.ui.config_params.child('Sinograms/Chunk').value(),
+                                           self.ui.config_params.child('CPU Cores').value(),
+                                           update_call=self.bottomwidget.log2local,
+                                           interrupt_signal=self.bottomwidget.local_cancelButton.clicked)
+        msg.showMessage('Computing reconstruction...', timeout=0)
+        self.recon_start_time = time.time()
+        # else:
+        #     print 'Beep'
+        #     # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
+        #     #                                                               'Are you sure you want to start another one?',
+        #     #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
+        #     # if r is QtGui.QMessageBox.Yes:
+        #     #     QtGui.QMessageBox.information(self, 'Reconstruction request',
+        #     #                                   'Then you should wait until the first one finishes.')
 
     def fullReconstructionFinished(self):
         run_time = time.time() - self.recon_start_time
         self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
         self._recon_running = False
 
-    def manualCenter(self, value):
-        self.currentDataset().onManualCenter(value)

@@ -14,7 +14,6 @@ import reconpkg
 import ui
 from xicam import msg
 import ftrwidgets as fw
-import yamlmod
 
 
 class FunctionWidget(fw.FeatureWidget):
@@ -190,7 +189,7 @@ class ReconFunctionWidget(FunctionWidget):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
-        ui.buildfunctionmenu(self.submenu, config.funcs['Input Functions'][name], self.addInputFunction)
+        ui.build_function_menu(self.submenu, config.funcs['Input Functions'][name], config.names, self.addInputFunction)
         self.menu.addMenu(self.submenu)
 
         self.input_functions = [self.center, self.angles]
@@ -414,22 +413,6 @@ class FunctionManager(fw.FeatureManager):
         self.addFeature(func_widget)
         return func_widget  #TODO why do i return this?
 
-    @property
-    def pipeline_dict(self):
-        d = OrderedDict()
-        for f in self.features:
-            d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
-            d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
-            if f.func_name == 'Reconstruction':
-                d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
-            if f.input_functions is not None:
-                d[f.func_name][f.subfunc_name]['Input Functions'] = {}
-                for ipf in f.input_functions:
-                    if ipf is not None:
-                        id = {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}
-                        d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
-        return d
-
     def updateParameters(self):
         for function in self.features:
             function.updateParamsDict()
@@ -445,3 +428,4 @@ class FunctionManager(fw.FeatureManager):
         elif 'Upsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
             cor_scale = lambda x: x * 2 ** s
+

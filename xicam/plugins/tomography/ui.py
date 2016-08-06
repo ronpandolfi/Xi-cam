@@ -1,13 +1,11 @@
-import os
 from functools import partial
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
-import toolbar as ttoolbar
-import config
-import manager
+import reconpkg
+import toolbar
 import widgets
 
 property_table = None
@@ -21,7 +19,7 @@ bottomwidget = None
 class UIform(object):
     def setupUi(self):
 
-        self.toolbar = ttoolbar.tomotoolbar()
+        self.toolbar = toolbar.tomotoolbar()
         self.centerwidget = QtGui.QTabWidget()
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
@@ -36,8 +34,6 @@ class UIform(object):
         self.functionwidget.moveUpButton.setToolTip('Move selected function up')
 
         self.addfunctionmenu = QtGui.QMenu()
-        self.buildfunctionmenu(config.funcs['Functions'], manager.add_action)
-
         self.functionwidget.addFunctionButton.setMenu(self.addfunctionmenu)
         self.functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
         self.functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
@@ -106,28 +102,6 @@ class UIform(object):
         self.property_table.hide()
         self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
-    def buildfunctionmenu(self, fdata, actionslot):
-        for func, subfuncs in fdata.iteritems():
-            if len(subfuncs) > 1 or func != subfuncs[0]:
-                funcmenu = QtGui.QMenu(func)
-                self.addfunctionmenu.addMenu(funcmenu)
-                for subfunc in subfuncs:
-                    if isinstance(subfuncs, dict) and len(subfuncs[subfunc]) > 0:
-                        optsmenu = QtGui.QMenu(subfunc)
-                        funcmenu.addMenu(optsmenu)
-                        for opt in subfuncs[subfunc]:
-                            funcaction = QtGui.QAction(opt, funcmenu)
-                            funcaction.triggered.connect(partial(actionslot, func, opt))
-                            optsmenu.addAction(funcaction)
-                    else:
-                        funcaction = QtGui.QAction(subfunc, funcmenu)
-                        funcaction.triggered.connect(partial(actionslot, func, subfunc))
-                        funcmenu.addAction(funcaction)
-            elif len(subfuncs) == 1:
-                funcaction = QtGui.QAction(func, self.addfunctionmenu)
-                funcaction.triggered.connect(partial(actionslot, func, func))
-                self.addfunctionmenu.addAction(funcaction)
-
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
         self.openaction.triggered.connect(open)
         self.saveaction.triggered.connect(save)
@@ -136,7 +110,7 @@ class UIform(object):
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
 
-    def set_config_params(self, sino, proj):
+    def setConfigParams(self, proj, sino):
         self.config_params.child('End Sinogram').setValue(sino)
         self.config_params.child('End Sinogram').setLimits([0, sino])
         self.config_params.child('Start Sinogram').setLimits([0, sino])
@@ -146,13 +120,9 @@ class UIform(object):
         self.config_params.child('Start Projection').setLimits([0, proj])
         self.config_params.child('Step Projection').setLimits([0, proj])
 
-def showform(widget):
-    paramformstack.addWidget(widget)
-    paramformstack.setCurrentWidget(widget)
 
-
-def buildfunctionmenu(menu, fdata, actionslot):
-    for func, subfuncs in fdata.iteritems():
+def build_function_menu(menu, functree, functiondata, actionslot):
+    for func, subfuncs in functree.iteritems():
         if len(subfuncs) > 1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             menu.addMenu(funcmenu)
@@ -162,13 +132,15 @@ def buildfunctionmenu(menu, fdata, actionslot):
                     funcmenu.addMenu(optsmenu)
                     for opt in subfuncs[subfunc]:
                         funcaction = QtGui.QAction(opt, funcmenu)
-                        funcaction.triggered.connect(partial(actionslot, func, opt))
+                        funcaction.triggered.connect(partial(actionslot, func, opt,
+                                                             reconpkg.packages[functiondata[opt][1]]))
                         optsmenu.addAction(funcaction)
                 else:
                     funcaction = QtGui.QAction(subfunc, funcmenu)
-                    funcaction.triggered.connect(partial(actionslot, func, subfunc))
+                    funcaction.triggered.connect(partial(actionslot, func, subfunc,
+                                                         reconpkg.packages[functiondata[subfunc][1]]))
                     funcmenu.addAction(funcaction)
         elif len(subfuncs) == 1:
             funcaction = QtGui.QAction(func, menu)
-            funcaction.triggered.connect(partial(actionslot, func, func))
+            funcaction.triggered.connect(partial(actionslot, func, func, reconpkg.packages[functiondata[func][1]]))
             menu.addAction(funcaction)
