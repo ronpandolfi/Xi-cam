@@ -312,7 +312,7 @@ class spacegroupwidget(ParameterTree):
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refdelta=refdelta,refbeta=refbeta,order=3,unitcell=None,space_grp=SG)
+                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refdelta=refdelta,refbeta=refbeta,order=5,unitcell=None,space_grp=SG)
         for peak in peaks:
             print unicode(peak)
 

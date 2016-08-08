@@ -232,7 +232,7 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
 
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
-               norm_type="uvw", wavelen=0.123984e-9, refdelta=2.236E-06, refbeta=-1.8790E-09, order=3, unitcell=None, space_grp=None):
+               norm_type="uvw", wavelen=0.123984e-9, refdelta=2.236E-06, refbeta=-1.8790E-09, order=5, unitcell=None, space_grp=None):
     # rotation matrix from crystal coordinates for sample coordinates
     if alpha is not None: alpha = np.deg2rad(alpha)
     if beta is not None: beta = np.deg2rad(beta)
