@@ -6,7 +6,7 @@ import pyqtgraph as pg
 import spacegrp_peaks
 import numpy as np
 from xicam import config
-
+import msg
 
 # TODO: Add index of refraction to interface and backend
 # TODO: Add q,twotheta, alphaf to tooltip
@@ -126,34 +126,32 @@ class VectorParameter(Parameter):
         return (0, 0, 0)
 
 
-class peak(object):
-    def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
-        self.mode = mode # either 'Transmission' or 'Reflection'
-        self.hkl = hkl
-        self.x = x
-        self.y = y
-        self.twotheta = twotheta
-        self.alphaf = alphaf
-        self.q = q
-
-    def isAt(self, pos):
-
-        if self.x == pos.x() and self.y == pos.y():
-            return True
-        return False
-
-    def __str__(self):
-        s = u"Peak type: {}\n".format(self.mode)
-        s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
-        if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
-        if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.q is not None: s += u"q: {}".format(self.q)
-        return s
+# class peak(object):
+#     def __init__(self, mode, hkl, x, y, twotheta=None, alphaf=None, q=None):
+#         self.mode = mode # either 'Transmission' or 'Reflection'
+#         self.hkl = hkl
+#         self.x = x
+#         self.y = y
+#         self.twotheta = twotheta
+#         self.alphaf = alphaf
+#         self.q = q
+#
+#
+#
+#     def __str__(self):
+#         s = u"Peak type: {}\n".format(self.mode)
+#         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
+#         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
+#         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
+#         if self.q is not None: s += u"q: {}".format(self.q)
+#         return s
 
 
 class peakoverlay(pg.ScatterPlotItem):
     def __init__(self, peaks):
         self.peaks = peaks
+        self.centerx = 0
+        self.centery = 0
         if len(peaks):
             x, y = zip(*[[p.x, p.y] for p in peaks])
             symbols = ['s' if p.mode == 'Transmission' else 'o' for p in peaks]
@@ -166,6 +164,18 @@ class peakoverlay(pg.ScatterPlotItem):
             # if parent is not None:
             # parent.addItem(self.scatterPoints)
             #     parent.addItem(self.display_text)
+
+    def setCenter(self,x,y):
+        self.centerx=x
+        self.centery=y
+        self.displayRelative()
+
+    def displayRelative(self):
+        px, py = zip(*[[p.x, p.y] for p in self.peaks])
+
+        symbols = ['s' if p.mode == 'Transmission' else 'o' for p in self.peaks]
+        colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in self.peaks]
+        self.setData(x=np.array(px)+self.centerx,y=np.array(py)+self.centery,size=10,brush=None,pen=colors,symbol=symbols)
 
     def enable(self, parent):
         self.scene().sigMouseMoved.connect(self.onMove)
@@ -182,33 +192,56 @@ class peakoverlay(pg.ScatterPlotItem):
     #     else:
     #         self.display_text.hide()
 
+    def peaksAtRelative(self, pos):
+        x = pos.x()-self.centerx
+        y = pos.y()-self.centery
+        pw = self.pixelWidth()
+        ph = self.pixelHeight()
+        peaks = []
+        ss=self.points()[0].size()
+        for p in self.peaks:
+            sx,sy = p.pos()
+            s2x = s2y = ss * 0.5
+            if self.opts['pxMode']:
+                s2x *= pw
+                s2y *= ph
+            if x > sx - s2x and x < sx + s2x and y > sy - s2y and y < sy + s2y:
+                peaks.append(p)
+                # print "HIT:", x, y, sx, sy, s2x, s2y
+                # else:
+                # print "No hit:", (x, y), (sx, sy)
+                # print "       ", (sx-s2x, sy-s2y), (sx+s2x, sy+s2y)
+        # pts.sort(lambda a,b: cmp(b.zValue(), a.zValue()))
+        return peaks[::-1]
+
     def onMove(self, pos):
         pos = self.mapFromScene(pos)
-        points = self.pointsAt(pos)
+        peaks = self.peaksAtRelative(pos)
 
-        if len(points) > 6:
-            self.display_text.setText('Too many points under cursor.\n'
-                                      'Zoom in for more info.')
-            self.display_text.setPos(pos)
-            self.display_text.show()
 
-        elif len(points) != 0:
+
+        if len(peaks) != 0:
             s = u''
             #print points
-            for point in points:
-                for peak in self.peaks:
-                    #print peak.x,peak.y,point
-                    if peak.isAt(point.pos()):
-                        if s != u'': s += '\n\n'
-                        s += unicode(peak)
+            for peak in peaks:
+                    if s != u'': s += '\n\n'
+                    s += unicode(peak)
 
             self.display_text.setText(s)
             self.display_text.setPos(pos)
             self.display_text.show()
+            msg.logMessage(s)
         else:
             self.display_text.hide()
             #print str(self)
 
+
+
+        if len(peaks) > 6:
+            self.display_text.setText('Too many points under cursor.\n'
+                                      'Zoom in or check Log info.')
+            self.display_text.setPos(pos)
+            self.display_text.show()
 
 class spacegroupwidget(ParameterTree):
     sigDrawSGOverlay = QtCore.Signal(peakoverlay)
@@ -242,9 +275,9 @@ class spacegroupwidget(ParameterTree):
                                   tetragonalparameter(), trigonalparameter(), hexagonalparameter(), cubicparameter()]
         self.rotations = [self.rotationvectorsample, self.rotationvectorcrystal, self.rotationplane]
 
-        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=2.236E-06)
-        self.gamma = pTypes.SimpleParameter(name=u'γ', type='float', value=-1.8790E-09)
-        self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.beta, self.gamma])
+        self.delta = pTypes.SimpleParameter(name=u'δ', type='float', value=4.60093997E-06)
+        self.beta = pTypes.SimpleParameter(name=u'β', type='float', value=3.91313968E-08)
+        self.refractiveindex = pTypes.GroupParameter(name='Refractive Index', children=[self.delta, self.beta])
 
         self.redrawsg = pTypes.ActionParameter(name='Overlay space group')
         self.redrawsg.sigActivated.connect(self.drawoverlay)
@@ -275,11 +308,11 @@ class spacegroupwidget(ParameterTree):
         activelatticetype = self.activelatticetype()
         SG = self.spacegroupparameter.value()
         refbeta = self.beta.value()
-        refgamma = self.gamma.value()
+        refdelta = self.delta.value()
         peaks = spacegrp_peaks.find_peaks(float(activelatticetype.a.value()), float(activelatticetype.b.value()),
                                           float(activelatticetype.c.value()), activelatticetype.alpha.value(),
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
-                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refgamma=refgamma,refbeta=refbeta,order=3,unitcell=None,space_grp=SG)
+                                          normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refdelta=refdelta,refbeta=refbeta,order=3,unitcell=None,space_grp=SG)
         for peak in peaks:
             print unicode(peak)
 
