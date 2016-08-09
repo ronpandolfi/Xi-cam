@@ -1,12 +1,11 @@
 import base
-from PySide import QtGui,QtCore
-import os
+from PySide import QtGui, QtCore
 from xicam import xglobals
 from pipeline import msg
 
-import widgets
+colors = {msg.DEBUG: QtCore.Qt.white, msg.ERROR: QtCore.Qt.darkRed, msg.CRITICAL: QtCore.Qt.red,
+          msg.INFO: QtCore.Qt.green, msg.WARNING: QtCore.Qt.yellow}
 
-colors = {msg.DEBUG:QtCore.Qt.white,msg.ERROR:QtCore.Qt.darkRed,msg.CRITICAL:QtCore.Qt.red,msg.INFO:QtCore.Qt.green,msg.WARNING:QtCore.Qt.yellow}
 
 class plugin(base.plugin):
     name = 'Log'
@@ -19,11 +18,11 @@ class plugin(base.plugin):
         self.leftwidget = None
         self.toolbar = None
 
-        msg.guilogcallable=self.log
+        msg.guilogcallable = self.log
 
         super(plugin, self).__init__(*args, **kwargs)
 
-    def log(self,level,timestamp,s,icon=None): # We can have icons!
+    def log(self, level, timestamp, s, icon=None):  # We can have icons!
         item = QtGui.QListWidgetItem(s)
         item.setForeground(QtGui.QBrush(colors[level]))
         item.setToolTip(timestamp)

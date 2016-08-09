@@ -32,12 +32,12 @@ def logMessage(s,level=INFO,loggername=None):
     logger.addHandler(stdch)
 
     timestamp = time.asctime()
-    s = timestamp +'\t'+unicode(s)
+    m = timestamp +'\t'+unicode(s)
 
-    logger.log(level,s)
+    logger.log(level,m)
     if guilogcallable:
         guilogcallable(level,timestamp,s)
-    print s
+    print m
 
 def clearMessage():
     statusbar.clearMessage()
