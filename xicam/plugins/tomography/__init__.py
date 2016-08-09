@@ -17,10 +17,12 @@ op_sys = platform.system()
 
 import os
 import time
+from functools import partial
 from PySide import QtGui
 import yamlmod
 from xicam.plugins import base
 from pipeline import msg
+from xicam import threads
 import widgets as twidgets
 import ui
 import config
@@ -55,7 +57,9 @@ class plugin(base.plugin):
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
 
-        self.toolbar.connecttriggers(self.previewSlice, self.preview3D, self.fullReconstruction, self.manualCenter)
+        # Connect toolbar signals and ui button signals
+        self.toolbar.connecttriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
+                                     self.manualCenter)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
@@ -104,9 +108,9 @@ class plugin(base.plugin):
             if current_dataset is not None:
                 current_dataset.sigReconFinished.connect(self.fullReconstructionFinished)
                 current_dataset.wireupCenterSelection(self.manager.recon_function)
-                self.setPipelineValues(current_dataset)
         except AttributeError as e:
             msg.logMessage(e, level=40)
+        self.setPipelineValues()
 
     def loadPipeline(self):
         open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
@@ -136,12 +140,14 @@ class plugin(base.plugin):
         if value is QtGui.QMessageBox.Yes:
             config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
 
-    def setPipelineValues(self, widget):
-        self.ui.property_table.setData(widget.data.header.items())
-        self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
-        self.ui.property_table.show()
-        self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
-        # manager.set_function_defaults(widget.data.header, funcs=manager.functions)
+    def setPipelineValues(self):
+        widget = self.currentDataset()
+        if widget is not None:
+            self.ui.property_table.setData(widget.data.header.items())
+            self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
+            self.ui.property_table.show()
+            self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
+            config.set_als832_defaults(widget.data.header, funcs=self.manager.features)
         # manager.update_function_parameters(funcs=manager.functions)
         # recon = manager.recon_function
         # if recon is not None:
@@ -155,13 +161,51 @@ class plugin(base.plugin):
     def manualCenter(self, value):
         self.currentDataset().onManualCenter(value)
 
-    def previewSlice(self):
-        msg.showMessage('Computing slice preview...', timeout=0)
-        self.currentDataset().runSlicePreview()
+    def checkPipeline(self):
+        if len(self.manager.features) < 1 or self.currentDataset() is None:
+            return False
+        elif 'Reconstruction' not in [func.func_name for func in self.manager.features]:
+            QtGui.QMessageBox.warning(None, 'Reconstruction method required',
+                                      'You have to select a reconstruction method to run a preview')
+            return False
+        return True
 
-    def preview3D(self):
-        msg.showMessage('Computing 3D preview...', timeout=0)
-        self.currentDataset().run3DPreview()
+    def slicePreviewAction(self):
+        if self.checkPipeline():
+            msg.showMessage('Computing slice preview...', timeout=0)
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x))
+
+    def runSlicePreview(self, partial_stack, stack_dict):
+        initializer = self.currentDataset().getsino()
+        slice_no = self.currentDataset().sinogramViewer.currentIndex
+        callback = partial(self.currentDataset().addSlicePreview, stack_dict, slice_no=slice_no)
+        message = 'Unable to compute slice preview. Check log for details.'
+        self.foldPreviewStack(partial_stack, initializer, callback, message)
+
+    def preview3DAction(self):
+        if self.checkPipeline():
+            msg.showMessage('Computing 3D preview...', timeout=0)
+            slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+
+    def run3DPreview(self, partial_stack, stack_dict):
+        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+        initializer = self.currentDataset().getsino(slc)
+        self.manager.cor_scale = lambda x: x // 8
+        callback = partial(self.currentDataset().add3DPreview, stack_dict)
+        message = 'Unable to compute 3D preview. Check log for details.'
+        self.foldPreviewStack(partial_stack, initializer, callback, message)
+
+    def processFunctionStack(self, callback, finished=None, slc=None):
+        bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
+                                          lock=threads.mutex)(self.manager.previewFunctionStack)
+        bg_functionstack(self.currentDataset(), slc=slc, ncore=self.ui.config_params.child('CPU Cores').value())
+
+    def foldPreviewStack(self, partial_stack, initializer, callback, error_message):
+        except_slot = lambda: msg.showMessage(error_message)
+        bg_fold = threads.method(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
+                                 except_slot=except_slot)
+        bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
 
     def fullReconstruction(self):
         self.bottomwidget.local_console.clear()

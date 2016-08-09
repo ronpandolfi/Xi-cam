@@ -2,13 +2,13 @@
 
 from copy import deepcopy
 from functools import partial
-from collections import OrderedDict
+import inspect
 import numpy as np
+from collections import OrderedDict
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-
+from xicam import threads
 import config
-import introspect
 import manager
 import reconpkg
 import ui
@@ -17,36 +17,40 @@ import ftrwidgets as fw
 
 
 class FunctionWidget(fw.FeatureWidget):
-    def __init__(self, name, subname, package, checkable=True, parent=None):
+    def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
         self.name = name
         if name != subname:
             self.name += ' (' + subname + ')'
-        super(FunctionWidget, self).__init__(self.name, checkable=checkable, parent=parent)
+        super(FunctionWidget, self).__init__(self.name, checkable=checkable, closeable=closeable, parent=parent)
 
         self.func_name = name
         self.subfunc_name = subname
-        self.input_functions = None
-        self._function = getattr(package, config.names[self.subfunc_name][0])
+        self.input_functions = {}
         self.param_dict = {}
+        self._function = getattr(package, config.names[self.subfunc_name][0])
         self._partial = None
 
+        # TODO have the children kwarg be passed to __init__
         self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
-
-        # Create dictionary with keys and default values that are not shown in the functions form
-        self.kwargs_complement = introspect.get_arg_defaults(self._function)
-        for key in self.param_dict.keys():
-            if key in self.kwargs_complement:
-                del self.kwargs_complement[key]
-
-        # Create a list of argument names (this will most generally be the data passed to the function)
-        self.args_complement = introspect.get_arg_names(self._function)
-        s = set(self.param_dict.keys() + self.kwargs_complement.keys())
-        self.args_complement = [i for i in self.args_complement if i not in s]
 
         self.form = ParameterTree(showHeader=False)
         self.form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.form.customContextMenuRequested.connect(self.paramMenuRequested)
         self.form.setParameters(self.params, showTop=True)
+
+        # Initialize parameter dictionary with keys and default values
+        self.updateParamsDict()
+        argspec = inspect.getargspec(self._function)
+        default_argnum = len(argspec[3])
+        self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
+        print self.subfunc_name, self.param_dict
+        for key, val in self.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        # Create a list of argument names (this will most generally be the data passed to the function)
+        self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
 
         self.parammenu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
@@ -56,9 +60,11 @@ class FunctionWidget(fw.FeatureWidget):
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
         self.menu = QtGui.QMenu()
 
-        self.setDefaults()
-        self.updateParamsDict()
+        if input_functions is not None:
+            for param, ipf in input_functions.iteritems():
+                self.addInputFunction(param, ipf)
 
+        # wire up param changed signals
         for param in self.params.children():
             param.sigValueChanged.connect(self.paramChanged)
 
@@ -76,22 +82,22 @@ class FunctionWidget(fw.FeatureWidget):
             self.previewButton.setChecked(False)
 
     def updateParamsDict(self):
-        for param in self.params.children():
-            self.param_dict.update({param.name(): param.value()})
-        if self.input_functions is not None:
-            for ipf in self.input_functions:
-                ipf.updateParamsDict()
-        return self.param_dict
+        self.param_dict.update({param.name(): param.value() for param in self.params.children()})
+        for p, ipf in self.input_functions.iteritems():
+            ipf.updateParamsDict()
 
     @property
     def partial(self):
-        kwargs = dict(self.param_dict, **self.kwargs_complement)
-        self._partial = partial(self._function, **kwargs)
+        self._partial = partial(self._function, **self.param_dict)
         return self._partial
 
     @partial.setter
     def partial(self, p):
         self._partial = p
+
+    def addInputFunction(self, parameter, functionwidget):
+        self.input_functions[parameter] = functionwidget
+        self.addSubFeature(functionwidget)
 
     @property
     def input_partials(self):
@@ -100,12 +106,9 @@ class FunctionWidget(fw.FeatureWidget):
     @property
     def func_signature(self):
         signature = str(self._function.__name__) + '('
-        for arg in self.args_complement:
+        for arg in self.missing_args:
             signature += '{},'.format(arg)
-        for param, value in self.updateParamsDict.iteritems():
-            signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
-                '{0}=\'{1}\','.format(param, value)
-        for param, value in self.kwargs_complement.iteritems():
+        for param, value in self.param_dict.iteritems():
             signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
                 '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
@@ -113,28 +116,21 @@ class FunctionWidget(fw.FeatureWidget):
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
 
-    def getParamDict(self, update=True):
-        if update:
-            self.updateParamsDict()
-        return self.param_dict
-
-    def setDefaults(self):
-        defaults = introspect.get_arg_defaults(self._function)
-        for param in self.params.children():
-            if param.name() in defaults:
-                if isinstance(defaults[param.name()], unicode):
-                    defaults[param.name()] = str(defaults[param.name()])
-                param.setDefault(defaults[param.name()])
-                param.setValue(defaults[param.name()])
+    # def getParamDict(self, update=True):
+    #     if update:
+    #         self.updateParamsDict()
+    #     return self.param_dict
 
     def allReadOnly(self, boolean):
         for param in self.params.children():
             param.setReadonly(boolean)
 
     def menuRequested(self):
+        # Menus when the function widget is right clicked
         pass
 
     def paramMenuRequested(self, pos):
+        # Menus when a parameter in the form is right clicked
         if self.form.currentItem().parent():
             self.parammenu.exec_(self.form.mapToGlobal(pos))
 
@@ -167,40 +163,27 @@ class FunctionWidget(fw.FeatureWidget):
 
 class ReconFunctionWidget(FunctionWidget):
     def __init__(self, name, subname, package):
-        super(ReconFunctionWidget, self).__init__(name, subname, package, checkable=False)
 
         self.packagename = package.__name__
-        self.kwargs_complement['algorithm'] = subname.lower()
-
-        # Input functions
-        self.center = None
-        self.angles = None
-
-        self.subframe = QtGui.QFrame(self)
-        self.subframe.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.subframe.setFrameShadow(QtGui.QFrame.Raised)
-        self.subframe_layout = QtGui.QVBoxLayout(self.subframe)
-        self.subframe_layout.setContentsMargins(5, 5, 5, 5)
-        self.subframe_layout.setSpacing(0)
-        self.verticalLayout.addWidget(self.subframe)
-        self.subframe.hide()
-
+        self.input_functions = {'theta': FunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
+                                                  package=reconpkg.packages['tomopy'], checkable=False)}
+        super(ReconFunctionWidget, self).__init__(name, subname, package, input_functions=self.input_functions,
+                                                  checkable=False)
+        # Fill in the appropriate 'algorithm' keyword
+        self.param_dict['algorithm'] = subname.lower()
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
-        ui.build_function_menu(self.submenu, config.funcs['Input Functions'][name], config.names, self.addInputFunction)
+        ui.build_function_menu(self.submenu, config.funcs['Input Functions'][name], config.names,
+                               self.addCenterDetectFunction)
         self.menu.addMenu(self.submenu)
-
-        self.input_functions = [self.center, self.angles]
-        self.addInputFunction('Projection Angles', 'Projection Angles', package=reconpkg.packages['tomopy'])
 
     @property
     def partial(self):
-        d = deepcopy(self.param_dict)
-        if 'cutoff' in d.keys() and 'order' in d.keys():
-            d['filter_par'] = list((d.pop('cutoff'), d.pop('order')))
-        kwargs = dict(d, **self.kwargs_complement)
+        kwargs = deepcopy(self.param_dict)
+        if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
+            kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
@@ -214,7 +197,6 @@ class ReconFunctionWidget(FunctionWidget):
                 slices = (0, -1)
             else:
                 slices = (slice(None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
-
             if self.center.subfunc_name == 'Nelder-Mead':
                 p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
             else:
@@ -226,39 +208,9 @@ class ReconFunctionWidget(FunctionWidget):
         self.center = None
         self.input_functions = [self.center, self.angles]
 
-    def addInputFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
-        fwidget = self.angles if func == 'Projection Angles' else self.center
-        if fwidget is not None and fwidget.subfunc_name != 'Manual':
-            if func != 'Projection Angles':
-                value = QtGui.QMessageBox.question(self, 'Adding duplicate function',
-                                                   '{} input function already in pipeline\n'
-                                                   'Do you want to replace it?'.format(func),
-                                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-                if value is QtGui.QMessageBox.No:
-                    return
-            try:
-                fwidget.deleteLater()
-            except AttributeError:
-                    pass
-        checkable = False if func == 'Projection Angles' else True
-        fwidget = FunctionWidget(func, subfunc, package=package, checkable=checkable)
-        h = QtGui.QHBoxLayout()
-        indent = QtGui.QLabel('  -   ')
-        h.addWidget(indent)
-        h.addWidget(fwidget)
-        fwidget.destroyed.connect(indent.deleteLater)
-        self.subframe_layout.addLayout(h)
-        if func == 'Projection Angles':
-            self.angles = fwidget
-        else:
-            self.center = fwidget
-            self.center.destroyed.connect(self.resetCenter)
-        self.input_functions = [self.center, self.angles]
-        return fwidget
-
-    def mouseClicked(self):
-        super(ReconFunctionWidget, self).mouseClicked()
-        self.subframe.show()
+    def addCenterDetectFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
+        self.input_functions['center'] = FunctionWidget(func, subfunc, package=package)
+        self.addInputFunction('center', self.input_functions['center'])
 
     def setCenterParam(self, value):
         self.params.child('center').setValue(value)
@@ -270,24 +222,20 @@ class ReconFunctionWidget(FunctionWidget):
 
 class AstraReconFuncWidget(ReconFunctionWidget):
     def __init__(self, name, subname, package):
-        super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.tomopy)
-        self.kwargs_complement['algorithm'] = reconpkg.tomopy.astra
-        self.kwargs_complement['options'] = {}
-        self.kwargs_complement['options']['method'] = subname.replace(' ', '_')
+        super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.packages['tomopy'])
+        self.param_dict['algorithm'] = reconpkg.packages['astra']
+        self.param_dict['options'] = {}
+        self.param_dict['options']['method'] = subname.replace(' ', '_')
         if 'CUDA' in subname:
-            self.kwargs_complement['options']['proj_type'] = 'cuda'
+            self.param_dict['options']['proj_type'] = 'cuda'
         else:
-            self.kwargs_complement['options']['proj_type'] = 'linear'
+            self.param_dict['options']['proj_type'] = 'linear'
 
     @property
     def partial(self):
-        d = deepcopy(self.param_dict)
-        kwargs = deepcopy(self.kwargs_complement)
-        if 'center' in d:
-            del d['center']
-        kwargs['options'].update(d)
-        self._partial = partial(self._function, **kwargs)
-        return self._partial
+        return FunctionWidget.partial(self)
+        # self._partial = partial(self._function, **self.param_dict)
+        # return self._partial
 
 
 
@@ -390,11 +338,12 @@ class FunctionManager(fw.FeatureManager):
     Class to manage tomography workflow/pipeline FunctionWidgets
     """
 
+    center_func_slc = {'Phase Correlation': (0, -1)}
+
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
                                               blank_form=blank_form)
-
-        self.cor_offset = None
+        self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
         self.pipeline_yaml = {}
@@ -409,23 +358,89 @@ class FunctionManager(fw.FeatureManager):
             self.recon_function = func_widget
         else:
             func_widget = FunctionWidget(function, subfunction, package)
-
         self.addFeature(func_widget)
         return func_widget  #TODO why do i return this?
+
+    def addInputFunction(self, funcwidget, parameter, function, subfunction, package, **kwargs):
+        ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
+        funcwidget.addInputFunction(parameter, ipf_widget)
+        return ipf_widget
 
     def updateParameters(self):
         for function in self.features:
             function.updateParamsDict()
 
+    def lockParams(self, boolean):
+        for func in self.features:
+            func.allReadOnly(boolean)
+
+    def resetCenterCorrection(self):
+        self.cor_offset = lambda x: x  # dummy
+        self.cor_scale = lambda x: x  # dummy
+
     def setCenterCorrection(self, name, param_dict):
-        global cor_offset, cor_scale
         if 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
-            cor_offset = lambda x: cor_scale(x) + n
+            self.cor_offset = lambda x: x + n
         elif 'Downsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
-            cor_scale = lambda x: x / 2 ** s
+            self.cor_scale = lambda x: x / 2 ** s
         elif 'Upsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
-            cor_scale = lambda x: x * 2 ** s
+            self.cor_scale = lambda x: x * 2 ** s
+
+
+    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict, slc):
+        fpartial = funcwidget.partial
+        for argname in funcwidget.missing_args:
+            if argname in 'flats':
+                fpartial.keywords[argname] = datawidget.getflats(slc=slc)
+            if argname in 'darks':
+                fpartial.keywords[argname] = datawidget.getdarks(slc=slc)
+        for param, ipf in funcwidget.input_functions.iteritems():
+            args = []
+            if not ipf.enabled:
+                continue
+            if param == 'center':  # Need to find a cleaner solution to this
+                if ipf.subfunc_name in FunctionManager.center_func_slc:
+                    map(args.append, map(datawidget.data.fabimage.__getitem__,
+                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                else:
+                    args.append(datawidget.getsino())
+                if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
+                    ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
+            fpartial.keywords[param] = ipf.partial(*args)
+            stack_dict[param] = fpartial.keywords[param]
+        if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
+            self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
+        elif 'Reconstruction' in funcwidget.func_name:
+            fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
+            self.resetCenterCorrection()
+        return fpartial
+
+    def previewFunctionStack(self, datawidget, slc=None, ncore=None):
+        stack_dict = OrderedDict()
+        partial_stack = []
+        self.lockParams(True)
+        for func in self.features:
+            if not func.enabled:
+                continue
+            elif func.func_name == 'Write':
+                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
+                continue
+            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
+            p = self.updateFunctionPartial(func, datawidget, stack_dict[func.func_name][func.subfunc_name], slc)
+            # stack_dict[func.func_name][func.subfunc_name].update(p.keywords)
+            if 'ncore' in p.keywords:
+                p.keywords['ncore'] = ncore
+            partial_stack.append(p)
+            if func.input_functions:
+                ipf_dict = {ipf.subfunc_name: deepcopy(ipf.param_dict) for ipf in func.input_functions.values()
+                            if ipf.enabled}
+                stack_dict[func.func_name][func.subfunc_name].update(ipf_dict)
+        self.lockParams(False)
+        return partial_stack, stack_dict
+
+    def foldFunctionStack(self, partial_stack, initializer):
+        return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 

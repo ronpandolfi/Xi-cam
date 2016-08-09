@@ -48,7 +48,7 @@ def load_pipeline(yaml_file, manager, setdefaults=False):
 
 def set_pipeline_from_yaml(manager, pipeline, setdefaults=False):
     manager.removeAllFeatures()
-    # Way too many for loops, oops
+    # Way too many for loops, oops... may want to restructure the yaml files
     for func, subfuncs in pipeline.iteritems():
         for subfunc in subfuncs:
             funcWidget = manager.addFunction(func, subfunc, package=reconpkg.packages[names[subfunc][1]])
@@ -61,17 +61,22 @@ def set_pipeline_from_yaml(manager, pipeline, setdefaults=False):
                     if setdefaults:
                         child.setDefault(value)
             if 'Input Functions' in subfuncs[subfunc]:
-                for ipf, sipfs in subfuncs[subfunc]['Input Functions'].iteritems():
-                    for sipf in sipfs:
-                        ifwidget = funcWidget.addInputFunction(ipf, sipf)
-                        if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
-                            ifwidget.enabled = False
-                        if 'Parameters' in sipfs[sipf]:
-                            for p, v in sipfs[sipf]['Parameters'].iteritems():
-                                ifwidget.params.child(p).setValue(v)
-                                if setdefaults:
-                                    ifwidget.params.child(p).setDefault(v)
-                        ifwidget.updateParamsDict()
+                for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
+                    for ipf, sipfs in ipfs.iteritems():
+                        for sipf in sipfs:
+                            if param in funcWidget.input_functions:
+                                ifwidget = funcWidget.input_functions[param]
+                            else:
+                                ifwidget = manager.addInputFunction(funcWidget, param, ipf, sipf,
+                                                                package=reconpkg.packages[names[sipf][1]])
+                            if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
+                                ifwidget.enabled = False
+                            if 'Parameters' in sipfs[sipf]:
+                                for p, v in sipfs[sipf]['Parameters'].iteritems():
+                                    ifwidget.params.child(p).setValue(v)
+                                    if setdefaults:
+                                        ifwidget.params.child(p).setDefault(v)
+                            ifwidget.updateParamsDict()
             funcWidget.updateParamsDict()
 
 
@@ -85,7 +90,7 @@ def set_pipeline_from_preview(manager, pipeline, setdefaults=False):
                     continue
                 elif param == 'Input Functions':
                     for ipf, sipfs in value.iteritems():
-                        ifwidget = funcWidget.addInputFunction(ipf, list(sipfs.keys())[0])
+                        ifwidget = manager.addInputFunction(ipf, list(sipfs.keys())[0])
                         [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
                         if setdefaults:
                             [ifwidget.params.child(p).setDefault(v) for p, v in sipfs[sipfs.keys()[0]].items()]
@@ -96,6 +101,7 @@ def set_pipeline_from_preview(manager, pipeline, setdefaults=False):
                     if setdefaults:
                         child.setDefault(value)
                 funcWidget.updateParamsDict()
+
 
 def save_function_pipeline(pipeline, file_name):
     if file_name != '':
@@ -122,13 +128,11 @@ def set_als832_defaults(mdata, funcs):
                     except KeyError as e:
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
-
         elif f.func_name == 'Write':
             outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
             f.params.child('fname').setValue(outname)
-
-        if f.input_functions is not None:
-            set_als832_defaults(mdata, funcs=f.input_functions)
+        if f.input_functions:
+            set_als832_defaults(mdata, funcs=f.input_functions.values())
 
 
 def extract_pipeline_dict(funwidget_list):

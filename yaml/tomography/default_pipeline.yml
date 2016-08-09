@@ -32,14 +32,16 @@ Reconstruction:
       filter_name: butterworth
     Package: tomopy
     Input Functions:
-      Center Detection:
-        Phase Correlation:
-          Enabled: True
-      Projection Angles:
+      center:
+        Center Detection:
+          Phase Correlation:
+            Enabled: True
+      theta:
         Projection Angles:
-          Parameters:
-            ang1: 270
-            ang2: 90
+          Projection Angles:
+            Parameters:
+              ang1: 270
+              ang2: 90
 Crop:
   Crop:
     Parameters:

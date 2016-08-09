@@ -21,7 +21,7 @@ import os
 import manager
 from pipeline import msg
 
-__author__ = "Ronald J Pandolfi"
+__author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
 __license__ = ""
@@ -138,9 +138,9 @@ class TomoViewer(QtGui.QWidget):
     def setCorValue(self, value):
         self.cor = value
 
-    def runSlicePreview(self):
-        slice_no = self.sinogramViewer.view_spinBox.value()
-        manager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
+    # def runSlicePreview(self):
+    #     slice_no = self.sinogramViewer.view_spinBox.value()
+    #     manager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))

@@ -5,12 +5,14 @@ class FeatureWidget(QtGui.QWidget):
 
     sigClicked = QtCore.Signal(QtGui.QWidget)
     sigDelete = QtCore.Signal(QtGui.QWidget)
+    sigSubFeature = QtCore.Signal(QtGui.QWidget)
 
-    def __init__(self, name='', checkable=True, subfeatures=None, parent=None):
+    def __init__(self, name='', checkable=True, closeable=True, subfeatures=None, parent=None):
         super(FeatureWidget, self).__init__(parent=parent)
 
         self.name = name
         self.form = QtGui.QLabel(self.name) # default form
+        self.subfeatures = []
 
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -45,6 +47,7 @@ class FeatureWidget(QtGui.QWidget):
             icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.previewButton.setCheckable(False)
             self.previewButton.setChecked(True)
+
         self.previewButton.setIcon(icon)
         self.previewButton.setFlat(True)
         self.previewButton.setChecked(True)
@@ -78,11 +81,14 @@ class FeatureWidget(QtGui.QWidget):
         self.subframe = QtGui.QFrame(self)
         self.subframe.setFrameShape(QtGui.QFrame.StyledPanel)
         self.subframe.setFrameShadow(QtGui.QFrame.Raised)
-        self.subframe_layout = QtGui.QGridLayout(self.subframe)
+        self.subframe_layout = QtGui.QVBoxLayout(self.subframe)# QtGui.QGridLayout(self.subframe)
         self.subframe_layout.setContentsMargins(0, 0, 0, 0)
         self.subframe_layout.setSpacing(0)
         self.verticalLayout.addWidget(self.subframe)
         self.subframe.hide()
+
+        if not closeable:
+            self.closeButton.hide()
 
         if subfeatures is not None:
             for subfeature in subfeatures:
@@ -90,22 +96,32 @@ class FeatureWidget(QtGui.QWidget):
 
         self.collapse()
 
-    def addSubFeature(self, feature):
-        r = self.subframe_layout.rowCount()
-        spacerItem = QtGui.QSpacerItem(20, 20, QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Minimum)
-        self.subframe_layout.addItem(spacerItem, r, 0, 1, 1)
-        if isinstance(feature, QtGui.QLayout):
-            self.subframe_layout.addLayout(feature, r, 2, 1, 1)
-        elif isinstance(feature, QtGui.QWidget):
-            self.subframe_layout.addWidget(feature, r, 2, 1, 1)
+    def addSubFeature(self, subfeature):
+        h = QtGui.QHBoxLayout()
+        indent = QtGui.QLabel('  -   ')
+        h.addWidget(indent)
+        subfeature.destroyed.connect(indent.deleteLater)
+        subfeature.destroyed.connect(h.deleteLater)
+        if isinstance(subfeature, QtGui.QLayout):
+            h.addLayout(subfeature)
+        elif isinstance(subfeature, QtGui.QWidget):
+            h.addWidget(subfeature)
+        self.subframe_layout.addLayout(h)
+        try:
+            subfeature.sigDelete.connect(self.removeSubFeature)
+        except AttributeError:
+            pass
+
+        self.sigSubFeature.emit(subfeature)
+        self.subfeatures.append(subfeature)
+
+    def removeSubFeature(self, subfeature):
+        self.subfeatures.remove(subfeature)
+        subfeature.deleteLater()
+        del subfeature
 
     def delete(self):
         self.sigDelete.emit(self)
-        # value = QtGui.QMessageBox.question(None, 'Delete this feature?',
-        #                                    'Are you sure you want to delete this function?',
-        #                                    (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-        # if value is QtGui.QMessageBox.Yes:
-        #     ui.showform(ui.blankform)
 
     def collapse(self):
         if self.subframe is not None:
@@ -200,7 +216,8 @@ class FeatureManager(object):
 
     @QtCore.Slot(QtGui.QWidget)
     def featureClicked(self, feature):
-        self.collapseAllFeatures()
+        if feature in self.features:
+            self.collapseAllFeatures()
         self.showForm(feature.form)
         feature.expand()
         self.selectedFeature = feature
@@ -212,16 +229,31 @@ class FeatureManager(object):
         del feature
         self.showForm(self.blank_form)
 
+    def subFeatureAdded(self, subfeature):
+        try:
+            subfeature.sigClicked.connect(self.featureClicked)
+            subfeature.sigSubFeature.connect(self.subFeatureAdded)
+            self._flayout.addWidget(subfeature.form)
+        except AttributeError:
+            pass
+
     def addFeature(self, feature):
         self.features.append(feature)
         self._llayout.addWidget(feature)
         self._flayout.addWidget(feature.form)
         feature.sigClicked.connect(self.featureClicked)
         feature.sigDelete.connect(self.removeFeature)
+        feature.sigSubFeature.connect(self.subFeatureAdded)
+        if feature.subfeatures is not None:
+            for subfeature in feature.subfeatures:
+                self.subFeatureAdded(subfeature)
 
     def collapseAllFeatures(self):
         for feature in self.features:
             feature.collapse()
+            if feature.subfeatures is not None:
+                for subfeature in feature.subfeatures:
+                    subfeature.collapse()
 
     def showForm(self, form):
         self._flayout.setCurrentWidget(form)
@@ -231,6 +263,7 @@ class FeatureManager(object):
             feature.deleteLater()
             del feature
         self.features = []
+        self.showForm(self.blank_form)
 
     def clearLayouts(self):
         for feature in self.features:

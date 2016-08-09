@@ -84,6 +84,7 @@ class RunnableMethod(QtCore.QRunnable):
         except Exception:
             ex_type, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(ex, tb)
+            raise
         else:
             self.emitter.sigFinished.emit()
         finally:
