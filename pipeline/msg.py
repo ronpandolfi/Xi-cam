@@ -9,11 +9,13 @@ stdch = logging.StreamHandler(sys.stdout)
 
 guilogcallable = None
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
+DEBUG = logging.DEBUG           # 10
+INFO = logging.INFO             # 20
+WARNING = logging.WARNING       # 30
+ERROR = logging.ERROR           # 40
+CRITICAL = logging.CRITICAL     # 50
+
+
 
 def showMessage(s,timeout=0):
     if statusbar is not None:
@@ -29,11 +31,12 @@ def logMessage(s,level=INFO,loggername=None):
     stdch.setLevel(level)
     logger.addHandler(stdch)
 
-    s = time.asctime()+'\t'+unicode(s)
+    timestamp = time.asctime()
+    s = timestamp +'\t'+unicode(s)
 
     logger.log(level,s)
     if guilogcallable:
-        guilogcallable(level,s)
+        guilogcallable(level,timestamp,s)
     print s
 
 def clearMessage():
