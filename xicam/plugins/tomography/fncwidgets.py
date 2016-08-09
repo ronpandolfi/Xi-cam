@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 from copy import deepcopy
 from functools import partial
 import inspect
@@ -7,7 +8,6 @@ import numpy as np
 from collections import OrderedDict
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from xicam import threads
 import config
 import manager
 import reconpkg
@@ -359,7 +359,7 @@ class FunctionManager(fw.FeatureManager):
         else:
             func_widget = FunctionWidget(function, subfunction, package)
         self.addFeature(func_widget)
-        return func_widget  #TODO why do i return this?
+        return func_widget
 
     def addInputFunction(self, funcwidget, parameter, function, subfunction, package, **kwargs):
         ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
@@ -389,8 +389,7 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
-
-    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict, slc):
+    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
         fpartial = funcwidget.partial
         for argname in funcwidget.missing_args:
             if argname in 'flats':
@@ -410,7 +409,8 @@ class FunctionManager(fw.FeatureManager):
                 if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
                     ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
             fpartial.keywords[param] = ipf.partial(*args)
-            stack_dict[param] = fpartial.keywords[param]
+            if stack_dict and param in stack_dict:
+                stack_dict[param] = fpartial.keywords[param]
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
@@ -418,19 +418,18 @@ class FunctionManager(fw.FeatureManager):
             self.resetCenterCorrection()
         return fpartial
 
-    def previewFunctionStack(self, datawidget, slc=None, ncore=None):
+    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write']):
         stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
         for func in self.features:
             if not func.enabled:
                 continue
-            elif func.func_name == 'Write':
+            elif func.func_name in skip_names:
                 stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
                 continue
             stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
             p = self.updateFunctionPartial(func, datawidget, stack_dict[func.func_name][func.subfunc_name], slc)
-            # stack_dict[func.func_name][func.subfunc_name].update(p.keywords)
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
             partial_stack.append(p)
@@ -444,3 +443,40 @@ class FunctionManager(fw.FeatureManager):
     def foldFunctionStack(self, partial_stack, initializer):
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
+    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, ncore=None):
+        write_start = sino[0]
+        nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
+        total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
+        if total_sino < sino_p_chunk:
+            sino_p_chunk = total_sino
+
+        for i in range(nchunk):
+            init = True
+            start, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
+            end = end if end < sino[1] else sino[1]
+
+            for function in self.features:
+                if not function.enabled:
+                    continue
+                ts = time.time()
+                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
+                                                                                              end, total_sino)
+                fpartial = self.updateFunctionPartial(function, datawidget,
+                                                      slc=(slice(*proj), slice(start, end, sino[2]),
+                                                           slice(None, None, None)))
+                if init:
+                    tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
+                                                   slice(None, None, None)))
+                    init = False
+                elif 'Tiff' in function.name:
+                    fpartial.keywords['start'] = write_start
+                    write_start += tomo.shape[0]
+                # elif 'Reconstruction' in fname:
+                #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+                #     # and set the reconstruction partial to the updated one.
+                #     if ipartials is not None:
+                #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
+                #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
+                #     tomo = fpartial(tomo)
+                tomo = fpartial(tomo)
+                yield ' Finished in {:.3f} s\n'.format(time.time() - ts)

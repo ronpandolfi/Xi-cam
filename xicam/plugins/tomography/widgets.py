@@ -45,7 +45,7 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
-        self._recon_path = None
+        # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
 
         self.viewmode = QtGui.QTabBar(self)
