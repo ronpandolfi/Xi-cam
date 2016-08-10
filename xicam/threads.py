@@ -5,11 +5,14 @@ Created on Mon Oct 19 17:22:00 2015
 @author: lbluque
 """
 import sys
+import types
+import traceback
 import time
 import functools
 import Queue
 import multiprocessing as mp
 from PySide import QtCore
+from pipeline import msg
 # Error is raised if this import is removed probably due to some circular with this module and something???
 from client import spot, globus, sftp
 
@@ -21,11 +24,21 @@ QtCore.Slot = QtCore.Slot
 class Emitter(QtCore.QObject):
     """
     Class that holds signals that can be emitted by a QRunnable
+
+    Attributes
+    ----------
+    sigRetValue : QtCore.Signal
+        Signal used to emit the return value from the function passed to Runnable
+    sigFinised : QtCore.Signal
+        Void signal emitted when the runnable has finished correctly (no exceptions raised)
+    sigExcept : QtCore.Signal
+        Signal that emits the exeption type, exception instance and traceback for an exception raised when running
+        the Runnable
     """
 
     sigRetValue = QtCore.Signal(object)
     sigFinished = QtCore.Signal()
-    sigExcept = QtCore.Signal(Exception, object)
+    sigExcept = QtCore.Signal(type, Exception, types.TracebackType)
 
     def __init__(self):
         super(Emitter, self).__init__()
@@ -34,27 +47,57 @@ class Emitter(QtCore.QObject):
 class RunnableMethod(QtCore.QRunnable):
     """
     Runnable that will execute a given method from a QThreadPool and emit the response to the given callback function
+    To use simply instantiate and pass the instance to a QThreadPool.start()
+
+    Attributes
+    ----------
+    emmiter : QtCore.QObject
+        QObject used to emit signals to communicate with the main GUI thread
+    _method : function/method
+        Function/method that will be run in a background thread
+    method_args : list
+        List/tuple of arguments for the given function/method
+    method_kwargs : dict
+        Dictionary with keyword arguments for the give function/method
+    lock : object
+        Mutex used to lock when several threads are spawned
+    _priority : int
+        Priority given to this Runnable in the pool
+
     """
 
     def __init__(self, method, method_args=(), method_kwargs={}, callback_slot=None,
-                 finished_slot=None, except_slot=None, priority=0, lock=None):
+                 finished_slot=None, except_slot=None, default_exhandle=True, priority=0, lock=None):
         """
-        RunnableMethod constructor
-        :param method: function object, method to run on seperate thread
-        :param method_args: tup, positional arguments for method
-        :param method_kwargs: dict, keyword arguments for method
-        :param callback_slot: function object (qt slot), slot to recieve return value of method
-        :param finished_slot: function object (qt slot), slot to recieve void signal if method finishes successfully
-        :param except_slot: function object (qt slot), slot to recieve exception instance and traceback object
-        :param priority: int, priority given to runnable
+        Instantiate the RunnableMethod
+
+        Parameters
+        ----------
+        method : function
+            Function object, method to run on seperate thread
+        method_args : list
+            List/tuple of arguments for the given function/method
+        method_kwargs : dict
+            Dictionary with keyword arguments for the give function/method
+        callback_slot : function
+            Function/method to run on a background thread
+        finished_slot : QtCore.Slot
+            Slot to call with the return value of the function
+        except_slot : QtCore.Slot
+            Function object (qt slot), slot to receive exception type, instance and traceback object
+        default_exhandle : bool
+            Flag to use the default exception handle slot. If false it will not be called
+        lock : mutex/semaphore
+            Simple lock if multiple access needs to be prevented
         """
+
         super(RunnableMethod, self).__init__()
         self.emitter = Emitter()
         self._method = method
-        self._priority = priority
-        self.lock = lock
         self.method_args = method_args
         self.method_kwargs = method_kwargs
+        self._priority = priority
+        self.lock = lock
 
         self.setAutoDelete(True)
 
@@ -65,10 +108,13 @@ class RunnableMethod(QtCore.QRunnable):
             self.emitter.sigFinished.connect(finished_slot, QtCore.Qt.QueuedConnection)
         if except_slot is not None:
             self.emitter.sigExcept.connect(except_slot, QtCore.Qt.QueuedConnection)
+        if default_exhandle:
+            self.emitter.sigExcept.connect(default_exception_handler, QtCore.Qt.QueuedConnection)
 
     def run(self):
         """
-        Override virtual run method of QRunnable base class
+        Override virtual run method of QRunnable base class to run the function/method that was passed in the
+        constructor
         """
 
         # print 'Started {0} in thread {1}, will emit back to {2}'.format(self._method.__name__,
@@ -82,8 +128,8 @@ class RunnableMethod(QtCore.QRunnable):
                 value = False
             self.emitter.sigRetValue.emit(value)
         except Exception:
-            ex_type, ex, tb = sys.exc_info()
-            self.emitter.sigExcept.emit(ex, tb)
+            etype, ex, tb = sys.exc_info()
+            self.emitter.sigExcept.emit(etype, ex, tb)
         else:
             self.emitter.sigFinished.emit()
         finally:
@@ -94,26 +140,49 @@ class RunnableMethod(QtCore.QRunnable):
 class RunnableIterator(RunnableMethod):
     """
     Runnable that will loop through an iterator and emit a signal representing the progress of a
-    iterator or generator method
+    iterator or generator method.
+
+    See RunnableMethod for attributes
+
+    Attributes
+    ----------
+    interrupt_signal : QtCore.Signal
+        Signal used to interrupt generator
+
     """
 
     def __init__(self, iterator, iterator_args=(), iterator_kwargs={}, callback_slot=None,
-                 finished_slot=None, interrupt_signal=None, except_slot=None, priority=0, lock=None):
+                 finished_slot=None, interrupt_signal=None, except_slot=None, default_exhandle=True,
+                 priority=0, lock=None):
         """
-        RunnableIterator constructor
-        :param iterator: generator object, method to run on seperate thread
-        :param iterator_args: tup, positional arguments for generator
-        :param iterator_kwargs: dict, keyword arguments for generator
-        :param callback_slot: function object (qt slot), slot to recieve yield value of generator
-        :param finished_slot: function object (qt slot), slot to recieve void signal if generator finishes successfully
-        :param interrupt_signal:, qt signal, signal used to interrupt generator
-        :param except_slot: function object (qt slot), slot to recieve exception instance and traceback object
-        :param priority: int, priority given to runnable
+        Instantiate the RunnableIterator
+
+        Parameters
+        ----------
+        iterator : iterator
+            Generator/iterator object to loop through on seperate thread
+        iterator_args : list
+            List/tuple of arguments for the given function/method
+        iterator_kwargs : dict
+            Dictionary with keyword arguments for the give function/method
+        callback_slot : function
+            Function/method to run on a background thread
+        finished_slot : QtCore.Slot
+            Slot to call with the return value of the function
+        interrupt_signal : QtCore.Signal
+            Signal used to interrupt generator
+        except_slot : QtCore.Slot
+            Function object (qt slot), slot to receive exception type, instance and traceback object
+        default_exhandle : bool
+            Flag to use the default exception handle slot. If false it will not be called
+        lock : mutex/semaphore
+            Simple lock if multiple access needs to be prevented
+
         """
         super(RunnableIterator, self).__init__(method=iterator, method_args=iterator_args,
                                                method_kwargs=iterator_kwargs, callback_slot=callback_slot,
                                                finished_slot=finished_slot, except_slot=except_slot,
-                                               priority=priority, lock=lock)
+                                               default_exhandle=default_exhandle, priority=priority, lock=lock)
         self._interrupt = False
 
         if interrupt_signal is not None:
@@ -140,34 +209,46 @@ class RunnableIterator(RunnableMethod):
                     status = False
                 self.emitter.sigRetValue.emit(status)
         except Exception:
-            ex_type, ex, tb = sys.exc_info()
-            self.emitter.sigExcept.emit(ex, tb)
+            etype, ex, tb = sys.exc_info()
+            self.emitter.sigExcept.emit(etype, ex, tb)
         else:
             self.emitter.sigFinished.emit()
         finally:
             if self.lock is not None: self.lock.unlock()
 
 
-def method(callback_slot=None, finished_slot=None, except_slot=None, lock=None):
+def method(callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True, lock=None):
     """
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
     decorated_method = threads.method(callback_slot, ...)(method_to_decorate)
     then simply run it: decorated_iterator(*args, **kwargs)
-    :param method: function/method to run on a background thread
-    :param callback_slot: slot to call with the return value of the function
-    :param finished_slot: slot to recieve finished signal when function completes
-    :param except_slot: function object (qt slot), slot to recieve exception instance and traceback object
-    :param lock: (mutex) simple lock if multiple access needs to be prevented
-    :return: decorated method
+
+    Parameters
+    ----------
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    default_exhandle : bool
+        Flag to use the default exception handle slot. If false it will not be called
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
+
+    Returns
+    -------
+    wrap_runnable_method : function
+        Decorated function/method
     """
 
-    def wrap_runnable_method(method):
-        @functools.wraps(method)
+    def wrap_runnable_method(function):
+        @functools.wraps(function)
         def _runnable_method(*args, **kwargs):
-            runnable = RunnableMethod(method, method_args=args, method_kwargs=kwargs,
-                                        callback_slot=callback_slot, finished_slot=finished_slot,
-                                        except_slot=except_slot, lock=lock)
+            runnable = RunnableMethod(function, method_args=args, method_kwargs=kwargs,
+                                      callback_slot=callback_slot, finished_slot=finished_slot,
+                                      except_slot=except_slot, default_exhandle=default_exception_handler, lock=lock)
             add_to_queue(runnable)
         return _runnable_method
     return wrap_runnable_method
@@ -179,14 +260,26 @@ def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, exce
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
     decorated_iterator = threads.iterator(callback_slot, ...)(iterator_to_decorate).
     then simply run it: decorated_iterator(*args, **kwargs)
-    :param generator: iterator/generator to be decorated
-    :param callback_slot: slot to call with the yield value or next value of iterator
-    :param finished_slot: slot to receive finished signal when iterator finishes
-    :param interrupt_signal: signal to break out of iterator loop prematurely
-    :param except_slot: function object (qt slot), slot to recieve exception instance and traceback object
-    :param lock: (mutex) simple lock if multiple access needs to be prevented
-    :return: decorated iterator
+
+    Parameters
+    ----------
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    interrupt_signal : QtCore.Signal
+        Signal to break out of iterator loop prematurely
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
+
+    Returns
+    -------
+    wrap_runnable_iterator : function
+        Decorated iterator/generator
     """
+
     def wrap_runnable_iterator(generator):
         @functools.wraps(generator)
         def _runnable_iterator(*args, **kwargs):
@@ -201,6 +294,14 @@ def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, exce
 class Worker(QtCore.QThread):
     """
     Daemon worker that contains a Queue and QThreadPool for running jobs
+
+    Attributes
+    ----------
+    queue : Queue
+        Queue to put/get runnables
+    pool : QThreadPool
+        Thread pool used to run runnables from queue
+
     """
 
     def __init__(self, queue, parent=None):
@@ -213,6 +314,9 @@ class Worker(QtCore.QThread):
         self.queue.join()
 
     def stop(self):
+        """
+        Puts a None in the queue to signal the run loop to exit
+        """
         self.queue.put(None)
         self.wait()
 
@@ -229,12 +333,44 @@ class Worker(QtCore.QThread):
             self.queue.task_done()
 
 
+@QtCore.Slot(type, Exception, types.TracebackType)
+def default_exception_handler(etype, ex, tb):
+    """
+    Default exception handle slot that will log the exception and traceback to the logger from pipeline.msg
+    this will also print the exception
+
+    Parameters
+    ----------
+    etype : Exception type
+        Type of the exception being raised from background thread
+    ex : Exception
+        Exception object raised from the function sent to a background thread
+    tb : Traceback
+        Traceback object raised from the function sent to a background thread
+
+    Returns
+    -------
+    None
+    """
+
+    exmessage = ''.join(traceback.format_exception(etype, ex, tb))  # concatenate the list of strings
+    msg.logMessage(exmessage, level=msg.ERROR)
+    traceback.print_exception(etype, ex, tb)
+
+
 def add_to_queue(runnable):
+    """
+    Add a Runnable to the global thread.queue
+
+    Parameters
+    ----------
+    runnable : QtCore.Runnable
+
+    """
     global queue
     try:
         queue.put(runnable)
     except Exception as e:
-        from pipeline import msg
         msg.logMessage(e, level=40)
         raise e
 
