@@ -9,14 +9,15 @@ from collections import OrderedDict
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
-import manager
 import reconpkg
 import ui
-from xicam import msg
 import ftrwidgets as fw
 
 
 class FunctionWidget(fw.FeatureWidget):
+
+    sigTestRange = QtCore.Signal(QtGui.QWidget, str, tuple)
+
     def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
         self.name = name
         if name != subname:
@@ -43,7 +44,6 @@ class FunctionWidget(fw.FeatureWidget):
         argspec = inspect.getargspec(self._function)
         default_argnum = len(argspec[3])
         self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
-        print self.subfunc_name, self.param_dict
         for key, val in self.param_dict.iteritems():
             if key in [p.name() for p in self.params.children()]:
                 self.params.child(key).setValue(val)
@@ -81,6 +81,12 @@ class FunctionWidget(fw.FeatureWidget):
         else:
             self.previewButton.setChecked(False)
 
+    @property
+    def exposed_param_dict(self):
+        param_dict = {key: val for (key, val) in self.param_dict.iteritems()
+                      if key in [param.name() for param in self.params.children()]}
+        return param_dict
+
     def updateParamsDict(self):
         self.param_dict.update({param.name(): param.value() for param in self.params.children()})
         for p, ipf in self.input_functions.iteritems():
@@ -100,10 +106,6 @@ class FunctionWidget(fw.FeatureWidget):
         self.addSubFeature(functionwidget)
 
     @property
-    def input_partials(self):
-        return None
-
-    @property
     def func_signature(self):
         signature = str(self._function.__name__) + '('
         for arg in self.missing_args:
@@ -115,11 +117,6 @@ class FunctionWidget(fw.FeatureWidget):
 
     def paramChanged(self, param):
         self.param_dict.update({param.name(): param.value()})
-
-    # def getParamDict(self, update=True):
-    #     if update:
-    #         self.updateParamsDict()
-    #     return self.param_dict
 
     def allReadOnly(self, boolean):
         for param in self.params.children():
@@ -148,18 +145,9 @@ class FunctionWidget(fw.FeatureWidget):
             test = TestListRangeDialog(param.opts['values'])
         else:
             return
-
         if test.exec_():
-            widget = ui.centerwidget.currentWidget()
-            if widget is None: return
-            self.updateParamsDict()
-            msg.showMessage('Computing previews for {}:{} parameter range...'.format(self.subfunc_name,
-                                                                                     param.name()), timeout=0)
-            for i in test.selectedRange():
-                self.param_dict[param.name()] = i
-                manager.pipeline_preview_action(widget, ui.centerwidget.currentWidget().addSlicePreview, update=False,
-                                                fixed_funcs={self.subfunc_name: [deepcopy(self.param_dict),
-                                                                                  deepcopy(self.partial)]})
+            self.sigTestRange.emit(self, param.name(), test.selectedRange())
+
 
 class ReconFunctionWidget(FunctionWidget):
     def __init__(self, name, subname, package):
@@ -186,23 +174,6 @@ class ReconFunctionWidget(FunctionWidget):
             kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
         self._partial = partial(self._function, **kwargs)
         return self._partial
-
-    @property
-    def input_partials(self):
-        p = []
-        if self.center is None or not self.center.previewButton.isChecked():
-            p.append((None, None, None))
-        else:
-            if self.center.subfunc_name == 'Phase Correlation':
-                slices = (0, -1)
-            else:
-                slices = (slice(None, ui.centerwidget.currentWidget().sinogramViewer.currentIndex),)
-            if self.center.subfunc_name == 'Nelder-Mead':
-                p.append(('center', slices, partial(self.center.partial, theta=self.angles.partial())))
-            else:
-                p.append(('center', slices, self.center.partial))
-        p.append(('theta', None, self.angles.partial))
-        return p
 
     def resetCenter(self):
         self.center = None
@@ -234,9 +205,6 @@ class AstraReconFuncWidget(ReconFunctionWidget):
     @property
     def partial(self):
         return FunctionWidget.partial(self)
-        # self._partial = partial(self._function, **self.param_dict)
-        # return self._partial
-
 
 
 class TestRangeDialog(QtGui.QDialog):
@@ -338,6 +306,7 @@ class FunctionManager(fw.FeatureManager):
     Class to manage tomography workflow/pipeline FunctionWidgets
     """
 
+    sigTestRange = QtCore.Signal(str, object)
     center_func_slc = {'Phase Correlation': (0, -1)}
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
@@ -358,6 +327,7 @@ class FunctionManager(fw.FeatureManager):
             self.recon_function = func_widget
         else:
             func_widget = FunctionWidget(function, subfunction, package)
+        func_widget.sigTestRange.connect(self.testParameterRange)
         self.addFeature(func_widget)
         return func_widget
 
@@ -409,7 +379,7 @@ class FunctionManager(fw.FeatureManager):
                 if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
                     ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
             fpartial.keywords[param] = ipf.partial(*args)
-            if stack_dict and param in stack_dict:
+            if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
                 stack_dict[param] = fpartial.keywords[param]
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
@@ -418,7 +388,7 @@ class FunctionManager(fw.FeatureManager):
             self.resetCenterCorrection()
         return fpartial
 
-    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write']):
+    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
         stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
@@ -426,9 +396,11 @@ class FunctionManager(fw.FeatureManager):
             if not func.enabled:
                 continue
             elif func.func_name in skip_names:
-                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
+                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
-            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.param_dict)}
+            elif fixed_func is not None and func.func_name == fixed_func.func_name:
+                func = fixed_func  # replace the function with the fixed function
+            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
             p = self.updateFunctionPartial(func, datawidget, stack_dict[func.func_name][func.subfunc_name], slc)
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
@@ -480,3 +452,17 @@ class FunctionManager(fw.FeatureManager):
                 #     tomo = fpartial(tomo)
                 tomo = fpartial(tomo)
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
+
+
+    def testParameterRange(self, function, parameter, prange):
+        self.updateParameters()
+        for i in prange:
+            function.param_dict[parameter] = i
+            fixed_func = type('FixedFunc', (), {'func_name': function.func_name, 'subfunc_name': function.subfunc_name,
+                                                'missing_args': function.missing_args,
+                                                'param_dict': function.param_dict,
+                                                'exposed_param_dict': function.exposed_param_dict,
+                                                'partial': function.partial,
+                                                'input_functions': function.input_functions})
+            self.sigTestRange.emit('Computing previews for {}: {} parameter range...'.format(function.name, parameter),
+                                   fixed_func)

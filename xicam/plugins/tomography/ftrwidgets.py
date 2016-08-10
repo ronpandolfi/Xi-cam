@@ -159,7 +159,7 @@ class ROlineEdit(QtGui.QLineEdit):
         self.selectAll()
 
 
-class FeatureManager(object):
+class FeatureManager(QtCore.QObject):
     """
     Feature Manager class to manage a list of FeatureWidgets and show the list in an appropriate layout and their
     corresponding forms in another layout. list layout must have an addWidget, removeWidget methods. Form layout
@@ -188,6 +188,7 @@ class FeatureManager(object):
 
         self._flayout.addWidget(self.blank_form)
         self.showForm(self.blank_form)
+        super(FeatureManager, self).__init__()
 
     @property
     def count(self):

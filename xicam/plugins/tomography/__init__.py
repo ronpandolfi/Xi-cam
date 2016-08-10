@@ -67,6 +67,7 @@ class plugin(base.plugin):
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
                                 self.clearPipeline)
+        self.manager.sigTestRange.connect(self.slicePreviewAction)
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
         super(plugin, self).__init__(*args, **kwargs)
@@ -171,10 +172,10 @@ class plugin(base.plugin):
             return False
         return True
 
-    def slicePreviewAction(self):
+    def slicePreviewAction(self, message='Computing slice preview...', fixed_func=None):
         if self.checkPipeline():
-            msg.showMessage('Computing slice preview...', timeout=0)
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x))
+            msg.showMessage(message, timeout=0)
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func)
 
     def runSlicePreview(self, partial_stack, stack_dict):
         initializer = self.currentWidget().getsino()
@@ -197,10 +198,11 @@ class plugin(base.plugin):
         message = 'Unable to compute 3D preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, message)
 
-    def processFunctionStack(self, callback, finished=None, slc=None):
+    def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None):
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.previewFunctionStack)
-        bg_functionstack(self.currentWidget(), slc=slc, ncore=self.ui.config_params.child('CPU Cores').value())
+        bg_functionstack(self.currentWidget(), slc=slc, ncore=self.ui.config_params.child('CPU Cores').value(),
+                         fixed_func=fixed_func)
 
     def foldPreviewStack(self, partial_stack, initializer, callback, error_message):
         except_slot = lambda: msg.showMessage(error_message)
