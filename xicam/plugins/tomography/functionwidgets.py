@@ -97,13 +97,14 @@ class FunctionWidget(fw.FeatureWidget):
         self._partial = partial(self._function, **self.param_dict)
         return self._partial
 
-    # @partial.setter
-    # def partial(self, p):
-    #     self._partial = p
-
     def addInputFunction(self, parameter, functionwidget):
         self.input_functions[parameter] = functionwidget
+        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
         self.addSubFeature(functionwidget)
+
+    def removeInputFunction(self, parameter):
+        function = self.input_functions.pop(parameter)
+        del function
 
     @property
     def func_signature(self):
@@ -300,7 +301,6 @@ class TestListRangeDialog(QtGui.QDialog):
         return str(self.lineEdit.text()).split(' ')
 
 
-
 class FunctionManager(fw.FeatureManager):
     """
     Class to manage tomography workflow/pipeline FunctionWidgets
@@ -349,6 +349,7 @@ class FunctionManager(fw.FeatureManager):
         self.cor_scale = lambda x: x  # dummy
 
     def setCenterCorrection(self, name, param_dict):
+        print 'Correcting center for ', name
         if 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
             self.cor_offset = lambda x: x + n
@@ -385,6 +386,7 @@ class FunctionManager(fw.FeatureManager):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
+            print 'My center is now ', fpartial.keywords['center']
             self.resetCenterCorrection()
         return fpartial
 
@@ -501,6 +503,7 @@ class FunctionManager(fw.FeatureManager):
                                 ifwidget.updateParamsDict()
                 funcWidget.updateParamsDict()
 
+
     def setPipelineFromDict(self, pipeline, config_file=config.names):
         self.removeAllFeatures()
         for func, subfuncs in pipeline.iteritems():
@@ -516,11 +519,8 @@ class FunctionManager(fw.FeatureManager):
                                                           package=reconpkg.packages[config_file[sipf.keys()[0]][1]])
                                 for p, v in sipf[sipf.keys()[0]].items():
                                     ifwidget.params.child(p).setValue(v)
-                                    # ifwidget.params.child(p).setDefault(v)
                                 ifwidget.updateParamsDict()
                     else:
-                        child = funcWidget.params.child(param)
-                        child.setValue(value)
-                        # child.setDefault(value)
+                        funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
 

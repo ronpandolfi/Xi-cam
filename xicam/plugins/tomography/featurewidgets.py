@@ -29,7 +29,7 @@ class FeatureWidget(QtGui.QWidget):
         self.horizontalLayout_2 = QtGui.QHBoxLayout(self.frame)
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.previewButton = QtGui.QPushButton(self)
+        self.previewButton = QtGui.QPushButton(parent=self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

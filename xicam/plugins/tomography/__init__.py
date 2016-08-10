@@ -138,10 +138,8 @@ class plugin(base.plugin):
             self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
 
     def setPipelineValues(self):
-        print 'setting values'
         widget = self.currentWidget()
         if widget is not None:
-            print 'Not none'
             self.ui.property_table.setData(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
@@ -186,12 +184,13 @@ class plugin(base.plugin):
         if self.checkPipeline():
             msg.showMessage('Computing 3D preview...', timeout=0)
             slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+            self.manager.cor_scale = lambda x: x // 8
             self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
 
     def run3DPreview(self, partial_stack, stack_dict):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
         initializer = self.currentWidget().getsino(slc)  # this step takes quite a bit, think of running a thread
-        self.manager.cor_scale = lambda x: x // 8
+        self.manager.updateParameters()
         callback = partial(self.currentWidget().add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, err_message)
@@ -213,6 +212,7 @@ class plugin(base.plugin):
             name = self.centerwidget.tabText(self.centerwidget.currentIndex())
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
             self.bottomwidget.local_console.clear()
+            self.manager.updateParameters()
             recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
                                           interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
                                           finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)

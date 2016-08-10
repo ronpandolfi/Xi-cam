@@ -54,11 +54,11 @@ class tomotoolbar(QtGui.QToolBar):
         icon3.addPixmap(QtGui.QPixmap("gui/icons_03.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionMasking.setIcon(icon3)
 
-        maskmenu = QtGui.QMenu()
+        maskmenu = QtGui.QMenu(self)
         maskmenu.addAction(self.actionShow_Mask)
         maskmenu.addAction(self.actionPolyMask)
         maskmenu.addAction(self.actionMaskLoad)
-        toolbuttonMasking = QtGui.QToolButton()
+        toolbuttonMasking = QtGui.QToolButton(self)
         toolbuttonMasking.setDefaultAction(self.actionMasking)
         toolbuttonMasking.setMenu(maskmenu)
         toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
@@ -71,20 +71,20 @@ class tomotoolbar(QtGui.QToolBar):
         icon1.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionCenter.setIcon(icon1)
         self.actionCenter.setToolTip('Overlay center of rotation detection')
-        toolbuttonCenter = QtGui.QToolButton()
-        toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
-        self.actionCenter.setDefaultWidget(toolbuttonCenter)
+        self.toolbuttonCenter = QtGui.QToolButton(parent=self)
+        self.toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.actionCenter.setDefaultWidget(self.toolbuttonCenter)
         self.actionCenter.setCheckable(True)
-        toolbuttonCenter.setDefaultAction(self.actionCenter)
+        self.toolbuttonCenter.setDefaultAction(self.actionCenter)
 
 
         self.setIconSize(QtCore.QSize(32, 32))
 
+        self.addAction(self.actionCenter)
         self.addAction(self.actionRun_FullRecon)
         self.addAction(self.actionRun_SlicePreview)
         self.addAction(self.actionRun_3DPreview)
         # self.addAction(toolbuttonMaskingAction)
-        self.addAction(self.actionCenter)
 
 
     def connecttriggers(self, slicepreview, preview3D, fullrecon, center):
