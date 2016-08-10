@@ -18,7 +18,6 @@ from pipeline import loader
 import pyqtgraph as pg
 import imageio
 import os
-import manager
 from pipeline import msg
 
 __author__ = "Luis Barroso-Luque"
@@ -140,19 +139,6 @@ class TomoViewer(QtGui.QWidget):
     def setCorValue(self, value):
         self.cor = value
 
-    # def runSlicePreview(self):
-    #     slice_no = self.sinogramViewer.view_spinBox.value()
-    #     manager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
-
-    # def run3DPreview(self):
-    #     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-    #     manager.cor_scale = lambda x: x // 8
-    #     manager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
-    #
-    # def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
-    #     manager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
-    #                            interrupt_signal=interrupt_signal)
-
     def addSlicePreview(self, params, recon, slice_no=None):
         if slice_no is None:
             slice_no = self.sinogramViewer.view_spinBox.value()
@@ -167,10 +153,6 @@ class TomoViewer(QtGui.QWidget):
         hist = self.preview3DViewer.volumeviewer.getHistogram()
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
-
-    # def fullReconFinished(self):
-    #     self.sigReconFinished.emit()
-    #     msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:
@@ -701,7 +683,6 @@ class PreviewViewer(QtGui.QSplitter):
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
         self.sigSetDefaults.emit(current_data)
-        # manager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 """

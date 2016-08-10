@@ -97,9 +97,9 @@ class FunctionWidget(fw.FeatureWidget):
         self._partial = partial(self._function, **self.param_dict)
         return self._partial
 
-    @partial.setter
-    def partial(self, p):
-        self._partial = p
+    # @partial.setter
+    # def partial(self, p):
+    #     self._partial = p
 
     def addInputFunction(self, parameter, functionwidget):
         self.input_functions[parameter] = functionwidget

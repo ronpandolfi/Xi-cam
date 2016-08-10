@@ -91,7 +91,6 @@ class plugin(base.plugin):
             paths = paths[0]
 
         widget = TomoViewer(paths=paths)
-        # widget.sigReconFinished.connect(self.reconstructionFinished)
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.wireupCenterSelection(self.manager.recon_function)
         self.centerwidget.addTab(widget, os.path.basename(paths))
@@ -104,14 +103,12 @@ class plugin(base.plugin):
             return None
 
     def currentChanged(self, index):
-        current_dataset = self.currentWidget()
-        if current_dataset is not None:
-        #     current_dataset.sigReconFinished.connect(self.reconstructionFinished)
-        #     current_dataset.sigSetDefaults.connect(self.manager.setPipelineFromDict)
-        #     current_dataset.wireupCenterSelection(self.manager.recon_function)
-            self.toolbar.actionCenter.setChecked(False)
+        try:
             self.setPipelineValues()
             self.manager.updateParameters()
+            self.toolbar.actionCenter.setChecked(False)
+        except (AttributeError, RuntimeError) as e:
+            msg.logMessage(e.message, level=msg.ERROR)
 
     def loadPipeline(self):
         open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
@@ -141,8 +138,10 @@ class plugin(base.plugin):
             self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
 
     def setPipelineValues(self):
+        print 'setting values'
         widget = self.currentWidget()
         if widget is not None:
+            print 'Not none'
             self.ui.property_table.setData(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
@@ -191,11 +190,11 @@ class plugin(base.plugin):
 
     def run3DPreview(self, partial_stack, stack_dict):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        initializer = self.currentWidget().getsino(slc)
+        initializer = self.currentWidget().getsino(slc)  # this step takes quite a bit, think of running a thread
         self.manager.cor_scale = lambda x: x // 8
         callback = partial(self.currentWidget().add3DPreview, stack_dict)
-        message = 'Unable to compute 3D preview. Check log for details.'
-        self.foldPreviewStack(partial_stack, initializer, callback, message)
+        err_message = 'Unable to compute 3D preview. Check log for details.'
+        self.foldPreviewStack(partial_stack, initializer, callback, err_message)
 
     def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None):
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
