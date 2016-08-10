@@ -70,7 +70,7 @@ class SGClass:
         """
         Get the relevant exclusion rule column and then test against it.
         """
-        col=self.getcolumn(m)
+        col,m=self.getcolumn(m)
         if type(self.conditions[SG]) is str: # ALLOW LINKED CONDITIONS
             SG = self.conditions[SG]
         return self.checkcolumn(SG,col,m)
@@ -97,7 +97,7 @@ class SGClass:
             SGconditions = [SGconditions]
         for condition in SGconditions:
             if condition is not None:
-                if not condition(*m):
+                if not condition(*m):   # Do not change this to 'return not condition(*m)'!
                     return False
         return True
 
@@ -153,7 +153,7 @@ class Monoclinic(SGClass):
         else:
             debugtools.frustration()
             raise ValueError
-        return column
+        return column,m
 
 class Orthorhombic(SGClass):
     # Status: COMPLETE!
@@ -381,7 +381,7 @@ class Orthorhombic(SGClass):
             column = 1
         else:
             column = 0
-        return column
+        return column,m
 
 class Tetragonal(SGClass):
     #Status: COMPLETE!
@@ -472,7 +472,7 @@ class Tetragonal(SGClass):
             column = 1
         else:
             column = 0
-        return column
+        return column,m
 
 class Trigonal(SGClass):
     # Status: COMPLETE!
@@ -536,7 +536,7 @@ class Trigonal(SGClass):
         else:
             debugtools.frustration()
             raise ValueError
-        return column
+        return column,m
 
 class Hexagonal(SGClass):
     # Status: COMPLETE!
@@ -580,7 +580,7 @@ class Hexagonal(SGClass):
             column = 0
         else:
             column = None
-        return column
+        return column,m
 
 class Cubic(SGClass):
     # Status: COMPLETE
@@ -604,7 +604,7 @@ class Cubic(SGClass):
                                 (u'Im3\u0305', [hpkpl, kpl, l, l]),
                                 ('I432', [hpkpl, kpl, l, l]),
                                 (u'I4\u03053m', [hpkpl, kpl, l, l]),
-                                (u'Im3\u0305m', [hpkpl, kpl, l, l]),
+                                (u'Im3\u0305m (BCC)', [hpkpl, kpl, l, l]),
                                 ('I4₁32',[hpkpl, kpl, l, l4n]),
                                 (u'I4\u03053d',[hpkpl, kpl, [twohpl4n,l],l4n]),
                                 (u'Ia3\u0305',[hpkpl, [k,l], l, l]),
@@ -634,9 +634,9 @@ class Cubic(SGClass):
                 column = 1
 
             if column:
-                return column
+                return column, [mh,mk,ml]
         column = 0
-        return column
+        return column, [mh,mk,ml]
 
 
 
