@@ -23,10 +23,10 @@ import yamlmod
 from xicam.plugins import base
 from pipeline import msg
 from xicam import threads
-import widgets as twidgets
+from widgets import TomoViewer
 import ui
 import config
-from fncwidgets import FunctionManager
+from functionwidgets import FunctionManager
 
 DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
 
@@ -53,8 +53,7 @@ class plugin(base.plugin):
         # Setup FunctionManager
         self.manager = FunctionManager(self.ui.functionwidget.functionsList, self.ui.param_form,
                                        blank_form='Select a function from\n below to set parameters...')
-        config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
-
+        self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
@@ -91,7 +90,10 @@ class plugin(base.plugin):
         if type(paths) is list:
             paths = paths[0]
 
-        widget = twidgets.TomoViewer(paths=paths)
+        widget = TomoViewer(paths=paths)
+        # widget.sigReconFinished.connect(self.reconstructionFinished)
+        widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
+        widget.wireupCenterSelection(self.manager.recon_function)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
@@ -102,22 +104,20 @@ class plugin(base.plugin):
             return None
 
     def currentChanged(self, index):
-        self.toolbar.actionCenter.setChecked(False)
-        try:
-            current_dataset = self.currentWidget()
-            if current_dataset is not None:
-                current_dataset.sigReconFinished.connect(self.reconstructionFinished)
-                current_dataset.wireupCenterSelection(self.manager.recon_function)
-        except AttributeError as e:
-            msg.logMessage(e, level=40)
-        self.setPipelineValues()
-        self.manager.updateParameters()
+        current_dataset = self.currentWidget()
+        if current_dataset is not None:
+        #     current_dataset.sigReconFinished.connect(self.reconstructionFinished)
+        #     current_dataset.sigSetDefaults.connect(self.manager.setPipelineFromDict)
+        #     current_dataset.wireupCenterSelection(self.manager.recon_function)
+            self.toolbar.actionCenter.setChecked(False)
+            self.setPipelineValues()
+            self.manager.updateParameters()
 
     def loadPipeline(self):
         open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
                                                       os.path.expanduser('~'), selectedFilter='*.yml')[0]
         if open_file != '':
-            config.load_pipeline(open_file, self.manager)
+            self.manager.setPipelineFromYAML(config.load_pipeline(open_file))
 
     def savePipeline(self):
         save_file = QtGui.QFileDialog.getSaveFileName(None, 'Save tomography pipeline file as',
@@ -126,7 +126,6 @@ class plugin(base.plugin):
         save_file = save_file.split('.')[0] + '.yml'
         with open(save_file, 'w') as yml:
             pipeline = config.extract_pipeline_dict(self.manager.features)
-            print pipeline
             yamlmod.ordered_dump(pipeline, yml)
 
     def clearPipeline(self):
@@ -139,7 +138,7 @@ class plugin(base.plugin):
         value = QtGui.QMessageBox.question(None, 'Reset functions', 'Do you want to reset to default functions?',
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
-            config.load_pipeline(DEFAULT_PIPELINE_YAML, self.manager, setdefaults=True)
+            self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
 
     def setPipelineValues(self):
         widget = self.currentWidget()
@@ -148,7 +147,7 @@ class plugin(base.plugin):
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
             self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
-            config.set_als832_defaults(widget.data.header, funcs=self.manager.features)
+            config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)
@@ -228,14 +227,6 @@ class plugin(base.plugin):
                        self.ui.config_params.child('Sinograms/Chunk').value(),
                        ncore=self.ui.config_params.child('CPU Cores').value())
             self.recon_start_time = time.time()
-        # else:
-        #     print 'Beep'
-        #     # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
-        #     #                                                               'Are you sure you want to start another one?',
-        #     #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))
-        #     # if r is QtGui.QMessageBox.Yes:
-        #     #     QtGui.QMessageBox.information(self, 'Reconstruction request',
-        #     #                                   'Then you should wait until the first one finishes.')
 
     def reconstructionFinished(self):
         run_time = time.time() - self.recon_start_time

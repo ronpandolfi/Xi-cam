@@ -11,7 +11,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
 import reconpkg
 import ui
-import ftrwidgets as fw
+import featurewidgets as fw
 
 
 class FunctionWidget(fw.FeatureWidget):
@@ -405,10 +405,12 @@ class FunctionManager(fw.FeatureManager):
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
             partial_stack.append(p)
-            if func.input_functions:
-                ipf_dict = {ipf.subfunc_name: deepcopy(ipf.param_dict) for ipf in func.input_functions.values()
-                            if ipf.enabled}
-                stack_dict[func.func_name][func.subfunc_name].update(ipf_dict)
+            for param, ipf in func.input_functions.iteritems():
+                if ipf.enabled:
+                    if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
+                        stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+                    ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+                    stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
         self.lockParams(False)
         return partial_stack, stack_dict
 
@@ -453,7 +455,6 @@ class FunctionManager(fw.FeatureManager):
                 tomo = fpartial(tomo)
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
-
     def testParameterRange(self, function, parameter, prange):
         self.updateParameters()
         for i in prange:
@@ -466,3 +467,60 @@ class FunctionManager(fw.FeatureManager):
                                                 'input_functions': function.input_functions})
             self.sigTestRange.emit('Computing previews for {}: {} parameter range...'.format(function.name, parameter),
                                    fixed_func)
+
+    def setPipelineFromYAML(self, pipeline, setdefaults=False, config_file=config.names):
+        self.removeAllFeatures()
+        # Way too many for loops, oops... may want to restructure the yaml files
+        for func, subfuncs in pipeline.iteritems():
+            for subfunc in subfuncs:
+                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_file[subfunc][1]])
+                if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
+                    funcWidget.enabled = False
+                if 'Parameters' in subfuncs[subfunc]:
+                    for param, value in subfuncs[subfunc]['Parameters'].iteritems():
+                        child = funcWidget.params.child(param)
+                        child.setValue(value)
+                        if setdefaults:
+                            child.setDefault(value)
+                if 'Input Functions' in subfuncs[subfunc]:
+                    for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
+                        for ipf, sipfs in ipfs.iteritems():
+                            for sipf in sipfs:
+                                if param in funcWidget.input_functions:
+                                    ifwidget = funcWidget.input_functions[param]
+                                else:
+                                    ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf,
+                                                                     package=reconpkg.packages[config_file[sipf][1]])
+                                if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
+                                    ifwidget.enabled = False
+                                if 'Parameters' in sipfs[sipf]:
+                                    for p, v in sipfs[sipf]['Parameters'].iteritems():
+                                        ifwidget.params.child(p).setValue(v)
+                                        if setdefaults:
+                                            ifwidget.params.child(p).setDefault(v)
+                                ifwidget.updateParamsDict()
+                funcWidget.updateParamsDict()
+
+    def setPipelineFromDict(self, pipeline, config_file=config.names):
+        self.removeAllFeatures()
+        for func, subfuncs in pipeline.iteritems():
+            for subfunc in subfuncs:
+                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_file[subfunc][1]])
+                for param, value in subfuncs[subfunc].iteritems():
+                    if param == 'Package':
+                        continue
+                    elif param == 'Input Functions':
+                        for param, ipfs in value.iteritems():
+                            for ipf, sipf in ipfs.iteritems():
+                                ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf.keys()[0],
+                                                          package=reconpkg.packages[config_file[sipf.keys()[0]][1]])
+                                for p, v in sipf[sipf.keys()[0]].items():
+                                    ifwidget.params.child(p).setValue(v)
+                                    # ifwidget.params.child(p).setDefault(v)
+                                ifwidget.updateParamsDict()
+                    else:
+                        child = funcWidget.params.child(param)
+                        child.setValue(value)
+                        # child.setDefault(value)
+                    funcWidget.updateParamsDict()
+

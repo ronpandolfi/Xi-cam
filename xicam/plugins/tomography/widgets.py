@@ -36,7 +36,8 @@ class TomoViewer(QtGui.QWidget):
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
     """
 
-    sigReconFinished = QtCore.Signal()
+    # sigReconFinished = QtCore.Signal()
+    sigSetDefaults = QtCore.Signal(dict)
 
     def __init__(self, paths=None, data=None, *args, **kwargs):
 
@@ -71,6 +72,7 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.sinogramViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
+        self.previewViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
@@ -142,14 +144,14 @@ class TomoViewer(QtGui.QWidget):
     #     slice_no = self.sinogramViewer.view_spinBox.value()
     #     manager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
 
-    def run3DPreview(self):
-        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        manager.cor_scale = lambda x: x // 8
-        manager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
-
-    def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
-        manager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
-                               interrupt_signal=interrupt_signal)
+    # def run3DPreview(self):
+    #     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+    #     manager.cor_scale = lambda x: x // 8
+    #     manager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
+    #
+    # def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
+    #     manager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
+    #                            interrupt_signal=interrupt_signal)
 
     def addSlicePreview(self, params, recon, slice_no=None):
         if slice_no is None:
@@ -166,9 +168,9 @@ class TomoViewer(QtGui.QWidget):
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
-    def fullReconFinished(self):
-        self.sigReconFinished.emit()
-        msg.clearMessage()
+    # def fullReconFinished(self):
+    #     self.sigReconFinished.emit()
+    #     msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:
@@ -435,11 +437,11 @@ class ProjectionViewer(QtGui.QWidget):
         self.flat = np.median(self.data.flats, axis=0).transpose()
         self.dark = np.median(self.data.darks, axis=0).transpose()
 
-        self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0])
+        self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
         # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
         self.imageItem.sigImageChanged.connect(self.roi.updateImage)
         self.stackViewer.view.addItem(self.roi)
-        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
+        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self.stackViewer)
 
         self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
         self.stackViewer.keyPressEvent = self.keyPressEvent
@@ -592,6 +594,8 @@ class PreviewViewer(QtGui.QSplitter):
     corresponding preview
     """
 
+    sigSetDefaults = QtCore.Signal(dict)
+
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
         self.maxpreviews = maxpreviews if maxpreviews is not None else 10
@@ -696,7 +700,8 @@ class PreviewViewer(QtGui.QSplitter):
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
-        manager.set_pipeline_from_preview(current_data, setdefaults=True)
+        self.sigSetDefaults.emit(current_data)
+        # manager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 """
@@ -1083,6 +1088,9 @@ class RunViewer(QtGui.QTabWidget):
 
 
 class Preview3DViewer(QtGui.QSplitter):
+
+    sigSetDefaults = QtCore.Signal(dict)
+
     def __init__(self, paths=None, data=None, *args, **kwargs):
         super(Preview3DViewer, self).__init__()
         self.setOrientation(QtCore.Qt.Horizontal)
@@ -1116,8 +1124,7 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.funcdata = None
 
-        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
-        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.clicked.connect(lambda: self.sigSetDefaults.emit(self.funcdata))
         self.setPipelineButton.hide()
 
     def setPreview(self, recon, funcdata):
@@ -1126,9 +1133,6 @@ class Preview3DViewer(QtGui.QSplitter):
         self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
         self.setPipelineButton.show()
-
-    def defaultsButtonClicked(self):
-        manager.set_pipeline_from_preview(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):

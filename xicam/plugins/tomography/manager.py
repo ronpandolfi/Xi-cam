@@ -9,7 +9,7 @@ from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader
 from pipeline import msg
 import config
-import fncwidgets
+import functionwidgets
 import reconpkg
 import ui
 import yamlmod

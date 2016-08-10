@@ -39,68 +39,11 @@ with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
 
 
-def load_pipeline(yaml_file, manager, setdefaults=False):
+def load_pipeline(yaml_file):
     global functions, currentindex
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
-        set_pipeline_from_yaml(manager, pipeline, setdefaults=setdefaults)
-
-
-def set_pipeline_from_yaml(manager, pipeline, setdefaults=False):
-    manager.removeAllFeatures()
-    # Way too many for loops, oops... may want to restructure the yaml files
-    for func, subfuncs in pipeline.iteritems():
-        for subfunc in subfuncs:
-            funcWidget = manager.addFunction(func, subfunc, package=reconpkg.packages[names[subfunc][1]])
-            if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
-                funcWidget.enabled = False
-            if 'Parameters' in subfuncs[subfunc]:
-                for param, value in subfuncs[subfunc]['Parameters'].iteritems():
-                    child = funcWidget.params.child(param)
-                    child.setValue(value)
-                    if setdefaults:
-                        child.setDefault(value)
-            if 'Input Functions' in subfuncs[subfunc]:
-                for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
-                    for ipf, sipfs in ipfs.iteritems():
-                        for sipf in sipfs:
-                            if param in funcWidget.input_functions:
-                                ifwidget = funcWidget.input_functions[param]
-                            else:
-                                ifwidget = manager.addInputFunction(funcWidget, param, ipf, sipf,
-                                                                package=reconpkg.packages[names[sipf][1]])
-                            if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
-                                ifwidget.enabled = False
-                            if 'Parameters' in sipfs[sipf]:
-                                for p, v in sipfs[sipf]['Parameters'].iteritems():
-                                    ifwidget.params.child(p).setValue(v)
-                                    if setdefaults:
-                                        ifwidget.params.child(p).setDefault(v)
-                            ifwidget.updateParamsDict()
-            funcWidget.updateParamsDict()
-
-
-def set_pipeline_from_preview(manager, pipeline, setdefaults=False):
-    manager.removeAllFeatures()
-    for func, subfuncs in pipeline.iteritems():
-        for subfunc in subfuncs:
-            funcWidget = manager.addFunction(func, subfunc)
-            for param, value in subfuncs[subfunc].iteritems():
-                if param == 'Package':
-                    continue
-                elif param == 'Input Functions':
-                    for ipf, sipfs in value.iteritems():
-                        ifwidget = manager.addInputFunction(ipf, list(sipfs.keys())[0])
-                        [ifwidget.params.child(p).setValue(v) for p, v in sipfs[sipfs.keys()[0]].items()]
-                        if setdefaults:
-                            [ifwidget.params.child(p).setDefault(v) for p, v in sipfs[sipfs.keys()[0]].items()]
-                        ifwidget.updateParamsDict()
-                else:
-                    child = funcWidget.params.child(param)
-                    child.setValue(value)
-                    if setdefaults:
-                        child.setDefault(value)
-                funcWidget.updateParamsDict()
+    return pipeline
 
 
 def save_function_pipeline(pipeline, file_name):
@@ -110,8 +53,8 @@ def save_function_pipeline(pipeline, file_name):
             yamlmod.ordered_dump(pipeline, y)
 
 
-def set_als832_defaults(mdata, funcs):
-    for f in funcs:
+def set_als832_defaults(mdata, funcwidget_list):
+    for f in funcwidget_list:
         if f is None:
             continue
         if f.subfunc_name in als832defaults:
@@ -132,7 +75,7 @@ def set_als832_defaults(mdata, funcs):
             outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
             f.params.child('fname').setValue(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcs=f.input_functions.values())
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values())
 
 
 def extract_pipeline_dict(funwidget_list):
@@ -142,10 +85,9 @@ def extract_pipeline_dict(funwidget_list):
         d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
         if f.func_name == 'Reconstruction':
             d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
-        if f.input_functions is not None:
-            d[f.func_name][f.subfunc_name]['Input Functions'] = {}
-            for ipf in f.input_functions:
-                if ipf is not None:
-                    id = {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}
-                    d[f.func_name][f.subfunc_name]['Input Functions'][ipf.func_name] = id
+        for param, ipf in f.input_functions.iteritems():
+            if 'Input Functions' not in d[f.func_name][f.subfunc_name]:
+                d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            id = {ipf.func_name: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
+            d[f.func_name][f.subfunc_name]['Input Functions'][param] = id
     return d
