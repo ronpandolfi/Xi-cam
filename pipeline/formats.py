@@ -454,16 +454,16 @@ class H5ReadError(IOError):
     pass
 
 
-# Testing
-if __name__ == '__main__':
-    from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-    slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-    # arr = data.__getitem__(slc)
-    arr = data.getsinogram(100)
-    # print sorted(data.frames, reverse=True)
-    # print data.darks.shape
-    # print data.flats.shape
-    imshow(arr, cmap='gray')
-    show()
+# # Testing
+# if __name__ == '__main__':
+#     from matplotlib.pyplot import imshow, show
+#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+#     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+#     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+#     # arr = data.__getitem__(slc)
+#     arr = data.getsinogram(100)
+#     # print sorted(data.frames, reverse=True)
+#     # print data.darks.shape
+#     # print data.flats.shape
+#     imshow(arr, cmap='gray')
+#     show()

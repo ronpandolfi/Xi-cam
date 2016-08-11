@@ -1,109 +1,11 @@
-# -*- coding: utf-8 -*-
-# -----------------------------------------------------------------------------
-# Copyright (c) 2015, Vispy Development Team. All Rights Reserved.
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
-# -----------------------------------------------------------------------------
-# vispy: gallery 2
-#
-# Adapted for use as a widget by Ron Pandolfi
-# volumeViewer.getHistogram method borrowed from PyQtGraph
-
-"""
-Example volume rendering
-
-Controls:
-
-* 1  - toggle camera between first person (fly), regular 3D (turntable) and
-       arcball
-* 2  - toggle between volume rendering methods
-* 3  - toggle between stent-CT / brain-MRI image
-* 4  - toggle between colormaps
-* 0  - reset cameras
-* [] - decrease/increase isosurface threshold
-
-With fly camera:
-
-* WASD or arrow keys - move around
-* SPACE - brake
-* FC - move up-down
-* IJKL or mouse - look around
-"""
-
-from itertools import cycle
-
-import numpy as np
-
-from PySide import QtGui,QtCore
-from vispy import app, scene, io
-from vispy.color import Colormap, BaseColormap,ColorArray
-from pipeline import loader, msg
-import pyqtgraph as pg
-import imageio
 import os
-
-# TODO refactor general widgets to be part of plugins.widgets to be shared in a more organized fashion
-from ..tomography.widgets import StackViewer
-
-
-class ThreeDViewer(QtGui.QWidget, ):
-    def __init__(self, paths, parent=None):
-        super(ThreeDViewer, self).__init__(parent=parent)
-
-        self.combo_box = QtGui.QComboBox(self)
-        self.combo_box.addItems(['Image Stack', '3D Volume'])
-        self.stack_viewer = StackViewer()
-        self.volume_viewer = VolumeViewer()
-
-        self.view_stack = QtGui.QStackedWidget(self)
-        self.view_stack.addWidget(self.stack_viewer)
-        self.view_stack.addWidget(self.volume_viewer)
-
-        hlayout = QtGui.QHBoxLayout()
-        self.subsample_spinbox = QtGui.QSpinBox()
-        self.subsample_label = QtGui.QLabel('Subsample Level:')
-        self.loadVolumeButton = QtGui.QToolButton()
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.loadVolumeButton.setIcon(icon)
-        self.loadVolumeButton.setToolTip('Generate Volume')
-        hlayout.addWidget(self.combo_box)
-        hlayout.addSpacing(2)
-        hlayout.addWidget(self.subsample_label)
-        hlayout.addWidget(self.subsample_spinbox)
-        hlayout.addWidget(self.loadVolumeButton)
-        hlayout.addStretch()
-        layout = QtGui.QVBoxLayout(self)
-        layout.addLayout(hlayout)
-        layout.addWidget(self.view_stack)
-
-        self.subsample_spinbox.hide()
-        self.subsample_spinbox.setValue(8)
-        self.subsample_label.hide()
-        self.loadVolumeButton.hide()
-
-        self.stack_image = loader.StackImage(paths)
-        self.volume = None
-        self.stack_viewer.setData(self.stack_image)
-        self.combo_box.activated.connect(self.view_stack.setCurrentIndex)
-        self.view_stack.currentChanged.connect(self.toggleInputs)
-        self.loadVolumeButton.clicked.connect(self.loadVolume)
-
-    def toggleInputs(self, index):
-        if self.view_stack.currentWidget() is self.volume_viewer:
-            self.subsample_label.show()
-            self.subsample_spinbox.show()
-            self.loadVolumeButton.show()
-        else:
-            self.subsample_label.hide()
-            self.subsample_spinbox.hide()
-            self.loadVolumeButton.hide()
-
-    def loadVolume(self):
-        msg.showMessage('Generating volume...', timeout=5)
-        level = self.subsample_spinbox.value()
-        self.volume = self.stack_image.asVolume(level=level)
-        self.volume_viewer.setVolume(vol=self.volume, slicevol=False)
-        msg.clearMessage()
+import imageio
+import numpy as np
+import pyqtgraph as pg
+from PySide import QtCore, QtGui
+from vispy import scene
+from vispy.color import Colormap
+from pipeline import loader
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -119,7 +21,7 @@ class VolumeViewer(QtGui.QWidget):
         ly.setContentsMargins(0,0,0,0)
         ly.setSpacing(0)
 
-        self.volumeRenderWidget=VolumeRenderWidget()
+        self.volumeRenderWidget= VolumeRenderWidget()
         ly.addWidget(self.volumeRenderWidget.native)
 
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
@@ -257,6 +159,75 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget.events.close.connect(lambda e: writer.close())
 
 
+class VolumeVisual(scene.visuals.Volume):
+    def set_data(self, vol, clim=None):
+        """ Set the volume data.
+
+        Parameters
+        ----------
+        vol : ndarray
+            The 3D volume.
+        clim : tuple | None
+            Colormap limits to use. None will use the min and max values.
+        """
+        # Check volume
+        if not isinstance(vol, np.ndarray):
+            raise ValueError('Volume visual needs a numpy array.')
+        if not ((vol.ndim == 3) or (vol.ndim == 4 and vol.shape[-1] <= 4)):
+            raise ValueError('Volume visual needs a 3D image.')
+
+        # Handle clim
+        if clim is not None:
+            clim = np.array(clim, float)
+            if not (clim.ndim == 1 and clim.size == 2):
+                raise ValueError('clim must be a 2-element array-like')
+            self._clim = tuple(clim)
+        self._clim = vol.min(), vol.max()   #NOTE: THIS IS MODIFIED BY RP TO RESET MIN/MAX EACH TIME
+
+        # Apply clim
+        vol = np.array(vol, dtype='float32', copy=False)
+        vol -= self._clim[0]
+        vol *= 1./(self._clim[1] - self._clim[0])
+
+        # Apply to texture
+        self._tex.set_data(vol)  # will be efficient if vol is same shape
+        self._program['u_shape'] = vol.shape[2], vol.shape[1], vol.shape[0]
+        self._vol_shape = vol.shape[:3]
+
+        # Create vertices?
+        if self._index_buffer is None:
+            self._create_vertex_data()
+
+
+class SliceWidget(pg.HistogramLUTWidget):
+    sigSliceChanged = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(SliceWidget, self).__init__(*args, **kwargs)
+        self.item.paint = lambda *x: None
+        self.item.vb.deleteLater()
+        self.item.gradient.gradRect.hide()
+        self.item.gradient.allowAdd = False
+        self.setMinimumWidth(70)
+        self.setMaximumWidth(70)
+        self.item.sigLookupTableChanged.connect(self.ticksChanged)
+        self.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Expanding)
+
+    def sizeHint(self):
+        return QtCore.QSize(70, 200)
+
+    def ticksChanged(self,LUT):
+        self.sigSliceChanged.emit()
+        #tuple(sorted(LUT.gradient.ticks.values()))
+
+    def getSlice(self):
+        bounds = sorted(self.item.gradient.ticks.values())
+        bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
+        return slice(*bounds)
+
+
+scene.visuals.Volume = VolumeVisual
+
 class VolumeRenderWidget(scene.SceneCanvas):
 
     def __init__(self,vol=None, path=None, size=(800,600), show=False):
@@ -340,72 +311,3 @@ class VolumeRenderWidget(scene.SceneCanvas):
             self.volume.threshold += s
             th = self.volume.threshold
             print("Isosurface threshold: %0.3f" % th)
-
-
-class SliceWidget(pg.HistogramLUTWidget):
-    sigSliceChanged = QtCore.Signal()
-
-    def __init__(self, *args, **kwargs):
-        super(SliceWidget, self).__init__(*args, **kwargs)
-        self.item.paint = lambda *x: None
-        self.item.vb.deleteLater()
-        self.item.gradient.gradRect.hide()
-        self.item.gradient.allowAdd = False
-        self.setMinimumWidth(70)
-        self.setMaximumWidth(70)
-        self.item.sigLookupTableChanged.connect(self.ticksChanged)
-        self.setSizePolicy(QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Expanding)
-
-    def sizeHint(self):
-        return QtCore.QSize(70, 200)
-
-    def ticksChanged(self,LUT):
-        self.sigSliceChanged.emit()
-        #tuple(sorted(LUT.gradient.ticks.values()))
-
-    def getSlice(self):
-        bounds = sorted(self.item.gradient.ticks.values())
-        bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
-        return slice(*bounds)
-
-
-class VolumeVisual(scene.visuals.Volume):
-    def set_data(self, vol, clim=None):
-        """ Set the volume data.
-
-        Parameters
-        ----------
-        vol : ndarray
-            The 3D volume.
-        clim : tuple | None
-            Colormap limits to use. None will use the min and max values.
-        """
-        # Check volume
-        if not isinstance(vol, np.ndarray):
-            raise ValueError('Volume visual needs a numpy array.')
-        if not ((vol.ndim == 3) or (vol.ndim == 4 and vol.shape[-1] <= 4)):
-            raise ValueError('Volume visual needs a 3D image.')
-
-        # Handle clim
-        if clim is not None:
-            clim = np.array(clim, float)
-            if not (clim.ndim == 1 and clim.size == 2):
-                raise ValueError('clim must be a 2-element array-like')
-            self._clim = tuple(clim)
-        self._clim = vol.min(), vol.max()   #NOTE: THIS IS MODIFIED BY RP TO RESET MIN/MAX EACH TIME
-
-        # Apply clim
-        vol = np.array(vol, dtype='float32', copy=False)
-        vol -= self._clim[0]
-        vol *= 1./(self._clim[1] - self._clim[0])
-
-        # Apply to texture
-        self._tex.set_data(vol)  # will be efficient if vol is same shape
-        self._program['u_shape'] = vol.shape[2], vol.shape[1], vol.shape[0]
-        self._vol_shape = vol.shape[:3]
-
-        # Create vertices?
-        if self._index_buffer is None:
-            self._create_vertex_data()
-
-scene.visuals.Volume = VolumeVisual

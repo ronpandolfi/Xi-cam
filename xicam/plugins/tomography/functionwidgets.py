@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
+import inspect
 import time
+from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
-import inspect
+
 import numpy as np
-from collections import OrderedDict
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
+
 import config
 import reconpkg
 import ui
-import featurewidgets as fw
+from xicam.widgets import featurewidgets as fw
 
 
 class FunctionWidget(fw.FeatureWidget):

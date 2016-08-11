@@ -23,7 +23,7 @@ import yamlmod
 from xicam.plugins import base
 from pipeline import msg
 from xicam import threads
-from widgets import TomoViewer
+from viewers import TomoViewer
 import ui
 import config
 from functionwidgets import FunctionManager

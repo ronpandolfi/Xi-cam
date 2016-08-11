@@ -3,7 +3,7 @@
 import os
 from PySide import QtGui
 from  xicam.plugins import base
-from widgets import ThreeDViewer
+from viewer import ThreeDViewer
 
 import platform
 op_sys = platform.system()

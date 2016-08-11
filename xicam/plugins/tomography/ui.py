@@ -6,14 +6,7 @@ import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
 import reconpkg
 import toolbar
-import widgets
-
-property_table = None
-config_params = None
-paramformstack = None
-functionwidget = None
-centerwidget = None
-bottomwidget = None
+import viewers
 
 
 class UIform(object):
@@ -23,7 +16,7 @@ class UIform(object):
         self.centerwidget = QtGui.QTabWidget()
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
-        self.bottomwidget = widgets.RunViewer()
+        self.bottomwidget = viewers.RunConsole()
         self.functionwidget = QUiLoader().load('gui/tomographyleft.ui')
         self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
 
