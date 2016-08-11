@@ -82,7 +82,6 @@ class plugin(base.plugin):
 
     def showFeature(self, index):
         self.showForm(index.internalPointer().form)
-        print 'clicked:', index.row(), index.parent().internalPointer()
 
 
     def showComputation(self):
@@ -153,7 +152,7 @@ class plugin(base.plugin):
         try:
            plugins.plugins['Viewer'].instance.opendata(out)
         except:
-           print "Unable to load data...."
+           msg.logMessage("Unable to load data....",msg.ERROR)
 
 
         # import os
@@ -231,7 +230,7 @@ class plugin(base.plugin):
         msg.showMessage("Execution complete. Fetching result...",timeout=5)
         result = future_tag.result()
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
-        print "result = ", out
+        msg.logMessage(("result = ", out),msg.DEBUG)
 
         plugins.plugins['Viewer'].instance.opendata(out)
 

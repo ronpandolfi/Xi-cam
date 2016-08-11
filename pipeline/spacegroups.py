@@ -295,11 +295,9 @@ class spacegroupwidget(ParameterTree):
         return self.spacegroupeditors[self.crystalsystem.reverse[0].index(self.crystalsystem.value())]
 
     def _getRotationVector(self):
-        print 'vec:',[self.rotationxyz,self.rotationuvw,self.rotationhkl][self._getRotationType()].value()
         return [self.rotationxyz,self.rotationuvw,self.rotationhkl][self._getRotationType()].value()
 
     def _getRotationType(self):
-        print 'type:',self.rotationstyle.reverse[0].index(self.rotationstyle.value())
         return self.rotationstyle.reverse[0].index(self.rotationstyle.value())
 
     def drawoverlay(self):
@@ -314,7 +312,7 @@ class spacegroupwidget(ParameterTree):
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refdelta=refdelta,refbeta=refbeta,order=5,unitcell=None,space_grp=SG)
         for peak in peaks:
-            print unicode(peak)
+            msg.logMessage(unicode(peak),msg.DEBUG)
 
 
         #     print key + " -> " + str(peaks[key])
@@ -322,8 +320,6 @@ class spacegroupwidget(ParameterTree):
             sdd = config.activeExperiment.getvalue('Detector Distance')
             pixelsize = config.activeExperiment.getvalue('Pixel Size X')
             peak.position(center,sdd,pixelsize)
-            print 'x:',peak.x
-            print 'y:',peak.y
         #     pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
         #     peaks[key] = pixels
 

@@ -32,7 +32,7 @@ import client.dask_local_scheduler
 import client.dask_remote_scheduler
 import client.dask_active_executor
 import threads
-
+from pipeline import msg
 
 class ComboBoxAction(QtGui.QWidgetAction):
     def __init__(self, title, parent=None):
@@ -191,7 +191,7 @@ class MyMainWindow(QtCore.QObject):
             self.sessionmenu.setTitle("Active Session (localhost)")
             client.dask_active_executor.active_executor = local_scheduler
         except:
-            print "Issues connecting to localhost"
+            msg.logMessage("Issues connecting to localhost",msg.ERROR)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
@@ -208,7 +208,7 @@ class MyMainWindow(QtCore.QObject):
         return QtCore.QObject.eventFilter(self, obj, ev)
 
     def closeAllConnections(self):
-        print "closing all connections"
+        msg.logMessage("Closing all connections")
         # self.daskLoop.loop.start()
         # self.daskLoop.loop.close()
         # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
@@ -238,7 +238,7 @@ class MyMainWindow(QtCore.QObject):
                 username = str(login.textName.text())
                 machine = str(login.textMachine.text())
                 password = str(login.textPass.text())
-                print username, machine  # , password
+                msg.logMessage((username, machine),msg.DEBUG)  # , password
                 self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop,
                                                                                    password, self.session_address[obj],
                                                                                    self.session_exec[obj])
@@ -421,7 +421,7 @@ class MyMainWindow(QtCore.QObject):
         # TODO: receive data from daemon thread instead of additional watcher object.
         if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
             for path in paths:
-                print(path)
+                msg.logMessage(path,msg.INFO)
                 self.openfile(os.path.join(d, path))
         if self.ui.findChild(QtGui.QCheckBox, 'autoTimeline').isChecked():
             self.showtimeline()

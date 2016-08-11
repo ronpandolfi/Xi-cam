@@ -1,7 +1,7 @@
 import os
 from requests import HTTPError
 from client.user import User
-
+from pipeline import msg
 
 class NewtClient(User):
     """
@@ -118,7 +118,7 @@ class NewtClient(User):
             # raise NERSCError('User %s scratch directory not found'
             #                  % self.username)
 
-            print 'User %s scratch directory not found' % self.username
+            msg.logMessage('User %s scratch directory not found' % self.username,msg.INFO)
             return '/'
         return scratch_dir
 

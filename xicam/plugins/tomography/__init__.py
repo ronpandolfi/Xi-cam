@@ -79,7 +79,7 @@ class plugin(base.plugin):
                 current_dataset.wireupCenterSelection(fmanager.recon_function)
                 self.setPipelineValues(current_dataset)
         except AttributeError as e:
-            print e.message
+            msg.logMessage(e.message,msg.ERROR)
 
     def setPipelineValues(self, widget):
         ui.propertytable.setData(widget.data.header.items())
@@ -140,7 +140,7 @@ class plugin(base.plugin):
                                                interrupt_signal=self.console.local_cancelButton.clicked)
             self.recon_start_time = time.time()
         else:
-            print 'Beep'
+            msg.logMessage('Beep',msg.DEBUG)
             # r = QtGui.QMessageBox.warning(self, 'Reconstruction running', 'A reconstruction is currently running.\n'
             #                                                               'Are you sure you want to start another one?',
             #                               (QtGui.QMessageBox.Yes | QtGui.QMessageBox.No))

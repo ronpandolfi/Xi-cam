@@ -28,7 +28,6 @@ def addSubstrate():
 def addLayer():
     global features
     features.append(customwidgets.layer())
-    print features
     update()
 
 

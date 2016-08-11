@@ -235,7 +235,7 @@ def add_to_queue(runnable):
         queue.put(runnable)
     except Exception as e:
         from pipeline import msg
-        msg.logMessage(e, level=40)
+        msg.logMessage(e, level=msg.ERROR)
         raise e
 
 

@@ -17,21 +17,73 @@ def initplugins(placeholders):
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
-    print 'packages:',packages
+    msg.logMessage(('packages:',packages),msg.DEBUG)
     packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
-    print 'packages:', packages
+    msg.logMessage(('packages:', packages),msg.DEBUG)
 
     for importer, modname, ispkg in packages:
         try:
-            print "Found plugin %s (is a package: %s)" % (modname, ispkg)
+            msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
             modules.append(importlib.import_module('.'+modname,'xicam.plugins'))
-            print "Imported", modules[-1]
+            msg.logMessage(("Imported", modules[-1]),msg.DEBUG)
         except ImportError as ex:
             msg.logMessage('Module could not be loaded: ' + modname)
-            msg.logMessage(ex.message)
+
+            missingpackage=ex.message.replace('No module named ','')
+
+            msgBox = QtGui.QMessageBox()
+            msgBox.setText("A python package is missing! Xi-cam can try to install this for you.")
+            msgBox.setInformativeText("Would you like to install "+missingpackage+"?")
+            msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+            msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
+
+            response = msgBox.exec_()
+
+            if response == QtGui.QMessageBox.Yes:
+                import pip
+
+                if not pip.main(['install','--user', missingpackage]):
+                    msgBox = QtGui.QMessageBox()
+                    msgBox.setText('Success! The missing package, '+missingpackage+', has been installed!')
+                    msgBox.setInformativeText('Please restart Xi-cam now.')
+                    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+                    msgBox.exec_()
+                    exit(0)
+                else:
+                    if modname=='MOTD':
+                        from xicam import debugtools
+                        debugtools.frustration()
+                        msgBox = QtGui.QMessageBox()
+                        msgBox.setText(
+                            'Sorry, ' + missingpackage + ' could not be installed. This is a Xi-cam critical library.')
+                        msgBox.setInformativeText('Xi-cam cannot be loaded . Please install '+modname+' manually.')
+                        msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+                        response = msgBox.exec_()
+                        exit(1)
+                    else:
+                        from xicam import debugtools
+                        debugtools.frustration()
+                        msgBox = QtGui.QMessageBox()
+                        msgBox.setText('Sorry, '+missingpackage+' could not be installed. Try installing this package yourself, or contact the package developer.')
+                        msgBox.setInformativeText('Would you like to continue loading Xi-cam?')
+                        msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                        response=msgBox.exec_()
+                        if response==QtGui.QMessageBox.No:
+                            exit(1)
+
+            if modname == 'MOTD':
+                from xicam import debugtools
+                debugtools.frustration()
+                msgBox = QtGui.QMessageBox()
+                msgBox.setText(
+                    'Sorry, ' + missingpackage + ' could not be installed. This is a Xi-cam critical library.')
+                msgBox.setInformativeText('Xi-cam cannot be loaded . Please install ' + modname + ' manually.')
+                msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+                response = msgBox.exec_()
+                exit(1)
 
     for module in modules:
-        print module.__name__
+        msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
@@ -54,7 +106,6 @@ def buildactivatemenu(modewidget):
 
 class pluginlink():
     def __init__(self, module, placeholders):
-        print module
         self.plugin = module.plugin
         self.modulename = module.__name__
         self.module = module

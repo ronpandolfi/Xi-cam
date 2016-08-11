@@ -660,7 +660,7 @@ class PreviewViewer(QtGui.QSplitter):
             self.functionform.setCurrentWidget(self.datatrees[index])
             self.view_number.setValue(self.slice_numbers[index])
         except IndexError as e:
-            print 'index {} does not exist'.format(index)
+            msg.logMessage('index {} does not exist'.format(index),msg.ERROR)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
@@ -784,7 +784,7 @@ class VolumeViewer(QtGui.QWidget):
                 try:
                     region.item.region.setBounds([0, self.volumeRenderWidget.vol.shape[i]])
                 except RuntimeError as e:
-                    print e.message
+                    msg.logMessage(e.message,msg.ERROR)
 
     def moveGradientTick(self, idx, pos):
         tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]
@@ -811,7 +811,7 @@ class VolumeViewer(QtGui.QWidget):
             pos = np.hstack([[0], pos*(self.levels[1] - self.levels[0]) + self.levels[0], [1]])
             self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
-            print ex
+            msg.logMessage(ex,msg.ERROR)
 
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=100, targetHistogramSize=500, **kwds):
@@ -935,7 +935,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
         if event.text == '1':
             cam_toggle = {self.cam1: self.cam2, self.cam2: self.cam3, self.cam3: self.cam1}
             self.view.camera = cam_toggle.get(self.view.camera, self.cam2)
-            print(self.view.camera.name + ' camera')
+            msg.logMessage(self.view.camera.name + ' camera',msg.DEBUG)
         elif event.text == '2':
             pass
         elif event.text == '3':
@@ -949,7 +949,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
             s = -0.025 if event.text == '[' else 0.025
             self.volume.threshold += s
             th = self.volume.threshold
-            print("Isosurface threshold: %0.3f" % th)
+            msg.logMessage("Isosurface threshold: %0.3f" % th,msg.DEBUG)
 
 
 class SliceWidget(pg.HistogramLUTWidget):
