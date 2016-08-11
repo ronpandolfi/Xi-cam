@@ -7,7 +7,6 @@ Created on Mon Oct 19 17:22:00 2015
 import sys
 import types
 import traceback
-import time
 import functools
 import Queue
 import multiprocessing as mp
@@ -15,10 +14,6 @@ from PySide import QtCore
 from pipeline import msg
 # Error is raised if this import is removed probably due to some circular with this module and something???
 from client import spot, globus, sftp
-
-
-QtCore.Signal = QtCore.Signal
-QtCore.Slot = QtCore.Slot
 
 
 class Emitter(QtCore.QObject):
@@ -99,8 +94,6 @@ class RunnableMethod(QtCore.QRunnable):
         self._priority = priority
         self.lock = lock
 
-        self.setAutoDelete(True)
-
         # Connect callback and finished slots to corresponding signals
         if callback_slot is not None:
             self.emitter.sigRetValue.connect(callback_slot, QtCore.Qt.QueuedConnection)
@@ -109,7 +102,8 @@ class RunnableMethod(QtCore.QRunnable):
         if except_slot is not None:
             self.emitter.sigExcept.connect(except_slot, QtCore.Qt.QueuedConnection)
         if default_exhandle:
-            self.emitter.sigExcept.connect(default_exception_handler, QtCore.Qt.QueuedConnection)
+            self.default_handler = functools.partial(default_exception_handler)  # create a copy of the function
+            self.emitter.sigExcept.connect(self.default_handler, QtCore.Qt.QueuedConnection)
 
     def run(self):
         """
