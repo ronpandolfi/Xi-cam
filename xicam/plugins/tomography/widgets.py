@@ -393,13 +393,17 @@ class ROImageOverlay(pg.ROI):
 
     def keyPressEvent(self, ev):
         if ev.key() == QtCore.Qt.Key_Right:
-            self.translate(pg.Point((1, 0)))
+            if not self._x_constrained:
+                self.translate(pg.Point((1, 0)))
         elif ev.key() == QtCore.Qt.Key_Left:
-            self.translate(pg.Point((-1, 0)))
+            if not self._x_constrained:
+                self.translate(pg.Point((-1, 0)))
         elif ev.key() == QtCore.Qt.Key_Up:
-            self.translate(pg.Point((0, 1)))
+            if not self._y_constrained:
+                self.translate(pg.Point((0, 1)))
         elif ev.key() == QtCore.Qt.Key_Down:
-            self.translate(pg.Point((0, -1)))
+            if not self._y_constrained:
+                self.translate(pg.Point((0, -1)))
         ev.accept()
 
 
