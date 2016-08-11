@@ -54,18 +54,14 @@ class UIform(object):
         self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
         self.functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
 
-        leftwidget = QtGui.QWidget()
-
-        ly = QtGui.QVBoxLayout()
-        ly.setContentsMargins(0, 0, 0, 0)
+        leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical) 
 
         paramtree = pt.ParameterTree()
         self.param_form = QtGui.QStackedWidget()
         self.param_form.addWidget(paramtree)
-        ly.addWidget(self.param_form)
-        ly.addWidget(self.functionwidget)
+        leftwidget.addWidget(self.param_form)
+        leftwidget.addWidget(self.functionwidget)
 
-        leftwidget.setLayout(ly)
         icon = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
         self.leftmodes = [(leftwidget, icon)]
 
