@@ -76,17 +76,13 @@ class UIform(object):
                   {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'End Projection', 'type': 'int'},
                   {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  # {'name': 'Browse', 'type': 'action'},
                   {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
                   {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
                    'limits':[1, cpu_count()]}]
 
         self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
         configtree.setParameters(self.config_params, showTop=False)
-        # self.config_params.param('Browse').sigActivated.connect(
-        #     lambda: self.config_params.param('Output Name').setValue(
-        #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
-        #                                               self.config_params.param('Output Name').value())[0])))
+
         rightwidget.addWidget(configtree)
 
         self.property_table = pg.TableWidget()

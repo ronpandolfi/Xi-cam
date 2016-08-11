@@ -209,6 +209,14 @@ class AstraReconFuncWidget(ReconFunctionWidget):
         return FunctionWidget.partial(self)
 
 
+class WriteFunctionWidget(FunctionWidget):
+    def __init__(self, name, subname, package):
+        super(WriteFunctionWidget, self).__init__(name, subname, package)
+        self.params.child('Browse').sigActivated.connect(
+            lambda: self.params.child('fname').setValue( str(QtGui.QFileDialog.getSaveFileName(None,
+            'Save reconstruction as', self.params.child('fname').value())[0])))
+
+
 class TestRangeDialog(QtGui.QDialog):
     """
     Simple QDialgog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
@@ -326,6 +334,8 @@ class FunctionManager(fw.FeatureManager):
             else:
                 func_widget = ReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
+        elif function == 'Write':
+            func_widget = WriteFunctionWidget(function, subfunction, package)
         else:
             func_widget = FunctionWidget(function, subfunction, package)
         func_widget.sigTestRange.connect(self.testParameterRange)
