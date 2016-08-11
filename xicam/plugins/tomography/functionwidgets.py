@@ -29,7 +29,6 @@ class FunctionWidget(fw.FeatureWidget):
         self.input_functions = {}
         self.param_dict = {}
         self._function = getattr(package, config.names[self.subfunc_name][0])
-        self._partial = None
 
         # TODO have the children kwarg be passed to __init__
         self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
@@ -88,15 +87,13 @@ class FunctionWidget(fw.FeatureWidget):
         return param_dict
 
     def updateParamsDict(self):
-        # TODO find a better way to represent list inputs!
         self.param_dict.update({param.name(): param.value() for param in self.params.children()})
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
 
     @property
     def partial(self):
-        self._partial = partial(self._function, **self.param_dict)
-        return self._partial
+        return partial(self._function, **self.param_dict)
 
     def addInputFunction(self, parameter, functionwidget):
         self.input_functions[parameter] = functionwidget
@@ -215,6 +212,12 @@ class WriteFunctionWidget(FunctionWidget):
         self.params.child('Browse').sigActivated.connect(
             lambda: self.params.child('fname').setValue( str(QtGui.QFileDialog.getSaveFileName(None,
             'Save reconstruction as', self.params.child('fname').value())[0])))
+
+    def updateParamsDict(self):
+        self.param_dict.update({param.name(): param.value() for param in self.params.children()
+                                if param.name() != 'Browse'})
+        for p, ipf in self.input_functions.iteritems():
+            ipf.updateParamsDict()
 
 
 class TestRangeDialog(QtGui.QDialog):
@@ -378,8 +381,10 @@ class FunctionManager(fw.FeatureManager):
             if argname in 'darks':
                 fpartial.keywords[argname] = datawidget.getdarks(slc=slc)
             if argname in 'flat_loc': # I don't like this at all
-                if slc is not None and slc[0] is not None:
-                    fpartial.keywords[argname] = map_loc(slc[0], datawidget.data.fabimage.flatindices())
+                if slc is not None and slc[0].start is not None:
+                    slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                            else slc[0])
+                    fpartial.keywords[argname] = map_loc(slc_, datawidget.data.fabimage.flatindices())
                 else:
                     fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
         for param, ipf in funcwidget.input_functions.iteritems():
@@ -546,7 +551,8 @@ def map_loc(slc, loc):
     The returned list of indices is used in normalize_nn function.
     """
 
-    ind = range(slc.start, slc.stop, slc.step)
+    step = slc.step if slc.step is not None else 1
+    ind = range(slc.start, slc.stop, step)
     loc = np.array(loc)
     low, upp = ind[0], ind[-1]
     buff = (loc[-1] - loc[0]) / len(loc)
