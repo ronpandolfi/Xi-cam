@@ -54,7 +54,7 @@ class UIform(object):
         self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
         self.functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
 
-        leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical) 
+        leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
         paramtree = pt.ParameterTree()
         self.param_form = QtGui.QStackedWidget()

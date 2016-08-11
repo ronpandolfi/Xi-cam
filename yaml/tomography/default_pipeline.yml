@@ -1,5 +1,5 @@
 Normalization:
-  Regular:
+  Nearest Flats:
     Enabled: True
 Outlier Removal:
   Remove Outliers:

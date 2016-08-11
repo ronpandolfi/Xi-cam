@@ -1,10 +1,10 @@
-Projection Angles:
-  nang:
-    name: nangles
-    type: int
-#  ang2:
-#    name: arange
-#    type: float
+#Projection Angles:
+#  nang:
+#    name: nangles
+#    type: int
+##  ang2:
+##    name: arange
+##    type: float
 Phase Retrieval:
   pixel_size:
     name: pxsize

@@ -88,6 +88,7 @@ class FunctionWidget(fw.FeatureWidget):
         return param_dict
 
     def updateParamsDict(self):
+        # TODO find a better way to represent list inputs!
         self.param_dict.update({param.name(): param.value() for param in self.params.children()})
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
@@ -349,7 +350,6 @@ class FunctionManager(fw.FeatureManager):
         self.cor_scale = lambda x: x  # dummy
 
     def setCenterCorrection(self, name, param_dict):
-        print 'Correcting center for ', name
         if 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
             self.cor_offset = lambda x: x + n
@@ -362,11 +362,16 @@ class FunctionManager(fw.FeatureManager):
 
     def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
         fpartial = funcwidget.partial
-        for argname in funcwidget.missing_args:
+        for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
             if argname in 'flats':
                 fpartial.keywords[argname] = datawidget.getflats(slc=slc)
             if argname in 'darks':
                 fpartial.keywords[argname] = datawidget.getdarks(slc=slc)
+            if argname in 'flat_loc': # I don't like this at all
+                if slc is not None and slc[0] is not None:
+                    fpartial.keywords[argname] = map_loc(slc[0], datawidget.data.fabimage.flatindices())
+                else:
+                    fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
         for param, ipf in funcwidget.input_functions.iteritems():
             args = []
             if not ipf.enabled:
@@ -386,7 +391,6 @@ class FunctionManager(fw.FeatureManager):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-            print 'My center is now ', fpartial.keywords['center']
             self.resetCenterCorrection()
         return fpartial
 
@@ -524,3 +528,24 @@ class FunctionManager(fw.FeatureManager):
                         funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
 
+
+def map_loc(slc, loc):
+    """
+    Does a linear mapping of the indices where brights where taken within the
+    full tomography to new indices of only those porjections which where read
+    The returned list of indices is used in normalize_nn function.
+    """
+
+    ind = range(slc.start, slc.stop, slc.step)
+    loc = np.array(loc)
+    low, upp = ind[0], ind[-1]
+    buff = (loc[-1] - loc[0]) / len(loc)
+    min_loc = low - buff
+    max_loc = upp + buff
+    loc = np.intersect1d(loc[loc > min_loc], loc[loc < max_loc])
+    new_upp = len(ind)
+    loc = (new_upp * (loc - low)) // (upp - low)
+    if loc[0] < 0:
+        loc[0] = 0
+
+    return np.ndarray.tolist(loc)
