@@ -22,6 +22,9 @@ __status__ = "Beta"
 class TomoViewer(QtGui.QWidget):
     """
     Class that holds projection, sinogram, recon preview, and process-settings viewers for a tomography dataset.
+
+    Attributes
+    ----------
     """
 
     sigSetDefaults = QtCore.Signal(dict)

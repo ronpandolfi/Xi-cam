@@ -1,15 +1,24 @@
 # -*- coding: utf-8 -*-
 
+
+__author__ = "Luis Barroso-Luque"
+__copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__license__ = ""
+__version__ = "1.2.1"
+__maintainer__ = "Ronald J Pandolfi"
+__email__ = "ronpandolfi@lbl.gov"
+__status__ = "Beta"
+
+
 import inspect
 import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
-
 import numpy as np
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-
 import config
 import reconpkg
 import ui
@@ -103,12 +112,14 @@ class FunctionWidget(fw.FeatureWidget):
 
     @property
     def enabled(self):
+        """Boolean showing if the function widget is enabled (eye open/closed)"""
         if self.previewButton.isChecked() or not self.previewButton.isCheckable():
             return True
         return False
 
     @enabled.setter
     def enabled(self, val):
+        """Set enabled value by toggling the previewButton only if the widget is checkable"""
         if val and self.previewButton.isCheckable():
             self.previewButton.setChecked(True)
         else:
@@ -116,30 +127,19 @@ class FunctionWidget(fw.FeatureWidget):
 
     @property
     def exposed_param_dict(self):
+        """Parameter dictionary with only the parameters that are shown in GUI"""
         param_dict = {key: val for (key, val) in self.param_dict.iteritems()
                       if key in [param.name() for param in self.params.children()]}
         return param_dict
 
-    def updateParamsDict(self):
-        self.param_dict.update({param.name(): param.value() for param in self.params.children()})
-        for p, ipf in self.input_functions.iteritems():
-            ipf.updateParamsDict()
-
     @property
     def partial(self):
+        """Package up all parameters into a functools.partial"""
         return partial(self._function, **self.param_dict)
-
-    def addInputFunction(self, parameter, functionwidget):
-        self.input_functions[parameter] = functionwidget
-        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
-        self.addSubFeature(functionwidget)
-
-    def removeInputFunction(self, parameter):
-        function = self.input_functions.pop(parameter)
-        del function
 
     @property
     def func_signature(self):
+        """String for function signature. Hopefully this can eventually be used to save workflows as scripts :)"""
         signature = str(self._function.__name__) + '('
         for arg in self.missing_args:
             signature += '{},'.format(arg)
@@ -148,23 +148,63 @@ class FunctionWidget(fw.FeatureWidget):
                 '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
 
+    def updateParamsDict(self):
+        """Update the values of the parameter dictionary with the current values in UI"""
+        self.param_dict.update({param.name(): param.value() for param in self.params.children()})
+        for p, ipf in self.input_functions.iteritems():
+            ipf.updateParamsDict()
+
+    def addInputFunction(self, parameter, functionwidget):
+        """
+        Add an input function widget
+
+        Parameters
+        ----------
+        parameter : str
+            Parameter name that will be overriden by return value of the input function
+        functionwidget : FunctionWidget
+            FunctionWidget representing the input function
+
+        """
+        if parameter in self.input_functions:  # Check to see if parameter already has input function
+            self.removeInputFunction(parameter)  # Remove it
+        self.input_functions[parameter] = functionwidget
+        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
+        self.addSubFeature(functionwidget)
+
+    def removeInputFunction(self, parameter):
+        """
+        Remove the input function for the given parameter
+
+        Parameters
+        ----------
+        parameter : str
+            Parameter name that will be overriden by return value of the input function
+
+        """
+        function = self.input_functions.pop(parameter)
+        del function
+
     def paramChanged(self, param):
+        """Slot connected to a pg.Parameter.sigChanged signal"""
         self.param_dict.update({param.name(): param.value()})
 
     def allReadOnly(self, boolean):
+        """Make all parameter read only"""
         for param in self.params.children():
             param.setReadonly(boolean)
 
     def menuRequested(self):
-        # Menus when the function widget is right clicked
+        """Context menu for functionWidget. Default is not menu."""
         pass
 
     def paramMenuRequested(self, pos):
-        # Menus when a parameter in the form is right clicked
+        """Menus when a parameter in the form is right clicked"""
         if self.form.currentItem().parent():
             self.parammenu.exec_(self.form.mapToGlobal(pos))
 
     def testParamTriggered(self):
+        """Slot when a parameter range is clicked. Will emit the parameter name and the chosen range"""
         param = self.form.currentItem().param
         if param.type() == 'int' or param.type() == 'float':
             start, end, step = None, None, None
@@ -206,18 +246,29 @@ class TomoPyReconFunctionWidget(FunctionWidget):
 
     @property
     def partial(self):
+        """Reimplement parents partial property to do some cleanup before creating the partial"""
         kwargs = deepcopy(self.param_dict)
+        # 'cutoff' and 'order' are not passed into the tomopy recon function as {'filter_par': [cutoff, order]}
         if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
             kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
         self._partial = partial(self._function, **kwargs)
         return self._partial
 
-    def resetCenter(self):
-        self.center = None
-        self.input_functions = [self.center, self.angles]
+    def addCenterDetectFunction(self, name, subname, package=reconpkg.packages['tomopy']):
+        """
+        Used to add a center detection input function from the FunctionWidgets context menu
 
-    def addCenterDetectFunction(self, func, subfunc, package=reconpkg.packages['tomopy']):
-        self.input_functions['center'] = FunctionWidget(func, subfunc, package=package)
+        Parameters
+        ----------
+        name : str
+            generic name of function
+        subname : str
+            specific name of function under the generic name category
+        package : python package
+            package where function is defined
+
+        """
+        self.input_functions['center'] = FunctionWidget(name, subname, package=package)
         self.addInputFunction('center', self.input_functions['center'])
 
     def setCenterParam(self, value):
@@ -260,7 +311,7 @@ class WriteFunctionWidget(FunctionWidget):
 
     def updateParamsDict(self):
         self.param_dict.update({param.name(): param.value() for param in self.params.children()
-                                if param.name() != 'Browse'})
+                                if param.name() != 'Browse'})  # skip the Browse parameter!
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
 
@@ -270,6 +321,7 @@ class TestRangeDialog(QtGui.QDialog):
     Simple QDialog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
     parameter
     """
+
     def __init__(self, dtype, prange, **opts):
         super(TestRangeDialog, self).__init__(**opts)
         SpinBox = QtGui.QSpinBox if dtype == 'int' else QtGui.QDoubleSpinBox
@@ -321,6 +373,7 @@ class TestListRangeDialog(QtGui.QDialog):
     Simple QDialog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
     in order to test the different function parameters.
     """
+
     def __init__(self, options, **opts):
         super(TestListRangeDialog, self).__init__(**opts)
         self.gridLayout = QtGui.QGridLayout(self)
@@ -361,6 +414,10 @@ class TestListRangeDialog(QtGui.QDialog):
 class FunctionManager(fw.FeatureManager):
     """
     Class to manage tomography workflow/pipeline FunctionWidgets
+
+    Attributes
+    ----------
+
     """
 
     sigTestRange = QtCore.Signal(str, object)
