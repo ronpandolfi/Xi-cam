@@ -1,10 +1,7 @@
 from PySide import QtCore, QtGui
-from pyqtgraph.parametertree import ParameterTree
-from functools import partial
+
 import widgets
-from xicam import config
-from xicam import models, xglobals
-from xicam.plugins import explorer, login
+from xicam.widgets import explorer, login
 
 activeplugin = None
 
@@ -18,7 +15,6 @@ l.setSpacing(0)
 
 loginwidget = login.LoginDialog()
 
-import os
 preview = widgets.previewwidget()
 w.addWidget(preview)
 
