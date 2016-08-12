@@ -13,7 +13,7 @@ import os
 from collections import OrderedDict
 import yaml
 from pipeline import msg
-from xicam.modpkgs import yamlmod
+from modpkgs import yamlmod
 
 PARAM_TYPES = {'int': int, 'float': float}
 

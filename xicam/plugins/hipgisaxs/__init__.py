@@ -9,7 +9,7 @@ import customwidgets
 import display
 import featuremanager
 import ui
-from collectionsmod import UnsortableOrderedDict
+from modpkgs.collectionsmod import UnsortableOrderedDict
 from pipeline import msg
 from xicam import clientmanager as cmanager
 from xicam import plugins

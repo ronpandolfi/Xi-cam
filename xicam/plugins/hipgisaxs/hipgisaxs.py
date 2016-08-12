@@ -3,7 +3,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 import yaml
-from collectionsmod import UnsortableOrderedDict
+from modpkgs.collectionsmod import UnsortableOrderedDict
 import ui
 import featuremanager
 import display

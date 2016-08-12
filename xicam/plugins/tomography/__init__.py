@@ -21,7 +21,7 @@ import os
 import time
 from functools import partial
 from PySide import QtGui
-from xicam.modpkgs import yamlmod
+from modpkgs import yamlmod
 from xicam.plugins import base
 from pipeline import msg
 from xicam import threads
