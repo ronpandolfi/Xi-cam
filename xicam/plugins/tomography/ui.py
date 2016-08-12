@@ -12,7 +12,7 @@ import viewers
 class UIform(object):
     def setupUi(self):
 
-        self.toolbar = toolbar.tomotoolbar()
+        self.toolbar = toolbar.Toolbar()
         self.centerwidget = QtGui.QTabWidget()
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)

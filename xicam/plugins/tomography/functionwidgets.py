@@ -17,10 +17,42 @@ from xicam.widgets import featurewidgets as fw
 
 
 class FunctionWidget(fw.FeatureWidget):
+    """
+    Subclass of FeatureWidget that defines attributes to show parameters to a given function and run the function
+    with the given parameters. These should be used with the corresponding FunctionManager to run Tomography pipeline
+    workflows
 
+    Attributes
+    ----------
+
+    Methods
+    -------
+
+    """
     sigTestRange = QtCore.Signal(QtGui.QWidget, str, tuple)
 
+    # TODO perhaps its better to not pass in the package object but only a string, package object can be retrived from reconpkgs.packages dict
     def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
+        """
+        Parameters
+        ----------
+        name : str
+            generic name of function
+        subname : str
+            specific name of function under the generic name category
+        package : python package
+            package
+        input_functions : dict, optional
+            dictionary with keys being parameters of this function to be overriden, and values being a FunctionWidget
+            whose function will override said parameter
+        checkable : bool, optional
+            bool to set the function to be toggled on and of when running constructed workflows
+        closeable : bool, optional
+            bool to set if the function can be deleted from the pipeline editor
+        parent : QWidget
+            parent of this FunctionWidget
+        """
+
         self.name = name
         if name != subname:
             self.name += ' (' + subname + ')'
@@ -150,14 +182,18 @@ class FunctionWidget(fw.FeatureWidget):
             self.sigTestRange.emit(self, param.name(), test.selectedRange())
 
 
-class ReconFunctionWidget(FunctionWidget):
+class TomoPyReconFunctionWidget(FunctionWidget):
+    """
+    Subclass of FunctionWidget used for Tomopy recon functions
+    """
+
     def __init__(self, name, subname, package):
 
         self.packagename = package.__name__
         self.input_functions = {'theta': FunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
                                                   package=reconpkg.packages['tomopy'], checkable=False)}
-        super(ReconFunctionWidget, self).__init__(name, subname, package, input_functions=self.input_functions,
-                                                  checkable=False)
+        super(TomoPyReconFunctionWidget, self).__init__(name, subname, package, input_functions=self.input_functions,
+                                                        checkable=False)
         # Fill in the appropriate 'algorithm' keyword
         self.param_dict['algorithm'] = subname.lower()
         self.submenu = QtGui.QMenu('Input Function')
@@ -192,7 +228,10 @@ class ReconFunctionWidget(FunctionWidget):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
 
-class AstraReconFuncWidget(ReconFunctionWidget):
+class AstraReconFuncWidget(TomoPyReconFunctionWidget):
+    """
+    Subclass of FunctionWidget used for Astra recon functions using Tomopy's astra wrapper
+    """
     def __init__(self, name, subname, package):
         super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.packages['tomopy'])
         self.param_dict['algorithm'] = reconpkg.packages['astra']
@@ -209,6 +248,10 @@ class AstraReconFuncWidget(ReconFunctionWidget):
 
 
 class WriteFunctionWidget(FunctionWidget):
+    """
+    Subclass of FunctionWidget for write functions to have a Browse button to use a QFileDialog for setting 'fname'
+    parameter
+    """
     def __init__(self, name, subname, package):
         super(WriteFunctionWidget, self).__init__(name, subname, package)
         self.params.child('Browse').sigActivated.connect(
@@ -224,7 +267,7 @@ class WriteFunctionWidget(FunctionWidget):
 
 class TestRangeDialog(QtGui.QDialog):
     """
-    Simple QDialgog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
+    Simple QDialog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
     parameter
     """
     def __init__(self, dtype, prange, **opts):
@@ -275,7 +318,7 @@ class TestRangeDialog(QtGui.QDialog):
 
 class TestListRangeDialog(QtGui.QDialog):
     """
-    Simple QDialgog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
+    Simple QDialog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
     in order to test the different function parameters.
     """
     def __init__(self, options, **opts):
@@ -337,7 +380,7 @@ class FunctionManager(fw.FeatureManager):
             if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
                 func_widget = AstraReconFuncWidget(function, subfunction, package)
             else:
-                func_widget = ReconFunctionWidget(function, subfunction, package)
+                func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
         elif function == 'Write':
             func_widget = WriteFunctionWidget(function, subfunction, package)
@@ -549,9 +592,20 @@ class FunctionManager(fw.FeatureManager):
 
 def map_loc(slc, loc):
     """
-    Does a linear mapping of the indices where brights where taken within the
-    full tomography to new indices of only those porjections which where read
-    The returned list of indices is used in normalize_nn function.
+    Does a linear mapping of the indices in loc from a range given by slc start and stop with step of one to a new
+    range given by len(range(slc.start, slc.stop, slc.step))
+
+    Parameters
+    ----------
+    slc : slice
+    loc : list
+        list of indices assumed to span from slc.start to slc.stop
+
+    Returns
+    -------
+    list
+        mapped indices to new range
+
     """
 
     step = slc.step if slc.step is not None else 1

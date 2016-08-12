@@ -1,10 +1,13 @@
 from PySide import QtGui
 from PySide import QtCore
 
-class tomotoolbar(QtGui.QToolBar):
+class Toolbar(QtGui.QToolBar):
+    """
+    QToolbar subclass used in Tomography plugin
+    """
 
     def __init__(self):
-        super(tomotoolbar, self).__init__()
+        super(Toolbar, self).__init__()
 
         self.actionRun_SlicePreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
@@ -88,6 +91,21 @@ class tomotoolbar(QtGui.QToolBar):
 
 
     def connecttriggers(self, slicepreview, preview3D, fullrecon, center):
+        """
+        Connect toolbar action signals to give slots
+
+        Parameters
+        ----------
+        slicepreview : QtCore.Slot
+            Slot to connect actionRun_SlicePreview
+        preview3D : QtCore.Slot
+            Slot to connect actionRun_3DPreview
+        fullrecon : QtCore.Slot
+            Slot to connect actionRun_FullRecon
+        center : QtCore.Slot
+            Slot to connect actionCenter
+
+        """
         self.actionRun_SlicePreview.triggered.connect(slicepreview)
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
