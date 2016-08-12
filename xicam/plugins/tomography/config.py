@@ -1,9 +1,10 @@
 import os
 from collections import OrderedDict
+
 import yaml
-import yamlmod
+
 from pipeline import msg
-import reconpkg
+from xicam.modpkgs import yamlmod
 
 PARAM_TYPES = {'int': int, 'float': float}
 

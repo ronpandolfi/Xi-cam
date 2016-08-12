@@ -482,13 +482,14 @@ class FunctionManager(fw.FeatureManager):
         self.updateParameters()
         for i in prange:
             function.param_dict[parameter] = i
+            # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
             fixed_func = type('FixedFunc', (), {'func_name': function.func_name, 'subfunc_name': function.subfunc_name,
                                                 'missing_args': function.missing_args,
                                                 'param_dict': function.param_dict,
                                                 'exposed_param_dict': function.exposed_param_dict,
                                                 'partial': function.partial,
                                                 'input_functions': function.input_functions})
-            self.sigTestRange.emit('Computing previews for {}: {} parameter range...'.format(function.name, parameter),
+            self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func)
 
     def setPipelineFromYAML(self, pipeline, setdefaults=False, config_file=config.names):
