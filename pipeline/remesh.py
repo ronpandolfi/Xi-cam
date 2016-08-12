@@ -6,12 +6,13 @@ import numpy as np
 from pyFAI import geometry
 
 from PySide import QtGui
+import msg
 
 
 try:
     from cWarpImage import warp_image
 except ImportError:
-    print "Remeshing C extension is NOT LOADED!"
+    msg.logMessage("Remeshing C extension is NOT LOADED!",msg.ERROR)
 
 
 def calc_q_range(lims, geometry, alphai, cen):
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     qpar.tofile("qpar.bin")
     qvrt.tofile("qvrt.bin")
     t1 = time.clock() - t0
-    print "remesh clock time = %f" % t1
+    msg.logMessage("remesh clock time = %f" % t1,msg.DEBUG)
     plt.imshow(np.log(qimg + 5), cmap=plt.cm.autumn_r, interpolation='Nearest',
                extent=[qpar.min(), qpar.max(), -1 * qvrt.max(), -1 * qvrt.min()])
     plt.show()

@@ -6,6 +6,7 @@ import importlib
 from pipeline import msg
 import os
 import pkgutil
+from xicam import safeimporter
 
 modules = []
 plugins = OrderedDict()
@@ -17,21 +18,17 @@ def initplugins(placeholders):
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
-    print 'packages:',packages
+    msg.logMessage(('packages:',packages),msg.DEBUG)
     packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
-    print 'packages:', packages
+    msg.logMessage(('packages:', packages),msg.DEBUG)
 
     for importer, modname, ispkg in packages:
-        try:
-            print "Found plugin %s (is a package: %s)" % (modname, ispkg)
-            modules.append(importlib.import_module('.'+modname,'xicam.plugins'))
-            print "Imported", modules[-1]
-        except ImportError as ex:
-            msg.logMessage('Module could not be loaded: ' + modname)
-            msg.logMessage(ex.message)
+
+        msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
+        modules.append(safeimporter.import_module('.'+modname,'xicam.plugins'))
 
     for module in modules:
-        print module.__name__
+        msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
@@ -54,7 +51,6 @@ def buildactivatemenu(modewidget):
 
 class pluginlink():
     def __init__(self, module, placeholders):
-        print module
         self.plugin = module.plugin
         self.modulename = module.__name__
         self.module = module

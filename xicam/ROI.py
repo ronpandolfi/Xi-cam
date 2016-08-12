@@ -150,7 +150,6 @@ class LineROI(pg.LineROI):
         bl = origin
         tr = np.sum([origin, np.multiply(v[1], shape[1]), np.multiply(v[0], shape[0])], axis=0)
         vecs = np.vstack([bl, br, tr, tl]).T
-        print vecs
         rr, cc = polygon(vecs[0], vecs[1])
         mask = np.zeros_like(data)
         rrcc = [[r, c] for r, c in zip(rr, cc) if r < mask.shape[0] and c < mask.shape[1]]

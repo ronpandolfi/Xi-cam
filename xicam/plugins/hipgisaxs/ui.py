@@ -31,6 +31,5 @@ def load():
 
 
 def showForm(form):
-    print 'form:', form
     rightwidget.addWidget(form)
     rightwidget.setCurrentWidget(form)

@@ -1148,7 +1148,7 @@ class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
         self.addChild(item)
 
     def handleUnknown(self, path):
-        print 'Unknown object found: {0}'.format(path)
+        msg.logMessage('Unknown object found: {0}'.format(path),msg.WARNING)
 
 
 class SFTPFileTreeItem(QtGui.QTreeWidgetItem):

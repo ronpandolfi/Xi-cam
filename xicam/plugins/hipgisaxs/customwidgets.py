@@ -611,9 +611,7 @@ class ensemble(form):
         allsame=True
         if len(self.parameter.children())>1:
             disttype=self.parameter.children()[1].AngleDist.DistributionChoice.value()
-            print 'disttype:',disttype
             for rot in [rot for rot in self.parameter.children() if type(rot) is RotationParameter]:
-                print 'distchoice:',rot.AngleDist.DistributionChoice.value()
                 if not rot.AngleDist.DistributionChoice.value() == disttype:
                     allsame = False
         else:

@@ -1,5 +1,6 @@
 import platform
 from fabio import edfimage
+from pipeline import msg
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -7,7 +8,7 @@ if op_sys == 'Darwin':
     try:
         from Foundation import NSURL
     except ImportError:
-        print 'NSURL not found. Drag and drop may not work correctly'
+        msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
 import base
 from PySide import QtGui, QtCore
@@ -84,7 +85,6 @@ class plugin(base.plugin):
 
 
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
         # if e.mimeData().hasFormat('text/plain'):
         # e.accept()
@@ -98,7 +98,7 @@ class plugin(base.plugin):
             else:
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
-                print(fname)
+                msg.logMessage(fname,msg.DEBUG)
                 self.openfiles([fname])
             e.accept()
 
@@ -256,7 +256,7 @@ class plugin(base.plugin):
                                    filter=u"EDF (*.edf)")
         dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
-        print filename
+        msg.logMessage(filename,msg.DEBUG)
         if ok and filename:
             fabimg.write(filename)
 

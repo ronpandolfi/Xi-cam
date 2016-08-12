@@ -23,7 +23,7 @@ g_verbose = True
 
 def verbose(s):
     if g_verbose:
-        print(s)
+        msg.logMessage(s,msg.DEBUG)
 
 
 class ForwardServer(SocketServer.ThreadingTCPServer):
@@ -77,12 +77,12 @@ class DaskScheduler(object):
         self.password = password
         # self.command = "/usr/common/graphics/visit/camera/runscript.sh {0} {1}".format(ipaddr, port)
         self.command = runscript + " {0} {1}".format(ipaddr, port)
-        print self.command
+        msg.logMessage(self.command,msg.DEBUG)
 
     def serve(self):
-        print "Serving: " + self.command
+        msg.logMessage("Serving: " + self.command,msg.INFO)
         channel = self.client.get_transport().open_session()
-        print channel.get_pty()
+        msg.logMessage(channel.get_pty(),msg.DEBUG)
         # channel.exec_command('tty')
         channel.exec_command(self.command)
         readytorun=False
@@ -103,9 +103,9 @@ class DaskScheduler(object):
                     readytorun=False
 
                 if line.find("Password") >= 0:
-                    print "writing password"
+                    msg.logMessage("writing password",msg.DEBUG)
                     channel.sendall(self.password + "\n")
-        print "Ending Dask Scheduler"
+        msg.logMessage("Ending Dask Scheduler",msg.INFO)
 
 
 class DaskWorker(object):
@@ -121,10 +121,10 @@ class DaskWorker(object):
 
         self.command = "/usr/common/graphics/visit/camera/runlocalserver.sh {0} {1}".format(ipaddr, port)
         # self.command = "/usr/common/graphics/visit/camera/runserver.sh {0} {1} {2} {3} {4} {5} {6}".format(ipaddr, port, nodes, partition, time, procs, threads)
-        print self.command
+        msg.logMessage(self.command,msg.DEBUG)
 
     def serve(self):
-        print "Serving Worker: " + self.command
+        msg.logMessage("Serving Worker: " + self.command,msg.INFO)
         channel = self.client.get_transport().open_session()
         channel.exec_command(self.command)
         # client.exec_command(self.command)
@@ -133,8 +133,8 @@ class DaskWorker(object):
             #  break
             rl, wl, xl = select.select([channel], [], [], 10.0)
             if len(rl) > 0:
-                print "rl:", channel.recv(1024)
-        print "Ending Dask Worker"
+                msg.logMessage("rl:", channel.recv(1024),msg.DEBUG)
+        msg.logMessage("Ending Dask Worker",msg.INFO)
 
 
 # client = paramiko.SSHClient()
@@ -171,16 +171,16 @@ class RemoteScheduler():
         if len(machine) > 0:
             self.remote_addr[0] = machine
 
-        print self.local_port, self.remote_addr
+        msg.logMessage((self.local_port, self.remote_addr),msg.DEBUG)
         self.start_scheduler(self.remote_addr[0], self.remote_addr[1], self.client, password, runscript)
         self.executor = None
         self.forward_tunnel(self.local_port, self.remote_addr[0], self.remote_addr[1], self.client.get_transport())
 
     def execute(self):
-        print "Starting Executor"
+        msg.logMessage("Starting Executor",msg.INFO)
         # self.executor = Executor("{0}:{1}".format(self.remote_addr[0], self.remote_addr[1]))
         self.executor = Executor("{0}:{1}".format("localhost", self.local_port))
-        print "End Executor"
+        msg.logMessage("End Executor",msg.INFO)
 
     def close(self):
         self.client.exec_command("killall dask-scheduler dask-worker")
@@ -214,7 +214,7 @@ class RemoteScheduler():
             ssh_transport = transport
 
         fs = ForwardServer(('', int(local_port)), SubHander)
-        print "FORWARDING: ", local_port, remote_host, remote_port
+        msg.logMessage(("FORWARDING: ", local_port, remote_host, remote_port),msg.INFO)
         server_thread = threading.Thread(target=fs.serve_forever)
         server_thread.daemon = True
         server_thread.start()

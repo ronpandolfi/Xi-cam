@@ -371,7 +371,7 @@ def add_to_queue(runnable):
     try:
         queue.put(runnable)
     except Exception as e:
-        msg.logMessage(e, level=40)
+        msg.logMessage(e, level=msg.ERROR)
         raise e
 
 

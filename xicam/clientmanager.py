@@ -12,6 +12,7 @@ __status__ = "Beta"
 
 import threads
 import client
+from pipeline import msg
 
 # Some default HPC host addresses
 HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 'Bragg': 'bragg.dhcp.lbl.gov'}
@@ -37,7 +38,7 @@ def login_wrapper(client_login):
         try:
             return client_login(*args, **kwargs)
         except client.EXCEPTIONS as e:
-            print e.message
+            msg.logMessage(e.message,msg.ERROR)
             return
 
     return handled_login

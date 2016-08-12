@@ -15,7 +15,7 @@ from xicam import xglobals
 import scipy
 from pipeline import variation
 from xicam import threads
-
+from pipeline import msg
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -47,7 +47,7 @@ class OOMTabItem(QtGui.QWidget):
         if not self.isloaded:
             if 'operation' in self.kwargs:
                 if self.kwargs['operation'] is not None:
-                    print self.kwargs['paths']
+                    msg.logMessage(self.kwargs['paths'],msg.DEBUG)
                     imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
                     imgdata = self.kwargs['operation'](imgdata)
                     dimg = loader.datadiffimage2(data=imgdata)
@@ -63,7 +63,7 @@ class OOMTabItem(QtGui.QWidget):
             self.isloaded = True
 
             self.sigLoaded.emit()
-            print 'Loaded:', self.itemclass
+            msg.logMessage(('Loaded:', self.itemclass),msg.DEBUG)
 
     def unload(self):
         """
@@ -197,7 +197,7 @@ class dimgViewer(QtGui.QWidget):
             if energy is not None:
                 config.activeExperiment.setvalue('Energy', energy)
         except (AttributeError, TypeError, KeyError):
-            print('Warning: Energy could not be determined from headers')
+            msg.logMessage('Warning: Energy could not be determined from headers',msg.WARNING)
 
         # Force cache the detector
         _ = self.dimg.detector
@@ -232,12 +232,12 @@ class dimgViewer(QtGui.QWidget):
 
     def resetLUT(self):
 
-        print 'Levels:', self.imgview.getHistogramWidget().item.getLevels()
+        msg.logMessage(('Levels:', self.imgview.getHistogramWidget().item.getLevels()),msg.DEBUG)
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
         Lmax = np.nanmax(self.dimg.rawdata)
 
         self.imgview.autoLevels()
-        print 'Levels set:', self.imgview.getHistogramWidget().item.getLevels()
+        msg.logMessage(('Levels set:', self.imgview.getHistogramWidget().item.getLevels()),msg.DEBUG)
 
     def cacheLUT(self):
         hist = self.imgview.getHistogramWidget().item
@@ -424,7 +424,6 @@ class dimgViewer(QtGui.QWidget):
             remeshqz = self.dimg.remeshqx
             q = remeshqpar ** 2 + remeshqz ** 2
             center = np.where(q == q.min())
-            print 'remeshcenter:', center
             return zip(*center)[0]
         else:
             return config.activeExperiment.center
@@ -563,10 +562,6 @@ class dimgViewer(QtGui.QWidget):
         for item in self.viewbox.addedItems:
             # print item
             if issubclass(type(item), ROI.ArcROI):
-                print 'Moving ArcROI:', item
-
-                print 'Current pos:', item.state['pos']
-                print 'New pos:', center
                 item.setPos(center)
 
     @debugtools.timeit
@@ -577,8 +572,6 @@ class dimgViewer(QtGui.QWidget):
 
 
         self.findcenter(skipdraw=True)
-        print 'center?:', config.activeExperiment.center
-
         radialprofile = integration.pixel_2Dintegrate(self.dimg,mask=self.dimg.mask)
 
         peaks = np.array(peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
@@ -595,8 +588,6 @@ class dimgViewer(QtGui.QWidget):
         tth = 2 * np.arcsin(0.5 * config.activeExperiment.getvalue('Wavelength') / 58.367e-10)
         tantth = np.tan(tth)
         sdd = bestpeak * config.activeExperiment.getvalue('Pixel Size X') / tantth
-
-        print 'Best AgB peak gives sdd: ' + str(sdd)
 
         config.activeExperiment.setvalue('Detector Distance', sdd)
 
@@ -802,7 +793,6 @@ class dimgViewer(QtGui.QWidget):
     def polymask(self):
         maskroi = None
         for roi in self.viewbox.addedItems:
-            print type(roi)
             if type(roi) is pg.PolyLineROI:
                 maskroi = roi
 
@@ -841,8 +831,6 @@ class dimgViewer(QtGui.QWidget):
             leftpad = max(boundrect.x(), 0)
             toppad = max(boundrect.y(), 0)
 
-            print 'Leftpad:', leftpad
-            print 'Rightpad:', toppad
 
             # Pad the mask so it has the same shape as the image
             maskedarea = np.pad(maskedarea, ((int(leftpad), 0), (int(toppad), 0)), mode='constant')
@@ -878,7 +866,7 @@ class dimgViewer(QtGui.QWidget):
             self.maskimage.clear()
         else:
             # Draw the mask as a red channel image with an alpha mask
-            print 'maskmax:', np.max(mask)
+            msg.logMessage(('maskmax:', np.max(mask)),msg.DEBUG)
             invmask = 1 - mask
             self.maskimage.setImage(
                 np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float),
@@ -909,7 +897,6 @@ class dimgViewer(QtGui.QWidget):
     def capture(self):
         captureroi = None
         for roi in self.viewbox.addedItems:
-            print type(roi)
             if type(roi) is pg.RectROI:
                 captureroi = roi
 
@@ -1067,7 +1054,7 @@ class timelineViewer(dimgViewer):
 
         # Run on thread queue
         bg_variation = threads.iterator(callback_slot=lambda ret: self.plotvariation(*ret),
-                                      finished_slot=self.testfinish)(variation.variationiterator)
+                                        finished_slot=self.processingfinished)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
@@ -1117,11 +1104,10 @@ class timelineViewer(dimgViewer):
         self.variationcurve[colorhash].setData(x=x,y=y)
         self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
-    def testfinish(self,*args,**kwargs):
-        print 'Finished:',args,kwargs
+    def processingfinished(self, *args, **kwargs):
+        msg.showMessage('Processing complete.',4)
 
     def setvariationmode(self, index):
-        print 'operationset:', index
         self.operationindex = index
 
     def cleartimeline(self):
@@ -1268,7 +1254,7 @@ class integrationsubwidget(pg.PlotWidget):
         try:
             self.applyintegration(self.integrationfunction,dimg,rois,data,mask,imageitem)
         except ValueError:
-            print 'Maybe the roi was too far away?'
+            msg.logMessage('Maybe the roi was too far away?',msg.DEBUG)
 
     def replotcallback(self,*args,**kwargs):
         self.sigPlotResult.emit(*args, **kwargs)
@@ -1298,7 +1284,7 @@ class integrationsubwidget(pg.PlotWidget):
                 continue
 
             cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
-            print 'Cut:', cut.shape
+            msg.logMessage(('Cut:', cut.shape),msg.DEBUG)
 
             if cut is not None:
                 xglobals.pool.apply_async(integrationfunction,
@@ -1487,8 +1473,8 @@ class ImageView(pg.ImageView):
             if np.isnan(levelmin): levelmin = 0
             if np.isnan(levelmax): levelmax = 1
             if np.isinf(levelmin): levelmin = 0
-            print 'min:',levelmin
-            print 'max:',levelmax
+            msg.logMessage(('min:',levelmin),msg.DEBUG)
+            msg.logMessage(('max:',levelmax),msg.DEBUG)
 
             self.ui.histogram.setLevels(levelmin, levelmax)
 
@@ -1688,7 +1674,7 @@ class fileTreeWidget(QtGui.QTreeView):
         elif os.path.isdir(path):
             self.sigOpenDir.emit(path)
         else:
-            print('Error on index (what is that?):', index)
+            msg.logMessage(('Error on index (what is that?):', index),msg.ERROR)
 
     def treerefresh(self, path=None):
         """

@@ -63,7 +63,6 @@ def radialintegration(data, t, roi):
 def angularcorrelationwithfirst(data, t, roi):
     # ROI is assumed to be in cake mode
 
-    print experiment.center
     experiment.center = (experiment.center[0] / 5, experiment.center[1] / 5)
 
     currentcake, _, _ = integration.cake(data[t], experiment)

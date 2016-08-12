@@ -68,7 +68,6 @@ class mainwindow():
 
     def showFeature(self, index):
         self.showForm(index.internalPointer().form)
-        print 'clicked:', index.row(), index.parent().internalPointer()
 
 
     def showComputation(self):

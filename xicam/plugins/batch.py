@@ -13,6 +13,7 @@ from xicam import xglobals
 import re
 
 import widgets
+from pipeline import msg
 
 
 class plugin(base.plugin):
@@ -72,7 +73,7 @@ class plugin(base.plugin):
                     break
 
             if self.roiOption.value():
-                print 'lastroi:',xglobals.lastroi
+                msg.logMessage(('lastroi:',xglobals.lastroi),msg.DEBUG)
                 if xglobals.lastroi is not None:
                     # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
                     cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T

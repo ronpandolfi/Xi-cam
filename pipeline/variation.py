@@ -3,6 +3,7 @@ import loader
 import scipy.ndimage
 import warnings
 import variationoperators
+import msg
 
 
 def variationiterator(simg,operationindex,roi=None,color=None):
@@ -43,7 +44,7 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
             with np.errstate(divide='ignore'):
                 return variationoperators.operations.values()[operationindex](p, c, n, roi, None, None)
         except TypeError:
-            print('Variation could not be determined for a frame.')
+            msg.logMessage('Variation could not be determined for a frame.',msg.ERROR)
     else:
-        print('Variation could not be determined for a frame.')
+        msg.logMessage('Variation could not be determined for a frame.',msg.ERROR)
     return 0

@@ -20,10 +20,10 @@ from PySide import QtGui
 from collections import OrderedDict
 import warnings
 from pipeline import msg
-# try:
-#     import libtiff
-# except IOError:
-#     warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
+try:
+    import libtiff
+except IOError:
+    warnings.warn('libtiff not loaded; 3D tiffs cannot be read')
 
 import numpy as nx
 
@@ -77,7 +77,7 @@ def loadimage(path):
                 data = fabio.open(path).data
                 return data
     except IOError:
-        print('IO Error loading: ' + path)
+        msg.logMessage('IO Error loading: ' + path,msg.ERROR)
 
     return data
 
@@ -105,22 +105,20 @@ def readenergy(path):
             else:
                 pass
     except IOError:
-        print('IO Error reading energy: ' + path)
+        msg.logMessage('IO Error reading energy: ' + path,msg.ERROR)
 
     return None
 
 
 def readvariation(path):
-    for i in range(20):
-        try:
-            nxroot = nx.load(path)
-            print 'Attempt', i + 1, 'to read', path, 'succeeded; continuing...'
-            return dict([[int(index), int(value)] for index, value in nxroot.data.variation])
-        except IOError:
-            print 'Could not load', path, ', trying again in 0.2 s'
-            time.sleep(0.2)
-        except nx.NeXusError:
-            print 'No variation saved in file ' + path
+
+    try:
+        nxroot = nx.load(path)
+        return dict([[int(index), int(value)] for index, value in nxroot.data.variation])
+    except IOError:
+        msg.logMessage(('Could not load', path),msg.ERROR)
+    except nx.NeXusError:
+        msg.logMessage('No variation saved in file ' + path,msg.ERROR)
 
     return None
 
@@ -181,9 +179,9 @@ def loadparas(path):
             return merge_dicts(fimg.header, textheader)
 
     except IOError:
-        print('Unexpected read error in loadparas')
+        msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
     except IndexError:
-        print('No txt file found in loadparas')
+        msg.logMessage('No txt file found in loadparas',msg.WARNING)
     return OrderedDict()
 
 
@@ -315,9 +313,9 @@ def loadthumbnail(path):
                     thumb = np.array(nxroot.data.thumbnail)
                     return thumb
     except IOError:
-        print('IO Error loading: ' + path)
+        msg.logMessage('IO Error loading: ' + path,msg.ERROR)
     except TypeError:
-        print 'TypeError: path has type ', str(type(path))
+        msg.logMessage(('TypeError: path has type ', str(type(path))),msg.ERROR)
 
     return None
 
@@ -369,7 +367,7 @@ def loadpath(path):
                 path2 = path.replace('_hi_', '_lo_')
             return loadstitched(path, path2)
         except Exception as ex:
-            print 'Stitching failed: ', ex.message
+            msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
     return loadimage(path), None
 
@@ -390,24 +388,24 @@ def convertto8bit(image):
 
 
 def loadtiffstack(path):
-    print 'Loading', path + '...'
+    msg.logMessage(('Loading', path + '...'))
     data = np.swapaxes(libtiff.TIFF3D.open(path).read_image(), 0, 1)
-    print 'Sub-sampling array...'
+    msg.logMessage('Sub-sampling array...')
     # data = convertto8bit(data)
-    print 'Load complete. Size:', np.shape(data)
+    msg.logMessage(('Load complete. Size:', np.shape(data)))
     data = data[::4, ::4, ::4]
     return data.astype(np.float32)
 
 
 def loadimageseries(pattern):
-    print 'Loading', pattern + '...'
+    msg.logMessage(('Loading', pattern + '...'))
     files = glob.glob(pattern)
     data = np.dstack([fabio.open(f).data for f in files])
-    print 'Log scaling data...'
+    msg.logMessage('Log scaling data...')
     data = (np.log(data * (data > 0) + (data < 1)))
-    print 'Converting to 8-bit and re-scaling...'
+    msg.logMessage('Converting to 8-bit and re-scaling...')
     data = convertto8bit(data)
-    print 'Load complete. Size:', np.shape(data)
+    msg.logMessage(('Load complete. Size:', np.shape(data)))
     return data
 
 
@@ -424,9 +422,9 @@ class diffimage():
         :param experiment: xicam.config.experiment
         """
 
-        warnings.warn('diffimage is deprecated. Migrate this to diffimage2')
+        msg.logMessage('diffimage is deprecated. Migrate this to diffimage2',msg.WARNING)
 
-        print 'Loading ' + unicode(filepath) + '...'
+        msg.logMessage('Loading ' + unicode(filepath) + '...')
 
         self._data = data
 
@@ -459,7 +457,7 @@ class diffimage():
 
     def invalidatecache(self):
         self.cache = dict()
-        print 'cache cleared'
+        msg.logMessage('cache cleared')
 
     def cachedata(self):
         if self._data is None:
@@ -533,14 +531,14 @@ class diffimage():
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
                     detector = detector()
-                    print 'Detector found: ' + name
+                    msg.logMessage('Detector found: ' + name)
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
-                        print 'Detector found with binning: ' + name
+                        msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
                         return name, detector
         return None, None
@@ -594,8 +592,6 @@ class diffimage():
                 cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
                 cakemask = cakemask > 0
 
-                print x, y
-
                 self.cache['cake'] = cake
                 self.cache['cakemask'] = cakemask
                 self.cache['cakeqx'] = x
@@ -603,12 +599,12 @@ class diffimage():
 
             return self.cache['cake']
         except AttributeError as ex:
-            print ex.message
+            msg.logMessage(ex.message,msg.ERROR)
 
     @property
     def remesh(self):
         if not self.iscached('remesh'):
-            print 'headers:', self.headers
+            msg.logMessage(('headers:', self.headers),msg.DEBUG)
             # read incident angle
             if "Sample Alpha Stage" in self.headers:
                 alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
@@ -679,7 +675,7 @@ class diffimage():
                 # print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
-                    print 'successful variation load!'
+                    msg.logMessage('successful variation load!')
                 else:
                     prv = pathtools.similarframe(self.filepath, -1)
                     nxt = pathtools.similarframe(self.filepath, +1)
@@ -688,7 +684,6 @@ class diffimage():
                 prv = pathtools.similarframe(self.filepath, -1)
                 nxt = pathtools.similarframe(self.filepath, +1)
                 if roi is None:
-                    print prv, self.dataunrot, nxt
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
                     v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
@@ -741,12 +736,12 @@ class imageseries():
 
     @property
     def xvals(self):
-        return numpy.array(sorted(self.paths.keys()))
+        return np.array(sorted(self.paths.keys()))
 
     def first(self):
         if len(self.paths) > 0:
             firstpath = sorted(list(self.paths.values()))[0]
-            print firstpath
+
             return diffimage(filepath=firstpath, experiment=self.experiment)
         else:
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
@@ -812,7 +807,7 @@ class imageseries():
                 return variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
             return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
         except IndexError as ex:
-            print 'Skipping index:', i
+            msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
 
     @property
@@ -836,7 +831,7 @@ class imageseries():
             return int(re.findall(expr, os.path.basename(path))[-1])
 
         except ValueError:
-            print 'Path has no frame number:', path
+            msg.logMessage(('Path has no frame number:', path),msg.ERROR)
 
         return None
 
@@ -873,7 +868,7 @@ class jpegimageset():
         return len(self.jpegs) * np.product(np.size(Image.open(self.jpegs[0])))
 
     def __getitem__(self, item):
-        print 'item:', item
+        msg.logMessage(('item:', item),msg.DEBUG)
         if type(item) in (int, np.int64):
             return self.jpegs[item]
         else:
@@ -1009,7 +1004,7 @@ class diffimage2(object):
         :param experiment: xicam.config.experiment
         """
 
-        print 'Loading ' + '...'
+        msg.logMessage('Loading...')
 
         self.logscale = True
         self.remeshmode = False
@@ -1056,7 +1051,7 @@ class diffimage2(object):
 
     def invalidatecache(self):
         self.cache = dict()
-        print 'cache cleared'
+        msg.logMessage('cache cleared')
 
     def cachedata(self):
         if self._rawdata is None:
@@ -1109,14 +1104,14 @@ class diffimage2(object):
                 # print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
-                    print 'Detector found: ' + name
+                    msg.logMessage('Detector found: ' + name)
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
-                        print 'Detector found with binning: ' + name
+                        msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
                         return name, detector
         return None, None
@@ -1366,7 +1361,6 @@ class singlefilediffimage2(diffimage2):
         # 'Permanently' cached
         if self._rawdata is None:
             rawdata, mask = loadpath(self.filepath)
-            print rawdata, mask
             self._rawdata = np.rot90(rawdata, 3)
             if mask is not None: self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
@@ -1498,7 +1492,7 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
-        print 'applyinglog:', self.logscale
+        msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
@@ -1522,7 +1516,7 @@ class multifilediffimage2(diffimage2):
         try:
             return variation.variationoperators.operations.values()[operationindex](self, i, roi)
         except IndexError as ex:
-            print 'Skipping index:', i
+            msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
 
     def __getitem__(self, item):

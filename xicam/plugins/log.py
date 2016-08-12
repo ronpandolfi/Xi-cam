@@ -3,8 +3,8 @@ from PySide import QtGui, QtCore
 from xicam import xglobals
 from pipeline import msg
 
-colors = {msg.DEBUG: QtCore.Qt.white, msg.ERROR: QtCore.Qt.darkRed, msg.CRITICAL: QtCore.Qt.red,
-          msg.INFO: QtCore.Qt.green, msg.WARNING: QtCore.Qt.yellow}
+colors = {msg.DEBUG: QtCore.Qt.gray, msg.ERROR: QtCore.Qt.darkRed, msg.CRITICAL: QtCore.Qt.red,
+          msg.INFO: QtCore.Qt.white, msg.WARNING: QtCore.Qt.yellow}
 
 
 class plugin(base.plugin):
@@ -19,6 +19,7 @@ class plugin(base.plugin):
         self.toolbar = None
 
         msg.guilogcallable = self.log
+        msg.flushbacklog()
 
         super(plugin, self).__init__(*args, **kwargs)
 

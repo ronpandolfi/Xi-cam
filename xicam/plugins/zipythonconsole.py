@@ -21,8 +21,6 @@ import qdarkstyle
 import os
 
 
-def print_process_id():
-    print('Process ID is:', os.getpid())
 
 class plugin(base.plugin):
     name = 'IPython'
