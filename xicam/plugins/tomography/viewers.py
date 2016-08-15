@@ -151,6 +151,14 @@ class TomoViewer(QtGui.QWidget):
         else:
             self.projectionViewer.hideCenterDetection()
 
+    # TODO you are here working on this ok ok ok
+    # TODO think how to only have one ROI and limit its size to the image!
+    # TODO then get the slice for that image to use in the reconstruction and fill in start, end sinogram and adjust center correspondingly when running!
+    # TODO change roi color to the same as Viewer
+    def onROIselection(self):
+        self.viewstack.setCurrentWidget(self.projectionViewer)
+        self.projectionViewer.addROIselection()
+
 
 class ProjectionViewer(QtGui.QWidget):
     """
@@ -167,11 +175,13 @@ class ProjectionViewer(QtGui.QWidget):
         self.flat = np.median(self.data.flats, axis=0).transpose()
         self.dark = np.median(self.data.darks, axis=0).transpose()
 
-        self.roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
-        # self.stackViewer.getHistogramWidget().setImageItem(self.roi.imageItem)
-        self.imageItem.sigImageChanged.connect(self.roi.updateImage)
-        self.stackViewer.view.addItem(self.roi)
-        self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self.stackViewer)
+        self.imgoverlay_roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
+        self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
+        self.stackViewer.view.addItem(self.imgoverlay_roi)
+        self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+
+        # roi to select region of interest
+        self.selection_roi = None
 
         self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
         self.stackViewer.keyPressEvent = self.keyPressEvent
@@ -244,20 +254,20 @@ class ProjectionViewer(QtGui.QWidget):
         slider.valueChanged.connect(self.stackViewer.resetImage)
         spinBox.valueChanged.connect(self.changeOverlayProj)
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
-        constrainYCheckBox.stateChanged.connect(lambda v: self.roi.constrainY(v))
-        constrainXCheckBox.stateChanged.connect(lambda v: self.roi.constrainX(v))
+        constrainYCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainY(v))
+        constrainXCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainX(v))
         # rotateCheckBox.stateChanged.connect(self.addRotateHandle)
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
-        self.roi.sigTranslated.connect(self.setCenter)
-        self.roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
+        self.imgoverlay_roi.sigTranslated.connect(self.setCenter)
+        self.imgoverlay_roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
 
         self.hideCenterDetection()
 
     def changeOverlayProj(self, idx):
         self.normCheckBox.setChecked(False)
-        self.roi.setCurrentImage(idx)
-        self.roi.updateImage()
+        self.imgoverlay_roi.setCurrentImage(idx)
+        self.imgoverlay_roi.updateImage()
 
     def setCenter(self, x, y):
         center = (self.data.shape[1] + x - 1)/2.0# subtract half a pixel out of 'some' convention?
@@ -268,51 +278,66 @@ class ProjectionViewer(QtGui.QWidget):
         self.normalize(False)
         self.cor_widget.hide()
         self.roi_histogram.hide()
-        self.roi.setVisible(False)
+        self.imgoverlay_roi.setVisible(False)
 
     def showCenterDetection(self):
         self.cor_widget.show()
         self.roi_histogram.show()
-        self.roi.setVisible(True)
+        self.imgoverlay_roi.setVisible(True)
 
     def updateROIFromCenter(self, center):
-        s = self.roi.pos()[0]
-        self.roi.translate(pg.Point((2 * center + 1 - self.data.shape[1] - s, 0))) # 1 again due to the so-called COR
+        s = self.imgoverlay_roi.pos()[0]
+        self.imgoverlay_roi.translate(pg.Point((2 * center + 1 - self.data.shape[1] - s, 0))) # 1 again due to the so-called COR
                                                                                    # conventions...
     def flipOverlayProj(self, val):
-        self.roi.flipCurrentImage()
-        self.roi.updateImage()
+        self.imgoverlay_roi.flipCurrentImage()
+        self.imgoverlay_roi.updateImage()
 
     def addRotateHandle(self, val):
         if val:
-            self.addRotateHandle.handle = self.roi.addRotateHandle([0,1], [0.2, 0.2])
+            self.addRotateHandle.handle = self.imgoverlay_roi.addRotateHandle([0, 1], [0.2, 0.2])
         else:
-            self.roi.removeHandle(self.addRotateHandle.handle)
+            self.imgoverlay_roi.removeHandle(self.addRotateHandle.handle)
+
+    def addROIselection(self):
+        self.selection_roi = pg.ROI([0, 0], [10, 10])
+        self.stackViewer.view.addItem(self.selection_roi)
+        ## handles scaling horizontally around center
+        # r3a.addScaleHandle([1, 0.5], [0.5, 0.5])
+        # r3a.addScaleHandle([0, 0.5], [0.5, 0.5])
+        #
+        # ## handles scaling vertically from opposite edge
+        # r3a.addScaleHandle([0.5, 0], [0.5, 1])
+        # r3a.addScaleHandle([0.5, 1], [0.5, 0])
+
+        ## handles scaling both vertically and horizontally
+        self.selection_roi.addScaleHandle([1, 1], [0, 0])
+        self.selection_roi.addScaleHandle([0, 0], [1, 1])
 
     def normalize(self, val):
         if val and not self.normalized:
             proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
-            overlay = self.roi.currentImage
-            if self.roi.flipped:
+            overlay = self.imgoverlay_roi.currentImage
+            if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
             overlay = (overlay - self.dark)/(self.flat - self.dark)
-            if self.roi.flipped:
+            if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
-            self.roi.currentImage = overlay
-            self.roi.updateImage(autolevels=True)
+            self.imgoverlay_roi.currentImage = overlay
+            self.imgoverlay_roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
         elif not val and self.normalized:
             self.stackViewer.resetImage()
-            self.roi.resetImage()
+            self.imgoverlay_roi.resetImage()
             self.normalized = False
             self.normCheckBox.setChecked(False)
 
     def keyPressEvent(self, ev):
         super(ProjectionViewer, self).keyPressEvent(ev)
-        if self.roi.isVisible():
-            self.roi.keyPressEvent(ev)
+        if self.imgoverlay_roi.isVisible():
+            self.imgoverlay_roi.keyPressEvent(ev)
         else:
             super(StackViewer, self.stackViewer).keyPressEvent(ev)
         ev.accept()

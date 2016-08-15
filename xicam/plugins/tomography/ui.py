@@ -234,7 +234,7 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(toolbuttonMaskingAction)
 
 
-    def connecttriggers(self, slicepreview, preview3D, fullrecon, center):
+    def connecttriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
         """
         Connect toolbar action signals to give slots
 
@@ -254,3 +254,4 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
         self.actionCenter.toggled.connect(center)
+        self.actionROI.triggered.connect(roiselection)

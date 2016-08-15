@@ -63,7 +63,7 @@ class plugin(base.plugin):
 
         # Connect toolbar signals and ui button signals
         self.toolbar.connecttriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
-                                     self.manualCenter)
+                                     self.manualCenter, self.roiSelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
@@ -157,6 +157,9 @@ class plugin(base.plugin):
         self.ui.property_table.clear()
         self.ui.property_table.hide()
         self.centerwidget.widget(index).deleteLater()
+
+    def roiSelection(self):
+        self.currentWidget().onROIselection()
 
     def manualCenter(self, value):
         self.currentWidget().onManualCenter(value)
