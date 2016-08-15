@@ -131,18 +131,27 @@ def build_function_menu(menu, functree, functiondata, actionslot):
                     funcmenu.addMenu(optsmenu)
                     for opt in subfuncs[subfunc]:
                         funcaction = QtGui.QAction(opt, funcmenu)
-                        funcaction.triggered.connect(partial(actionslot, func, opt,
-                                                             reconpkg.packages[functiondata[opt][1]]))
-                        optsmenu.addAction(funcaction)
+                        try:
+                            funcaction.triggered.connect(partial(actionslot, func, opt,
+                                                                 reconpkg.packages[functiondata[opt][1]]))
+                            optsmenu.addAction(funcaction)
+                        except KeyError:
+                            pass
                 else:
                     funcaction = QtGui.QAction(subfunc, funcmenu)
-                    funcaction.triggered.connect(partial(actionslot, func, subfunc,
-                                                         reconpkg.packages[functiondata[subfunc][1]]))
-                    funcmenu.addAction(funcaction)
+                    try:
+                        funcaction.triggered.connect(partial(actionslot, func, subfunc,
+                                                             reconpkg.packages[functiondata[subfunc][1]]))
+                        funcmenu.addAction(funcaction)
+                    except KeyError:
+                        pass
         elif len(subfuncs) == 1:
-            funcaction = QtGui.QAction(func, menu)
-            funcaction.triggered.connect(partial(actionslot, func, func, reconpkg.packages[functiondata[func][1]]))
-            menu.addAction(funcaction)
+            try:
+                funcaction = QtGui.QAction(func, menu)
+                funcaction.triggered.connect(partial(actionslot, func, func, reconpkg.packages[functiondata[func][1]]))
+                menu.addAction(funcaction)
+            except KeyError:
+                pass
 
 
 class Toolbar(QtGui.QToolBar):

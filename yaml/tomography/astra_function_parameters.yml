@@ -2,7 +2,7 @@ BP:
   - name: center
     type: float
     suffix: px
-FBP:
+FBP_astra:
   - name: center
     type: float
     suffix: px
