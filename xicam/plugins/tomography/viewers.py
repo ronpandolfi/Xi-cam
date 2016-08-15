@@ -28,6 +28,7 @@ class TomoViewer(QtGui.QWidget):
     """
 
     sigSetDefaults = QtCore.Signal(dict)
+    # sigROI = QtCore.Signal(tuple)
 
     def __init__(self, paths=None, data=None, *args, **kwargs):
 
@@ -77,6 +78,9 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.currentChanged.connect(self.currentChanged)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
+        self.sigROI =  self.projectionViewer.sigROIChanged
+        self.xbounds = self.projectionViewer.xbounds
+
     def wireupCenterSelection(self, recon_function):
         if recon_function is not None:
             center_param = recon_function.params.child('center')
@@ -96,7 +100,7 @@ class TomoViewer(QtGui.QWidget):
         else:
             return loader.StackImage(paths)
 
-    def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
+    def getsino(self, slc=None):
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
@@ -126,10 +130,11 @@ class TomoViewer(QtGui.QWidget):
     def currentChanged(self, index):
         self.viewstack.setCurrentIndex(index)
 
-    def setCorValue(self, value):
-        self.cor = value
+    # def setCorValue(self, value):
+    #     self.cor = value
 
     def addSlicePreview(self, params, recon, slice_no=None):
+        print 'Adding slice prevvvvvs'
         if slice_no is None:
             slice_no = self.sinogramViewer.view_spinBox.value()
         self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
@@ -151,13 +156,27 @@ class TomoViewer(QtGui.QWidget):
         else:
             self.projectionViewer.hideCenterDetection()
 
-    # TODO you are here working on this ok ok ok
-    # TODO think how to only have one ROI and limit its size to the image!
+    def centerActionActive(self):
+        if self.projectionViewer.imgoverlay_roi.isVisible():
+            return True
+        else:
+            return False
+
     # TODO then get the slice for that image to use in the reconstruction and fill in start, end sinogram and adjust center correspondingly when running!
-    # TODO change roi color to the same as Viewer
-    def onROIselection(self):
-        self.viewstack.setCurrentWidget(self.projectionViewer)
-        self.projectionViewer.addROIselection()
+    def onROIselection(self, active):
+        if active:
+            self.viewstack.setCurrentWidget(self.projectionViewer)
+            self.projectionViewer.selection_roi.show()
+        else:
+            self.projectionViewer.selection_roi.setSize(self.data.shape[1:])
+            self.projectionViewer.selection_roi.setPos([0,0])
+            self.projectionViewer.selection_roi.hide()
+
+    def roiActionActive(self):
+        if self.projectionViewer.selection_roi.isVisible():
+            return True
+        else:
+            return False
 
 
 class ProjectionViewer(QtGui.QWidget):
@@ -165,6 +184,7 @@ class ProjectionViewer(QtGui.QWidget):
     Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
     """
     sigCenterChanged = QtCore.Signal(float)
+    sigROIChanged = QtCore.Signal(tuple)
 
     def __init__(self, data, view_label=None, center=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
@@ -172,6 +192,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
+        self.xbounds = [0, self.data.shape[1]]
         self.flat = np.median(self.data.flats, axis=0).transpose()
         self.dark = np.median(self.data.darks, axis=0).transpose()
 
@@ -181,7 +202,17 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
 
         # roi to select region of interest
-        self.selection_roi = None
+        self.selection_roi = pg.ROI([0, 0], self.data.shape[1:], removable=True)
+        self.selection_roi.setPen(color=[0, 255, 255], width=1)
+        self.selection_roi.addScaleHandle([1, 1], [0, 0])
+        self.selection_roi.addScaleHandle([0, 0], [1, 1])
+        self.selection_roi.addScaleHandle([1, 0.5], [0.5, 0.5])
+        self.selection_roi.addScaleHandle([0, 0.5], [0.5, 0.5])
+        self.selection_roi.addScaleHandle([0.5, 0], [0.5, 1])
+        self.selection_roi.addScaleHandle([0.5, 1], [0.5, 0])
+        self.stackViewer.view.addItem(self.selection_roi)
+        self.selection_roi.sigRegionChangeFinished.connect(self.roiChanged)
+        self.selection_roi.hide()
 
         self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
         self.stackViewer.keyPressEvent = self.keyPressEvent
@@ -189,7 +220,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_widget = QtGui.QWidget(self)
         clabel = QtGui.QLabel('Rotation Center:')
         olabel = QtGui.QLabel('Offset:')
-        self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
+        self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget)
         self.centerBox.setDecimals(1)
         self.setCenterButton = QtGui.QToolButton()
         icon = QtGui.QIcon()
@@ -199,7 +230,7 @@ class ProjectionViewer(QtGui.QWidget):
         originBox = QtGui.QLabel(parent=self.cor_widget)
         originBox.setText('x={}   y={}'.format(0, 0))
         center = center if center is not None else data.shape[1]/2.0
-        self.centerBox.setValue(center) #setText(str(center))
+        self.centerBox.setValue(center)
         h1 = QtGui.QHBoxLayout()
         h1.setAlignment(QtCore.Qt.AlignLeft)
         h1.setContentsMargins(0, 0, 0, 0)
@@ -261,8 +292,13 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.imgoverlay_roi.sigTranslated.connect(self.setCenter)
         self.imgoverlay_roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
-
         self.hideCenterDetection()
+
+    def roiChanged(self):
+        roi = self.selection_roi.getArraySlice(self.data[self.stackViewer.currentIndex], self.imageItem,
+                                               returnSlice=False)
+        self.sigROIChanged.emit(roi[0])
+        self.xbounds = roi[0][0]
 
     def changeOverlayProj(self, idx):
         self.normCheckBox.setChecked(False)
@@ -298,21 +334,6 @@ class ProjectionViewer(QtGui.QWidget):
             self.addRotateHandle.handle = self.imgoverlay_roi.addRotateHandle([0, 1], [0.2, 0.2])
         else:
             self.imgoverlay_roi.removeHandle(self.addRotateHandle.handle)
-
-    def addROIselection(self):
-        self.selection_roi = pg.ROI([0, 0], [10, 10])
-        self.stackViewer.view.addItem(self.selection_roi)
-        ## handles scaling horizontally around center
-        # r3a.addScaleHandle([1, 0.5], [0.5, 0.5])
-        # r3a.addScaleHandle([0, 0.5], [0.5, 0.5])
-        #
-        # ## handles scaling vertically from opposite edge
-        # r3a.addScaleHandle([0.5, 0], [0.5, 1])
-        # r3a.addScaleHandle([0.5, 1], [0.5, 0])
-
-        ## handles scaling both vertically and horizontally
-        self.selection_roi.addScaleHandle([1, 1], [0, 0])
-        self.selection_roi.addScaleHandle([0, 0], [1, 1])
 
     def normalize(self, val):
         if val and not self.normalized:

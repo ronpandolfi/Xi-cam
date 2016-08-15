@@ -63,7 +63,7 @@ class plugin(base.plugin):
 
         # Connect toolbar signals and ui button signals
         self.toolbar.connecttriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
-                                     self.manualCenter, self.roiSelection)
+                                     self.manualCenter, self.projROISelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
@@ -106,11 +106,28 @@ class plugin(base.plugin):
 
     def currentChanged(self, index):
         try:
+            self.currentWidget().sigROI.connect(self.setProjROI)
             self.setPipelineValues()
             self.manager.updateParameters()
-            self.toolbar.actionCenter.setChecked(False)
+            if self.currentWidget().centerActionActive():
+                self.toolbar.actionCenter.setChecked(True)
+            else:
+                self.toolbar.actionCenter.setChecked(False)
+            if self.currentWidget().roiActionActive():
+                self.toolbar.actionROI.setChecked(True)
+            else:
+                self.toolbar.actionROI.setChecked(False)
         except (AttributeError, RuntimeError) as e:
             msg.logMessage(e.message, level=msg.ERROR)
+
+    def tabCloseRequested(self, index):
+        self.ui.setProjParams(0)
+        self.ui.setSinoParams(0)
+        self.ui.property_table.clear()
+        self.ui.property_table.hide()
+        self.centerwidget.widget(index).deleteLater()
+        self.toolbar.actionCenter.setChecked(False)
+        self.toolbar.actionROI.setChecked(False)
 
     def loadPipeline(self):
         open_file = QtGui.QFileDialog.getOpenFileName(None, 'Open tomography pipeline file',
@@ -145,21 +162,21 @@ class plugin(base.plugin):
             self.ui.property_table.setData(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
-            self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
+            self.ui.setProjParams(widget.data.shape[0])
+            self.ui.setSinoParams(widget.data.shape[2])
             config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)
                 rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
 
-    def tabCloseRequested(self, index):
-        self.ui.setConfigParams(0, 0)
-        self.ui.property_table.clear()
-        self.ui.property_table.hide()
-        self.centerwidget.widget(index).deleteLater()
+    def projROISelection(self, value):
+        self.currentWidget().onROIselection(value)
+        if not value:
+            self.ui.setSinoParams(self.currentWidget().data.shape[2])
 
-    def roiSelection(self):
-        self.currentWidget().onROIselection()
+    def setProjROI(self, ind):
+        self.ui.setSinoParams(ind[1][1], ind[1][0])
 
     def manualCenter(self, value):
         self.currentWidget().onManualCenter(value)
@@ -176,11 +193,15 @@ class plugin(base.plugin):
     def slicePreviewAction(self, message='Computing slice preview...', fixed_func=None):
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func)
+            xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[1])
+            slc = (slice(None), slice(None), xslc)
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func, slc=slc)
 
     def runSlicePreview(self, partial_stack, stack_dict):
-        initializer = self.currentWidget().getsino()
         slice_no = self.currentWidget().sinogramViewer.currentIndex
+        xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[1])
+        initializer = self.currentWidget().getsino()
+        initializer = initializer[:, :, xslc]
         callback = partial(self.currentWidget().addSlicePreview, stack_dict, slice_no=slice_no)
         message = 'Unable to compute slice preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, message)
@@ -188,13 +209,15 @@ class plugin(base.plugin):
     def preview3DAction(self):
         if self.checkPipeline():
             msg.showMessage('Computing 3D preview...', timeout=0)
-            slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+            xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[0], 8)
+            slc = (slice(None), slice(None, None, 8), xslc)
             self.manager.cor_scale = lambda x: x // 8
             self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
 
     def run3DPreview(self, partial_stack, stack_dict):
-        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        initializer = self.currentWidget().getsino(slc)  # this step takes quite a bit, think of running a thread
+        xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[0], 8)
+        slc = (slice(None), slice(None, None, 8), xslc)
+        initializer = self.currentWidget().getsino(slc)  # this step can take quite a bit, think of running a thread
         self.manager.updateParameters()
         callback = partial(self.currentWidget().add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
@@ -213,24 +236,25 @@ class plugin(base.plugin):
         bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
 
     def fullReconstruction(self):
-        if self.checkPipeline():
-            name = self.centerwidget.tabText(self.centerwidget.currentIndex())
-            msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
-            self.bottomwidget.local_console.clear()
-            self.manager.updateParameters()
-            recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                          interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-                                          finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
-            pstart = self.ui.config_params.child('Start Projection').value()
-            pend = self.ui.config_params.child('End Projection').value()
-            pstep = self.ui.config_params.child('Step Projection').value()
-            sstart = self.ui.config_params.child('Start Sinogram').value()
-            send = self.ui.config_params.child('End Sinogram').value()
-            sstep =  self.ui.config_params.child('Step Sinogram').value()
-            recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
-                       self.ui.config_params.child('Sinograms/Chunk').value(),
-                       ncore=self.ui.config_params.child('CPU Cores').value())
-            self.recon_start_time = time.time()
+        if not self.checkPipeline():
+            return
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
+        self.bottomwidget.local_console.clear()
+        self.manager.updateParameters()
+        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
+                                      interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+                                      finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+        pstart = self.ui.config_params.child('Start Projection').value()
+        pend = self.ui.config_params.child('End Projection').value()
+        pstep = self.ui.config_params.child('Step Projection').value()
+        sstart = self.ui.config_params.child('Start Sinogram').value()
+        send = self.ui.config_params.child('End Sinogram').value()
+        sstep =  self.ui.config_params.child('Step Sinogram').value()
+        recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
+                   self.ui.config_params.child('Sinograms/Chunk').value(),
+                   ncore=self.ui.config_params.child('CPU Cores').value())
+        self.recon_start_time = time.time()
 
     def reconstructionFinished(self):
         run_time = time.time() - self.recon_start_time

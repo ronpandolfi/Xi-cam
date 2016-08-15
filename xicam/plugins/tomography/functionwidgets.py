@@ -508,6 +508,9 @@ class FunctionManager(fw.FeatureManager):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
+            # if slc[2].start is not None:
+            #     print 'Resetting center with, ', slc[2].start
+            #     fpartial.keywords['center'] -= slc[2].start
             self.resetCenterCorrection()
         return fpartial
 
@@ -540,7 +543,7 @@ class FunctionManager(fw.FeatureManager):
     def foldFunctionStack(self, partial_stack, initializer):
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
-    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, ncore=None):
+    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, xbounds=None, ncore=None):
         write_start = sino[0]
         nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
         total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
@@ -558,12 +561,11 @@ class FunctionManager(fw.FeatureManager):
                 ts = time.time()
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
                                                                                               end, total_sino)
+                xslc = slice(None, None, None) if xbounds is None else slice(*xbounds)
                 fpartial = self.updateFunctionPartial(function, datawidget,
-                                                      slc=(slice(*proj), slice(start, end, sino[2]),
-                                                           slice(None, None, None)))
+                                                      slc=(slice(*proj), slice(start, end, sino[2]), xslc))
                 if init:
-                    tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
-                                                   slice(None, None, None)))
+                    tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]), xslc))
                     init = False
                 elif 'Tiff' in function.name:
                     fpartial.keywords['start'] = write_start

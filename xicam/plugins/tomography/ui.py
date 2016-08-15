@@ -106,18 +106,22 @@ class UIform(object):
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
 
-    def setConfigParams(self, proj, sino):
-        print 'Setting config params to ', proj, sino
-        self.config_params.child('End Sinogram').setLimits([0, sino])
-        self.config_params.child('Start Sinogram').setLimits([0, sino])
-        self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
-        self.config_params.child('End Sinogram').setValue(sino)
-        self.config_params.child('End Sinogram').setDefault(sino)
-        self.config_params.child('End Projection').setLimits([0, proj])
-        self.config_params.child('Start Projection').setLimits([0, proj])
-        self.config_params.child('Step Projection').setLimits([0, proj + 1])
-        self.config_params.child('End Projection').setValue(proj)
-        self.config_params.child('End Projection').setDefault(proj)
+    def setProjParams(self, end, start=0):
+        self.config_params.child('End Projection').setLimits([0, end])
+        self.config_params.child('Start Projection').setLimits([0, end])
+        self.config_params.child('Step Projection').setLimits([0, end + 1])
+        self.config_params.child('End Projection').setValue(end)
+        self.config_params.child('End Projection').setDefault(end)
+        self.config_params.child('Start Projection').setValue(start)
+
+    def setSinoParams(self, end, start=0):
+        self.config_params.child('End Sinogram').setLimits([0, end])
+        self.config_params.child('Start Sinogram').setLimits([0, end])
+        self.config_params.child('Step Sinogram').setLimits([0, end + 1])
+        self.config_params.child('End Sinogram').setValue(end)
+        self.config_params.child('End Sinogram').setDefault(end)
+        self.config_params.child('Start Sinogram').setValue(start)
+
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):
@@ -226,12 +230,12 @@ class Toolbar(QtGui.QToolBar):
         self.actionCenter.setCheckable(True)
         self.toolbuttonCenter.setDefaultAction(self.actionCenter)
 
-        # TODO working on ROI Selection TOOL
         self.actionROI = QtGui.QAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionROI.setIcon(icon)
         self.actionROI.setToolTip('Select region of interest')
+        self.actionROI.setCheckable(True)
 
         self.setIconSize(QtCore.QSize(32, 32))
 
@@ -263,4 +267,4 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
         self.actionCenter.toggled.connect(center)
-        self.actionROI.triggered.connect(roiselection)
+        self.actionROI.toggled.connect(roiselection)
