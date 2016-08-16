@@ -62,7 +62,7 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         # Connect toolbar signals and ui button signals
-        self.toolbar.connecttriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
+        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
                                      self.manualCenter, self.roiSelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),

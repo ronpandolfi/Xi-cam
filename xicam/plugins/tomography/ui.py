@@ -21,7 +21,38 @@ import viewers
 
 
 class UIform(object):
+    """
+    Class for tomography plugin ui setup.
+
+    Attributes
+    ----------
+
+    toolbar : QtGui.QToolBar
+        Toolbar shown in plugin
+    leftmodes : list of tuples
+        leftmodes list for standard base plugin initialization [widget, tab icon]
+    righmodes : list of tuples
+        rightmodes list for standard base plugin initialization [widget, tab icon]
+    param_form : QtGui.QStackedWidget
+        Container for ParameterTree's used to display function parameters
+    functionWidget : QtGui.QWidget
+        Workflow pipeline GUI in plugin's leftmodes
+    property_table : pyqtgraph.TableWidget
+        TableWidget to display dataset metadata on right widget
+    config_params : pyqtgraph.Parameter
+        Parameter holding the run configuration parameters (ie sino start, sino end, sino step, number of cores)
+
+    Methods
+    -------
+    connectTriggers
+        Connect leftwidget (function mangement buttons) triggers to corresponding slots
+    setConfigParams
+        Sets configuration parameters in pg.Parameter inside rightwidget
+
+    """
+
     def setupUi(self):
+        """Set up the UI for tomography plugin"""
 
         self.toolbar = Toolbar()
         self.centerwidget = QtGui.QTabWidget()
@@ -99,6 +130,26 @@ class UIform(object):
         self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
+        """
+        Connect leftwidget (function mangement buttons) triggers to corresponding slots
+
+        Parameters
+        ----------
+        open : QtCore.Slot
+            Slot to handle signal from open button
+        save QtCore.Slot
+            Slot to handle signal from save button
+        reset QtCore.Slot
+            Slot to handle signal from reset button
+        moveup QtCore.Slot
+            Slot to handle signal to move a function widget upwards
+        movedown QtCore.Slot
+            Slot to handle signal to move a function widget downwards
+        clear QtCore.Slot
+            Slot to handle signal from clear button
+
+        """
+
         self.openaction.triggered.connect(open)
         self.saveaction.triggered.connect(save)
         self.refreshaction.triggered.connect(reset)
@@ -107,7 +158,6 @@ class UIform(object):
         self.functionwidget.clearButton.clicked.connect(clear)
 
     def setConfigParams(self, proj, sino):
-        print 'Setting config params to ', proj, sino
         self.config_params.child('End Sinogram').setLimits([0, sino])
         self.config_params.child('Start Sinogram').setLimits([0, sino])
         self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
@@ -121,6 +171,23 @@ class UIform(object):
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):
+    """
+    Builds the function menu's and submenu's anc connects them to the corresponding slot to add them to the workflow
+    pipeline
+
+    Parameters
+    ----------
+    menu : QtGui.QMenu
+        Menu object to populate with submenu's and actions
+    functree : dict
+        Dictionary specifying the depth levels of functions. See functions.yml entry "Functions"
+    functiondata : dict
+        Dictionary with function information. See function_names.yml
+    actionslot : QtCore.Slot
+        slot where the function action triggered signal shoud be connected
+
+    """
+
     for func, subfuncs in functree.iteritems():
         if len(subfuncs) > 1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
@@ -157,6 +224,23 @@ def build_function_menu(menu, functree, functiondata, actionslot):
 class Toolbar(QtGui.QToolBar):
     """
     QToolbar subclass used in Tomography plugin
+
+    Attributes
+    ----------
+    actionRun_SlicePreview : QtGui.QAction
+    actionRun_3DPreview : QtGui.QAction
+    actionRun_FullRecon : QtGui.QAction
+    actionCenter : QtGui.QAction
+    actionROI : QtGui.QAction
+    actionPolyMask : QtGui.QAction
+    actionCircMask : QtGui.QAction
+    actionRectMask : QtGui.QAction
+    actionMask : QtGui.QAction
+
+    Methods
+    -------
+    connecttriggers
+        Connect toolbar action signals to give slots
     """
 
     def __init__(self):
@@ -179,6 +263,17 @@ class Toolbar(QtGui.QToolBar):
         icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_FullRecon.setIcon(icon)
         self.actionRun_FullRecon.setToolTip('Full reconstruction')
+
+        self.actionCenter = QtGui.QWidgetAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionCenter.setIcon(icon)
+        self.actionCenter.setToolTip('Overlay center of rotation detection')
+        self.toolbuttonCenter = QtGui.QToolButton(parent=self)
+        self.toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.actionCenter.setDefaultWidget(self.toolbuttonCenter)
+        self.actionCenter.setCheckable(True)
+        self.toolbuttonCenter.setDefaultAction(self.actionCenter)
 
         self.actionPolyMask = QtGui.QAction(self)
         icon = QtGui.QIcon()
@@ -214,18 +309,6 @@ class Toolbar(QtGui.QToolBar):
         toolbuttonMaskingAction = QtGui.QWidgetAction(self)
         toolbuttonMaskingAction.setDefaultWidget(toolbuttonMasking)
 
-
-        self.actionCenter = QtGui.QWidgetAction(self)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
-        self.actionCenter.setIcon(icon)
-        self.actionCenter.setToolTip('Overlay center of rotation detection')
-        self.toolbuttonCenter = QtGui.QToolButton(parent=self)
-        self.toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
-        self.actionCenter.setDefaultWidget(self.toolbuttonCenter)
-        self.actionCenter.setCheckable(True)
-        self.toolbuttonCenter.setDefaultAction(self.actionCenter)
-
         # TODO working on ROI Selection TOOL
         self.actionROI = QtGui.QAction(self)
         icon = QtGui.QIcon()
@@ -239,11 +322,11 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionRun_SlicePreview)
         self.addAction(self.actionRun_3DPreview)
         self.addAction(self.actionCenter)
-        self.addAction(self.actionROI)
-        self.addAction(toolbuttonMaskingAction)
+        # self.addAction(self.actionROI)
+        # self.addAction(toolbuttonMaskingAction)
 
 
-    def connecttriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
+    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
         """
         Connect toolbar action signals to give slots
 

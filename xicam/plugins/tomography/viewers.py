@@ -25,6 +25,25 @@ class TomoViewer(QtGui.QWidget):
 
     Attributes
     ----------
+    data : pipeline.loader.StackImage
+        Raw tomography data as a StackImage
+    viewstack : QtGui.StackedWidget
+        Container for different tomography viewers
+    viewmode : QtGui.QTabBar
+        Tabbar to switch between tomopgraphy views
+    projectionViewer : ProejctionViewer
+        Viewer class to visualize raw tomography projections
+    sinogramViewer : StackViewer
+        Viewer class to visualize raw tomography sinograms
+    previewViewer : PreviewViewer
+        Viewer class to hold a set of preview reconstructions of a single sinogram/slice
+    preview3DViewer : Preview3DViewer
+        Viewer class to visualize a reconstruction of subsampled set of the raw data
+
+    Signals
+    -------
+    sigSetDefaults(dict)
+        emits dictionary with dataset specific defaults to set in tomography plugin
     """
 
     sigSetDefaults = QtCore.Signal(dict)
@@ -74,10 +93,20 @@ class TomoViewer(QtGui.QWidget):
         v.addWidget(self.viewmode)
         self.setLayout(v)
 
-        self.viewmode.currentChanged.connect(self.currentChanged)
+        self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
     def wireupCenterSelection(self, recon_function):
+        """
+        Connect the reconstruction functions parameters to the manual center selection button.
+        And connect the parameters sigValueChanged to the center detection image overlay widget
+
+        Parameters
+        ----------
+        recon_function : FuncionWidget
+            Reconstruction function widget with a 'center' child parameter
+
+        """
         if recon_function is not None:
             center_param = recon_function.params.child('center')
             # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
@@ -91,45 +120,131 @@ class TomoViewer(QtGui.QWidget):
 
     @staticmethod
     def loaddata(paths, raw=True):
+        """
+        Load data from a file or list of files
+
+        Parameters
+        ----------
+        paths : str/list of str
+            Path to files
+        raw : bool
+            Boolean specifiying it the file is a raw dataset with flats and darks
+            (not using this now but can be used for files where flats/darks are in seperate files)
+
+        Returns
+        -------
+        ProjectionStack, StackImage:
+            Class with raw data from file
+
+        """
+
         if raw:
             return loader.ProjectionStack(paths)
         else:
             return loader.StackImage(paths)
 
     def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
+        """
+        Returns the sinograms specified in slc (this and getproj can be made one function)
+
+        Parameters
+        ----------
+        slc : slice, optional
+            Slice object specifying the portion of the array to return
+
+        Returns
+        -------
+        ndarray:
+            Array of raw data
+
+        """
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
             return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getproj(self, slc=None):
+        """
+        Returns the projections specified in slc (this and getsino can be made one function)
+
+        Parameters
+        ----------
+        slc : slice, optional
+            Slice object specifying the portion of the array to return
+
+        Returns
+        -------
+        ndarray:
+            Array of raw data
+
+        """
         if slc is None:
             return np.ascontiguousarray(self.projectionViewer.currentdata[np.newaxis, :, :])
         else:
             return np.ascontiguousarray(self.data.fabimage[slc])
 
     def getflats(self, slc=None):
+        """
+        Returns the flat fields specified in slc
+
+        Parameters
+        ----------
+        slc : slice, optional
+            Slice object specifying the portion of the array to return
+
+        Returns
+        -------
+        ndarray:
+            Array of flat field data
+
+        """
         if slc is None:
             return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
         else:
             return np.ascontiguousarray(self.data.flats[slc])
 
     def getdarks(self, slc=None):
+        """
+        Returns the dark fields specified in slc
+
+        Parameters
+        ----------
+        slc : slice, optional
+            Slice object specifying the portion of the array to return
+
+        Returns
+        -------
+        ndarray:
+            Array of dark field data
+
+        """
         if slc is None:
             return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
         else:
             return np.ascontiguousarray(self.data.darks[slc])
 
     def getheader(self):
+        """Return the data's header (metadata)"""
         return self.data.header
-
-    def currentChanged(self, index):
-        self.viewstack.setCurrentIndex(index)
 
     def setCorValue(self, value):
         self.cor = value
 
     def addSlicePreview(self, params, recon, slice_no=None):
+        """
+        Adds a slice reconstruction preview with the corresponding workflow pipeline dictionary to the previewViewer
+
+        Parameters
+        ----------
+        params : dict
+            Pipeline dictionary
+        recon : ndarry
+            Reconstructed slice
+        slice_no :
+            Sinogram/slice number reconstructed
+
+        """
+
         if slice_no is None:
             slice_no = self.sinogramViewer.view_spinBox.value()
         self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
@@ -137,6 +252,18 @@ class TomoViewer(QtGui.QWidget):
         msg.clearMessage()
 
     def add3DPreview(self, params, recon):
+        """
+        Adds a slice reconstruction preview with the corresponding workflow pipeline dictionary to the preview3DViewer
+
+        Parameters
+        ----------
+        params : dict
+            Pipeline dictionary
+        recon : ndarry
+            Reconstructed array
+
+        """
+
         recon = np.flipud(recon)
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
@@ -145,6 +272,16 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
     def onManualCenter(self, active):
+        """
+        Activates the manual center portion of the ProjectionViewer.
+        This is connected to the corresponding toolbar signal
+
+        Parameters
+        ----------
+        active : bool
+            Boolean specifying to activate or not. True activate, False deactivate
+
+        """
         if active:
             self.projectionViewer.showCenterDetection()
             self.viewstack.setCurrentWidget(self.projectionViewer)
@@ -156,6 +293,15 @@ class TomoViewer(QtGui.QWidget):
     # TODO then get the slice for that image to use in the reconstruction and fill in start, end sinogram and adjust center correspondingly when running!
     # TODO change roi color to the same as Viewer
     def onROIselection(self):
+        """
+        Shows a rectangular roi to select portion of data to reconstruct. (Not fully implemented yet)
+
+        Parameters
+        ----------
+        active : bool
+            Boolean specifying to activate or not. True activate, False deactivate
+
+        """
         self.viewstack.setCurrentWidget(self.projectionViewer)
         self.projectionViewer.addROIselection()
 
@@ -163,6 +309,9 @@ class TomoViewer(QtGui.QWidget):
 class ProjectionViewer(QtGui.QWidget):
     """
     Class that holds a stack viewer, an ROImageOverlay and a few widgets to allow manual center detection
+
+    Attributes
+    ----------
     """
     sigCenterChanged = QtCore.Signal(float)
 

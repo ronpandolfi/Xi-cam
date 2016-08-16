@@ -55,6 +55,7 @@ class DataTreeWidget(QtGui.QTreeWidget):
 class ImageView(pg.ImageView):
     """
     Subclass of PG ImageView to correct z-slider signal behavior, and add coordinate label.
+    See pygtgraph.ImageView for documentation
     """
     sigDeletePressed = QtCore.Signal()
 

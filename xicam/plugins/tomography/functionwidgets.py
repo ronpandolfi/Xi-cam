@@ -424,6 +424,15 @@ class FunctionManager(fw.FeatureManager):
     center_func_slc = {'Phase Correlation': (0, -1)}
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
+        """
+
+        Parameters
+        ----------
+        list_layout
+        form_layout
+        function_widgets
+        blank_form
+        """
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
                                               blank_form=blank_form)
         self.cor_offset = lambda x: x  # dummy
@@ -433,6 +442,18 @@ class FunctionManager(fw.FeatureManager):
 
     # TODO fix this astra check raise error if package not available
     def addFunction(self, function, subfunction, package):
+        """
+
+        Parameters
+        ----------
+        function
+        subfunction
+        package
+
+        Returns
+        -------
+
+        """
         if function == 'Reconstruction':
             if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
                 func_widget = AstraReconFuncWidget(function, subfunction, package)
@@ -448,23 +469,52 @@ class FunctionManager(fw.FeatureManager):
         return func_widget
 
     def addInputFunction(self, funcwidget, parameter, function, subfunction, package, **kwargs):
+        """
+
+        Parameters
+        ----------
+        funcwidget
+        parameter
+        function
+        subfunction
+        package
+        kwargs
+
+        Returns
+        -------
+
+        """
         ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
         funcwidget.addInputFunction(parameter, ipf_widget)
         return ipf_widget
 
     def updateParameters(self):
+        """Updates all parameters for the current function list"""
         for function in self.features:
             function.updateParamsDict()
 
     def lockParams(self, boolean):
+        """Locks all parameters for the current function list"""
         for func in self.features:
             func.allReadOnly(boolean)
 
     def resetCenterCorrection(self):
+        """Resets the center correction functions to dummy lambdas"""
         self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
 
     def setCenterCorrection(self, name, param_dict):
+        """
+
+        Parameters
+        ----------
+        name
+        param_dict
+
+        Returns
+        -------
+
+        """
         if 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
             self.cor_offset = lambda x: x + n
@@ -476,6 +526,19 @@ class FunctionManager(fw.FeatureManager):
             self.cor_scale = lambda x: x * 2 ** s
 
     def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
+        """
+
+        Parameters
+        ----------
+        funcwidget
+        datawidget
+        stack_dict
+        slc
+
+        Returns
+        -------
+
+        """
         fpartial = funcwidget.partial
         for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
             if argname in 'flats':
@@ -512,6 +575,20 @@ class FunctionManager(fw.FeatureManager):
         return fpartial
 
     def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
+        """
+
+        Parameters
+        ----------
+        datawidget
+        slc
+        ncore
+        skip_names
+        fixed_func
+
+        Returns
+        -------
+
+        """
         stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
@@ -538,9 +615,34 @@ class FunctionManager(fw.FeatureManager):
         return partial_stack, stack_dict
 
     def foldFunctionStack(self, partial_stack, initializer):
+        """
+
+        Parameters
+        ----------
+        partial_stack
+        initializer
+
+        Returns
+        -------
+
+        """
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
     def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, ncore=None):
+        """
+
+        Parameters
+        ----------
+        datawidget
+        proj
+        sino
+        sino_p_chunk
+        ncore
+
+        Returns
+        -------
+
+        """
         write_start = sino[0]
         nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
         total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
@@ -579,6 +681,18 @@ class FunctionManager(fw.FeatureManager):
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
     def testParameterRange(self, function, parameter, prange):
+        """
+
+        Parameters
+        ----------
+        function
+        parameter
+        prange
+
+        Returns
+        -------
+
+        """
         self.updateParameters()
         for i in prange:
             function.param_dict[parameter] = i
@@ -593,6 +707,18 @@ class FunctionManager(fw.FeatureManager):
                                    fixed_func)
 
     def setPipelineFromYAML(self, pipeline, setdefaults=False, config_file=config.names):
+        """
+
+        Parameters
+        ----------
+        pipeline
+        setdefaults
+        config_file
+
+        Returns
+        -------
+
+        """
         self.removeAllFeatures()
         # Way too many for loops, oops... may want to restructure the yaml files
         for func, subfuncs in pipeline.iteritems():
@@ -627,6 +753,17 @@ class FunctionManager(fw.FeatureManager):
 
 
     def setPipelineFromDict(self, pipeline, config_file=config.names):
+        """
+
+        Parameters
+        ----------
+        pipeline
+        config_file
+
+        Returns
+        -------
+
+        """
         self.removeAllFeatures()
         for func, subfuncs in pipeline.iteritems():
             for subfunc in subfuncs:
