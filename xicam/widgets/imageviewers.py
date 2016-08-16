@@ -15,15 +15,16 @@ from xicam.widgets.customwidgets import ImageView
 
 class StackViewer(ImageView):
     """
-    PG ImageView subclass to view projections or sinograms of a tomography dataset
+    PG ImageView subclass to view 3D datasets as image stacks. Removes Menu and ROI buttons from imageview and replaces
+    it with a spinbox with the current frame index and a label.
     """
+
     def __init__(self, data=None, view_label=None, *args, **kwargs):
         super(StackViewer, self).__init__(*args, **kwargs)
 
-        # self.getImageItem().setAutoDownsample(True)
-
-        self.view_label = QtGui.QLabel(self)
-        self.view_label.setText('No: ')
+        if view_label is None:
+            view_label = QtGui.QLabel(self)
+            view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
         self.view_spinBox.setKeyboardTracking(False)
 
@@ -32,12 +33,12 @@ class StackViewer(ImageView):
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(self.view_label)
+        l.addWidget(view_label)
         l.addWidget(self.view_spinBox)
         l.addStretch(1)
         w = QtGui.QWidget()
         w.setLayout(l)
-        self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
+        self.ui.gridLayout.addWidget(view_label, 1, 1, 1, 1)
         self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
         self.ui.menuBtn.setParent(None)
         self.ui.roiBtn.setParent(None)

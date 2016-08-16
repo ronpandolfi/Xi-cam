@@ -44,12 +44,22 @@ class TomoViewer(QtGui.QWidget):
     -------
     sigSetDefaults(dict)
         emits dictionary with dataset specific defaults to set in tomography plugin
+
+    Parameters
+    ----------
+    paths : str/list of str, optional
+        Path to input dataset
+    data : ndarry, optional
+        Array with input data. Currently only paths are supported.
+    args
+        Additional arguments
+    kwargs
+        Additional keyword arguments
     """
 
     sigSetDefaults = QtCore.Signal(dict)
 
     def __init__(self, paths=None, data=None, *args, **kwargs):
-
         if paths is None and data is None:
             raise ValueError('Either data or path to file must be provided')
 
@@ -69,9 +79,7 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-        self.cor = float(self.data.shape[1])/2.0
-
-        self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
+        self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.viewstack.addWidget(self.projectionViewer)
 
@@ -83,7 +91,7 @@ class TomoViewer(QtGui.QWidget):
         self.previewViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.previewViewer)
 
-        self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
+        self.preview3DViewer = Preview3DViewer(parent=self)
         self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
         self.viewstack.addWidget(self.preview3DViewer)
 
@@ -227,9 +235,6 @@ class TomoViewer(QtGui.QWidget):
         """Return the data's header (metadata)"""
         return self.data.header
 
-    def setCorValue(self, value):
-        self.cor = value
-
     def addSlicePreview(self, params, recon, slice_no=None):
         """
         Adds a slice reconstruction preview with the corresponding workflow pipeline dictionary to the previewViewer
@@ -288,13 +293,9 @@ class TomoViewer(QtGui.QWidget):
         else:
             self.projectionViewer.hideCenterDetection()
 
-    # TODO you are here working on this ok ok ok
-    # TODO think how to only have one ROI and limit its size to the image!
-    # TODO then get the slice for that image to use in the reconstruction and fill in start, end sinogram and adjust center correspondingly when running!
-    # TODO change roi color to the same as Viewer
     def onROIselection(self):
         """
-        Shows a rectangular roi to select portion of data to reconstruct. (Not fully implemented yet)
+        Shows a rectangular roi to select portion of data to reconstruct. (Not implemented yet)
 
         Parameters
         ----------
@@ -312,7 +313,42 @@ class ProjectionViewer(QtGui.QWidget):
 
     Attributes
     ----------
+    stackViewer : StackViewer
+        widgets.StackViewer used to display the data
+    data : loader.StackImage
+        Image data
+    flat : ndarray
+        Median of flat field data
+    dark : ndarray
+        Median of dark field data
+    imageoverlay_roi : widgets.ROIImageOverlay
+        Widget used in the cor_widget for manual center detection
+    selection_roi : pyqtgragh.ROI
+        ROI for selecting region to reconstruct (Not implemented)
+    cor_widget : QtGui.QWidget
+        Widget used in manual center detection
+    setCenterButton : QtGui.QToolButton
+        Button for setting center value from cor_widget to reconstruction function in pipeline
+
+    Signals
+    -------
+    sigCenterChanged(float)
+        emits float with new center value
+
+    Parameters
+    ----------
+    data : pipeline.loader.StackImage
+        Raw tomography data as a StackImage
+    view_label : str
+        String to show in QLabel lower right hand corner. Where the current index is displayed
+    center : float
+        center of rotation value
+    args
+        Additional arguments
+    kwargs
+        Additional keyword arguments
     """
+
     sigCenterChanged = QtCore.Signal(float)
 
     def __init__(self, data, view_label=None, center=None, *args, **kwargs):
@@ -414,56 +450,104 @@ class ProjectionViewer(QtGui.QWidget):
         self.hideCenterDetection()
 
     def changeOverlayProj(self, idx):
+        """
+        Changes the image in the overlay. This is connected to the slider in the cor_widget
+        """
+
         self.normCheckBox.setChecked(False)
         self.imgoverlay_roi.setCurrentImage(idx)
         self.imgoverlay_roi.updateImage()
 
     def setCenter(self, x, y):
-        center = (self.data.shape[1] + x - 1)/2.0# subtract half a pixel out of 'some' convention?
-        self.centerBox.setValue(center) # setText(str(center))
+        """
+        Sets the center in the centerBox based on the position of the imageoverlay
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate of overlay image in the background images coordinates
+        y : float
+            x-coordinate of overlay image in the background images coordinates
+        """
+
+        center = (self.data.shape[1] + x - 1)/2.0 # subtract half a pixel out of 'some' convention?
+        self.centerBox.setValue(center)
         self.sigCenterChanged.emit(center)
 
     def hideCenterDetection(self):
+        """
+        Hides the center detection widget and corresponding histogram
+        """
         self.normalize(False)
         self.cor_widget.hide()
         self.roi_histogram.hide()
         self.imgoverlay_roi.setVisible(False)
 
     def showCenterDetection(self):
+        """
+        Shows the center detection widget and corresponding histogram
+        """
         self.cor_widget.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
 
     def updateROIFromCenter(self, center):
+        """
+        Updates the position of the ROIImageOverlay based on the given center
+
+        Parameters
+        ----------
+        center : float
+            Location of center of rotation
+        """
+
         s = self.imgoverlay_roi.pos()[0]
         self.imgoverlay_roi.translate(pg.Point((2 * center + 1 - self.data.shape[1] - s, 0))) # 1 again due to the so-called COR
                                                                                    # conventions...
     def flipOverlayProj(self, val):
+        """
+        Flips the image show in the ROIImageOverlay
+        """
+
         self.imgoverlay_roi.flipCurrentImage()
         self.imgoverlay_roi.updateImage()
 
-    def addRotateHandle(self, val):
+    def toggleRotateHandle(self, val):
+        """
+        Adds/ removes a handle on the ROIImageOverlay to be able to rotate the image (Rotation is not implemented
+        correctly yet)
+
+        Parameters
+        ----------
+        val : bool
+            Boolean specifying to add or remove the handle
+        """
+
         if val:
-            self.addRotateHandle.handle = self.imgoverlay_roi.addRotateHandle([0, 1], [0.2, 0.2])
+            self.toggleRotateHandle.handle = self.imgoverlay_roi.addRotateHandle([0, 1], [0.2, 0.2])
         else:
-            self.imgoverlay_roi.removeHandle(self.addRotateHandle.handle)
+            self.imgoverlay_roi.removeHandle(self.toggleRotateHandle.handle)
 
     def addROIselection(self):
+        """
+        Adds/ removes a rectangular ROI to select a region of interest for reconstruction. Not implemented yet
+        """
+
         self.selection_roi = pg.ROI([0, 0], [10, 10])
         self.stackViewer.view.addItem(self.selection_roi)
-        ## handles scaling horizontally around center
-        # r3a.addScaleHandle([1, 0.5], [0.5, 0.5])
-        # r3a.addScaleHandle([0, 0.5], [0.5, 0.5])
-        #
-        # ## handles scaling vertically from opposite edge
-        # r3a.addScaleHandle([0.5, 0], [0.5, 1])
-        # r3a.addScaleHandle([0.5, 1], [0.5, 0])
-
-        ## handles scaling both vertically and horizontally
         self.selection_roi.addScaleHandle([1, 1], [0, 0])
         self.selection_roi.addScaleHandle([0, 0], [1, 1])
 
     def normalize(self, val):
+        """
+        Toggles the normalization of the ROIImageOverlay.
+
+        Parameters
+        ----------
+        val : bool
+            Boolean specifying to normalize image
+        """
+
         if val and not self.normalized:
             proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
             overlay = self.imgoverlay_roi.currentImage
@@ -484,6 +568,9 @@ class ProjectionViewer(QtGui.QWidget):
             self.normCheckBox.setChecked(False)
 
     def keyPressEvent(self, ev):
+        """
+        Override QWidgets key pressed event to send the event to the ROIImageOverlay when it is pressed
+        """
         super(ProjectionViewer, self).keyPressEvent(ev)
         if self.imgoverlay_roi.isVisible():
             self.imgoverlay_roi.keyPressEvent(ev)
@@ -496,6 +583,34 @@ class PreviewViewer(QtGui.QSplitter):
     """
     Viewer class to show reconstruction previews in a PG ImageView, along with the function pipeline settings for the
     corresponding preview
+
+    Attributes
+    ----------
+    previews : ArrayDeque
+        ArrayDeque to hold slice reconstruction previews
+    data : deque of dicts
+        deque holding preview dicts corresponding to the reconstruction in previews
+    datatrees : deque of DataTree widgets
+        deque holding DataTree widgets to show the data in data deque
+    slice_numbers : deque
+        deque with sinogram index that was reconstructed for that preview
+    imageview : widgets.ImageView
+        ImageView to display preview reconstructions
+
+    Signals
+    -------
+    sigSetDefaults(dict)
+        Emits dictionary of current preview. Used to set the workflow pipeline according to the emitted dict
+
+    Parameters
+    ----------
+    dim : int
+        Dimensions of arrays in preview array deque. This is no longer used because array deque can hold arrays of
+        different size.
+    maxpreviews : int
+        Maximum number of preview arrrays that can be held
+    args
+    kwargs
     """
 
     sigSetDefaults = QtCore.Signal(dict)
@@ -564,6 +679,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
+        """Slot connected to the ImageViews sigChanged"""
         try:
             self.functionform.setCurrentWidget(self.datatrees[index])
             self.view_number.setValue(self.slice_numbers[index])
@@ -573,6 +689,19 @@ class PreviewViewer(QtGui.QSplitter):
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
     def addPreview(self, image, funcdata, slice_number):
+        """
+        Adds a preview
+
+        Parameters
+        ----------
+        image : ndarray
+            Reconstructed image
+        funcdata : dict
+            Dictionary summarizing pipeline used for reconstruction
+        slice_number : int
+            Index of sinogram reconstructed
+        """
+
         self.deleteButton.show()
         self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
@@ -588,6 +717,9 @@ class PreviewViewer(QtGui.QSplitter):
         self.functionform.setCurrentWidget(functree)
 
     def removePreview(self):
+        """
+        Removes the current preview
+        """
         if len(self.previews) > 0:
             idx = self.imageview.currentIndex
             self.functionform.removeWidget(self.datatrees[idx])
@@ -603,16 +735,41 @@ class PreviewViewer(QtGui.QSplitter):
                 self.imageview.setImage(self.previews)
 
     def defaultsButtonClicked(self):
+        """
+        Emits the dict of current preview
+        """
         current_data = self.data[self.imageview.currentIndex]
         self.sigSetDefaults.emit(current_data)
 
 
 class Preview3DViewer(QtGui.QSplitter):
+    """
+    Viewer class to show 3D reconstruction previews, along with the function pipeline settings for the
+    corresponding preview
+
+
+    Attributes
+    ----------
+    volumviewer : widgets,volumeviewers.VolumeViewer
+        VolumeViewer widget to render 3D preview reconstruction volume
+    fdata : dict
+        dict corresponding to the reconstruction functions
+    pipelinetree : DataTree widget
+        Datatree for displaying data dict
+    data : ndarray
+        Array of reconstructed volume
+
+    Signals
+    -------
+    sigSetDefaults(dict)
+        Emits dictionary of preview. Used to set the workflow pipeline according to the emitted dict
+
+    """
 
     sigSetDefaults = QtCore.Signal(dict)
 
-    def __init__(self, paths=None, data=None, *args, **kwargs):
-        super(Preview3DViewer, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Preview3DViewer, self).__init__(*args, **kwargs)
         self.setOrientation(QtCore.Qt.Horizontal)
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
@@ -642,14 +799,25 @@ class Preview3DViewer(QtGui.QSplitter):
         self.addWidget(panel)
         self.addWidget(self.volumeviewer)
 
-        self.funcdata = None
+        self.data = None
 
-        self.setPipelineButton.clicked.connect(lambda: self.sigSetDefaults.emit(self.funcdata))
+        self.setPipelineButton.clicked.connect(lambda: self.sigSetDefaults.emit(self.data))
         self.setPipelineButton.hide()
 
     def setPreview(self, recon, funcdata):
+        """
+        Sets the 3D preview
+
+        Parameters
+        ----------
+        recon : ndarray
+            3D array of reconstructed volume
+        funcdata : dict
+            Dictionary summarizing pipeline used for reconstruction
+        """
+
         self.pipelinetree.setData(funcdata, hideRoot=True)
-        self.funcdata = funcdata
+        self.data = funcdata
         self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
         self.setPipelineButton.show()
@@ -659,6 +827,11 @@ class RunConsole(QtGui.QTabWidget):
     """
     Class to output status of a running job, and cancel the job.  Has tab for local run settings
     and can add tabs tab for remote job settings.
+
+    Attributes
+    ----------
+    local_console : QtGui.QWidget
+        Widget for console used when running local reconstructions
     """
 
     icon = QtGui.QIcon()
@@ -667,12 +840,19 @@ class RunConsole(QtGui.QTabWidget):
     def __init__(self, parent=None):
         super(RunConsole, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
-
         # Text Browser for local run console
         self.local_console, self.local_cancelButton = self.addConsole('Local')
-        self.local_console.setObjectName('Local')
 
     def addConsole(self, name):
+        """
+        Adds a new console, This will come in handy when running remote operations (ie adding a console for remote
+        location). Will probably need to create an attribute (dict) for holding the names, consoles when adding consoles
+
+        Parameters
+        ----------
+        name : str
+            Name to be used in tab for console added
+        """
         console = QtGui.QTextEdit()
         button = QtGui.QToolButton()
         console.setObjectName(name)
@@ -695,6 +875,10 @@ class RunConsole(QtGui.QTabWidget):
         return console, button
 
     def log2local(self, msg):
+        """
+        Logs a message to the local console. If adding new consoles there will have to be a way to dynamically create
+        a function like this for the added console.
+        """
         text = self.local_console.toPlainText()
         if '\n' not in msg:
             self.local_console.setText(msg + '\n\n' + text)
@@ -707,7 +891,19 @@ class RunConsole(QtGui.QTabWidget):
 class ArrayDeque(deque):
     """
     Class for a numpy array deque where arrays can be appended on both ends.
+
+    Parameters
+    ----------
+    arraylist : list of ndarrays, optional
+        List of ndarrays to initialize
+    arrayshape : tuple, optional
+        Shape of ndarrays to be held. This is not lenient and not needed since arrays of different sizes can be added
+    dtype : type
+        Type of array data
+    maxlen : int
+        Maximum number of arrays that can be held in ArrayDeque
     """
+
     def __init__(self, arraylist=[], arrayshape=None, dtype=None, maxlen=None):
         # perhaps will need to add check of datatype everytime a new array is added with extend, append, etc??
         if not arraylist and not arrayshape:
@@ -731,12 +927,18 @@ class ArrayDeque(deque):
 
     @property
     def shape(self):
+        """
+        Return the shape of the deque based on number of arrays held
+        """
         self._shape[0] = len(self)
         return self._shape
 
     @property
     def size(self):
-        return np.product(self._shape)
+        """
+        Return the size of the array based on number of arrays held
+        """
+        return np.product(self.shape)
 
     @property
     def dtype(self):

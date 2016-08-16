@@ -42,8 +42,8 @@ def crop(arr, p11, p12, p21, p22, axis=0):
     -------
     ndarray:
         Cropped array
-
     """
+
     slc = []
     pts = [p11, p12, p21, p22]
     for n in range(len(arr.shape)):
@@ -79,7 +79,8 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
 
     Returns
     -------
-
+    ndarray
+        Converted array
     """
 
     allowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')
@@ -129,7 +130,10 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
 
 
 def array_operation(arr, value, operation='divide'):
-    """Simple wrapper function to expose array element by element operations in workflow pipeline GUI"""
+    """
+    Simple wrapper function to expose array element by element operations in workflow pipeline GUI
+    """
+
     if operation not in ('add', 'subtract', 'multiply', 'divide'):
         raise ValueError('Operation {} is not a valid array operation'.format(operation))
     elif operation == 'add':

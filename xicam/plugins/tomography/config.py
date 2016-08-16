@@ -50,7 +50,10 @@ with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
 
 
 def load_pipeline(yaml_file):
-    """Load a workflow pipeline from a yaml file"""
+    """
+    Load a workflow pipeline from a yaml file
+    """
+
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
     return pipeline
@@ -66,8 +69,8 @@ def save_function_pipeline(pipeline, file_name):
         dictionary specifying the workflow pipeline
     file_name : str
         file name to save as yml
-
     """
+
     if file_name != '':
         file_name = file_name.split('.')[0] + '.yml'
         with open(file_name, 'w') as y:
@@ -84,8 +87,8 @@ def set_als832_defaults(mdata, funcwidget_list):
         dataset metadata
     funcwidget_list : list of FunctionWidgets
         list of FunctionWidgets exposed in the UI workflow pipeline
-
     """
+
     for f in funcwidget_list:
         if f is None:
             continue
@@ -124,6 +127,7 @@ def extract_pipeline_dict(funwidget_list):
     dict
         dictionary specifying the workflow pipeline
     """
+
     d = OrderedDict()
     for f in funwidget_list:
         d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}

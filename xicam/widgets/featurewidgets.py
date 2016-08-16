@@ -12,6 +12,49 @@ __status__ = "Beta"
 
 
 class FeatureWidget(QtGui.QWidget):
+    """
+    Widget that stands for a feature or function with a a preview icon and a delete icon. These are added to a layout
+    to represent a set of features (as in higgisaxs) or functions (as in tomography). FeatureWidgets are normally
+    managed by an instance of the FeatureManager Class
+
+
+    Attributes
+    ----------
+    name : str
+        Name to be shown in the FeatureWidget's GUI
+    form
+        Widget that portrays information about the widget (ie a textlabel, spinbox, ParameterTree, etc)
+    subfeatures : list of FeatureWidgets/QWidgets
+        Subfeatures of the widget
+    previewButton : QtGui.QPushButton
+        Button to call the preview action associated with this widget
+    closeButton : QtGui.QPushButton
+        Button that emits sigDelete
+
+    Signals
+    -------
+    sigClicked(FeatureWidget)
+        Signal emitted when the widget is clicked, self is emitted so that a FeatureManager has access to the sender
+        Qt has a sender method which could also be used instead...
+    sigDelete(FeatureWidget)
+        Signal emitted when the widget's closeButton is clicked, self is emitted
+    sigSubFeature(FeatureWidget)
+        Signal emitted when a subfeature is added to the current widget. Emits the subfeature.
+
+
+    Parameters
+    ----------
+    name : str
+        Name to be given to widget
+    checkable : bool, optional
+        Boolean specifying if the previewButton is checkable (for toggling)
+    closeable : bool, optional
+        Boolean specifying whether the widget can be closed/deleted
+    subfeatures : list of FeatureWidgets/QWidgets
+        Initialization list of subfeatures. New subfeatures can be added with the addSubFeatureMethod
+    parent
+        Parent widget, normally the manager
+    """
 
     sigClicked = QtCore.Signal(QtGui.QWidget)
     sigDelete = QtCore.Signal(QtGui.QWidget)
@@ -107,6 +150,15 @@ class FeatureWidget(QtGui.QWidget):
         self.collapse()
 
     def addSubFeature(self, subfeature):
+        """
+        Adds a subfeature to the widget
+
+        Parameters
+        ----------
+        subfeature : FeatureWidget/QWidget
+            Widget to add as a subfeature
+        """
+
         h = QtGui.QHBoxLayout()
         indent = QtGui.QLabel('  -   ')
         h.addWidget(indent)
@@ -126,29 +178,59 @@ class FeatureWidget(QtGui.QWidget):
         self.subfeatures.append(subfeature)
 
     def removeSubFeature(self, subfeature):
+        """
+        Removes a subfeature
+
+        Parameters
+        ----------
+        subfeature : FeatureWidget/QWidget
+            Feature to remove
+        """
+
         self.subfeatures.remove(subfeature)
         subfeature.deleteLater()
         del subfeature
 
     def delete(self):
+        """
+        Emits delete signal with self. Connected to deleteButton's clicked
+        """
+
         self.sigDelete.emit(self)
 
     def collapse(self):
+        """
+        Collapses all expanded subfeatures
+        """
+
         if self.subframe is not None:
             self.subframe.hide()
 
     def expand(self):
+        """
+        Expands subfeatures
+        """
+
         if self.subframe is not None:
             self.subframe.show()
 
     def mouseClicked(self):
+        """
+        Slot to handle when a feature is clicked
+        """
+
         self.sigClicked.emit(self)
         self.setFocus()
         self.previewButton.setFocus()
 
 
 class ROlineEdit(QtGui.QLineEdit):
+    """
+    Subclass of QlineEdit used for labels in FeatureWidgets
+    """
+
     sigClicked = QtCore.Signal()
+
     def __init__(self, *args, **kwargs):
         super(ROlineEdit, self).__init__(*args, **kwargs)
         self.setReadOnly(True)
@@ -174,6 +256,24 @@ class FeatureManager(QtCore.QObject):
     Feature Manager class to manage a list of FeatureWidgets and show the list in an appropriate layout and their
     corresponding forms in another layout. list layout must have an addWidget, removeWidget methods. Form layout
     must in addition have a setCurrentWidget method
+
+    Attributes
+    ----------
+    features : list of FeatureWidgets
+        List of the FeatureWidgets managed
+    selectedFeature : FeatureWidget
+        The currently selected feature
+
+    Parameters
+    ----------
+    list_layout : QtGui.QLayout
+        Layout to display the list of FeatureWidgets
+    form_layout : QtGui.QLayout
+        Layout to display the FeaturenWidgets form (pyqtgraph.Parameter)
+    feature_widgets : list of FeatureWidgets, optional
+        List with feature widgets for initialization
+    blank_form : QtGui.QWidget, optional
+        Widget to display in form_layout when not FunctionWidget is selected
     """
 
     def __init__(self, list_layout, form_layout, feature_widgets=None, blank_form=None):
@@ -202,10 +302,16 @@ class FeatureManager(QtCore.QObject):
 
     @property
     def count(self):
+        """
+        Number of features managed
+        """
         return len(self.features)
 
     @property
     def nextFeature(self):
+        """
+        The feature after the selectedFeature
+        """
         try:
             index = self.features.index(self.selectedFeature)
         except (ValueError, IndexError):
@@ -217,6 +323,9 @@ class FeatureManager(QtCore.QObject):
 
     @property
     def previousFeature(self):
+        """
+        The feature before the selectedFeature
+        """
         if self.selectedFeature is None:
             return None
         index = self.features.index(self.selectedFeature)
@@ -227,6 +336,9 @@ class FeatureManager(QtCore.QObject):
 
     @QtCore.Slot(QtGui.QWidget)
     def featureClicked(self, feature):
+        """
+        Slot used to receive features sigClicked
+        """
         if feature in self.features:
             self.collapseAllFeatures()
         self.showForm(feature.form)
@@ -235,12 +347,19 @@ class FeatureManager(QtCore.QObject):
 
     @QtCore.Slot(QtGui.QWidget)
     def removeFeature(self, feature):
+        """
+        Slot used to receive features sigDelete
+        """
         self.features.remove(feature)
         feature.deleteLater()
         del feature
         self.showForm(self.blank_form)
 
+    @QtCore.Slot(QtGui.QWidget)
     def subFeatureAdded(self, subfeature):
+        """
+        Slot used to receive features sigSubFeature
+        """
         try:
             subfeature.sigClicked.connect(self.featureClicked)
             subfeature.sigSubFeature.connect(self.subFeatureAdded)
@@ -249,6 +368,9 @@ class FeatureManager(QtCore.QObject):
             pass
 
     def addFeature(self, feature):
+        """
+        Adds a subfeature to the given feature
+        """
         self.features.append(feature)
         self._llayout.addWidget(feature)
         self._flayout.addWidget(feature.form)
@@ -260,6 +382,9 @@ class FeatureManager(QtCore.QObject):
                 self.subFeatureAdded(subfeature)
 
     def collapseAllFeatures(self):
+        """
+        Collapses all features with subfeatures
+        """
         for feature in self.features:
             feature.collapse()
             if feature.subfeatures is not None:
@@ -267,9 +392,15 @@ class FeatureManager(QtCore.QObject):
                     subfeature.collapse()
 
     def showForm(self, form):
+        """
+        Shows the current features form
+        """
         self._flayout.setCurrentWidget(form)
 
     def removeAllFeatures(self):
+        """
+        Deletes all features
+        """
         for feature in self.features:
             feature.deleteLater()
             del feature
@@ -277,11 +408,17 @@ class FeatureManager(QtCore.QObject):
         self.showForm(self.blank_form)
 
     def clearLayouts(self):
+        """
+        Removes all features and forms from layouts
+        """
         for feature in self.features:
             self._flayout.removeWidget(feature)
             self._llayout.removeWidget(feature)
 
     def update(self):
+        """
+        Updates the layouts to show the current list of features
+        """
         self.clearLayouts()
         for feature in self.features:
             self._llayout.addWidget(feature)
@@ -289,6 +426,9 @@ class FeatureManager(QtCore.QObject):
         self.showForm(self.selectedFeature.form)
 
     def swapFeatures(self, f1, f2):
+        """
+        Swaps the location of two features
+        """
         idx_1, idx_2 = self.features.index(f1), self.features.index(f2)
         self.features[idx_1], self.features[idx_2] = self.features[idx_2], self.features[idx_1]
         self.update()

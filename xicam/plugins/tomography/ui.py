@@ -48,7 +48,6 @@ class UIform(object):
         Connect leftwidget (function mangement buttons) triggers to corresponding slots
     setConfigParams
         Sets configuration parameters in pg.Parameter inside rightwidget
-
     """
 
     def setupUi(self):
@@ -147,7 +146,6 @@ class UIform(object):
             Slot to handle signal to move a function widget downwards
         clear QtCore.Slot
             Slot to handle signal from clear button
-
         """
 
         self.openaction.triggered.connect(open)
@@ -185,7 +183,6 @@ def build_function_menu(menu, functree, functiondata, actionslot):
         Dictionary with function information. See function_names.yml
     actionslot : QtCore.Slot
         slot where the function action triggered signal shoud be connected
-
     """
 
     for func, subfuncs in functree.iteritems():
@@ -340,8 +337,8 @@ class Toolbar(QtGui.QToolBar):
             Slot to connect actionRun_FullRecon
         center : QtCore.Slot
             Slot to connect actionCenter
-
         """
+
         self.actionRun_SlicePreview.triggered.connect(slicepreview)
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
