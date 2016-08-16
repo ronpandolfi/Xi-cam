@@ -196,13 +196,14 @@ class FunctionWidget(fw.FeatureWidget):
             FunctionWidget representing the input function
 
         """
+
         if parameter in self.input_functions:  # Check to see if parameter already has input function
             if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
-                raise AttributeError('Function exists')  # skip if the input function already exists
+                raise AttributeError('Input function already exists')  # skip if the input function already exists
             self.removeInputFunction(parameter)  # Remove it if it will be replaced
         self.input_functions[parameter] = functionwidget
-        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
         self.addSubFeature(functionwidget)
+        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
 
     def removeInputFunction(self, parameter):
         """
@@ -215,7 +216,7 @@ class FunctionWidget(fw.FeatureWidget):
 
         """
         function = self.input_functions.pop(parameter)
-        del function
+        self.removeSubFeature(function)
 
     def paramChanged(self, param):
         """
@@ -320,10 +321,11 @@ class TomoPyReconFunctionWidget(FunctionWidget):
             specific name of function under the generic name category
         package : python package
             package where function is defined
-
         """
-        self.input_functions['center'] = FunctionWidget(name, subname, package=package)
-        self.addInputFunction('center', self.input_functions['center'])
+        try:
+            self.addInputFunction('center', FunctionWidget(name, subname, package=package))
+        except AttributeError:
+            pass
 
     def setCenterParam(self, value):
         """
