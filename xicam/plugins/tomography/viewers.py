@@ -93,6 +93,7 @@ class TomoViewer(QtGui.QWidget):
 
         self.preview3DViewer = Preview3DViewer(parent=self)
         self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
+        self.preview3DViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.preview3DViewer)
 
         v = QtGui.QVBoxLayout(self)

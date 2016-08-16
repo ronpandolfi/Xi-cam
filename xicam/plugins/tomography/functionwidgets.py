@@ -198,7 +198,7 @@ class FunctionWidget(fw.FeatureWidget):
         """
         if parameter in self.input_functions:  # Check to see if parameter already has input function
             if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
-                return  # skip if the input function already exists
+                raise AttributeError('Function exists')  # skip if the input function already exists
             self.removeInputFunction(parameter)  # Remove it if it will be replaced
         self.input_functions[parameter] = functionwidget
         functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
@@ -570,9 +570,11 @@ class FunctionManager(fw.FeatureManager):
         kwargs
             Additional keyword arguments
         """
-
-        ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
-        funcwidget.addInputFunction(parameter, ipf_widget)
+        try:
+            ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
+            funcwidget.addInputFunction(parameter, ipf_widget)
+        except AttributeError:
+            ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
 
     def updateParameters(self):
