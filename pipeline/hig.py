@@ -15,6 +15,7 @@ def parsetodict(content):
         content.partition('=')
 
 
+#takes string and writes in hig format
 def dict2str(d, depth=0):
     content = ''
     for key in d:

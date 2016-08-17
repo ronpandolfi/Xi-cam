@@ -130,14 +130,13 @@ if __name__ == '__main__':  # Start Qt event loop unless running in interactive 
     import sys
 
     app = QtGui.QApplication([])  # Launches an app
-    root = '/Users/austinblair/Downloads/test_20150714_144045/'
-    root = '/home/ablair/test_20150714_144045/'
+    root = '/Users/holden'
 
     win = QtGui.QMainWindow()  # Create window with two ImageView widgets
     win.resize(800, 800)
     win.setWindowTitle('pyqtgraph example: Hiprmc ')
 
-    win.setCentralWidget(rmcView(root))
+    win.setCentralWidget(rmcView(root,0.111))
 
     win.show()
 
