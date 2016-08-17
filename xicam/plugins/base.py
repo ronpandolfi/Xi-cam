@@ -22,7 +22,7 @@ fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
 fileexplorer.sigLoginRequest.connect(loginwidget.loginRequest)
-fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
+fileexplorer.sigLoginSuccess.connect(loginwidget.loginResult)
 fileexplorer.sigPreview.connect(preview.loaditem)
 
 l.addWidget(loginwidget)

@@ -10,6 +10,15 @@ from PySide.QtUiTools import QUiLoader
 class LoginDialog(QtGui.QWidget):
     """
     Class for user credential input and login to NERSC/SPOT through NEWT/SPOT API
+
+    Attributes
+    ----------
+    ui : QtGui.QWidget
+        Widget specifying ui. Read from .ui file
+    login_slot : Slot/function
+        Slot to recieve login button clicked signal
+
+
     """
     REMOTE_NAMES = ('SPOT', 'NERSC', 'Globus')
 
@@ -30,7 +39,6 @@ class LoginDialog(QtGui.QWidget):
         self.ui.login_button.clicked.connect(self.handleLogin)
         self.ui.pass_box.returnPressed.connect(self.handleLogin)
         self.ui.host_box.returnPressed.connect(self.handleLogin)
-        self.ui.logout_button.clicked.connect(self.handleLogout)
         self.setStyleSheet('background-color:#111111;')
 
         self.hide()
@@ -48,6 +56,9 @@ class LoginDialog(QtGui.QWidget):
 
     @login_slot.setter
     def login_slot(self, slot):
+        """
+        Connect appropriate signals when setting slot
+        """
         if self.login_slot is not None:
             self.loginClicked.disconnect(self.login_slot)
         self._login_slot = slot
@@ -55,6 +66,17 @@ class LoginDialog(QtGui.QWidget):
 
     @QtCore.Slot(QtCore.Signal, bool)
     def loginRequest(self, login_clicked_slot, show_host=False):
+        """
+        Slot to receive login request signal and setup/show the loginDialog accordingly
+
+        Parameters
+        ----------
+        login_clicked_slot : Slot
+            Slot to set as the login_slot to call. This should be the clients constructor or login method
+        show_host : bool
+            Boolean to show the host QTextEdit to input a hostname
+        """
+
         if show_host:
             self.ui.host_box.show()
         else:
@@ -65,6 +87,9 @@ class LoginDialog(QtGui.QWidget):
         self.show()
 
     def handleLogin(self):
+        """
+        Handles the login button clicked signal and calls the login_slot if all input fields are satisfied
+        """
         host, usr, pwd = self.ui.host_box.text(), self.ui.user_box.text(), self.ui.pass_box.text()
         if usr == '':
             QtGui.QMessageBox.warning(self, 'Username missing', 'You forgot to mention who you are!')
@@ -82,7 +107,15 @@ class LoginDialog(QtGui.QWidget):
                 else {'username': usr, 'password': pwd, 'host': host}
             self.loginClicked.emit(credentials)
 
-    def loginSuccessful(self, status, client_callback=None):
+    def loginResult(self, status):
+        """
+        Slot called upon finishing the login_slot call. Emits sigLoggedIn with the status
+
+        Parameters
+        ----------
+        status : bool
+            Status of login. True if successful
+        """
         self.stopProgress()
         self.setCurrentWidget(self.ui.login_page)
         if status is True:
@@ -95,25 +128,23 @@ class LoginDialog(QtGui.QWidget):
 
 
     def setCurrentWidget(self, widget):
+        """
+        Used to set the page in the loginDialogs stackedWidget
+        """
         self.ui.stackedWidget.setCurrentWidget(widget)
 
     def startProgress(self):
+        """
+        Starts the progress bar pulsation
+        """
         self.ui.progressBar.setRange(0, 0)
 
     def stopProgress(self):
+        """
+        Stops the progress bar pulsation
+        """
         self.ui.progressBar.setRange(0, 1)
 
     def progressMessage(self, message):
         # Not working for some reason
         self.ui.progress_label.setText(message)
-
-    def handleLogout(self):
-        self.setCurrentWidget(self.ui.progress_page)
-        self.progressMessage('Goodbye {}...'.format(self.ui.user_box.text()))
-        self.startProgress()
-        self.ui.user_box.clear()
-        self.logoutClicked.emit()
-
-    def logoutSuccessful(self):
-        self.stopProgress()
-        self.setCurrentWidget(self.ui.login_page)

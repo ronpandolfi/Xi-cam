@@ -89,6 +89,7 @@ class plugin(base.plugin):
         self.manager = FunctionManager(self.ui.functionwidget.functionsList, self.ui.param_form,
                                        blank_form='Select a function from\n below to set parameters...')
         self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
+        self.manager.sigPipelineChanged.connect(self.reconnectTabs)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -167,6 +168,14 @@ class plugin(base.plugin):
         except (AttributeError, RuntimeError) as e:
             msg.logMessage(e.message, level=msg.ERROR)
 
+    def reconnectTabs(self):
+        """
+        Reconnect TomoViewers when the pipeline is reset
+        """
+        for idx in range(self.centerwidget.count()):
+            self.centerwidget.widget(idx).wireupCenterSelection(self.manager.recon_function)
+            self.centerwidget.widget(idx).sigSetDefaults.connect(self.manager.setPipelineFromDict)
+
     def loadPipeline(self):
         """
         Load a workflow pipeline yaml file
@@ -209,6 +218,8 @@ class plugin(base.plugin):
                                            (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Yes:
             self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
+        self.setPipelineValues()
+        self.manager.updateParameters()
 
     def setPipelineValues(self):
         """

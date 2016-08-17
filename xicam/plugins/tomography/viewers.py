@@ -2,7 +2,8 @@ from collections import deque
 import numpy as np
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
-from pipeline import loader
+from loader import ProjectionStack, SinogramStack
+from pipeline.loader import StackImage
 from pipeline import msg
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView
 from xicam.widgets.roiwidgets import ROImageOverlay
@@ -83,7 +84,7 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.viewstack.addWidget(self.projectionViewer)
 
-        self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
+        self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
@@ -148,9 +149,9 @@ class TomoViewer(QtGui.QWidget):
         """
 
         if raw:
-            return loader.ProjectionStack(paths)
+            return ProjectionStack(paths)
         else:
-            return loader.StackImage(paths)
+            return StackImage(paths)
 
     def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         """

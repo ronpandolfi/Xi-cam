@@ -512,10 +512,18 @@ class FunctionManager(fw.FeatureManager):
         List with functionwidgets for initialization
     blank_form : QtGui.QWidget, optional
         Widget to display in form_layout when not FunctionWidget is selected
+
+    Signals
+    -------
+    sigTestRange(str, object)
+    sigPipelineChanged()
+        Emitted when the pipeline changes or the reconstruction function is changed
     """
 
     sigTestRange = QtCore.Signal(str, object)
-    center_func_slc = {'Phase Correlation': (0, -1)}
+    sigPipelineChanged = QtCore.Signal()
+
+    center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
@@ -545,6 +553,7 @@ class FunctionManager(fw.FeatureManager):
             else:
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
+            self.sigPipelineChanged.emit()
         elif function == 'Write':
             func_widget = WriteFunctionWidget(function, subfunction, package)
         else:
@@ -883,7 +892,7 @@ class FunctionManager(fw.FeatureManager):
                                             ifwidget.params.child(p).setDefault(v)
                                 ifwidget.updateParamsDict()
                 funcWidget.updateParamsDict()
-
+        self.sigPipelineChanged.emit()
 
     def setPipelineFromDict(self, pipeline, config_dict=config.names):
         """
@@ -916,7 +925,7 @@ class FunctionManager(fw.FeatureManager):
                     else:
                         funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
-
+        self.sigPipelineChanged.emit()
 
 def map_loc(slc, loc):
     """
