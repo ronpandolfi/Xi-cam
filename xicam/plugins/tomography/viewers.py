@@ -944,19 +944,32 @@ class ArrayDeque(deque):
 
     @property
     def dtype(self):
+        """
+        Return the dataype of the array's in deque
+        """
         if self._dtype is None and self.shape[0]:
             self._dtype = self.__getitem__(0).dtype
         return self._dtype
 
     @property
     def max(self):
+        """
+        Return the maximum value
+        """
         return np.max(max(self, key=lambda x:np.max(x)))
 
     @property
     def min(self):
+        """
+        Return the minimum value
+        """
         return np.min(min(self, key=lambda x:np.min(x)))
 
     def append(self, arr):
+        """
+        Appends an array to the end of the array deque
+        """
+
         # if arr.shape != tuple(self.shape[1:]):
         #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
         # if self.dtype is not None and arr.dtype != self.dtype:
@@ -964,6 +977,10 @@ class ArrayDeque(deque):
         super(ArrayDeque, self).append(arr)
 
     def appendleft(self, arr):
+        """
+        Appends an array to the beginning of the array deque
+        """
+
         # if arr.shape != tuple(self.shape[1:]):
         #     raise ValueError('Array shape must be {0}, got shape {1}'.format(self.shape[1:], arr.shape))
         # if self.dtype is not None and arr.dtype != self.dtype:
@@ -971,6 +988,9 @@ class ArrayDeque(deque):
         super(ArrayDeque, self).appendleft(arr)
 
     def __getitem__(self, item):
+        """
+        Override slicing
+        """
         if type(item) is list and isinstance(item[0], slice):
             dq_item = item.pop(0)
             if isinstance(dq_item, slice):
