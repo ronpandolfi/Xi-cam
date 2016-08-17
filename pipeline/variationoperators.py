@@ -20,38 +20,38 @@ import writer
 # ROI-mask is accept=1
 
 def chisquared(data, t, roi):
-    current = data[t]
-    previous = data[t - 1]
-    return np.sum(roi * np.square(current.astype(float) - previous))
+    current = data[t].astype(float)
+    previous = data[t - 1].astype(float)
+    return np.sum(roi * np.square(current - previous))
 
 
 def absdiff(data, t, roi):
-    current = data[t]
-    previous = data[t - 1]
+    current = data[t].astype(float)
+    previous = data[t - 1].astype(float)
     return np.sum(roi * np.abs(current - previous))
 
 
 def normabsdiff(data, t, roi):
-    current = data[t]
-    previous = data[t - 1]
+    current = data[t].astype(float)
+    previous = data[t - 1].astype(float)
     return np.sum(roi * np.abs(current - previous) / previous)
 
 
 def sumintensity(data, t, roi):
-    current = data[t]
+    current = data[t].astype(float)
     return np.sum(roi * current)
 
 
 def normabsdiffderiv(data, t, roi):
-    current = data[t]
-    previous = data[t - 1]
-    next = data[t + 1]
+    current = data[t].astype(float)
+    previous = data[t - 1].astype(float)
+    next = data[t + 1].astype(float)
     return -np.sum(roi * (np.abs(next - current) / current) + np.sum(np.abs(current - previous) / current))
 
 
 def chisquaredwithfirst(data, t, roi):
-    current = data[t]
-    first = data[0]
+    current = data[t].astype(float)
+    first = data[0].astype(float)
     return np.sum(roi * np.square(current.astype(float) - first))
 
 
@@ -63,7 +63,6 @@ def radialintegration(data, t, roi):
 def angularcorrelationwithfirst(data, t, roi):
     # ROI is assumed to be in cake mode
 
-    print experiment.center
     experiment.center = (experiment.center[0] / 5, experiment.center[1] / 5)
 
     currentcake, _, _ = integration.cake(data[t], experiment)

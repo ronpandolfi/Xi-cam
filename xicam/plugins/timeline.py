@@ -1,4 +1,5 @@
 import platform
+from pipeline import msg
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -6,10 +7,10 @@ if op_sys == 'Darwin':
     try:
         from Foundation import NSURL
     except ImportError:
-        print 'NSURL not found. Drag and drop may not work correctly'
+        msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
 
-import base
+import base, viewer
 from PySide import QtGui
 import os
 # from moviepy.editor import VideoClip
@@ -20,6 +21,7 @@ import widgets
 
 class plugin(base.plugin):  ##### Inherit viewer instead!!!
     name = 'Timeline'
+    sigUpdateExperiment = viewer.plugin.sigUpdateExperiment
 
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QTabWidget()
@@ -27,6 +29,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
+        # Share right modes with viewer
+        self.rightmodes = viewer.rightmodes
 
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
@@ -44,7 +49,6 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
 
 
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
         # TODO: We should do something a bit less aggressive here!
 
@@ -64,6 +68,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
 
     def getCurrentTab(self):
         return self.centerwidget.currentWidget().widget
+
+    def currentImage(self):
+        return self.getCurrentTab()
 
     def calibrate(self):
         self.getCurrentTab().calibrate()

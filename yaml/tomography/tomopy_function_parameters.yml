@@ -64,7 +64,10 @@ Fourier-Wavelet:
   type: float
 - name: pad
   type: bool
-Pad:
+Remove NAN:
+- name: val
+  type: float
+Padding:
 - name: axis
   type: int
   limits: [0, 2]

@@ -12,7 +12,7 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools
+from pipeline import pathtools, msg
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -24,13 +24,14 @@ class LocalFileView(QtGui.QTreeView):
     sigOpen = QtCore.Signal(list)
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = pathtools.getRoot()
+        self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
@@ -82,6 +83,11 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.sigOpen.emit([path])
 
+    def currentChanged(self, current, previous):
+        path = self.file_model.filePath(current)
+        if os.path.isfile(path):
+            self.sigItemPreview.emit(path)
+
     def getSelectedFilePaths(self):
         paths = [self.file_model.filePath(index) for index in self.selectedIndexes()]
         return paths
@@ -121,6 +127,7 @@ class RemoteFileView(QtGui.QListWidget):
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -130,7 +137,7 @@ class RemoteFileView(QtGui.QListWidget):
 
         self.menu = QtGui.QMenu()
         standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self),
-        QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
+                           QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
         standardActions[1].triggered.connect(self.handleDownloadAction)
         standardActions[2].triggered.connect(self.handleDeleteAction)
@@ -155,6 +162,9 @@ class RemoteFileView(QtGui.QListWidget):
             path = self.path + '/' + str(file_name)
             self.refresh(path=path)
 
+    def currentChanged(self, current, previous):
+        pass
+
     def getSelectedFilePaths(self):
         paths = ['{0}/{1}'.format(self.path, item.text()) for item in self.selectedItems()]
         return paths
@@ -162,10 +172,9 @@ class RemoteFileView(QtGui.QListWidget):
     def getSelectedFile(self):
         return str(self.currentItem().text())
 
+    @threads.method(callback_slot=lambda self: self.fillList)
     def getDirContents(self, path, *args):
-        runnable = threads.RunnableMethod(self.client.get_dir_contents, method_args=(path,) + args,
-                                          callback_slot=self.fillList)
-        threads.add_to_queue(runnable)
+        self.client.get_dir_contents(path, *args)
 
     def fillList(self, value):
         self.clear()
@@ -188,7 +197,7 @@ class RemoteFileView(QtGui.QListWidget):
 
 # This has been replaced with SFTP based client see SFTPFileView
 # class NERSCFileView(RemoteFileView):
-#     """
+# """
 #     File explorer for NERSC systems, must be passed a client and a worker to make REST calls
 #     """
 #
@@ -273,17 +282,17 @@ class GlobusFileView(RemoteFileView):
             name = os.path.split(path)[-1]
             method = self.client.transfer_generator
             desc = '{0} from {1}.'.format(name, self.endpoint)
-            args = [self.endpoint, path, 'LOCAL ENDPOINT'] #TODO Local endpoint again....
+            args = [self.endpoint, path, 'LOCAL ENDPOINT']  # TODO Local endpoint again....
             kwargs = {}
             self.sigDownload.emit(name, desc, method, args, kwargs, fslot)
 
     def handleTransferAction(self):
-        #TODO implement this
+        # TODO implement this
         paths = super(GlobusFileView, self).getSelectedFilePaths()
         for path in paths:
             method = self.client.transfer_generator
             desc = '{0} from {1}.'.format(os.path.split(path)[-1], self.endpoint)
-            args = [self.endpoint, path, 'DEST ENDPOINT'] #TODO Dest endpoint geeet it....
+            args = [self.endpoint, path, 'DEST ENDPOINT']  # TODO Dest endpoint geeet it....
             kwargs = {}
             return desc, method, args, kwargs
 
@@ -293,13 +302,13 @@ class GlobusFileView(RemoteFileView):
 
 
 class SFTPFileView(QtGui.QTreeWidget):
-
     pathChanged = QtCore.Signal(str)
     sigAddTopLevelItem = QtCore.Signal(str, str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, sftp_client, parent=None):
         super(SFTPFileView, self).__init__(parent=parent)
@@ -325,22 +334,26 @@ class SFTPFileView(QtGui.QTreeWidget):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
 
+    @threads.method(callback_slot=lambda self: self.pathChanged.emit(self.path))
     def refresh(self, path=None):
         self.clear()
         if path is not None:
             self.path = path
             self.client.cd(path)
-        runnable = threads.RunnableMethod(self.client.walktree,
-                                          method_args=(self.path,
-                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
-                                                       lambda x: self.sigAddTopLevelItem.emit(x, 'dir'),
-                                                       lambda: None),
-                                          method_kwargs={'recurse': False},
-                                          finished_slot=lambda: self.pathChanged.emit(self.path))
-        threads.add_to_queue(runnable)
+        self.client.walktree(self.path, lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
+                             lambda x: self.sigAddTopLevelItem.emit(x, 'dir'), lambda: None, recurse=False)
+        return self
+        # runnable = threads.RunnableMethod(self.client.walktree,
+        #                                   method_args=(self.path,
+        #                                                lambda x: self.sigAddTopLevelItem.emit(x, 'file'),
+        #                                                lambda x: self.sigAddTopLevelItem.emit(x, 'dir'),
+        #                                                lambda: None),
+        #                                   method_kwargs={'recurse': False},
+        #                                   finished_slot=lambda: self.pathChanged.emit(self.path))
+        # threads.add_to_queue(runnable)
         # Or on gui thread
         # self.client.walktree(self.path,
-        #                      lambda x: self.createTopLevelItem(x, 'file'),
+        # lambda x: self.createTopLevelItem(x, 'file'),
         #                      lambda x: self.createTopLevelItem(x, 'dir'),
         #                      lambda x: x, recurse=False)
         # self.pathChanged.emit(self.path)
@@ -381,9 +394,11 @@ class SFTPFileView(QtGui.QTreeWidget):
         if item.childCount() == 0:
             item.getChildren()
 
+    def currentChanged(self, current, previous):
+        pass
+
     def getSelectedFilePaths(self):
         paths = [item.path for item in self.selectedItems()]
-        print paths
         return paths
 
     def deleteSelection(self):
@@ -429,6 +444,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     sigOpen = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(object)
 
 
     def __init__(self, spot_client, parent=None):
@@ -464,11 +480,12 @@ class SpotDatasetView(QtGui.QTreeWidget):
         self.handleDownloadAction(save_paths=save_path, fslot=(lambda: self.sigOpen.emit(save_path)))
 
     def getDatasets(self, query):
-        runnable = threads.RunnableMethod(self.client.search, method_args=(query,),
-                                          method_kwargs=self.search_params,
-                                          callback_slot=self.createDatasetDictionary)
-        threads.add_to_queue(runnable)
+        msg.showMessage('Searching SPOT database...')
+        search = threads.method(callback_slot=self.createDatasetDictionary,
+                                finished_slot=msg.clearMessage)(self.client.search)
+        search(query, **self.search_params)
 
+    @QtCore.Slot(dict)
     def createDatasetDictionary(self, data):
         tree_data = {}
         for index in range(len(data)):
@@ -505,9 +522,22 @@ class SpotDatasetView(QtGui.QTreeWidget):
             child.setIcon(0, icon)
             item.addChild(child)
 
+    def currentChanged(self, current, previous):
+        item = self.itemFromIndex(current)
+        try:
+            if item.childCount() == 0:
+                msg.showMessage('Loading preview...')
+                dataset = item.parent().parent().text(0)
+                stage = item.parent().text(0)
+                bg_get_preview = threads.method(callback_slot=self.sigItemPreview.emit,
+                                                except_slot=self.handleException)(self.client.get_image_as)
+                bg_get_preview(dataset, stage, index=0)
+        except AttributeError:
+            pass
+
     def getStagesAndDatasets(self):
         dsets_stages = [(item.parent().parent().text(0), item.parent().text(0))
-         for item in self.selectedItems() if item.childCount() == 0]
+                        for item in self.selectedItems() if item.childCount() == 0]
         return dsets_stages
 
     def getSelectedDatasets(self):
@@ -523,7 +553,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         names = self.getSelectedDatasets()
         stages_dsets = self.getStagesAndDatasets()
         if save_paths is None:
-            save_paths = len(names)*(None, )
+            save_paths = len(names) * (None, )
         for name, stage_dset, save_path in zip(names, stages_dsets, save_paths):
             desc = '{} from SPOT.'.format(name)
             method = self.client.download_dataset_generator
@@ -534,7 +564,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
             self.sigDownload.emit(name, desc, method, args, kwargs, fslot)
 
     def handleTransferAction(self):
-        #TODO need to implement this
+        # TODO need to implement this
         fname = self.getSelectedDatasets()
         stage, dataset = self.getStagesAndDatasets()
         system = self.client.system
@@ -545,8 +575,9 @@ class SpotDatasetView(QtGui.QTreeWidget):
         kwargs = {}
         return desc, method, args, kwargs
 
-    def handlePreviewAction(self):
-        print "Not implemented!"
+    def handleException(self, ex, tb):
+        msg.showMessage('Unable to fetch preview from SPOT.')
+        msg.logMessage(ex, level=40)
 
 
 class FileExplorer(QtGui.QWidget):
@@ -560,9 +591,12 @@ class FileExplorer(QtGui.QWidget):
         self.file_view = file_view
         self.path_label = QtGui.QLineEdit(self)
         self.back_button = QtGui.QToolButton(self)
+        self.back_button.setToolTip('Back')
         self.refresh_button = QtGui.QToolButton(self)
+        self.refresh_button.setToolTip('Refresh')
 
-        for button, icon_file in zip((self.back_button, self.refresh_button), ('gui/back.png', 'gui/refresh_2.png')):
+        for button, icon_file in zip((self.back_button, self.refresh_button),
+                                     ('gui/icons_44.png', 'gui/icons_57.png')):
             icon = QtGui.QIcon()
             icon.addPixmap(QtGui.QPixmap(icon_file), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             button.setIcon(icon)
@@ -598,12 +632,6 @@ class FileExplorer(QtGui.QWidget):
 
     def setPathLabel(self, path):
         self.path_label.setText(path)
-
-    # def getRawDatasetList(self):
-    #     widget = self.file_view
-    #     items = widget.findItems('*.h5', QtCore.Qt.MatchWildcard)
-    #     items = [i.text() for i in items]
-    #     return items
 
     def getSelectedFilePaths(self):
         return self.file_view.getSelectedFilePaths()
@@ -658,17 +686,17 @@ class SpotDatasetExplorer(QtGui.QWidget):
     def getSelectedFilePath(self):
         return os.path.join(*self.file_view.getStagesAndDatasets())
 
-    # def getRawDatasetList(self):
-    #     widget = self.file_view
-    #     items = []
-    #
-    #     parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
-    #     child_items = []
-    #     for item in parent_items:
-    #         child_items += [item.child(i) for i in range(item.childCount())]
-    #     for item in child_items:
-    #         items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
-    #     return items
+    def getRawDatasetList(self):
+        widget = self.file_view
+        items = []
+
+        parent_items = widget.findItems('*', QtCore.Qt.MatchWildcard)
+        child_items = []
+        for item in parent_items:
+            child_items += [item.child(i) for i in range(item.childCount())]
+        for item in child_items:
+            items += [item.child(i).text(0) for i in range(item.childCount()) if item.text(0) == 'raw']
+        return items
 
 
 class MultipleFileExplorer(QtGui.QTabWidget):
@@ -682,6 +710,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpen = QtCore.Signal(list)
+    sigPreview = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -714,7 +743,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
         self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
-                                 'Bragg': addbragg, 'SFTP': addsftp})
+                                             'Bragg': addbragg, 'SFTP': addsftp})
         self.newtabmenu.addActions(self.standard_actions.values())
         self.newtabmenu.addAction(showjobtab)
         addspot.triggered.connect(self.addSPOTTab)
@@ -749,6 +778,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
+        file_explorer.file_view.sigItemPreview.connect(self.itemSelected)
         self.wireExplorerSignals(file_explorer)
         idx = len(self.explorers) - 1
         tab = self.insertTab(idx, file_explorer, name)
@@ -776,10 +806,14 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         except AttributeError:
             pass
 
+    def itemSelected(self, item):
+        msg.clearMessage() #
+        self.sigPreview.emit(item)
+
     def addHPCTab(self, system):
         # # NERSC tabs based on NEWT API
         # add_nersc_explorer = lambda client: self.addFileExplorer(system.capitalize(),
-        #                                                          FileExplorer(NERSCFileView(client, system, self)))
+        # FileExplorer(NERSCFileView(client, system, self)))
         # login_callback = lambda client: self.loginSuccess(client, add_explorer=add_nersc_explorer)
         # self.sigLoginRequest.emit(partial(cmanager.login, login_callback, cmanager.spot_client.login), False)
         # add_sftp_explorer = lambda client: self.addFileExplorer(client.host.split('.')[0],
@@ -787,7 +821,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
         # NERSC tabs based on SFTP
         add_sftp_explorer = lambda client: self.addFileExplorer(system,
-                                                                FileExplorer(SFTPFileView(client,self)))
+                                                                FileExplorer(SFTPFileView(client, self)))
         add_sftp_callback = lambda client: self.loginSuccess(client,
                                                              add_explorer=add_sftp_explorer)
         login_callback = lambda client: cmanager.add_sftp_client(system,
@@ -806,7 +840,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     #TODO add globus tranfer capabilities to SFTP connected machines if they are globus endpoints
     # This is being replaced by SFTP tabs
     # def addGlobusTab(self, endpoint):
-    #     add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
+    # add_globus_explorer = lambda client: self.addFileExplorer(endpoint.split('#')[-1],
     #                                                              FileExplorer(GlobusFileView(client, client, self)))
     #     add_endpoint_callback = lambda client: self.loginSuccess(client,
     #                                                              add_explorer=add_globus_explorer)
@@ -851,7 +885,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleDeleteActions(self, paths):
         r = QtGui.QMessageBox.warning(self, 'Delete file',
                                       'Are you sure you want to delete\n{}?'.format(',\n'.join(paths)),
-                                       QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+                                      QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
         if r == QtGui.QMessageBox.Yes:
             self.currentWidget().file_view.deleteSelection()
 
@@ -896,6 +930,7 @@ class TabBarPlus(QtGui.QTabBar):
         super(TabBarPlus, self).__init__(parent)
 
         self.plus_button = QtGui.QPushButton(" + ")
+        self.plus_button.setToolTip('Add browser location')
         self.plus_button.setParent(self)
         self.plus_button.setMaximumSize(32, 32)
         self.plus_button.setMinimumSize(32, 32)
@@ -907,7 +942,7 @@ class TabBarPlus(QtGui.QTabBar):
         sizeHint = QtGui.QTabBar.sizeHint(self)
         width = sizeHint.width()
         height = sizeHint.height()
-        return QtCore.QSize(width+32, height)
+        return QtCore.QSize(width + 32, height)
 
     def resizeEvent(self, event):
         super(TabBarPlus, self).resizeEvent(event)
@@ -979,26 +1014,25 @@ class JobTable(QtGui.QTableWidget):
     @QtCore.Slot(str, object, list, dict)
     def addProgJob(self, job_desc, generator, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc)
-        runnable = threads.RunnableIterator(generator, generator_args=args, generator_kwargs=kwargs,
-                                            callback_slot=job_entry.progress, finished_slot=finish_slot,
-                                            interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        bg_generator = threads.iterator(callback_slot=job_entry.progress,
+                                        finished_slot=finish_slot,
+                                        interrupt_signal=job_entry.sigCancel)(generator)
+        bg_generator(*args, **kwargs)
 
     def addSFTPJob(self, job_desc, method, args, kwargs, finish_slot=None):
         job_entry = self.addJob(job_desc)
         kwargs['callback'] = job_entry.progressRaw
-        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs, finished_slot=finish_slot)
-        threads.add_to_queue(runnable)
+        bg_method = threads.method(finished_slot=finish_slot)(method)
+        bg_method(*args, **kwargs)
 
     @QtCore.Slot(str, object, list, dict)
     def addPulseJob(self, job_type, job_desc, method, args, kwargs):
         job_entry = self.addJob(job_type, job_desc)
         job_entry.sigRemove.connect(self.removeJob)
         job_entry.pulseStart()
-        runnable = threads.RunnableMethod(method, method_args=args, method_kwargs=kwargs,
-                                          finished_slot=job_entry.pulseStop,
-                                          interrupt_signal=job_entry.sigCancel)
-        threads.add_to_queue(runnable)
+        bg_method = threads.method(finished_slot=job_entry.pulseStop, interrupt_signal=job_entry.sigCancel)(method)
+        bg_method(*args, **kwargs)
+
 
     def removeJob(self, jobentry):
         jobentry.cancel()
@@ -1071,7 +1105,7 @@ class LazyTreeItem(QtGui.QTreeWidgetItem):
         raise NotImplementedError('getChildren method not implemented. This method must be implemented.')
 
 
-#TODO walktree in a different thread!
+# TODO walktree in a different thread!
 class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
     """
     SFTP folder tree item that will not retrieve its contents until it is expanded
@@ -1088,16 +1122,10 @@ class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
         self.sigAddChildFile.connect(self.addChildFile)
         self.sigAddChildDir.connect(self.addChildDir)
 
+    @threads.method()
     def getChildren(self):
-        runnable = threads.RunnableMethod(self.client.walktree,
-                                          method_args=(self.path,
-                                                       self.sigAddChildFile.emit,
-                                                       self.sigAddChildDir.emit,
-                                                       self.handleUnknown),
-                                          method_kwargs={'recurse': False})
-        threads.add_to_queue(runnable)
-        # or on gui thread
-        # self.client.walktree(self.path, self.addChildFile, self.addChildDir, self.handleUnknown, recurse=False)
+        self.client.walktree(self.path, self.sigAddChildFile.emit, self.sigAddChildDir.emit,
+                             self.handleUnknown, recurse=False)
 
     def addChildFile(self, path):
         name = os.path.split(path)[-1]
@@ -1115,7 +1143,7 @@ class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
         self.addChild(item)
 
     def handleUnknown(self, path):
-        print 'Unknown object found: {0}'.format(path)
+        msg.logMessage('Unknown object found: {0}'.format(path),msg.WARNING)
 
 
 class SFTPFileTreeItem(QtGui.QTreeWidgetItem):
@@ -1135,6 +1163,7 @@ if __name__ == '__main__':
     import client
     import getpass
     import sys
+
     passw = getpass.getpass()
     client = client.sftp.SFTPClient('bl832viz2.dhcp.lbl.gov', username='lbluque', password=passw)
     app = QtGui.QApplication(sys.argv)

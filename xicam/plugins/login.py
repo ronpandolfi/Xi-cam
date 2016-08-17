@@ -79,7 +79,7 @@ class LoginDialog(QtGui.QWidget):
             self.progressMessage('Logging in...')
             self.startProgress()
             credentials = {'username': usr, 'password': pwd} if self.ui.host_box.isHidden() \
-                    else {'username': usr, 'password': pwd, 'host': host}
+                else {'username': usr, 'password': pwd, 'host': host}
             self.loginClicked.emit(credentials)
 
     def loginSuccessful(self, status, client_callback=None):
@@ -92,7 +92,6 @@ class LoginDialog(QtGui.QWidget):
         else:
             self.ui.pass_box.clear()
         self.sigLoggedIn.emit(status)
-
 
 
     def setCurrentWidget(self, widget):

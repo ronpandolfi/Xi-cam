@@ -39,6 +39,7 @@ class GlobusClient(User):
             return self
         else:
             self.authentication = None
+            raise GLOBUSError('Bad Authentication: Unable to log in')
 
     def add_standard_endpoints(self):
         """

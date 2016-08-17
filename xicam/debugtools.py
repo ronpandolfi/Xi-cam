@@ -3,6 +3,7 @@ import time
 import inspect
 import pyqtgraph as pg
 import numpy as np
+from pipeline import msg
 
 def timeit(method):
     """
@@ -18,18 +19,16 @@ def timeit(method):
         te = time.time()
         # '%r (%r, %r) %2.2f sec'
         #(method.__name__, args, kw, te - ts)
-        print '%r  %2.3f sec' % \
-              (method.__name__, te - ts)
+        msg.logMessage('%r  %2.3f sec' % \
+              (method.__name__, te - ts),msg.DEBUG)
         return result
 
     return timed
 
 
 def frustration():
-    print "(ﾉಥ益ಥ）ﾉ﻿ ┻━┻"
+    msg.logMessage(u"(ﾉಥ益ಥ)ﾉ﻿ ┻━┻",msg.CRITICAL)
 
 
 def showimage(img):
     image = pg.image(np.fliplr(img))
-
-    print 'Image displayed!'

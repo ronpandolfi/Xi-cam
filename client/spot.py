@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 from time import sleep
+from StringIO import StringIO
+from PIL import Image
+import numpy as np
 from client.newt import NewtClient
 
 
@@ -25,6 +28,7 @@ class SpotClient(NewtClient):
             return super(SpotClient, self).login(username, password)
         else:
             self.authentication = None
+            raise SPOTError('Bad Authentication: Unable to log in')
 
     def search(self, query, **kwargs):
         """
@@ -35,7 +39,7 @@ class SpotClient(NewtClient):
             'sorttype': ascending 'asc' or descending 'desc'
             'end_station': endstation of dataset
             'limitnum': maximum number of results to show
-            'skipnum': number of results to skip
+            'skipnum': number of results to skipd
             'search': search query
         :return: json response of search results
         """
@@ -122,6 +126,7 @@ class SpotClient(NewtClient):
         :param group:
         :return: json reponse of attributes
         """
+
         path = self.get_stage_path(dataset, stage)
         params = {'group': group}
         r = self.post(self.SPOT_URL + '/hdf/attributes' + path, params=params)
@@ -136,6 +141,7 @@ class SpotClient(NewtClient):
         :param stage: str, stage name
         :return: json response of image list
         """
+
         path = self.get_stage_path(dataset, stage)
         r = self.post(self.SPOT_URL + '/hdf/listimages' + path)
 
@@ -149,19 +155,114 @@ class SpotClient(NewtClient):
         :param stage: str, stage name
         :return: int, dataset size in bytes?
         """
-        path = self.get_stage_path(dataset, stage)
 
+        path = self.get_stage_path(dataset, stage)
         r = self.session.head(self.SPOT_URL + '/hdf/download' + path)
         head = r.headers
         if not 'content-length' in head: return 1
-        size = int(head['content-length'])
+        size = float(head['content-length'])
 
         return size
 
-    def download_raw_image(self, dataset, stage, image, fpath):
-        """NOT IMPLEMENTED YET"""
-        # TODO Implement this
-        return
+    def get_raw_image(self, dataset, stage, image=None, index=None):
+        """
+        Download raw data from an image in a SPOT dataset
+
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: 2D ndarray
+        """
+
+        images = list(self.list_dataset_images(dataset, stage))
+        if image is None and index is None:
+            raise ValueError('One of image or index must be given')
+        elif image is None and index is not None:
+            group = images[index]
+        else:
+            group = os.path.split(images[0])[0] + '/' + image
+
+        r = self.stage_tape_2_disk(dataset, stage)
+        path = self.get_stage_path(dataset, stage)
+        params = {'group': group}
+        r = self.post(self.SPOT_URL + '/hdf/rawdata' + path, params=params)
+        r = self.check_response(r)
+        return np.array(r['data'])
+
+
+    def get_image_download_URLS(self, dataset, stage, image=None, index=None):
+        """
+        Get download URL's for a specific image in a SPOT dataset
+
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: dict with urls to images
+        """
+        images = list(self.list_dataset_images(dataset, stage))
+        if image is None and index is None:
+            raise ValueError('One of image or index must be given')
+        elif image is None and index is not None:
+            group = images[index]
+        else:
+            group = os.path.split(images[0])[0] + '/' + image
+
+        r = self.stage_tape_2_disk(dataset, stage)
+        path = self.get_stage_path(dataset, stage)
+        params = {'group': group}
+        r = self.post(self.SPOT_URL + '/hdf/image' + path, params=params)
+        r = self.check_response(r)
+        return r
+
+    def get_image_as(self, dataset, stage, ext='tif', image=None, index=None):
+        """
+        Download an image in the specified format and return an array of the image
+
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param ext: str (optional), extension for image type (tif or png)
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: None
+        """
+
+        r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
+        url = r['pnglocaion'] if ext == 'png' else r['tiflocaion']  # Careful when spot API fixes this spelling mistake
+        r = self.get(url)
+        img = Image.open(StringIO(r.content))
+        return np.asarray(img)
+
+
+    def download_image(self, dataset, stage, save_path=None, ext='tif', image=None, index=None):
+        """
+        Download and save a specific image in a dataset as png or tif image
+
+        :param dataset: str, name of dataset
+        :param stage: str, stage name
+        :param save_path: str (optional) Path to save the image
+        :param ext: str (optional), extension for image type (tif or png)
+        :param image: str, (optional), name of image in dataset
+        :param index: int, (optional) index of image in dataset (one of index or image must be given)
+        :return: None
+        """
+        if ext not in ('png', 'tif'):
+            raise ValueError('ext can only be png or tif')
+        if image is None and index is None:
+            raise ValueError('One of image or index must be given')
+
+        if save_path is None:
+            name = image.split('.')[0] if image is not None else dataset + '_{}'.format(index)
+            save_path = os.path.join(os.path.expanduser('~'), '{}.{}'.format(name,ext))
+
+        r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
+        url = r['pnglocaion'] if ext == 'png' else r['tiflocaion'] # Careful when spot API fixes this spelling mistake
+        r = self.get(url)
+
+        with open(save_path, 'w') as f:
+            for chunk in r:
+                f.write(chunk)
 
     def stage_tape_2_disk(self, dataset, stage):
         """
@@ -257,3 +358,24 @@ class SpotClient(NewtClient):
 class SPOTError(Exception):
     """Raised when SPOT gets angry"""
     pass
+
+if __name__ == '__main__':
+    import time
+    from StringIO import StringIO
+    from PIL import Image
+    from matplotlib.pyplot import imshow, show, figure
+    s = SpotClient()
+    s.login('lbluque', '')
+    # t = time.time()
+    # img = s.get_raw_image('20160630_054009_prefire_3_0amp_scan7', 'raw',  index=0)
+    # print 'Time: ', time.time() - t
+    t = time.time()
+    arr = s.get_image_as('20160630_054009_prefire_3_0amp_scan7', 'raw', ext='tif', index=0)
+    print arr.shape
+    imshow(arr)
+    show()
+    # for i in range(3):
+    #     figure(i)
+    #     imshow(arr[:, :, i])
+    # show()
+    print 'Time: ', time.time() - t

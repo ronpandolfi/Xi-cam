@@ -182,13 +182,13 @@ class difftoolbar(QtGui.QToolBar):
         self.actionVideo.setObjectName("actionVideo")
         self.actionVideo.setVisible(False)
 
-        self.actionSpaceGroup = QtGui.QAction(self)
-        icon29 = QtGui.QIcon()
-        icon29.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionSpaceGroup.setIcon(icon29)
-        self.actionSpaceGroup.setObjectName("actionSpaceGroup")
-        self.actionSpaceGroup.setCheckable(True)
-        self.actionSpaceGroup.setVisible(False)
+        # self.actionSpaceGroup = QtGui.QAction(self)
+        # icon29 = QtGui.QIcon()
+        # icon29.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        # self.actionSpaceGroup.setIcon(icon29)
+        # self.actionSpaceGroup.setObjectName("actionSpaceGroup")
+        # self.actionSpaceGroup.setCheckable(True)
+        # self.actionSpaceGroup.setVisible(False)
 
         self.actionCapture = QtGui.QAction(self)
         icon30 = QtGui.QIcon()
@@ -232,12 +232,12 @@ class difftoolbar(QtGui.QToolBar):
         self.addAction(self.actionLog_Intensity)
         self.addAction(self.actionRadial_Symmetry)
         self.addAction(self.actionMirror_Symmetry)
-        self.addAction(self.actionSpaceGroup)
+        # self.addAction(self.actionSpaceGroup)
         self.addAction(self.actionCapture)
 
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
-                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None, spacegroup=None,
+                        radialsym, mirrorsym, roi, arc, polymask, process=None, video=None,
                         capture=None,removecosmics=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
@@ -266,9 +266,9 @@ class difftoolbar(QtGui.QToolBar):
             self.actionVideo.setVisible(True)
             self.actionVideo.triggered.connect(video)
 
-        if spacegroup is not None:
-            self.actionSpaceGroup.setVisible(True)
-            self.actionSpaceGroup.triggered.connect(spacegroup)
+        # if spacegroup is not None:
+        #     self.actionSpaceGroup.setVisible(True)
+        #     self.actionSpaceGroup.triggered.connect(spacegroup)
 
         if capture is not None:
             self.actionCapture.setVisible(True)

@@ -1,5 +1,6 @@
 import threads
 import client
+from pipeline import msg
 
 # Some default HPC host addresses
 HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 'Bragg': 'bragg.dhcp.lbl.gov'}
@@ -8,6 +9,7 @@ HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 
 # bind classes to new names
 sftp_client = client.sftp.SFTPClient
 globus_client = client.globus.GlobusClient
+ssh_client = client.ssh.SSHClient
 
 # Singleton instance of spot_client
 spot_client = client.spot.SpotClient()
@@ -15,29 +17,37 @@ spot_client = client.spot.SpotClient()
 # Dicts to hold client instances
 sftp_clients = {}
 globus_clients = {}
+ssh_clients = {}
 
 
-def login_wrapper(client_login, *args, **kwargs):
+def login_wrapper(client_login):
     """Decorator to catch all login errors from NEWT, Globus, and PySFTP/Paramiko"""
     def handled_login(*args, **kwargs):
         try:
             return client_login(*args, **kwargs)
         except client.EXCEPTIONS as e:
-            print e.message
+            msg.logMessage(e.message,msg.ERROR)
             return
+
     return handled_login
 
 
 def login(client_callback, client_login, credentials):
     """Login clients on a background thread"""
     handled_login = login_wrapper(client_login)
-    runnable = threads.RunnableMethod(handled_login, method_kwargs=credentials, callback_slot=client_callback)
-    threads.add_to_queue(runnable)
+    bg_handled_login = threads.method(callback_slot=client_callback)(handled_login)
+    bg_handled_login(**credentials)
 
 
 def add_sftp_client(host, client, callback):
     """Add sftp client to dictionary in order to have them accessible to plugins"""
     sftp_clients[host] = client
+    callback(client)
+
+
+def add_ssh_client(host, client, callback):
+    """Add sftp client to dictionary in order to have them accessible to plugins"""
+    ssh_clients[host] = client
     callback(client)
 
 
@@ -54,11 +64,10 @@ def logout(client_obj, callback=None):
         method = client_obj.logout
     elif hasattr(client_obj, 'close'):
         method = client_obj.close
-    runnable = threads.RunnableMethod(method, callback_slot=callback)
-    threads.add_to_queue(runnable)
+    threads.method(callback_slot=callback)(method)()  # Decorate and run client logout/close method
 
 
-#TODO implement this to save NIM credentials
+# TODO implement this to save NIM credentials
 class NIMCredentials(object):
     """Class to save NIM user credentials to avoid inputting them soooo many times"""
     # Is this not secure? I am mangling the names though...

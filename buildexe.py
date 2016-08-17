@@ -5,6 +5,7 @@ import numpy as np
 # import scipy.sparse.csgraph._validation
 sys.path.append('xicam/')
 import zmq.libzmq
+import os
 
 # Notes:
 # Build error with scipy? edit cx_Freeze hooks.py line 548...http://stackoverflow.com/questions/32432887/cx-freeze-importerror-no-module-named-scipy
@@ -67,11 +68,25 @@ shortcut_table = [
 
 msi_data = {'Shortcut': shortcut_table}
 
-buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles'],
-                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub'],  # ,'scipy.sparse.csgraph._validation'
+def include_OpenGL():
+    path_base = "C:\\Python27\\Lib\\site-packages\\OpenGL"
+    skip_count = len(path_base)
+    zip_includes = [(path_base, "OpenGL")]
+    for root, sub_folders, files in os.walk(path_base):
+        for file_in_root in files:
+            zip_includes.append(
+                    ("{}".format(os.path.join(root, file_in_root)),
+                     "{}".format(os.path.join("OpenGL", root[skip_count+1:], file_in_root))
+                    )
+            )
+    return zip_includes
+
+buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging'],
+                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub','distributed','cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__]}
+                'include_files': ['tiff.dll','hipgisaxs.exe','gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__],
+                'zip_includes': include_OpenGL(),}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
 

@@ -1,5 +1,6 @@
 import platform
 from fabio import edfimage
+from pipeline import msg
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -7,12 +8,12 @@ if op_sys == 'Darwin':
     try:
         from Foundation import NSURL
     except ImportError:
-        print 'NSURL not found. Drag and drop may not work correctly'
+        msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
 import base
-from PySide import QtGui
+from PySide import QtGui, QtCore
 import os
-
+from pyqtgraph.parametertree import ParameterTree
 import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
@@ -20,8 +21,17 @@ from pipeline import loader
 from xicam import config
 import fabio
 
+# Globals so Timeline can share the same rightmodes
+configtree = ParameterTree()
+configtree.setParameters(config.activeExperiment, showTop=False)
+
+
+rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+
 class plugin(base.plugin):
     name = 'Viewer'
+    sigUpdateExperiment = QtCore.Signal()
+    config.activeExperiment.sigTreeStateChanged.connect(sigUpdateExperiment)
 
     def __init__(self, *args, **kwargs):
 
@@ -31,14 +41,27 @@ class plugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        self.bottomwidget = widgets.integrationwidget()
+        self.rightmodes = rightmodes
+        self.bottomwidget = widgets.integrationwidget(self.getCurrentTab)
+
+
 
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
-                                     self.roi, self.arccut, self.polymask, spacegroup=self.togglespacegroup,
-                                     capture=self.capture,removecosmics=self.removecosmics)
+                                     self.roi, self.arccut, self.polymask,
+                                     capture=self.capture, removecosmics=self.removecosmics)
+
+
+        self.spacegroupwidget = spacegroupwidget()
+        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
+        sgicon = QtGui.QIcon()
+        sgicon.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rightmodes.append((self.spacegroupwidget,sgicon))
+
+        self.propertytable = widgets.frameproptable()
+        self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -53,9 +76,7 @@ class plugin(base.plugin):
         self.booltoolbar.actionDivide.triggered.connect(self.dividemode)
         self.booltoolbar.actionAverage.triggered.connect(self.averagemode)
 
-        self.spacegroupwidget = spacegroupwidget()
-        self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
-        self.placeholders[1].addWidget(self.spacegroupwidget)
+
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -64,7 +85,6 @@ class plugin(base.plugin):
 
 
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
         # if e.mimeData().hasFormat('text/plain'):
         # e.accept()
@@ -78,7 +98,7 @@ class plugin(base.plugin):
             else:
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
-                print(fname)
+                msg.logMessage(fname,msg.DEBUG)
                 self.openfiles([fname])
             e.accept()
 
@@ -207,7 +227,7 @@ class plugin(base.plugin):
 
     def opendata(self, data=None, operation=None, operationname=None):
         self.activate()
-        dimg = loader.diffimage(data=data)
+        dimg = loader.datadiffimage2(data=data)
         widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, dimg=dimg, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
@@ -232,11 +252,11 @@ class plugin(base.plugin):
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
         dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
-                                   directory=unicode(os.path.dirname(self.getCurrentTab().paths[0])),
+                                   directory=unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)),
                                    filter=u"EDF (*.edf)")
-        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
+        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
-        print filename
+        msg.logMessage(filename,msg.DEBUG)
         if ok and filename:
             fabimg.write(filename)
 

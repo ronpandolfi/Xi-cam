@@ -5,30 +5,30 @@ from xicam import xglobals
 import importlib
 from pipeline import msg
 import os
+import pkgutil
+from xicam import safeimporter
 
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'HipGISAXS', 'XAS']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS']
 
 
 def initplugins(placeholders):
     global plugins, modules
-    modules = [module for module in os.listdir(os.path.dirname(__file__)) if '.pyc' not in module and module not in ['widgets.py','login.py','base.py','explorer.py','spew','__init__.py']]
-    for i in range(len(modules)):
-        try:
-            modules[i] = importlib.import_module('.' + modules[i].replace('.py',''),'xicam.plugins')
-        except ImportError as ex:
-            msg.logMessage('Module could not be loaded: ' + modules[i])
-            msg.logMessage(ex.message)
 
+    packages = pkgutil.iter_modules(__path__)
+    msg.logMessage(('packages:',packages),msg.DEBUG)
+    packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
+    msg.logMessage(('packages:', packages),msg.DEBUG)
 
+    for importer, modname, ispkg in packages:
 
-
-
+        msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
+        modules.append(safeimporter.import_module('.'+modname,'xicam.plugins'))
 
     for module in modules:
-        if type(module) is str: continue
+        msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link
@@ -51,7 +51,6 @@ def buildactivatemenu(modewidget):
 
 class pluginlink():
     def __init__(self, module, placeholders):
-        print module
         self.plugin = module.plugin
         self.modulename = module.__name__
         self.module = module
@@ -64,7 +63,7 @@ class pluginlink():
         self.instance = None
 
     def enable(self):
-        self.module = reload(sys.modules[self.modulename])
+       #self.module = reload(sys.modules[self.modulename])
         self.plugin = self.module.plugin
         self.instance = self.plugin(self.placeholders)
 

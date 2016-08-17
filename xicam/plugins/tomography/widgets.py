@@ -12,13 +12,14 @@ from collections import deque
 import numpy as np
 from functools import partial
 from PySide import QtGui, QtCore
-from vispy import scene  # , app, io
-from vispy.color import Colormap  # , BaseColormap, ColorArray
+from vispy import scene
+from vispy.color import Colormap
 from pipeline import loader
 import pyqtgraph as pg
 import imageio
 import os
 import fmanager
+from pipeline import msg
 
 __author__ = "Ronald J Pandolfi"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
@@ -52,7 +53,6 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
-        self.viewmode.addTab('Reconstruction View')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
         if data is not None:
@@ -64,16 +64,6 @@ class TomoViewer(QtGui.QWidget):
 
         self.projectionViewer = ProjectionViewer(self.data, center=self.cor, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
-        if fmanager.recon_function is not None:
-            center_param = fmanager.recon_function.params.child('center')
-            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
-            # manual center widget, but this limits the center options to a resolution of 0.5
-            # self.projectionViewer.sigCenterChanged.connect(
-            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
-            self.projectionViewer.setCenterButton.clicked.connect(
-                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
-            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(loader.SinogramStack.cast(self.data), parent=self)
@@ -84,10 +74,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.addWidget(self.previewViewer)
 
         self.preview3DViewer = Preview3DViewer(paths=paths, data=data)
+        self.preview3DViewer.volumeviewer.moveGradientTick(1, 0.3)
         self.viewstack.addWidget(self.preview3DViewer)
-
-        self.reconstructionViewer = ReconstructionViewer(parent=self)
-        self.viewstack.addWidget(self.reconstructionViewer)
 
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -98,6 +86,18 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.currentChanged.connect(self.currentChanged)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
+    def wireupCenterSelection(self, recon_function):
+        if recon_function is not None:
+            center_param = recon_function.params.child('center')
+            # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
+            # manual center widget, but this limits the center options to a resolution of 0.5
+            # self.projectionViewer.sigCenterChanged.connect(
+            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.setCenterButton.clicked.connect(
+                lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
+            center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
+
     @staticmethod
     def loaddata(paths, raw=True):
         if raw:
@@ -105,7 +105,7 @@ class TomoViewer(QtGui.QWidget):
         else:
             return loader.StackImage(paths)
 
-    def getsino(self, slc=None):
+    def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         if slc is None:
             return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
         else:
@@ -139,39 +139,36 @@ class TomoViewer(QtGui.QWidget):
         self.cor = value
 
     def runSlicePreview(self):
-        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.addSlicePreview))
+        slice_no = self.sinogramViewer.view_spinBox.value()
+        fmanager.pipeline_preview_action(self, partial(self.addSlicePreview, slice_no=slice_no))
 
     def run3DPreview(self):
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
         fmanager.cor_scale = lambda x: x//8
-        fmanager.run_preview_recon(*fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc))
+        fmanager.pipeline_preview_action(self, self.add3DPreview, slc=slc, finish_call=msg.clearMessage)
 
-    def runFullRecon(self, proj, sino, nchunk, ncore, update_call, interrupt_signal):
-        fmanager.run_full_recon(self, proj, sino, nchunk, ncore,
-                                update_call=update_call,
-                                finish_call=self.fullReconFinished,
+    def runFullRecon(self, proj, sino, sino_p_chunk, ncore, update_call, interrupt_signal=None):
+        fmanager.run_full_recon(self, proj, sino, sino_p_chunk, ncore, update_call, self.fullReconFinished,
                                 interrupt_signal=interrupt_signal)
 
-    def addSlicePreview(self, params, recon):
-        self.previewViewer.addPreview(recon[0], params)
+    def addSlicePreview(self, params, recon, slice_no=None):
+        if slice_no is None:
+            slice_no = self.sinogramViewer.view_spinBox.value()
+        self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
+        msg.clearMessage()
 
     def add3DPreview(self, params, recon):
-        # pad = int((recon.shape[1] - self.data.shape[1] // 8) / 2)
-        # if pad > 0:
-        #     recon = recon[:, pad:-pad, pad:-pad]
         recon = np.flipud(recon)
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
+        hist = self.preview3DViewer.volumeviewer.getHistogram()
+        max = hist[0][np.argmax(hist[1])]
+        self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
     def fullReconFinished(self):
         self.sigReconFinished.emit()
-        path = fmanager.get_output_path()
-        # if not extension was given assume it is a tiff directory.
-        if '.' not in path:
-            path = os.path.split(path)[0]
-        self.reconstructionViewer.openDataset(path=path)
-        self.viewstack.setCurrentWidget(self.reconstructionViewer)
+        msg.clearMessage()
 
     def onManualCenter(self, active):
         if active:
@@ -366,7 +363,7 @@ class ROImageOverlay(pg.ROI):
 
         return self._image_overlap
 
-    def updateImage(self, autolevels=None):
+    def updateImage(self, autolevels=False):
         self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
 
     def translate(self, *args, **kwargs):
@@ -445,16 +442,18 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi_histogram = pg.HistogramLUTWidget(image=self.roi.imageItem, parent=self)
 
         self.stackViewer.ui.gridLayout.addWidget(self.roi_histogram, 0, 3, 1, 2)
-
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
         clabel = QtGui.QLabel('Rotation Center:')
-        clabel.setAlignment(QtCore.Qt.AlignRight)
         olabel = QtGui.QLabel('Offset:')
         self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
         self.centerBox.setDecimals(1)
-        self.setCenterButton = QtGui.QPushButton('Set in Pipeline')
+        self.setCenterButton = QtGui.QToolButton()
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setCenterButton.setIcon(icon)
+        self.setCenterButton.setToolTip('Set center in pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
         originBox.setText('x={}   y={}'.format(0, 0))
         center = center if center is not None else data.shape[1]/2.0
@@ -504,7 +503,7 @@ class ProjectionViewer(QtGui.QWidget):
         v.addLayout(h2)
         v.addWidget(slider)
 
-        l = QtGui.QGridLayout(self) # VBoxLayout(self)
+        l = QtGui.QGridLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
@@ -529,7 +528,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi.updateImage()
 
     def setCenter(self, x, y):
-        center = (self.data.shape[1] + x)/2.0
+        center = (self.data.shape[1] + x - 1)/2.0# subtract half a pixel out of 'some' convention?
         self.centerBox.setValue(center) # setText(str(center))
         self.sigCenterChanged.emit(center)
 
@@ -546,8 +545,8 @@ class ProjectionViewer(QtGui.QWidget):
 
     def updateROIFromCenter(self, center):
         s = self.roi.pos()[0]
-        self.roi.translate(pg.Point((2 * center - self.data.shape[1] - s, 0)))
-
+        self.roi.translate(pg.Point((2 * center + 1 - self.data.shape[1] - s, 0))) # 1 again due to the so-called COR
+                                                                                   # conventions...
     def flipOverlayProj(self, val):
         self.roi.flipCurrentImage()
         self.roi.updateImage()
@@ -602,29 +601,49 @@ class PreviewViewer(QtGui.QSplitter):
         self.previews = ArrayDeque(arrayshape=(dim, dim), maxlen=self.maxpreviews)
         self.datatrees = deque(maxlen=self.maxpreviews)
         self.data = deque(maxlen=self.maxpreviews)
+        self.slice_numbers = deque(maxlen=self.maxpreviews)
 
         self.setOrientation(QtCore.Qt.Horizontal)
-
-        l = QtGui.QVBoxLayout()
-        l.setContentsMargins(0, 0, 0, 0)
         self.functionform = QtGui.QStackedWidget()
-        self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set As Pipeline")
-        l.addWidget(self.functionform)
-        l.addWidget(self.setPipelineButton)
+
+        self.deleteButton = QtGui.QToolButton(self)
+        self.deleteButton.setToolTip('Delete this preview')
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.deleteButton.setIcon(icon)
+
+        self.setPipelineButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setPipelineButton.setIcon(icon)
+        self.setPipelineButton.setToolTip('Set as pipeline')
+
+        ly = QtGui.QVBoxLayout()
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
+        ly.addWidget(self.functionform)
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(self.setPipelineButton)
+        h.addWidget(self.deleteButton)
+        ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.setLayout(l)
+        panel.setLayout(ly)
+        self.setPipelineButton.hide()
+        self.deleteButton.hide()
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
         self.imageview.ui.roiBtn.setParent(None)
+        self.imageview.ui.menuBtn.setParent(None)
 
-        self.deleteButton = QtGui.QPushButton(self.imageview)
-        self.deleteButton.setText("")
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_40.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.deleteButton.setIcon(icon)
-        self.imageview.ui.gridLayout.addWidget(self.deleteButton, 1, 1, 1, 1)
+        self.view_label = QtGui.QLabel(self)
+        self.view_label.setText('No: ')
+        self.view_number = QtGui.QSpinBox(self)
+        self.view_number.setReadOnly(True)
+        self.view_number.setMaximum(5000) # Large enough number
+        self.imageview.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(panel)
@@ -639,18 +658,23 @@ class PreviewViewer(QtGui.QSplitter):
     def indexChanged(self, index, time):
         try:
             self.functionform.setCurrentWidget(self.datatrees[index])
+            self.view_number.setValue(self.slice_numbers[index])
         except IndexError as e:
-            print 'index {} does not exist'.format(index)
+            msg.logMessage('index {} does not exist'.format(index),msg.ERROR)
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
-    def addPreview(self, image, funcdata):
+    def addPreview(self, image, funcdata, slice_number):
+        self.deleteButton.show()
+        self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
+        self.slice_numbers.appendleft(slice_number)
+        self.view_number.setValue(slice_number)
         self.functionform.addWidget(functree)
         self.imageview.setImage(self.previews)
         self.functionform.setCurrentWidget(functree)
@@ -662,41 +686,17 @@ class PreviewViewer(QtGui.QSplitter):
             del self.previews[idx]
             del self.datatrees[idx]
             del self.data[idx]
+            del self.slice_numbers[idx]
             if len(self.previews) == 0:
                 self.imageview.clear()
+                self.deleteButton.hide()
+                self.setPipelineButton.hide()
             else:
                 self.imageview.setImage(self.previews)
 
     def defaultsButtonClicked(self):
         current_data = self.data[self.imageview.currentIndex]
-        fmanager.set_function_pipeline(current_data)
-
-
-class ReconstructionViewer(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(ReconstructionViewer, self).__init__(parent=parent)
-        self.stack_viewer = StackViewer()
-        self.path_edit = QtGui.QLineEdit(parent=self)
-        self.path_edit.setReadOnly(True)
-        self.browse_button = QtGui.QPushButton(parent=self)
-        self.browse_button.setText('Select Reconstruction')
-
-        layout = QtGui.QGridLayout(self)
-        layout.addWidget(self.path_edit, 0, 0, 1, 1)
-        layout.addWidget(self.browse_button, 0, 1, 1, 1)
-        layout.addWidget(self.stack_viewer, 1, 0, 2, 2)
-
-        self.browse_button.clicked.connect(self.openDataset)
-
-    def openDataset(self, path=None):
-        if path is None:
-            path = QtGui.QFileDialog.getOpenFileNames(self, 'Open Reconstruction Data', os.path.expanduser('~'))[0]
-        if path:
-            data = loader.StackImage(path)
-            self.stack_viewer.setData(data)
-            if isinstance(path, list):
-                path = os.path.split(path[0])[0]
-            self.path_edit.setText(path)
+        fmanager.set_pipeline_from_preview(current_data, setdefaults=True)
 
 
 """
@@ -728,7 +728,7 @@ class VolumeViewer(QtGui.QWidget):
     def __init__(self,path=None,data=None,*args,**kwargs):
         super(VolumeViewer, self).__init__()
 
-        self.levels=[0,1]
+        self.levels = [0, 1]
 
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0,0,0,0)
@@ -746,9 +746,9 @@ class VolumeViewer(QtGui.QWidget):
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
         self.zregion = SliceWidget(parent=self)
-        self.xregion.item.region.setRegion([0,5000])
-        self.yregion.item.region.setRegion([0,5000])
-        self.zregion.item.region.setRegion([0,5000])
+        self.xregion.item.region.setRegion([0, 1000])
+        self.yregion.item.region.setRegion([0, 1000])
+        self.zregion.item.region.setRegion([0, 1000])
         self.xregion.sigSliceChanged.connect(self.setVolume) #change to setVolume
         self.yregion.sigSliceChanged.connect(self.setVolume)
         self.zregion.sigSliceChanged.connect(self.setVolume)
@@ -764,40 +764,54 @@ class VolumeViewer(QtGui.QWidget):
         # self.writevideo()
 
 
+    @property
+    def vol(self):
+        return self.volumeRenderWidget.vol
+
     def getSlice(self):
         xslice=self.xregion.getSlice()
         yslice=self.yregion.getSlice()
         zslice=self.zregion.getSlice()
         return xslice,yslice,zslice
 
-    def setVolume(self,vol=None,path=None):
-        sliceobj=self.getSlice()
-        self.volumeRenderWidget.setVolume(vol,path,sliceobj)
+    def setVolume(self, vol=None, path=None):
+        sliceobj = self.getSlice()
+        self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
             self.sigImageChanged.emit()
-            self.xregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[0]])
-            self.yregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[1]])
-            self.zregion.item.region.setRegion([0,self.volumeRenderWidget.vol.shape[2]])
+            for i, region in enumerate([self.xregion, self.yregion, self.zregion]):
+                try:
+                    region.item.region.setBounds([0, self.volumeRenderWidget.vol.shape[i]])
+                except RuntimeError as e:
+                    msg.logMessage(e.message,msg.ERROR)
+
+    def moveGradientTick(self, idx, pos):
+        tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]
+        tick.setPos(pos, 0)
+        tick.view().tickMoved(tick, QtCore.QPoint(pos*self.HistogramLUTWidget.item.gradient.length, 0))
+        tick.sigMoving.emit(tick)
+        tick.sigMoved.emit(tick)
+        tick.view().tickMoveFinished(tick)
 
     def setLevels(self, levels, update=True):
-        print 'levels:',levels
-        self.levels=levels
+        self.levels = levels
         self.setLookupTable()
+        self.HistogramLUTWidget.region.setRegion(levels)
+        if update:
+            self.volumeRenderWidget.update()
 
     def setLookupTable(self, lut=None, update=True):
         try:
-            table=self.HistogramLUTWidget.item.gradient.colorMap().color/256.
-            pos=self.HistogramLUTWidget.item.gradient.colorMap().pos
-
+            table = self.HistogramLUTWidget.item.gradient.colorMap().color/256.
+            pos = self.HistogramLUTWidget.item.gradient.colorMap().pos
             #table=np.clip(table*(self.levels[1]-self.levels[0])+self.levels[0],0.,1.)
-            table[:,3]=pos
-            table=np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
-            pos=np.hstack([[0],pos*(self.levels[1]-self.levels[0])+self.levels[0],[1]])
-
-            self.volumeRenderWidget.volume.cmap = Colormap(table,controls=pos)
+            table[:, 3] = pos
+            table = np.vstack([np.array([[0,0,0,0]]),table,np.array([[1,1,1,1]])])
+            pos = np.hstack([[0], pos*(self.levels[1] - self.levels[0]) + self.levels[0], [1]])
+            self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
-            print ex
+            msg.logMessage(ex,msg.ERROR)
 
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=100, targetHistogramSize=500, **kwds):
@@ -843,10 +857,6 @@ class VolumeViewer(QtGui.QWidget):
 
         return hist[1][:-1], hist[0]
 
-    @property
-    def vol(self):
-        return self.volumeRenderWidget.vol
-    #
     # @volumeRenderWidget.connect
     # def on_frame(self,event):
     #     self.volumeRenderWidget.cam1.auto_roll
@@ -883,8 +893,6 @@ class VolumeRenderWidget(scene.SceneCanvas):
 
 
     def setVolume(self, vol=None, path=None, sliceobj=None):
-        print 'slice:',sliceobj
-
         if vol is None:
             vol=self.vol
 
@@ -902,33 +910,32 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.vol = vol
 
         if slice is not None:
-            print 'preslice:',vol.shape
-            slicevol=self.vol[sliceobj]
-            print 'postslice:',vol.shape
+            slicevol = self.vol[sliceobj]
         else:
-            slicevol=self.vol
+            slicevol = self.vol
 
         # Set whether we are emulating a 3D texture
         emulate_texture = False
 
         # Create the volume visuals
         if self.volume is None:
-            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene,emulate_texture=emulate_texture)
-            self.volume.method='translucent'
+            self.volume = scene.visuals.Volume(slicevol, parent=self.view.scene, emulate_texture=emulate_texture)
+            self.volume.method = 'translucent'
         else:
             self.volume.set_data(slicevol)
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
-
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        self.volume.transform = scene.STTransform(translate=(-vol.shape[2]/2,-vol.shape[1]/2,-vol.shape[0]/2))
+        scale = 3*(.0075,) # This works for now but might be different for different resolutions
+        translate = map(lambda x: -scale[0]*x/2, reversed(vol.shape))
+        self.volume.transform = scene.STTransform(translate=translate, scale=scale)
 
     # Implement key presses
     def on_key_press(self, event):
         if event.text == '1':
             cam_toggle = {self.cam1: self.cam2, self.cam2: self.cam3, self.cam3: self.cam1}
             self.view.camera = cam_toggle.get(self.view.camera, self.cam2)
-            print(self.view.camera.name + ' camera')
+            msg.logMessage(self.view.camera.name + ' camera',msg.DEBUG)
         elif event.text == '2':
             pass
         elif event.text == '3':
@@ -942,7 +949,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
             s = -0.025 if event.text == '[' else 0.025
             self.volume.threshold += s
             th = self.volume.threshold
-            print("Isosurface threshold: %0.3f" % th)
+            msg.logMessage("Isosurface threshold: %0.3f" % th,msg.DEBUG)
 
 
 class SliceWidget(pg.HistogramLUTWidget):
@@ -967,8 +974,8 @@ class SliceWidget(pg.HistogramLUTWidget):
         #tuple(sorted(LUT.gradient.ticks.values()))
 
     def getSlice(self):
-        bounds=sorted(self.item.gradient.ticks.values())
-        bounds=(bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
+        bounds = sorted(self.item.gradient.ticks.values())
+        bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
 
 
@@ -1012,7 +1019,7 @@ class VolumeVisual(scene.visuals.Volume):
             self._create_vertex_data()
 
 
-scene.visuals.Volume=VolumeVisual
+scene.visuals.Volume = VolumeVisual
 
 
 class RunViewer(QtGui.QTabWidget):
@@ -1021,46 +1028,48 @@ class RunViewer(QtGui.QTabWidget):
     and tab for remote job settins.
     """
 
-    # sigRunClicked = QtCore.Signal(tuple, tuple, str, str, int, int, object)
+    icon = QtGui.QIcon()
+    icon.addPixmap(QtGui.QPixmap("gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunViewer, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_41.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.local_cancelButton = QtGui.QToolButton()
-        self.remote_cancelButton = QtGui.QToolButton()
-
         # Text Browser for local run console
-        self.local_console = QtGui.QTextEdit() #Browser()
+        self.local_console, self.local_cancelButton = self.addConsole('Local')
         self.local_console.setObjectName('Local')
 
-        # Text Brower for remote run console
-        self.remote_console = QtGui.QTextEdit()
-        self.remote_console.setObjectName('Remote')
-
-        for console, button in zip((self.local_console, self.remote_console),
-                                   (self.local_cancelButton, self.remote_cancelButton)):
-            console.setReadOnly(True)
-            console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-            button.setIcon(icon)
-            button.setIconSize(QtCore.QSize(24, 24))
-            button.setFixedSize(32, 32)
-            button.setToolTip('Cancel Current Process')
-            w = QtGui.QWidget()
-            w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-            w.setContentsMargins(0,0,0,0)
-            l = QtGui.QGridLayout()
-            l.setContentsMargins(0,0,0,0)
-            l.setSpacing(0)
-            l.addWidget(console, 0, 0, 2, 2)
-            l.addWidget(button, 1, 2, 1, 1)
-            w.setLayout(l)
-            self.addTab(w, console.objectName())
+    def addConsole(self, name):
+        console = QtGui.QTextEdit()
+        button = QtGui.QToolButton()
+        console.setObjectName(name)
+        console.setReadOnly(True)
+        console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        button.setIcon(self.icon)
+        button.setIconSize(QtCore.QSize(24, 24))
+        button.setFixedSize(32, 32)
+        button.setToolTip('Cancel running process')
+        w = QtGui.QWidget()
+        w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        w.setContentsMargins(0, 0, 0, 0)
+        l = QtGui.QGridLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        l.setSpacing(0)
+        l.addWidget(console, 0, 0, 2, 2)
+        l.addWidget(button, 1, 2, 1, 1)
+        w.setLayout(l)
+        self.addTab(w, console.objectName())
+        return console, button
 
     def log2local(self, msg):
-        self.local_console.insertPlainText(msg)
+        text = self.local_console.toPlainText()
+        if '\n' not in msg:
+            self.local_console.setText(msg + '\n\n' + text)
+        else:
+            topline = text.splitlines()[0]
+            tail = '\n'.join(text.splitlines()[1:])
+            self.local_console.setText(topline + msg + tail)
+        # self.local_console.insertPlainText(msg)
 
     def sino_indices(self):
         return (self.reconsettings.child('Start Sinogram').value(),
@@ -1072,14 +1081,6 @@ class RunViewer(QtGui.QTabWidget):
                 self.reconsettings.child('End Projection').value(),
                 self.reconsettings.child('Step Projection').value())
 
-    def runButtonClicked(self):
-        self.sigRunClicked.emit(self.proj_indices(), self.sino_indices(),
-                                self.reconsettings.child('Output Name').value(),
-                                self.reconsettings.child('Ouput Format').value(),
-                                self.localsettings.child('Sinogram Chunks').value(),
-                                self.localsettings.child('Cores').value(),
-                                self.log2local)
-
 
 class Preview3DViewer(QtGui.QSplitter):
     def __init__(self, paths=None, data=None, *args, **kwargs):
@@ -1087,15 +1088,26 @@ class Preview3DViewer(QtGui.QSplitter):
         self.setOrientation(QtCore.Qt.Horizontal)
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
-        self.functiontree = DataTreeWidget()
-        self.functiontree.setHeaderHidden(True)
-        self.functiontree.clear()
-        self.setPipelineButton = QtGui.QPushButton(self)
-        self.setPipelineButton.setText("Set Pipeline")
-        l.addWidget(self.functiontree)
-        l.addWidget(self.setPipelineButton)
+        self.pipelinetree = DataTreeWidget()
+        self.pipelinetree.setHeaderHidden(True)
+        self.pipelinetree.clear()
+
+        self.setPipelineButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.setPipelineButton.setIcon(icon)
+        self.setPipelineButton.setToolTip('Set as pipeline')
+
+        ly = QtGui.QVBoxLayout()
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(0)
+        ly.addWidget(self.pipelinetree)
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(self.setPipelineButton)
+        ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.setLayout(l)
+        panel.setLayout(ly)
 
         self.volumeviewer = VolumeViewer()
 
@@ -1105,15 +1117,18 @@ class Preview3DViewer(QtGui.QSplitter):
         self.funcdata = None
 
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
+        self.setPipelineButton.hide()
 
     def setPreview(self, recon, funcdata):
-        self.functiontree.setData(funcdata, hideRoot=True)
+        self.pipelinetree.setData(funcdata, hideRoot=True)
         self.funcdata = funcdata
-        self.functiontree.show()
+        self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
+        self.setPipelineButton.show()
 
     def defaultsButtonClicked(self):
-        fmanager.set_function_pipeline(self.funcdata)
+        fmanager.set_pipeline_from_preview(self.funcdata)
 
 
 class DataTreeWidget(QtGui.QTreeWidget):
@@ -1224,3 +1239,17 @@ class ArrayDeque(deque):
         else:
             return super(ArrayDeque, self).__getitem__(item)
 
+
+# Testing
+if __name__ == '__main__':
+    import sys, time
+    app = QtGui.QApplication(sys.argv)
+    w = RunViewer()
+    def foobar():
+        for i in range(10000):
+            w.log2local('Line {}\n\n'.format(i))
+            # time.sleep(.1)
+    w.local_cancelButton.clicked.connect(foobar)
+    w.setWindowTitle("Test this thing")
+    w.show()
+    sys.exit(app.exec_())
