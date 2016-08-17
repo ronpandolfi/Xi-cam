@@ -52,7 +52,10 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None):
     else:
         global logbacklog
         logbacklog.append({'stuple':s,'level':level,'timestamp':timestamp})
-    print m
+    try:
+        print m
+    except UnicodeEncodeError:
+        print 'A unicode string could not be written to console. Some logging will not be displayed.'
 
 def flushbacklog():
     for l in logbacklog:
