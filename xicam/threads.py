@@ -50,6 +50,7 @@ class RunnableMethod(QtCore.QRunnable):
     Runnable that will execute a given method from a QThreadPool and emit the response to the given callback function
     To use simply instantiate and pass the instance to a QThreadPool.start()
 
+
     Attributes
     ----------
     emmiter : QtCore.QObject
@@ -65,33 +66,29 @@ class RunnableMethod(QtCore.QRunnable):
     _priority : int
         Priority given to this Runnable in the pool
 
+
+    Parameters
+    ----------
+    method : function
+        Function object, method to run on seperate thread
+    method_args : list
+        List/tuple of arguments for the given function/method
+    method_kwargs : dict
+        Dictionary with keyword arguments for the give function/method
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    default_exhandle : bool
+        Flag to use the default exception handle slot. If false it will not be called
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
     """
 
     def __init__(self, method, method_args=(), method_kwargs={}, callback_slot=None,
                  finished_slot=None, except_slot=None, default_exhandle=True, priority=0, lock=None):
-        """
-        Instantiate the RunnableMethod
-
-        Parameters
-        ----------
-        method : function
-            Function object, method to run on seperate thread
-        method_args : list
-            List/tuple of arguments for the given function/method
-        method_kwargs : dict
-            Dictionary with keyword arguments for the give function/method
-        callback_slot : function
-            Function/method to run on a background thread
-        finished_slot : QtCore.Slot
-            Slot to call with the return value of the function
-        except_slot : QtCore.Slot
-            Function object (qt slot), slot to receive exception type, instance and traceback object
-        default_exhandle : bool
-            Flag to use the default exception handle slot. If false it will not be called
-        lock : mutex/semaphore
-            Simple lock if multiple access needs to be prevented
-        """
-
         super(RunnableMethod, self).__init__()
         self.emitter = Emitter()
         self._method = method
@@ -144,41 +141,38 @@ class RunnableIterator(RunnableMethod):
 
     See RunnableMethod for attributes
 
+
     Attributes
     ----------
     interrupt_signal : QtCore.Signal
         Signal used to interrupt generator
 
+
+    Parameters
+    ----------
+    iterator : iterator
+        Generator/iterator object to loop through on seperate thread
+    iterator_args : list
+        List/tuple of arguments for the given function/method
+    iterator_kwargs : dict
+        Dictionary with keyword arguments for the give function/method
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    interrupt_signal : QtCore.Signal
+        Signal used to interrupt generator
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    default_exhandle : bool
+        Flag to use the default exception handle slot. If false it will not be called
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
     """
 
     def __init__(self, iterator, iterator_args=(), iterator_kwargs={}, callback_slot=None,
                  finished_slot=None, interrupt_signal=None, except_slot=None, default_exhandle=True,
                  priority=0, lock=None):
-        """
-        Instantiate the RunnableIterator
-
-        Parameters
-        ----------
-        iterator : iterator
-            Generator/iterator object to loop through on seperate thread
-        iterator_args : list
-            List/tuple of arguments for the given function/method
-        iterator_kwargs : dict
-            Dictionary with keyword arguments for the give function/method
-        callback_slot : function
-            Function/method to run on a background thread
-        finished_slot : QtCore.Slot
-            Slot to call with the return value of the function
-        interrupt_signal : QtCore.Signal
-            Signal used to interrupt generator
-        except_slot : QtCore.Slot
-            Function object (qt slot), slot to receive exception type, instance and traceback object
-        default_exhandle : bool
-            Flag to use the default exception handle slot. If false it will not be called
-        lock : mutex/semaphore
-            Simple lock if multiple access needs to be prevented
-
-        """
         super(RunnableIterator, self).__init__(method=iterator, method_args=iterator_args,
                                                method_kwargs=iterator_kwargs, callback_slot=callback_slot,
                                                finished_slot=finished_slot, except_slot=except_slot,
@@ -302,12 +296,16 @@ class Worker(QtCore.QThread):
     pool : QThreadPool
         Thread pool used to run runnables from queue
 
+    Parameters
+    ----------
+    queue : Queue
+        Queue to put/get runnables
     """
 
     def __init__(self, queue, parent=None):
         super(Worker, self).__init__(parent)
         self.queue = queue
-        self.pool = QtCore.QThreadPool.globalInstance()  # Should I use globalInstance() or a seperate instance?
+        self.pool = QtCore.QThreadPool.globalInstance()
         self.pool.setMaxThreadCount(mp.cpu_count())
 
     def __del__(self):
