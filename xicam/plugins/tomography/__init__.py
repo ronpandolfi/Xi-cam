@@ -97,7 +97,7 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         # Connect toolbar signals and ui button signals
-        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
+        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.runFullReconstruction,
                                      self.manualCenter, self.roiSelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
@@ -409,30 +409,38 @@ class plugin(base.plugin):
                                  except_slot=except_slot)
         bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
 
-    def fullReconstruction(self):
+    def runFullReconstruction(self):
         """
         Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
         workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
         """
+        if not self.checkPipeline():
+            return
 
-        if self.checkPipeline():
-            name = self.centerwidget.tabText(self.centerwidget.currentIndex())
-            msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
-            self.bottomwidget.local_console.clear()
-            self.manager.updateParameters()
-            recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                          interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-                                          finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
-            pstart = self.ui.config_params.child('Start Projection').value()
-            pend = self.ui.config_params.child('End Projection').value()
-            pstep = self.ui.config_params.child('Step Projection').value()
-            sstart = self.ui.config_params.child('Start Sinogram').value()
-            send = self.ui.config_params.child('End Sinogram').value()
-            sstep =  self.ui.config_params.child('Step Sinogram').value()
-            recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
-                       self.ui.config_params.child('Sinograms/Chunk').value(),
-                       ncore=self.ui.config_params.child('CPU Cores').value())
-            self.recon_start_time = time.time()
+        value = QtGui.QMessageBox.question(None, 'Run Full Reconstruction',
+                                           'You are about to run a full reconstruction.'
+                                           'This step can take some minutes. Do you want to continue?',
+                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
+        if value is QtGui.QMessageBox.No:
+            return
+
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
+        self.bottomwidget.local_console.clear()
+        self.manager.updateParameters()
+        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
+                                      interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+                                      finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+        pstart = self.ui.config_params.child('Start Projection').value()
+        pend = self.ui.config_params.child('End Projection').value()
+        pstep = self.ui.config_params.child('Step Projection').value()
+        sstart = self.ui.config_params.child('Start Sinogram').value()
+        send = self.ui.config_params.child('End Sinogram').value()
+        sstep =  self.ui.config_params.child('Step Sinogram').value()
+        recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
+                   self.ui.config_params.child('Sinograms/Chunk').value(),
+                   ncore=self.ui.config_params.child('CPU Cores').value())
+        self.recon_start_time = time.time()
 
     @QtCore.Slot()
     def reconstructionFinished(self):
