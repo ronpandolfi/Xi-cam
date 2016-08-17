@@ -25,7 +25,13 @@ def initplugins(placeholders):
     for importer, modname, ispkg in packages:
 
         msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
-        modules.append(safeimporter.import_module('.'+modname,'xicam.plugins'))
+        mod=safeimporter.import_module('.' + modname, 'xicam.plugins')
+        if mod:
+            modules.append(mod)
+        else:
+            msg.logMessage("Plugin loading aborted: "+modname,msg.CRITICAL)
+            continue
+
 
     for module in modules:
         msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
