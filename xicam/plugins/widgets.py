@@ -1,21 +1,19 @@
 # --coding: utf-8 --
 
-from PySide import QtGui, QtCore
-from PySide.QtCore import Qt
+import os
+
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
-from xicam import config, ROI, debugtools, toolbar
-from fabio import edfimage
-import os
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+from PySide import QtGui, QtCore
+from PySide.QtCore import Qt
+from utils import msg
+from utils.io import loader, pathtools
+from utils.pipeline import cosmics, integration, peakfinding, center_approx, variationoperators, variation
+from xicam import config, ROI, debugtools
 from xicam import dialogs
-from xicam import xglobals
-import scipy
-from pipeline import variation
 from xicam import threads
-from pipeline import msg
+from xicam import xglobals
+
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -47,7 +45,7 @@ class OOMTabItem(QtGui.QWidget):
         if not self.isloaded:
             if 'operation' in self.kwargs:
                 if self.kwargs['operation'] is not None:
-                    msg.logMessage(self.kwargs['paths'],msg.DEBUG)
+                    msg.logMessage(self.kwargs['paths'], msg.DEBUG)
                     imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
                     imgdata = self.kwargs['operation'](imgdata)
                     dimg = loader.datadiffimage2(data=imgdata)
@@ -63,7 +61,7 @@ class OOMTabItem(QtGui.QWidget):
             self.isloaded = True
 
             self.sigLoaded.emit()
-            msg.logMessage(('Loaded:', self.itemclass),msg.DEBUG)
+            msg.logMessage(('Loaded:', self.itemclass), msg.DEBUG)
 
     def unload(self):
         """
@@ -197,7 +195,7 @@ class dimgViewer(QtGui.QWidget):
             if energy is not None:
                 config.activeExperiment.setvalue('Energy', energy)
         except (AttributeError, TypeError, KeyError):
-            msg.logMessage('Warning: Energy could not be determined from headers',msg.WARNING)
+            msg.logMessage('Warning: Energy could not be determined from headers', msg.WARNING)
 
         # Force cache the detector
         _ = self.dimg.detector
@@ -232,12 +230,12 @@ class dimgViewer(QtGui.QWidget):
 
     def resetLUT(self):
 
-        msg.logMessage(('Levels:', self.imgview.getHistogramWidget().item.getLevels()),msg.DEBUG)
+        msg.logMessage(('Levels:', self.imgview.getHistogramWidget().item.getLevels()), msg.DEBUG)
         # if self.imgview.getHistogramWidget().item.getLevels()==(0,1.):
         Lmax = np.nanmax(self.dimg.rawdata)
 
         self.imgview.autoLevels()
-        msg.logMessage(('Levels set:', self.imgview.getHistogramWidget().item.getLevels()),msg.DEBUG)
+        msg.logMessage(('Levels set:', self.imgview.getHistogramWidget().item.getLevels()), msg.DEBUG)
 
     def cacheLUT(self):
         hist = self.imgview.getHistogramWidget().item
@@ -866,7 +864,7 @@ class dimgViewer(QtGui.QWidget):
             self.maskimage.clear()
         else:
             # Draw the mask as a red channel image with an alpha mask
-            msg.logMessage(('maskmax:', np.max(mask)),msg.DEBUG)
+            msg.logMessage(('maskmax:', np.max(mask)), msg.DEBUG)
             invmask = 1 - mask
             self.maskimage.setImage(
                 np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float),
@@ -939,7 +937,7 @@ class dimgViewer(QtGui.QWidget):
 
     def clearsgoverlays(self):
         for item in self.viewbox.addedItems:
-            from pipeline import spacegroups
+            from utils.pipeline import spacegroups
 
             # print type(item), type(item) is spacegroups.peakoverlay
             if type(item) is spacegroups.peakoverlay:
@@ -1105,7 +1103,7 @@ class timelineViewer(dimgViewer):
         self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
     def processingfinished(self, *args, **kwargs):
-        msg.showMessage('Processing complete.',4)
+        msg.showMessage('Processing complete.', 4)
 
     def setvariationmode(self, index):
         self.operationindex = index
@@ -1254,7 +1252,7 @@ class integrationsubwidget(pg.PlotWidget):
         try:
             self.applyintegration(self.integrationfunction,dimg,rois,data,mask,imageitem)
         except ValueError:
-            msg.logMessage('Maybe the roi was too far away?',msg.DEBUG)
+            msg.logMessage('Maybe the roi was too far away?', msg.DEBUG)
 
     def replotcallback(self,*args,**kwargs):
         self.sigPlotResult.emit(*args, **kwargs)
@@ -1284,7 +1282,7 @@ class integrationsubwidget(pg.PlotWidget):
                 continue
 
             cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
-            msg.logMessage(('Cut:', cut.shape),msg.DEBUG)
+            msg.logMessage(('Cut:', cut.shape), msg.DEBUG)
 
             if cut is not None:
                 xglobals.pool.apply_async(integrationfunction,
@@ -1473,8 +1471,8 @@ class ImageView(pg.ImageView):
             if np.isnan(levelmin): levelmin = 0
             if np.isnan(levelmax): levelmax = 1
             if np.isinf(levelmin): levelmin = 0
-            msg.logMessage(('min:',levelmin),msg.DEBUG)
-            msg.logMessage(('max:',levelmax),msg.DEBUG)
+            msg.logMessage(('min:', levelmin), msg.DEBUG)
+            msg.logMessage(('max:', levelmax), msg.DEBUG)
 
             self.ui.histogram.setLevels(levelmin, levelmax)
 
@@ -1674,7 +1672,7 @@ class fileTreeWidget(QtGui.QTreeView):
         elif os.path.isdir(path):
             self.sigOpenDir.emit(path)
         else:
-            msg.logMessage(('Error on index (what is that?):', index),msg.ERROR)
+            msg.logMessage(('Error on index (what is that?):', index), msg.ERROR)
 
     def treerefresh(self, path=None):
         """

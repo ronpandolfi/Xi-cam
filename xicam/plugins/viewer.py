@@ -1,6 +1,6 @@
 import platform
 from fabio import edfimage
-from pipeline import msg
+from utils import msg
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -8,7 +8,7 @@ if op_sys == 'Darwin':
     try:
         from Foundation import NSURL
     except ImportError:
-        msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
+        msg.logMessage('NSURL not found. Drag and drop may not work correctly', msg.WARNING)
 
 import base
 from PySide import QtGui, QtCore
@@ -16,9 +16,9 @@ import os
 from pyqtgraph.parametertree import ParameterTree
 import widgets
 import numpy as np
-from pipeline.spacegroups import spacegroupwidget
-from pipeline import loader
-from xicam import config
+from utils.pipeline.spacegroups import spacegroupwidget
+from utils.io import loader
+from xicam import config, msg
 import fabio
 
 # Globals so Timeline can share the same rightmodes
@@ -98,7 +98,7 @@ class plugin(base.plugin):
             else:
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
-                msg.logMessage(fname,msg.DEBUG)
+                msg.logMessage(fname, msg.DEBUG)
                 self.openfiles([fname])
             e.accept()
 
@@ -256,7 +256,7 @@ class plugin(base.plugin):
                                    filter=u"EDF (*.edf)")
         dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
-        msg.logMessage(filename,msg.DEBUG)
+        msg.logMessage(filename, msg.DEBUG)
         if ok and filename:
             fabimg.write(filename)
 

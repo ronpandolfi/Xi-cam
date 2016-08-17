@@ -3,8 +3,6 @@ from PySide import QtGui
 import os
 from xicam import xglobals
 
-import widgets
-
 
 class plugin(base.plugin):
     name = 'MOTD'

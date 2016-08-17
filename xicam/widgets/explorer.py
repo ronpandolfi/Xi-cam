@@ -9,15 +9,13 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-
 import os
 import tempfile
+from collections import OrderedDict
 from functools import partial
 from PySide import QtGui, QtCore
-from collections import OrderedDict
-from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools, msg
+from xicam import threads
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -1148,7 +1146,7 @@ class SFTPDirTreeItem(LazyTreeItem, QtCore.QObject):
         self.addChild(item)
 
     def handleUnknown(self, path):
-        msg.logMessage('Unknown object found: {0}'.format(path),msg.WARNING)
+        msg.logMessage('Unknown object found: {0}'.format(path), msg.WARNING)
 
 
 class SFTPFileTreeItem(QtGui.QTreeWidgetItem):
@@ -1165,7 +1163,7 @@ class SFTPFileTreeItem(QtGui.QTreeWidgetItem):
 
 
 if __name__ == '__main__':
-    import client
+    from utils import client, msg
     import getpass
     import sys
 

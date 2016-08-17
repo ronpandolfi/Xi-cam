@@ -9,30 +9,23 @@
 ## TODO: Use detector mask in centerfinder
 
 
-import sys
 import os
-import socket
-
-from PySide.QtUiTools import QUiLoader
-from PySide import QtGui
-from PySide import QtCore
-
-import config
-import watcher
-import daemon
-import pipeline
-import qdarkstyle
-import plugins
-from xicam import xglobals
 import numpy as np
-from pipeline import msg
-
-import client.dask_io_loop
-import client.dask_local_scheduler
-import client.dask_remote_scheduler
-import client.dask_active_executor
+import qdarkstyle
+from PySide import QtCore
+from PySide import QtGui
+from PySide.QtUiTools import QUiLoader
+import config
+import daemon
+import plugins
 import threads
-from pipeline import msg
+import watcher
+from utils import client
+from utils import pipeline
+from utils import msg
+from utils import io
+from xicam import xglobals
+
 
 class ComboBoxAction(QtGui.QWidgetAction):
     def __init__(self, title, parent=None):
@@ -191,7 +184,7 @@ class MyMainWindow(QtCore.QObject):
             self.sessionmenu.setTitle("Active Session (localhost)")
             client.dask_active_executor.active_executor = local_scheduler
         except:
-            msg.logMessage("Issues connecting to localhost",msg.ERROR)
+            msg.logMessage("Issues connecting to localhost", msg.ERROR)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
@@ -238,10 +231,10 @@ class MyMainWindow(QtCore.QObject):
                 username = str(login.textName.text())
                 machine = str(login.textMachine.text())
                 password = str(login.textPass.text())
-                msg.logMessage((username, machine),msg.DEBUG)  # , password
+                msg.logMessage((username, machine), msg.DEBUG)  # , password
                 self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop,
-                                                                                   password, self.session_address[obj],
-                                                                                   self.session_exec[obj])
+                                                                                         password, self.session_address[obj],
+                                                                                         self.session_exec[obj])
                 self.sessionmenu.setTitle("Active Session ({0})".format(self.session_machines[obj]))
 
                 import time
@@ -277,14 +270,14 @@ class MyMainWindow(QtCore.QObject):
         load an image with fabio
         """
         # Load an image path with fabio
-        return pipeline.loader.loadpath(path)[0]
+        return io.loader.loadpath(path)[0]
 
     def dialogopen(self):
         """
         Open a file dialog then open that image
         """
         filename, ok = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open file', os.curdir,
-                                                         '*' + ' *'.join(pipeline.loader.acceptableexts))
+                                                         '*' + ' *'.join(io.loader.acceptableexts))
         if filename and ok:
             self.openfiles([filename])
 
@@ -421,7 +414,7 @@ class MyMainWindow(QtCore.QObject):
         # TODO: receive data from daemon thread instead of additional watcher object.
         if self.ui.findChild(QtGui.QCheckBox, 'autoView').isChecked():
             for path in paths:
-                msg.logMessage(path,msg.INFO)
+                msg.logMessage(path, msg.INFO)
                 self.openfile(os.path.join(d, path))
         if self.ui.findChild(QtGui.QCheckBox, 'autoTimeline').isChecked():
             self.showtimeline()

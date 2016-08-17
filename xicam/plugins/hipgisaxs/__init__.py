@@ -9,8 +9,8 @@ import customwidgets
 import display
 import featuremanager
 import ui
-from modpkgs.collectionsmod import UnsortableOrderedDict
-from pipeline import msg
+from utils import msg
+from utils.modpkgs.collectionsmod import UnsortableOrderedDict
 from xicam import clientmanager as cmanager
 from xicam import plugins
 from xicam.plugins import base
@@ -148,7 +148,7 @@ class plugin(base.plugin):
         try:
            plugins.plugins['Viewer'].instance.opendata(out)
         except:
-           msg.logMessage("Unable to load data....",msg.ERROR)
+           msg.logMessage("Unable to load data....", msg.ERROR)
 
 
         # import os
@@ -183,13 +183,12 @@ class plugin(base.plugin):
             self.loginwidget.loginRequest(partial(cmanager.login, login_callback, ssh_client), True)
 
     def runDask(self):
-        import client.dask_active_executor
 
-        if client.dask_active_executor.active_executor is None:
+        if utils.client.dask_active_executor.active_executor is None:
             #warning message
             return
 
-        ae = client.dask_active_executor.active_executor.executor
+        ae = utils.client.dask_active_executor.active_executor.executor
 
         def hipgisaxs_func(yaml_str):
           import subprocess
@@ -218,13 +217,13 @@ class plugin(base.plugin):
             time.sleep(1)
 
         if future_tag.status == "failure":
-            msg.showMessage("Execution failed.",timeout=5)
+            msg.showMessage("Execution failed.", timeout=5)
             return
 
-        msg.showMessage("Execution complete. Fetching result...",timeout=5)
+        msg.showMessage("Execution complete. Fetching result...", timeout=5)
         result = future_tag.result()
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
-        msg.logMessage(("result = ", out),msg.DEBUG)
+        msg.logMessage(("result = ", out), msg.DEBUG)
 
         plugins.plugins['Viewer'].instance.opendata(out)
 

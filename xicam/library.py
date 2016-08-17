@@ -1,12 +1,14 @@
-from PySide import QtGui
-from PySide import QtCore
-from PySide.QtCore import Qt
-from PIL import Image
-import viewer
 import os
-import pipeline
+
 import numpy as np
-from pipeline import msg
+from PySide import QtCore
+from PySide import QtGui
+from PySide.QtCore import Qt
+
+from utils import io
+from utils import pipeline
+from xicam import msg
+
 
 class FlowLayout(QtGui.QLayout):
     """
@@ -165,12 +167,12 @@ class thumbwidgetitem(QtGui.QFrame):
 
         self.path = path
         # print path
-        self.dimg = pipeline.loader.diffimage(filepath=self.path)
+        self.dimg = io.loader.diffimage(filepath=self.path)
         self.image = QtGui.QImage()
         #print os.path.splitext(path)[1]
         if os.path.isdir(path):
             self.image = self.foldericon
-        elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
+        elif os.path.splitext(path)[1] in io.loader.acceptableexts:
 
 
             try:
@@ -184,7 +186,7 @@ class thumbwidgetitem(QtGui.QFrame):
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             except Exception as ex:
-                msg.logMessage(ex.message,msg.Error)
+                msg.logMessage(ex.message, msg.Error)
 
                 self.image = self.fileicon
 

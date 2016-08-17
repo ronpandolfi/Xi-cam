@@ -11,12 +11,11 @@ from pyFAI import detectors
 import pyFAI
 import glob
 import re
-import writer
+import utils.io.writer
 from xicam import debugtools, config
-from pipeline.formats import TiffStack
+from utils.io.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
-from pipeline import msg
 # try:
 #     import libtiff
 # except IOError:
@@ -24,7 +23,7 @@ from pipeline import msg
 
 import numpy as nx
 
-import detectors  # injects pyFAI with custom detectors
+import utils.pipeline.detectors  # injects pyFAI with custom detectors
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
@@ -73,7 +72,7 @@ def loadimage(path):
                 data = fabio.open(path).data
                 return data
     except IOError:
-        msg.logMessage('IO Error loading: ' + path,msg.ERROR)
+        utils.pipeline.msg.logMessage('IO Error loading: ' + path, utils.pipeline.msg.ERROR)
 
     return data
 
@@ -101,7 +100,7 @@ def readenergy(path):
             else:
                 pass
     except IOError:
-        msg.logMessage('IO Error reading energy: ' + path,msg.ERROR)
+        utils.pipeline.msg.logMessage('IO Error reading energy: ' + path, utils.pipeline.msg.ERROR)
 
     return None
 
@@ -112,9 +111,9 @@ def readvariation(path):
         nxroot = nx.load(path)
         return dict([[int(index), int(value)] for index, value in nxroot.data.variation])
     except IOError:
-        msg.logMessage(('Could not load', path),msg.ERROR)
+        utils.pipeline.msg.logMessage(('Could not load', path), utils.pipeline.msg.ERROR)
     except nx.NeXusError:
-        msg.logMessage('No variation saved in file ' + path,msg.ERROR)
+        utils.pipeline.msg.logMessage('No variation saved in file ' + path, utils.pipeline.msg.ERROR)
 
     return None
 
@@ -175,9 +174,9 @@ def loadparas(path):
             return merge_dicts(fimg.header, textheader)
 
     except IOError:
-        msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
+        utils.pipeline.msg.logMessage('Unexpected read error in loadparas', utils.pipeline.msg.ERROR)
     except IndexError:
-        msg.logMessage('No txt file found in loadparas',msg.WARNING)
+        utils.pipeline.msg.logMessage('No txt file found in loadparas', utils.pipeline.msg.WARNING)
     return OrderedDict()
 
 
@@ -302,16 +301,16 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 def loadthumbnail(path):
     try:
         if os.path.splitext(path)[1] in ['.nxs', '.hdf']:
-            nxroot = nx.load(pathtools.path2nexus(path))
+            nxroot = nx.load(utils.pipeline.pathtools.path2nexus(path))
             # print nxroot.tree
             if hasattr(nxroot, 'data'):
                 if hasattr(nxroot.data, 'thumbnail'):
                     thumb = np.array(nxroot.data.thumbnail)
                     return thumb
     except IOError:
-        msg.logMessage('IO Error loading: ' + path,msg.ERROR)
+        utils.pipeline.msg.logMessage('IO Error loading: ' + path, utils.pipeline.msg.ERROR)
     except TypeError:
-        msg.logMessage(('TypeError: path has type ', str(type(path))),msg.ERROR)
+        utils.pipeline.msg.logMessage(('TypeError: path has type ', str(type(path))), utils.pipeline.msg.ERROR)
 
     return None
 
@@ -363,7 +362,7 @@ def loadpath(path):
                 path2 = path.replace('_hi_', '_lo_')
             return loadstitched(path, path2)
         except Exception as ex:
-            msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
+            utils.pipeline.msg.logMessage(('Stitching failed: ', ex.message), utils.pipeline.msg.ERROR)
 
     return loadimage(path), None
 
@@ -384,28 +383,29 @@ def convertto8bit(image):
 
 
 def loadtiffstack(path):
-    msg.logMessage(('Loading', path + '...'))
+    utils.pipeline.msg.logMessage(('Loading', path + '...'))
     data = np.swapaxes(libtiff.TIFF3D.open(path).read_image(), 0, 1)
-    msg.logMessage('Sub-sampling array...')
+    utils.pipeline.msg.logMessage('Sub-sampling array...')
     # data = convertto8bit(data)
-    msg.logMessage(('Load complete. Size:', np.shape(data)))
+    utils.pipeline.msg.logMessage(('Load complete. Size:', np.shape(data)))
     data = data[::4, ::4, ::4]
     return data.astype(np.float32)
 
 
 def loadimageseries(pattern):
-    msg.logMessage(('Loading', pattern + '...'))
+    utils.pipeline.msg.logMessage(('Loading', pattern + '...'))
     files = glob.glob(pattern)
     data = np.dstack([fabio.open(f).data for f in files])
-    msg.logMessage('Log scaling data...')
+    utils.pipeline.msg.logMessage('Log scaling data...')
     data = (np.log(data * (data > 0) + (data < 1)))
-    msg.logMessage('Converting to 8-bit and re-scaling...')
+    utils.pipeline.msg.logMessage('Converting to 8-bit and re-scaling...')
     data = convertto8bit(data)
-    msg.logMessage(('Load complete. Size:', np.shape(data)))
+    utils.pipeline.msg.logMessage(('Load complete. Size:', np.shape(data)))
     return data
 
 
-import integration, remesh, center_approx, variation, pathtools
+import utils.pipeline.integration, utils.pipeline.remesh, utils.pipeline.center_approx, utils.pipeline.variation, \
+    utils.io.pathtools
 
 
 class diffimage():
@@ -418,9 +418,9 @@ class diffimage():
         :param experiment: xicam.config.experiment
         """
 
-        msg.logMessage('diffimage is deprecated. Migrate this to diffimage2',msg.WARNING)
+        utils.pipeline.msg.logMessage('diffimage is deprecated. Migrate this to diffimage2', utils.pipeline.msg.WARNING)
 
-        msg.logMessage('Loading ' + unicode(filepath) + '...')
+        utils.pipeline.msg.logMessage('Loading ' + unicode(filepath) + '...')
 
         self._data = data
 
@@ -453,7 +453,7 @@ class diffimage():
 
     def invalidatecache(self):
         self.cache = dict()
-        msg.logMessage('cache cleared')
+        utils.pipeline.msg.logMessage('cache cleared')
 
     def cachedata(self):
         if self._data is None:
@@ -527,14 +527,14 @@ class diffimage():
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
                     detector = detector()
-                    msg.logMessage('Detector found: ' + name)
+                    utils.pipeline.msg.logMessage('Detector found: ' + name)
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
-                        msg.logMessage('Detector found with binning: ' + name)
+                        utils.pipeline.msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
                         return name, detector
         return None, None
@@ -547,7 +547,7 @@ class diffimage():
                 self._detector = pyFAI.detectors.ALL_DETECTORS[value]
             except KeyError:
                 try:
-                    self._detector = getattr(detectors, value)
+                    self._detector = getattr(utils.pipeline.detectors, value)
                 except AttributeError:
                     raise KeyError('Detector not found in pyFAI registry: ' + value)
         else:
@@ -564,13 +564,13 @@ class diffimage():
         if self._thumb is None:
             self._thumb = loadthumbnail(self.filepath)
             if self._thumb is None:
-                self._thumb = writer.thumbnail(self.data)
+                self._thumb = utils.pipeline.writer.thumbnail(self.data)
         return self._thumb
 
     @property
     def jpeg(self):
         if self._jpeg is None:
-            self._jpeg = writer.jpeg(self.data.astype(np.uint8))
+            self._jpeg = utils.pipeline.writer.jpeg(self.data.astype(np.uint8))
         return self._jpeg
 
     def iscached(self, key):
@@ -584,8 +584,8 @@ class diffimage():
         try:
             self.cachedetector()
             if not self.iscached('cake'):
-                cake, x, y = integration.cake(self.data, self.experiment)
-                cakemask, _, _ = integration.cake(np.ones_like(self.data), self.experiment)
+                cake, x, y = utils.pipeline.integration.cake(self.data, self.experiment)
+                cakemask, _, _ = utils.pipeline.integration.cake(np.ones_like(self.data), self.experiment)
                 cakemask = cakemask > 0
 
                 self.cache['cake'] = cake
@@ -595,12 +595,12 @@ class diffimage():
 
             return self.cache['cake']
         except AttributeError as ex:
-            msg.logMessage(ex.message,msg.ERROR)
+            utils.pipeline.msg.logMessage(ex.message, utils.pipeline.msg.ERROR)
 
     @property
     def remesh(self):
         if not self.iscached('remesh'):
-            msg.logMessage(('headers:', self.headers),msg.DEBUG)
+            utils.pipeline.msg.logMessage(('headers:', self.headers), utils.pipeline.msg.DEBUG)
             # read incident angle
             if "Sample Alpha Stage" in self.headers:
                 alphai = np.deg2rad(float(self.headers["Sample Alpha Stage"]))
@@ -615,10 +615,10 @@ class diffimage():
             if alphai is None:
                 return self.data
 
-            remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
-            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+            remeshdata, x, y = utils.pipeline.remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
+                                                            self.experiment.getGeometry(), alphai)
+            remeshmask, _, _ = utils.pipeline.remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
+                                                            self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
             self.cache['remeshmask'] = remeshmask > 0
@@ -645,14 +645,14 @@ class diffimage():
 
     @debugtools.timeit
     def writenexus(self):
-        nxpath = pathtools.path2nexus(self.filepath)
-        w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
-                               variation=self._variation)
+        nxpath = utils.pipeline.pathtools.path2nexus(self.filepath)
+        w = utils.pipeline.writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
+                                              variation=self._variation)
         w.run()
 
     def findcenter(self):
         # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.data)
+        [x, y] = utils.pipeline.center_approx.center_approx(self.data)
 
         # Set the center in the experiment
         self.experiment.center = (x, y)
@@ -660,29 +660,29 @@ class diffimage():
     def integrate(self, mode='', cut=None):
         ai = config.activeExperiment.getAI().getPyFAI()
         iscake = False
-        return integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
+        return utils.pipeline.integration.radialintegratepyFAI(self.data, self.mask, ai, cut=cut)
 
     @debugtools.timeit  # 0.07s on Izanami
     def variation(self, operationindex, roi):
         if operationindex not in self._variation or roi is not None:
-            nxpath = pathtools.path2nexus(self.filepath)
+            nxpath = utils.pipeline.pathtools.path2nexus(self.filepath)
             if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
                 # print v
                 if operationindex in v:
                     self._variation[operationindex] = v[operationindex]
-                    msg.logMessage('successful variation load!')
+                    utils.pipeline.msg.logMessage('successful variation load!')
                 else:
-                    prv = pathtools.similarframe(self.filepath, -1)
-                    nxt = pathtools.similarframe(self.filepath, +1)
-                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                    prv = utils.pipeline.pathtools.similarframe(self.filepath, -1)
+                    nxt = utils.pipeline.pathtools.similarframe(self.filepath, +1)
+                    self._variation[operationindex] = utils.pipeline.variation.filevariation(operationindex, prv, self.dataunrot, nxt)
             else:
-                prv = pathtools.similarframe(self.filepath, -1)
-                nxt = pathtools.similarframe(self.filepath, +1)
+                prv = utils.pipeline.pathtools.similarframe(self.filepath, -1)
+                nxt = utils.pipeline.pathtools.similarframe(self.filepath, +1)
                 if roi is None:
-                    self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
+                    self._variation[operationindex] = utils.pipeline.variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
-                    v = variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
+                    v = utils.pipeline.variation.filevariation(operationindex, prv, self.dataunrot, nxt, roi)
                     return v
         return self._variation[operationindex]
 
@@ -696,7 +696,7 @@ class diffimage():
     @property
     def radialintegration(self):
         if 'radialintegration' in self.cache.keys():
-            self.cache['radialintegration'] = integration.radialintegrate(self)
+            self.cache['radialintegration'] = utils.pipeline.integration.radialintegrate(self)
 
         return self.cache['radialintegration']
 
@@ -780,16 +780,16 @@ class imageseries():
         keys = self.paths.keys()
 
         if roi is not None:
-            roi = writer.thumbnail(roi.T)
+            roi = utils.pipeline.writer.thumbnail(roi.T)
 
         for key, index in zip(keys, range(self.__len__())):
             variationx = self.path2frame(self.paths[key])
             variationy = self.calcVariation(index, operationindex, roi)
 
             if variationy is not None:
-                variation[variationx] = variationy
+                utils.pipeline.variation[variationx] = variationy
 
-        return variation
+        return utils.pipeline.variation
 
     def calcVariation(self, i, operationindex, roi):
         if roi is None:
@@ -800,10 +800,10 @@ class imageseries():
         thumbs = self.thumbs
         try:
             if operationindex == 7:
-                return variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
-            return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
+                return utils.pipeline.variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
+            return utils.pipeline.variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
         except IndexError as ex:
-            msg.logMessage(('Skipping index:', i),msg.WARNING)
+            utils.pipeline.msg.logMessage(('Skipping index:', i), utils.pipeline.msg.WARNING)
         return None
 
     @property
@@ -827,7 +827,7 @@ class imageseries():
             return int(re.findall(expr, os.path.basename(path))[-1])
 
         except ValueError:
-            msg.logMessage(('Path has no frame number:', path),msg.ERROR)
+            utils.pipeline.msg.logMessage(('Path has no frame number:', path), utils.pipeline.msg.ERROR)
 
         return None
 
@@ -864,7 +864,7 @@ class jpegimageset():
         return len(self.jpegs) * np.product(np.size(Image.open(self.jpegs[0])))
 
     def __getitem__(self, item):
-        msg.logMessage(('item:', item),msg.DEBUG)
+        utils.pipeline.msg.logMessage(('item:', item), utils.pipeline.msg.DEBUG)
         if type(item) in (int, np.int64):
             return self.jpegs[item]
         else:
@@ -961,7 +961,7 @@ class diffimage2(object):
         :param experiment: xicam.config.experiment
         """
 
-        msg.logMessage('Loading...')
+        utils.pipeline.msg.logMessage('Loading...')
 
         self.logscale = True
         self.remeshmode = False
@@ -1008,7 +1008,7 @@ class diffimage2(object):
 
     def invalidatecache(self):
         self.cache = dict()
-        msg.logMessage('cache cleared')
+        utils.pipeline.msg.logMessage('cache cleared')
 
     def cachedata(self):
         if self._rawdata is None:
@@ -1061,14 +1061,14 @@ class diffimage2(object):
                 # print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
                     detector = detector()
-                    msg.logMessage('Detector found: ' + name)
+                    utils.pipeline.msg.logMessage('Detector found: ' + name)
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 for binning in detector.BINNED_PIXEL_SIZE.keys():
                     if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
                         detector = detector()
-                        msg.logMessage('Detector found with binning: ' + name)
+                        utils.pipeline.msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
                         return name, detector
         return None, None
@@ -1080,7 +1080,7 @@ class diffimage2(object):
                 self._detector = pyFAI.detectors.ALL_DETECTORS[value]
             except KeyError:
                 try:
-                    self._detector = getattr(detectors, value)
+                    self._detector = getattr(utils.pipeline.detectors, value)
                 except AttributeError:
                     raise KeyError('Detector not found in pyFAI registry: ' + value)
         else:
@@ -1097,13 +1097,13 @@ class diffimage2(object):
         if self._thumb is None:
             self._thumb = loadthumbnail(self.filepath)
             if self._thumb is None:
-                self._thumb = writer.thumbnail(self.data)
+                self._thumb = utils.pipeline.writer.thumbnail(self.data)
         return self._thumb
 
     @property
     def jpeg(self):
         if self._jpeg is None:
-            self._jpeg = writer.jpeg(self.data.astype(np.uint8))
+            self._jpeg = utils.pipeline.writer.jpeg(self.data.astype(np.uint8))
         return self._jpeg
 
     def iscached(self, key):
@@ -1115,8 +1115,8 @@ class diffimage2(object):
     def cake(self, img, mask):
         self.cachedetector()
         if not self.iscached('cake'):
-            cake, x, y = integration.cake(img, self.experiment, mask=mask)
-            cakemask, _, _ = integration.cake(np.ones_like(img), self.experiment, mask=mask)
+            cake, x, y = utils.pipeline.integration.cake(img, self.experiment, mask=mask)
+            cakemask, _, _ = utils.pipeline.integration.cake(np.ones_like(img), self.experiment, mask=mask)
             cakemask = cakemask > 0
 
             self.cache['cake'] = cake
@@ -1137,7 +1137,7 @@ class diffimage2(object):
         elif "samtilt" in self.headers:
             alphai = np.deg2rad(float(self.headers['samtilt']))
         else:
-            msg.logMessage('No incidence angle found in headers. Consider mapping key to internal variable.')
+            utils.pipeline.msg.logMessage('No incidence angle found in headers. Consider mapping key to internal variable.')
             alphai=0
         return alphai
 
@@ -1146,12 +1146,12 @@ class diffimage2(object):
             # read incident angle
 
             alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
-            msg.logMessage('Using incidence angle value: ' + str(alphai))
+            utils.pipeline.msg.logMessage('Using incidence angle value: ' + str(alphai))
 
-            remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
-            remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+            remeshdata, x, y = utils.pipeline.remesh.remesh(np.rot90(img).copy(), self.filepath,
+                                                            self.experiment.getGeometry(), alphai)
+            remeshmask, _, _ = utils.pipeline.remesh.remesh(np.rot90(mask).copy(), self.filepath,
+                                                            self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
             self.cache['remeshmask'] = remeshmask > 0
@@ -1162,7 +1162,7 @@ class diffimage2(object):
 
     def findcenter(self):
         # Auto find the beam center
-        [x, y] = center_approx.center_approx(self.rawdata)
+        [x, y] = utils.pipeline.center_approx.center_approx(self.rawdata)
 
         # Set the center in the experiment
         self.experiment.center = (x, y)
@@ -1449,7 +1449,7 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
-        msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
+        utils.pipeline.msg.logMessage(('applyinglog:', self.logscale), utils.pipeline.msg.DEBUG)
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
@@ -1471,9 +1471,9 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            return utils.pipeline.variation.variationoperators.operations.values()[operationindex](self, i, roi)
         except IndexError as ex:
-            msg.logMessage(('Skipping index:', i),msg.WARNING)
+            utils.pipeline.msg.logMessage(('Skipping index:', i), utils.pipeline.msg.WARNING)
         return None
 
     def __getitem__(self, item):

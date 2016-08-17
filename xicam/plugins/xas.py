@@ -1,4 +1,5 @@
 import platform
+
 from fabio import edfimage
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
@@ -12,8 +13,7 @@ import os
 
 import widgets
 import numpy as np
-from pipeline.spacegroups import spacegroupwidget
-from pipeline import loader
+from utils.io import loader
 
 
 class plugin(base.plugin):

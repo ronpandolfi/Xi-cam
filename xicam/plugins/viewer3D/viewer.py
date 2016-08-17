@@ -30,12 +30,11 @@ With fly camera:
 """
 
 from PySide import QtGui
-from vispy import scene
 
-from pipeline import loader, msg
-# TODO refactor general widgets to be part of plugins.widgets to be shared in a more organized fashion
-from xicam.widgets.volumeviewers import VolumeVisual, VolumeViewer
+from utils import msg
+from utils.io import loader
 from xicam.widgets.imageviewers import StackViewer
+from xicam.widgets.volumeviewers import VolumeViewer
 
 
 class ThreeDViewer(QtGui.QWidget, ):

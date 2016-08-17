@@ -1,5 +1,6 @@
 import importlib
-from pipeline import msg
+
+from utils import msg
 
 # Packages to import
 PACKAGE_LIST =['tomopy', 'astra', 'dxchange']

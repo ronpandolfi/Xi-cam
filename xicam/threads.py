@@ -9,18 +9,17 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-
-import sys
-import types
-import traceback
-import functools
 import Queue
+import functools
 import multiprocessing as mp
+import sys
+import traceback
+import types
 from PySide import QtCore
-from pipeline import msg
-# Error is raised if this import is removed probably due to some circular with this module and something???
-from client import spot, globus, sftp
+from utils import msg
 
+
+# Error is raised if this import is removed probably due to some circular with this module and something???
 
 class Emitter(QtCore.QObject):
     """

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from copy import copy
-from pipeline.loader import StackImage
+
+from utils.io.loader import StackImage
 
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"

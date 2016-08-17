@@ -7,19 +7,17 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-import json
+import numpy as np
+import pyqtgraph.parametertree.parameterTypes as pTypes
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
-import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-import numpy as np
 from pyFAI import detectors
-import hig
+from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType
+
+import display
 import featuremanager
 import ui
-import display
-from modpkgs.collectionsmod import UnsortableOrderedDict
+from utils.modpkgs.collectionsmod import UnsortableOrderedDict
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

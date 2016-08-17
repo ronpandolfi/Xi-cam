@@ -9,15 +9,16 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-
 import os
+
 import imageio
 import numpy as np
 import pyqtgraph as pg
 from PySide import QtCore, QtGui
 from vispy import scene
 from vispy.color import Colormap
-from pipeline import loader
+
+from utils.io import loader
 
 
 class VolumeViewer(QtGui.QWidget):

@@ -1,6 +1,6 @@
 
-import pipeline
-
+from utils import pipeline
+from utils import io
 import numpy as np
 import os
 from PIL import Image
@@ -16,7 +16,7 @@ def process(parent, files, experiment,
     # print('Processing new file: ' + path)
     for f in files:
         path = os.path.join(parent, f)
-        img, _ = pipeline.loader.loadpath(path)
+        img, _ = io.loader.loadpath(path)
         if img is not None:
             if options['findcenter']:
                 cen = pipeline.center_approx.center_approx(img)

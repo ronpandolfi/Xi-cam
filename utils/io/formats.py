@@ -1,17 +1,17 @@
+import glob
+import inspect
 import os
 import sys
-import inspect
-import h5py
-import tifffile
-import glob
-import numpy as np
-from fabio.fabioimage import fabioimage
-from fabio import fabioutils
+
 import fabio
-import pyFAI
+import h5py
+import numpy as np
+import tifffile
+from fabio import fabioutils
+from fabio.fabioimage import fabioimage
 from pyFAI import detectors
-import logging
-import msg
+
+import utils.msg
 
 
 class rawimage(fabioimage):
@@ -23,14 +23,14 @@ class rawimage(fabioimage):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if np.prod(detector.MAX_SHAPE) == len(data):  #
                     detector = detector()
-                    msg.logMessage('Detector found: ' + name,msg.INFO)
+                    utils.msg.logMessage('Detector found: ' + name, utils.msg.INFO)
                     break
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 if len(data) in [np.prod(np.array(detector.MAX_SHAPE) / b) for b in
                                  detector.BINNED_PIXEL_SIZE.keys()]:
                     detector = detector()
-                    msg.logMessage('Detector found with binning: ' + name,msg.INFO)
+                    utils.msg.logMessage('Detector found with binning: ' + name, utils.msg.INFO)
                     break
         data.shape = detector.MAX_SHAPE
         self.data = data

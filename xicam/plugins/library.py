@@ -2,7 +2,7 @@ from PySide import QtGui
 import sys
 import base
 import viewer
-
+from utils import io
 
 class plugin(base.plugin):
     name = 'Library'
@@ -34,7 +34,7 @@ from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
 import os
-import pipeline
+from utils import pipeline
 import numpy as np
 
 
@@ -219,12 +219,12 @@ class thumbwidgetitem(QtGui.QFrame):
 
         self.path = path
         # print path
-        dimg = pipeline.loader.diffimage(filepath=self.path)
+        dimg = io.loader.diffimage(filepath=self.path)
         self.image = QtGui.QImage()
         # print os.path.splitext(path)[1]
         if os.path.isdir(path):
             self.image = self.foldericon
-        elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
+        elif os.path.splitext(path)[1] in io.loader.acceptableexts:
 
 
             try:

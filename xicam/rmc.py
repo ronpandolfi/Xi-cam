@@ -1,9 +1,13 @@
 import os
-import RmcView
-import time
 import subprocess
+import time
+
 from PySide import QtGui, QtCore
-from pipeline import hig, loader
+
+import RmcView
+from utils.io import loader
+from utils.pipeline import hig
+
 
 class gui():
     def __init__(self, ui):

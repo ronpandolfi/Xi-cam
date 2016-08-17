@@ -1,5 +1,4 @@
 from PySide import QtCore, QtGui
-
 import widgets
 from xicam.widgets import explorer, login
 

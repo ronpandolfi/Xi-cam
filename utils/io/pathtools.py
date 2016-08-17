@@ -1,9 +1,11 @@
 import os
-import string
-from PySide import QtGui
-import sys
 import re
-import msg
+import sys
+
+from PySide import QtGui
+
+from xicam import msg
+
 
 def similarframe(path, N):
     """
@@ -18,7 +20,7 @@ def similarframe(path, N):
         prevframenum = '{:0>{}}'.format(prevframenum,leadingzeroslen)
         return re.sub(expr, prevframenum, path)
     except ValueError:
-        msg.logMessage('No earlier frame found for ' + path + ' with ' + N,msg.ERROR)
+        msg.logMessage('No earlier frame found for ' + path + ' with ' + N, msg.ERROR)
         return None
 
 

@@ -1,6 +1,9 @@
 import importlib
-from pipeline import msg
+
 from PySide import QtGui
+
+from utils import msg
+
 
 def import_module(modname,packagename=None):
     try:

@@ -21,9 +21,9 @@ import os
 import time
 from functools import partial
 from PySide import QtGui, QtCore
-from modpkgs import yamlmod
+from utils import msg
+from utils.modpkgs import yamlmod
 from xicam.plugins import base
-from pipeline import msg
 from xicam import threads
 from viewers import TomoViewer
 import ui

@@ -1,12 +1,9 @@
+import pkgutil
 from collections import OrderedDict
 from PySide import QtGui
-import sys
-from xicam import xglobals
-import importlib
-from pipeline import msg
-import os
-import pkgutil
+from utils import msg
 from xicam import safeimporter
+from xicam import xglobals
 
 modules = []
 plugins = OrderedDict()
@@ -18,17 +15,17 @@ def initplugins(placeholders):
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
-    msg.logMessage(('packages:',packages),msg.DEBUG)
+    msg.logMessage(('packages:', packages), msg.DEBUG)
     packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
-    msg.logMessage(('packages:', packages),msg.DEBUG)
+    msg.logMessage(('packages:', packages), msg.DEBUG)
 
     for importer, modname, ispkg in packages:
 
-        msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
+        msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg), msg.DEBUG)
         modules.append(safeimporter.import_module('.'+modname,'xicam.plugins'))
 
     for module in modules:
-        msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
+        msg.logMessage(('Loaded:', module.__name__), msg.DEBUG)
         link = pluginlink(module, placeholders)
         if link.name not in disabledatstart: link.enable()
         plugins[link.name] = link

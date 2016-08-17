@@ -10,7 +10,7 @@ __status__ = "Beta"
 
 
 from PySide import QtGui, QtCore
-from xicam.widgets.customwidgets import ImageView
+from customwidgets import ImageView
 
 
 class StackViewer(ImageView):

@@ -1,18 +1,18 @@
 #import nexpy.api.nexus as nx
 
-import numpy as nx
-
-import numpy as np
-import scipy.ndimage
-from PySide import QtCore
-from xicam import debugtools
 import multiprocessing
-import time
 import os
-from PIL import Image
-from fabio import edfimage, tifimage
+
+import numpy as nx
+import numpy as np
 import scipy.misc
-import msg
+import scipy.ndimage
+from PIL import Image
+from PySide import QtCore
+from fabio import edfimage, tifimage
+
+import utils.msg
+from xicam import debugtools
 
 
 class nexusmerger(QtCore.QThread):
@@ -53,7 +53,7 @@ def writenexus(nexroot, path):
     try:
         nexroot.save(path)
     except IOError:
-        msg.logMessage('IOError: Check that you have write permissions.',msg.ERROR)
+        utils.msg.logMessage('IOError: Check that you have write permissions.', utils.msg.ERROR)
 
 
 @debugtools.timeit
@@ -77,7 +77,7 @@ def jpeg(img):
     buffer = StringIO.StringIO()
     pilImage = Image.fromarray(img)
     pilImage.save(buffer, "JPEG", quality=85)
-    msg.logMessage(('JPEG buffer size (bytes):', buffer.len),msg.DEBUG)
+    utils.msg.logMessage(('JPEG buffer size (bytes):', buffer.len), utils.msg.DEBUG)
     return buffer
 
 

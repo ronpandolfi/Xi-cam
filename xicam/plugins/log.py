@@ -1,7 +1,8 @@
-import base
 from PySide import QtGui, QtCore
+
+import base
+from utils import msg
 from xicam import xglobals
-from pipeline import msg
 
 colors = {msg.DEBUG: QtCore.Qt.gray, msg.ERROR: QtCore.Qt.darkRed, msg.CRITICAL: QtCore.Qt.red,
           msg.INFO: QtCore.Qt.white, msg.WARNING: QtCore.Qt.yellow}

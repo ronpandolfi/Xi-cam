@@ -1,13 +1,15 @@
 from collections import deque
+
 import numpy as np
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
+
 from loader import ProjectionStack, SinogramStack
-from pipeline.loader import StackImage
-from pipeline import msg
+from utils import msg
+from utils.io.loader import StackImage
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView
-from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer
+from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.volumeviewers import VolumeViewer
 
 __author__ = "Luis Barroso-Luque"

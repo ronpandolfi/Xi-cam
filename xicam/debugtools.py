@@ -1,9 +1,12 @@
 # -*- coding: UTF-8 -*-
-import time
 import inspect
-import pyqtgraph as pg
+import time
+
 import numpy as np
-from pipeline import msg
+import pyqtgraph as pg
+
+from utils import msg
+
 
 def timeit(method):
     """
@@ -20,14 +23,14 @@ def timeit(method):
         # '%r (%r, %r) %2.2f sec'
         #(method.__name__, args, kw, te - ts)
         msg.logMessage('%r  %2.3f sec' % \
-              (method.__name__, te - ts),msg.DEBUG)
+                       (method.__name__, te - ts), msg.DEBUG)
         return result
 
     return timed
 
 
 def frustration():
-    msg.logMessage(u"(ﾉಥ益ಥ)ﾉ﻿ ┻━┻",msg.CRITICAL)
+    msg.logMessage(u"(ﾉಥ益ಥ)ﾉ﻿ ┻━┻", msg.CRITICAL)
 
 
 def showimage(img):

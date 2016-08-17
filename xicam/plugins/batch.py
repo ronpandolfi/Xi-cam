@@ -1,19 +1,19 @@
 # avg dphi correlation (mask normalized) for each q
 
-import base
-from PySide import QtGui
-import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import os
-from pipeline import loader, writer
-from xicam import config
-import numpy as np
-from xicam import xglobals
 import re
 
+import numpy as np
+import pyqtgraph.parametertree.parameterTypes as pTypes
+from PySide import QtGui
+from pyqtgraph.parametertree import Parameter, ParameterTree
+
+import base
 import widgets
-from pipeline import msg
+from utils import msg
+from utils.io import loader, writer
+from utils.pipeline import writer
+from xicam import xglobals
 
 
 class plugin(base.plugin):
@@ -73,7 +73,7 @@ class plugin(base.plugin):
                     break
 
             if self.roiOption.value():
-                msg.logMessage(('lastroi:',xglobals.lastroi),msg.DEBUG)
+                msg.logMessage(('lastroi:', xglobals.lastroi), msg.DEBUG)
                 if xglobals.lastroi is not None:
                     # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
                     cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T

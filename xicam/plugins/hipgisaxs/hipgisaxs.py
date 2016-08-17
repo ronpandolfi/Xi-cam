@@ -1,13 +1,7 @@
-import json
-from PySide.QtUiTools import QUiLoader
-from PySide import QtGui
-from PySide import QtCore
-import yaml
-from modpkgs.collectionsmod import UnsortableOrderedDict
-import ui
-import featuremanager
-import display
 import customwidgets
+import display
+import featuremanager
+import ui
 
 
 class mainwindow():
