@@ -75,7 +75,7 @@ class UIform(object):
         filefuncmenu = QtGui.QMenu()
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.openaction = QtGui.QAction(icon, 'Open', filefuncmenu,)
+        self.openaction = QtGui.QAction(icon, 'Open', filefuncmenu)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
