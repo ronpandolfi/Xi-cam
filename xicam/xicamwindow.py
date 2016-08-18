@@ -203,7 +203,6 @@ class MyMainWindow(QtCore.QObject):
                 self.closeAllConnections()
                 QtGui.QApplication.quit()
                 threads.worker.stop()  # ask worker to stop nicely
-                xglobals.pool.join()
                 return True
             else:
                 return False
