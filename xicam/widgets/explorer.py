@@ -18,6 +18,7 @@ from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
 from pipeline import pathtools, msg
+from xicam import config
 
 
 class LocalFileView(QtGui.QTreeView):
@@ -36,7 +37,8 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = os.path.expanduser('~')  # pathtools.getRoot()
+        self.path = config.settings['defaultlocalpath']
+        if not self.path: self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
@@ -77,6 +79,7 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.setRootIndex(self.file_model.index(root.absolutePath()))
         self.pathChanged.emit(path)
+        config.settings['defaultlocalpath'] = path
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
