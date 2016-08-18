@@ -15,14 +15,16 @@ class settingstracker(object):
     settingspath = os.path.join(pathtools.user_config_dir, 'settings.yml')
 
     def __init__(self):
+        self.settings = dict()
         if os.path.isfile(self.settingspath):
             with open(self.settingspath,'r') as stream:
                 try:
                     self.settings = yaml.load(stream)
                 except yaml.YAMLError as exc:
                     msg.logMessage(exc, msg.WARNING)
-        else:
-            self.settings = dict()
+        if not self.settings: self.settings=dict()
+
+
 
     def write(self):
 

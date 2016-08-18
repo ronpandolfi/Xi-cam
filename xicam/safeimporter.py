@@ -36,7 +36,7 @@ def import_module(modname,packagename=None):
                 msgBox.exec_()
                 exit(0)
             else:
-                if modname == 'MOTD':
+                if modname.strip('.') == 'MOTD':
                     from xicam import debugtools
                     debugtools.frustration()
                     msgBox = QtGui.QMessageBox()
@@ -57,7 +57,7 @@ def import_module(modname,packagename=None):
                     response = msgBox.exec_()
                     if response == QtGui.QMessageBox.No:
                         exit(1)
-        elif response == QtGui.QMessageBox.Ignore:
+        elif response == QtGui.QMessageBox.Ignore and modname.strip('.') != 'MOTD':
             import config
             if config.settings['ignoredmodules']:
                 config.settings['ignoredmodules'].append(missingpackage)
@@ -68,13 +68,13 @@ def import_module(modname,packagename=None):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
             msgBox.exec_()
 
-        if modname == 'MOTD':
+        if modname.strip('.') == 'MOTD':
             from xicam import debugtools
             debugtools.frustration()
             msgBox = QtGui.QMessageBox()
             msgBox.setText(
-                'Sorry, ' + missingpackage + ' could not be installed. This is a Xi-cam critical library.')
-            msgBox.setInformativeText('Xi-cam cannot be loaded . Please install ' + modname + ' manually.')
+                'Sorry, ' + missingpackage + ' is a Xi-cam critical library. This must be installed to run Xi-cam!')
+            msgBox.setInformativeText('Xi-cam cannot be loaded . Please install ' + modname.strip('.') + ' manually.')
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
             msgBox.exec_()
             exit(1)

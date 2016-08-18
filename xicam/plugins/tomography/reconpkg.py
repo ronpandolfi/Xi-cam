@@ -13,8 +13,9 @@ for name in PACKAGE_LIST:
         print package
         packages[name] = package
         msg.logMessage('{} module loaded'.format(name), level=20)
-    except ImportError:
+    except ImportError as ex:
         msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning
+        raise ex
 
 # Add the extra functions
 import pipelinefunctions
