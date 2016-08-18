@@ -608,7 +608,7 @@ class FileExplorer(QtGui.QWidget):
             button.setIconSize(QtCore.QSize(18, 18))
             button.setFixedSize(32, 32)
 
-        self.path_label.setReadOnly(True)
+        # self.path_label.setReadOnly(True)
 
         l = QtGui.QVBoxLayout(self)
         l.setStretch(0, 0)
@@ -626,6 +626,11 @@ class FileExplorer(QtGui.QWidget):
         self.back_button.clicked.connect(self.onBackClicked)
         self.refresh_button.clicked.connect(self.onRefreshClicked)
         self.file_view.pathChanged.connect(self.setPathLabel)
+        self.path_label.textChanged.connect(self.pathlabelChanged)
+
+    def pathlabelChanged(self):
+        path = self.path_label.text()
+        self.file_view.refresh(path=path)
 
     def onBackClicked(self):
         path = self.file_view.path
