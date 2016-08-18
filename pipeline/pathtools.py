@@ -4,6 +4,9 @@ from PySide import QtGui
 import sys
 import re
 import msg
+from appdirs import *
+
+user_config_dir=user_config_dir('xicam')
 
 def similarframe(path, N):
     """
