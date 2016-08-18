@@ -59,7 +59,6 @@ class TomoViewer(QtGui.QWidget):
     """
 
     sigSetDefaults = QtCore.Signal(dict)
-    # sigROI = QtCore.Signal(tuple)
 
     def __init__(self, paths=None, data=None, *args, **kwargs):
         if paths is None and data is None:
@@ -67,7 +66,6 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
-        # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection View')  # TODO: Add icons!
@@ -107,8 +105,9 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
 
-        self.sigROI =  self.projectionViewer.sigROIChanged
-        self.xbounds = self.projectionViewer.xbounds
+        # Set some attributes from the projectionViewer
+        self.sigROIchanged =  self.projectionViewer.sigROIChanged
+        self.getROIBounds = self.projectionViewer.getROIBounds
 
     def wireupCenterSelection(self, recon_function):
         """
@@ -239,14 +238,16 @@ class TomoViewer(QtGui.QWidget):
             return np.ascontiguousarray(self.data.darks[slc])
 
     def getheader(self):
-        """Return the data's header (metadata)"""
+        """
+        Return the data's header (metadata)
+        """
         return self.data.header
 
     def currentChanged(self, index):
+        """
+        Slot when the view is changed (projection/sinogram/preview/3d preview)
+        """
         self.viewstack.setCurrentIndex(index)
-
-    def setCorValue(self, value):
-        self.cor = value
 
     def addSlicePreview(self, params, recon, slice_no=None):
         """
@@ -307,12 +308,14 @@ class TomoViewer(QtGui.QWidget):
             self.projectionViewer.hideCenterDetection()
 
     def centerActionActive(self):
+        """
+        Returns True the manual center detection is on
+        """
         if self.projectionViewer.imgoverlay_roi.isVisible():
             return True
         else:
             return False
 
-    # TODO then get the slice for that image to use in the reconstruction and fill in start, end sinogram and adjust center correspondingly when running!
     def onROIselection(self, active):
         """
         Shows a rectangular roi to select portion of data to reconstruct. (Not implemented yet)
@@ -332,6 +335,9 @@ class TomoViewer(QtGui.QWidget):
             self.projectionViewer.selection_roi.hide()
 
     def roiActionActive(self):
+        """
+        Returns True the ROI selection is on
+        """
         if self.projectionViewer.selection_roi.isVisible():
             return True
         else:
@@ -389,7 +395,6 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
-        self.xbounds = [0, self.data.shape[1]]
         self.flat = np.median(self.data.flats, axis=0).transpose()
         self.dark = np.median(self.data.darks, axis=0).transpose()
 
@@ -492,10 +497,18 @@ class ProjectionViewer(QtGui.QWidget):
         self.hideCenterDetection()
 
     def roiChanged(self):
+        """
+        Slot connected to the selectionROI sigRegionChangeFinished
+        """
+        self.sigROIChanged.emit(self.getROIBounds())
+
+    def getROIBounds(self):
+        """
+        Retrieve the current selection_roi bounds ((x1, x2), (y1, y2))
+        """
         roi = self.selection_roi.getArraySlice(self.data[self.stackViewer.currentIndex], self.imageItem,
-                                               returnSlice=False)
-        self.sigROIChanged.emit(roi[0])
-        self.xbounds = roi[0][0]
+                                                returnSlice=False)
+        return roi[0]
 
     def changeOverlayProj(self, idx):
         """

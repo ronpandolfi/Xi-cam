@@ -684,9 +684,10 @@ class FunctionManager(fw.FeatureManager):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-            # if slc[2].start is not None:
-            #     print 'Resetting center with, ', slc[2].start
-            #     fpartial.keywords['center'] -= slc[2].start
+            if slc is not None and slc[2].start is not None and slc[2].start != 0:
+                print 'Resetting center with, ', slc[2].start
+                fpartial.keywords['center'] -= slc[2].start
+            print 'Center is now', fpartial.keywords['center']
             self.resetCenterCorrection()
         return fpartial
 

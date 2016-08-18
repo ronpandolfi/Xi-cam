@@ -97,7 +97,7 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         # Connect toolbar signals and ui button signals
-        self.toolbar.connecttriggers(self.slicePreviewAction, self.preview3DAction, self.fullReconstruction,
+        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.runFullReconstruction,
                                      self.manualCenter, self.projROISelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
@@ -162,7 +162,7 @@ class plugin(base.plugin):
         """
 
         try:
-            self.currentWidget().sigROI.connect(self.setProjROI)
+            self.currentWidget().sigROIchanged.connect(self.setProjROI)
             self.setPipelineValues()
             self.manager.updateParameters()
             if self.currentWidget().centerActionActive():
@@ -271,6 +271,9 @@ class plugin(base.plugin):
             self.ui.setSinoParams(self.currentWidget().data.shape[2])
 
     def setProjROI(self, ind):
+        """
+        Sets the sinogram start and step in rightwidget according to the roi
+        """
         self.ui.setSinoParams(ind[1][1], ind[1][0])
 
     def manualCenter(self, value):
@@ -317,11 +320,15 @@ class plugin(base.plugin):
 
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
-            xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[1])
-            slc = (slice(None), slice(None), xslc)
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func, slc=slc)
+            if self.currentWidget().roiActionActive():
+                bounds = self.currentWidget().getROIBounds()
+                slc = (slice(None), slice(bounds[1][0], bounds[1][1]), slice(bounds[0][0], bounds[0][1]))
+            else:
+                slc = None
+            callback = partial(self.runSlicePreview, slc=slc)
+            self.processFunctionStack(callback=lambda x: callback(*x), fixed_func=fixed_func, slc=slc)
 
-    def runSlicePreview(self, partial_stack, stack_dict):
+    def runSlicePreview(self, partial_stack, stack_dict, slc):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.previewViewer
@@ -334,12 +341,8 @@ class plugin(base.plugin):
             Dictionary describing the workflow pipeline being run. This is displayed to the left of the preview image in
             the viewer.TomoViewer.previewViewer
         """
-
-        initializer = self.currentWidget().getsino()
+        initializer = self.currentWidget().getsino(slc)
         slice_no = self.currentWidget().sinogramViewer.currentIndex
-        xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[1])
-        initializer = self.currentWidget().getsino()
-        initializer = initializer[:, :, xslc]
         callback = partial(self.currentWidget().addSlicePreview, stack_dict, slice_no=slice_no)
         message = 'Unable to compute slice preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, message)
@@ -353,15 +356,17 @@ class plugin(base.plugin):
 
         if self.checkPipeline():
             msg.showMessage('Computing 3D preview...', timeout=0)
-            xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[0], 8)
-            slc = (slice(None), slice(None, None, 8), xslc)
+            if self.currentWidget().roiActionActive:
+                bounds = self.currentWidget().getROIBounds()
+                slc = (slice(None), slice(bounds[1][0], bounds[1][1], 8), slice(bounds[0][0], bounds[0][1], 8))
+            else:
+                slc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[0], 8)
             self.manager.cor_scale = lambda x: x // 8
-            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+            # self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+            callback = partial(self.run3DPreview, slc=slc)
+            self.processFunctionStack(callback=lambda x: callback(*x), slc=slc)
 
-    def run3DPreview(self, partial_stack, stack_dict):
-        xslc = slice(self.currentWidget().xbounds[0], self.currentWidget().xbounds[0], 8)
-        slc = (slice(None), slice(None, None, 8), xslc)
-        initializer = self.currentWidget().getsino(slc)  # this step can take quite a bit, think of running a thread
+    def run3DPreview(self, partial_stack, stack_dict, slc):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
@@ -375,8 +380,7 @@ class plugin(base.plugin):
             the viewer.TomoViewer.previewViewer
         """
 
-        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        initializer = self.currentWidget().getsino(slc)  # this step takes quite a bit, think of running a thread
+        initializer = self.currentWidget().getsino(slc)  # this step can take quite a bit, think of running a thread
         self.manager.updateParameters()
         callback = partial(self.currentWidget().add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
