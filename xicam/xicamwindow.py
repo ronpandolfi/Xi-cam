@@ -201,7 +201,9 @@ class MyMainWindow(QtCore.QObject):
         if obj is self.ui:  # if the object is from the MainWindow
             if ev.type() == QtCore.QEvent.Close:
                 self.closeAllConnections()
+                QtGui.QApplication.quit()
                 threads.worker.stop()  # ask worker to stop nicely
+                xglobals.pool.join()
                 return True
             else:
                 return False
@@ -218,7 +220,7 @@ class MyMainWindow(QtCore.QObject):
                 self.executors[e].close()
         self.daskLoop.loop.stop()
         self.daskLoop.loop.close()
-        xglobals.endpool()
+
         # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
 
     def activesessionchanged(self):

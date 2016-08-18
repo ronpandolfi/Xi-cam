@@ -31,7 +31,7 @@ rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvide
 class plugin(base.plugin):
     name = 'Viewer'
     sigUpdateExperiment = QtCore.Signal()
-    config.activeExperiment.sigTreeStateChanged.connect(sigUpdateExperiment)
+
 
     def __init__(self, *args, **kwargs):
 
@@ -65,6 +65,7 @@ class plugin(base.plugin):
 
         super(plugin, self).__init__(*args, **kwargs)
 
+        config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
         self.sigUpdateExperiment.connect(self.redrawcurrent)
         self.sigUpdateExperiment.connect(self.replotcurrent)
         self.sigUpdateExperiment.connect(self.invalidatecache)

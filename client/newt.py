@@ -29,7 +29,7 @@ class NewtClient(User):
     def __del__(self):
         if self.logged_in:
             self.logout()
-        self.session.close()
+        super(NewtClient, self).__del__()
 
     def login(self, username, password):
         """
