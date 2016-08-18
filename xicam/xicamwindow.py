@@ -218,6 +218,7 @@ class MyMainWindow(QtCore.QObject):
                 self.executors[e].close()
         self.daskLoop.loop.stop()
         self.daskLoop.loop.close()
+        xglobals.endpool()
         # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
 
     def activesessionchanged(self):

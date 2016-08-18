@@ -19,6 +19,11 @@ def load():
 
 def hardresetpool():
     global pool
+    endpool()
+    pool = multiprocessing.Pool()
+
+
+def endpool():
+    global pool
     pool.terminate()
     pool.join()
-    pool = multiprocessing.Pool()
