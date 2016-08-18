@@ -3,6 +3,7 @@ from pipeline import msg
 from PySide import QtGui
 
 def import_module(modname,packagename=None):
+    module=None
     try:
         module=importlib.import_module(modname, packagename)
         msg.logMessage(("Imported", modname), msg.DEBUG)
@@ -62,5 +63,5 @@ def import_module(modname,packagename=None):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
             msgBox.exec_()
             exit(1)
-
+    if not module: msg.logMessage('Failed to import '+modname,msg.CRITICAL)
     return module

@@ -1,24 +1,20 @@
-import time
-from xicam.plugins import base
-from PySide import QtGui
 import os
-from xicam import xglobals
-
-import json
-from PySide.QtUiTools import QUiLoader
-from PySide import QtGui
-from PySide import QtCore
-import yaml
-from collectionsmod import UnsortableOrderedDict
-import ui
-import featuremanager
-import display
-import customwidgets
-import numpy as np
-from xicam import clientmanager as cmanager
+import time
 from functools import partial
-from xicam import plugins
+
+import numpy as np
+import yaml
+
+import customwidgets
+import display
+import featuremanager
+import ui
+from modpkgs.collectionsmod import UnsortableOrderedDict
 from pipeline import msg
+from xicam import clientmanager as cmanager
+from xicam import plugins
+from xicam.plugins import base
+
 
 class plugin(base.plugin):
     name = 'HipGISAXS'
@@ -61,8 +57,8 @@ class plugin(base.plugin):
 
 
         # inject loginwidget
-        from xicam.plugins import login
-        self.loginwidget=login.LoginDialog()
+        from xicam.widgets import login
+        self.loginwidget= login.LoginDialog()
         self.leftwidget.layout().addWidget(self.loginwidget)
 
 
@@ -188,7 +184,6 @@ class plugin(base.plugin):
 
     def runDask(self):
         import client.dask_active_executor
-        import time
 
         if client.dask_active_executor.active_executor is None:
             #warning message
@@ -198,7 +193,6 @@ class plugin(base.plugin):
 
         def hipgisaxs_func(yaml_str):
           import subprocess
-          import yaml
           import time
           timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
           filename = os.path.join(os.path.expanduser('~'),"test_remote.yml")
@@ -236,7 +230,7 @@ class plugin(base.plugin):
 
 
     def loginSuccess(self,client):
-        self.loginwidget.loginSuccessful(True)
+        self.loginwidget.loginResult(True)
         sftp = client.open_sftp()
         timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
         sftp.put('test.yml',timestamp+'.yml')

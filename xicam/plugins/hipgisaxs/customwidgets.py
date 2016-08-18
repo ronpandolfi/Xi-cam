@@ -19,7 +19,7 @@ import hig
 import featuremanager
 import ui
 import display
-from collectionsmod import UnsortableOrderedDict
+from modpkgs.collectionsmod import UnsortableOrderedDict
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

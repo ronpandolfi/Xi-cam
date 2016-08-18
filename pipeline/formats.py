@@ -186,7 +186,6 @@ class ALS832H5image(fabioimage):
         self._dgroup = None
         self._flats = None
         self._darks = None
-        self._sinogram = None
 
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
@@ -209,7 +208,7 @@ class ALS832H5image(fabioimage):
             # Check header for unique attributes
             try:
                 self._h5 = h5py.File(self.filename, 'r')
-                self._dgroup = self._find_dataset_group(self._h5)
+                self._dgroup = self._finddatagroup(self._h5)
                 self.readheader(f)
                 if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
                     raise H5ReadError
@@ -223,7 +222,7 @@ class ALS832H5image(fabioimage):
         self.data = dfrm[0]
         return self
 
-    def _find_dataset_group(self, h5object):
+    def _finddatagroup(self, h5object):
         keys = h5object.keys()
         if len(keys) == 1:
             if isinstance(h5object[keys[0]], h5py.Group):
@@ -231,7 +230,7 @@ class ALS832H5image(fabioimage):
                 if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
                     return h5object[keys[0]]
                 else:
-                    return self._find_dataset_group(h5object[keys[0]])
+                    return self._finddatagroup(h5object[keys[0]])
             else:
                 raise H5ReadError('Unable to find dataset group')
         else:
@@ -249,6 +248,17 @@ class ALS832H5image(fabioimage):
             self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
         return self._darks
 
+    def flatindices(self):
+        i0 = int(self.header['i0cycle'])
+        nproj = len(self)
+        if i0 > 0:
+            indices = list(range(0, nproj, i0))
+            if indices[-1] != nproj - 1:
+                indices.append(nproj - 1)
+        elif i0 == 0:
+            indices = [0, nproj - 1]
+        return indices
+
     @property
     def nframes(self):
         return len(self.frames)
@@ -257,11 +267,11 @@ class ALS832H5image(fabioimage):
     def nframes(self, n):
         pass
 
-    def getsinogram(self, idx=None):
-        if idx is None: idx = self.data.shape[0]//2
-        self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
-                                                                  range(self.nframes))])
-        return self.sinogram
+    # def getsinogram(self, idx=None):
+    #     if idx is None: idx = self.data.shape[0]//2
+    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
+    #                                                               range(self.nframes))])
+    #     return self.sinogram
 
     def __getitem__(self, item):
         s = []
@@ -335,7 +345,6 @@ class DXchangeH5image(fabioimage):
         self._dgroup = None
         self._flats = None
         self._darks = None
-        self._sinogram = None
 
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
@@ -356,14 +365,14 @@ class DXchangeH5image(fabioimage):
             frame = 0
         if self._h5 is None:
             self._h5 = h5py.File(self.filename, 'r')
-            self._dgroup = self._find_exchange_group(self._h5)
+            self._dgroup = self._finddatagroup(self._h5)
         self.readheader(f)
         self.currentframe = frame
         self.nframes = self._dgroup['data'].shape[0]
         self.data = self._dgroup['data'][frame]
         return self
 
-    def _find_exchange_group(self, h5object):
+    def _finddatagroup(self, h5object):
         exchange_groups = [key for key in h5object.keys() if 'exchange' in key]
         if len(exchange_groups) > 1:
             raise RuntimeWarning('More than one exchange group found. Will use \'exchange\'\n'
@@ -444,16 +453,16 @@ class H5ReadError(IOError):
     pass
 
 
-# Testing
-if __name__ == '__main__':
-    from matplotlib.pyplot import imshow, show
-    data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-    slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-    # arr = data.__getitem__(slc)
-    arr = data.getsinogram(100)
-    # print sorted(data.frames, reverse=True)
-    # print data.darks.shape
-    # print data.flats.shape
-    imshow(arr, cmap='gray')
-    show()
+# # Testing
+# if __name__ == '__main__':
+#     from matplotlib.pyplot import imshow, show
+#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+#     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+#     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+#     # arr = data.__getitem__(slc)
+#     arr = data.getsinogram(100)
+#     # print sorted(data.frames, reverse=True)
+#     # print data.darks.shape
+#     # print data.flats.shape
+#     imshow(arr, cmap='gray')
+#     show()

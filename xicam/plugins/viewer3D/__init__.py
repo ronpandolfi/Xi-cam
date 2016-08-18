@@ -3,8 +3,7 @@
 import os
 from PySide import QtGui
 from  xicam.plugins import base
-from widgets import ThreeDViewer
-from pipeline import msg
+from viewer import ThreeDViewer
 
 import platform
 op_sys = platform.system()
@@ -31,7 +30,7 @@ class plugin(base.plugin):
         super(plugin, self).__init__(*args, **kwargs)
 
     def openfiles(self, paths):
-        msg.logMessage(paths,msg.DEBUG)
+        print paths
         self.activate()
         widget = ThreeDViewer(paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
@@ -48,6 +47,7 @@ class plugin(base.plugin):
             e.accept()
 
     def dragEnterEvent(self, e):
+        print(e)
         e.accept()
 
     def currentChanged(self, index):

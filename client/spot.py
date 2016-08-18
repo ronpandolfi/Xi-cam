@@ -20,6 +20,15 @@ class SpotClient(NewtClient):
         self.spot_authentication = None
 
     def login(self, username, password):
+        """
+        Login to SPOT
+
+        Parameters
+        ----------
+        username : str
+        password : str
+        """
+
         credentials = {"username": username,
                        "password": password}
         response = self.post(self.SPOT_URL + '/auth', data=credentials)
@@ -33,15 +42,29 @@ class SpotClient(NewtClient):
     def search(self, query, **kwargs):
         """
         Search a dataset on SPOT
-        :param query: str, search query
-        :param kwargs: str, optional, from
-            'sortterm': attribute to sort results by
-            'sorttype': ascending 'asc' or descending 'desc'
-            'end_station': endstation of dataset
-            'limitnum': maximum number of results to show
-            'skipnum': number of results to skipd
-            'search': search query
-        :return: json response of search results
+
+        Parameters
+        ----------
+        query : str, search query
+        kwargs : {key: option}
+            Any of the following:
+            'sortterm'
+                attribute to sort results by
+            'sorttype'
+                ascending 'asc' or descending 'desc'
+            'end_station'
+                endstation of dataset
+            'limitnum'
+                maximum number of results to show
+            'skipnum'
+                number of results to skipd
+            'search'
+                search query
+
+        Returns
+        -------
+        json
+            response of search results
         """
         self.check_login()
         # sortterm probably allows more filters will need to check...
@@ -68,9 +91,18 @@ class SpotClient(NewtClient):
         """
         Get datasets that are derived from the given dataset. ie raw, sino,
         norm, etc...
-        :param dataset: str, dataset name
-        :return: json response with derived datasets
+
+        Parameters
+        ----------
+        dataset : str
+            dataset name
+
+        Returns
+        -------
+        json
+            Response with derived datasets
         """
+
         self.check_login()
         params = {'dataset': dataset}
         r = self.post(self.SPOT_URL + '/hdf/dataset', params=params)
@@ -81,9 +113,17 @@ class SpotClient(NewtClient):
         Get the database path for a specific stage of a dataset. Stages
         are raw, norm, sino, gridrec, etc...
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :return: str, database path
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+
+        Returns
+        -------
+        str
+            database path
         """
         self.check_login()
         derivatives = self.get_derived_datasets(dataset)
@@ -101,9 +141,17 @@ class SpotClient(NewtClient):
         Get the full location (system path) for a specific stage of a dataset.
         stages are raw, norm, sino, gridrec, etc...
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :return: str, file path
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+
+        Returns
+        -------
+        str
+            file path
         """
         self.check_login()
         derivatives = self.get_derived_datasets(dataset)
@@ -121,10 +169,19 @@ class SpotClient(NewtClient):
         Get hdf5 attributes of a specified dataset. group can be a specified
         image within the hdf5 file, or default '/' for top level attributes
 
-        :param dataset:
-        :param stage:
-        :param group:
-        :return: json reponse of attributes
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        group : str
+            group name of hdf5
+
+        Returns
+        -------
+        json
+            json reponse of attributes
         """
 
         path = self.get_stage_path(dataset, stage)
@@ -137,9 +194,17 @@ class SpotClient(NewtClient):
         """
         List images inside a given dataset
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :return: json response of image list
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+
+        Returns
+        -------
+        json
+            response of image list
         """
 
         path = self.get_stage_path(dataset, stage)
@@ -151,9 +216,17 @@ class SpotClient(NewtClient):
         """
         Get the file size of a specified dataset
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :return: int, dataset size in bytes?
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+
+        Returns
+        -------
+        int
+            dataset size in bytes
         """
 
         path = self.get_stage_path(dataset, stage)
@@ -168,11 +241,20 @@ class SpotClient(NewtClient):
         """
         Download raw data from an image in a SPOT dataset
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :param image: str, (optional), name of image in dataset
-        :param index: int, (optional) index of image in dataset (one of index or image must be given)
-        :return: 2D ndarray
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        image : str
+            (optional), name of image in dataset
+        index : int
+            (optional) index of image in dataset (one of index or image must be given)
+        Returns
+        -------
+        ndarray
+            2D ndarray of image data
         """
 
         images = list(self.list_dataset_images(dataset, stage))
@@ -195,12 +277,22 @@ class SpotClient(NewtClient):
         """
         Get download URL's for a specific image in a SPOT dataset
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :param image: str, (optional), name of image in dataset
-        :param index: int, (optional) index of image in dataset (one of index or image must be given)
-        :return: dict with urls to images
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        image : str
+            (optional), name of image in dataset
+        index : int
+            (optional) index of image in dataset (one of index or image must be given)
+        Returns
+        -------
+        dict
+            Dictionary with urls to images
         """
+
         images = list(self.list_dataset_images(dataset, stage))
         if image is None and index is None:
             raise ValueError('One of image or index must be given')
@@ -220,12 +312,22 @@ class SpotClient(NewtClient):
         """
         Download an image in the specified format and return an array of the image
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :param ext: str (optional), extension for image type (tif or png)
-        :param image: str, (optional), name of image in dataset
-        :param index: int, (optional) index of image in dataset (one of index or image must be given)
-        :return: None
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        ext : str, optional
+            extension for image type (tif or png)
+        image : str
+            (optional), name of image in dataset
+        index : int
+            (optional) index of image in dataset (one of index or image must be given)
+        Returns
+        -------
+        ndarray
+            2D ndarray of image data
         """
 
         r = self.get_image_download_URLS(dataset, stage, image=image, index=index)
@@ -239,14 +341,22 @@ class SpotClient(NewtClient):
         """
         Download and save a specific image in a dataset as png or tif image
 
-        :param dataset: str, name of dataset
-        :param stage: str, stage name
-        :param save_path: str (optional) Path to save the image
-        :param ext: str (optional), extension for image type (tif or png)
-        :param image: str, (optional), name of image in dataset
-        :param index: int, (optional) index of image in dataset (one of index or image must be given)
-        :return: None
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        save_path : str, optional
+            Path to save the image
+        ext : str, optional
+            extension for image type (tif or png)
+        image : str
+            (optional), name of image in dataset
+        index : int
+            (optional) index of image in dataset (one of index or image must be given)
         """
+
         if ext not in ('png', 'tif'):
             raise ValueError('ext can only be png or tif')
         if image is None and index is None:
@@ -268,10 +378,14 @@ class SpotClient(NewtClient):
         """
         Stage a dataset from tape to disk if needed
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :return:
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
         """
+
         path = self.get_stage_path(dataset, stage)
         r = self.check_response(self.post(self.SPOT_URL + '/hdf/stageifneeded' + path))
         # Wait for staging to finish
@@ -285,11 +399,16 @@ class SpotClient(NewtClient):
         """
         Download a specified dataset
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :param save_path: str, path and name to save file locally. If None name on SPOT is used and save in home directory
-        :return: None
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        save_path : str
+            Path and name to save file locally. If None name on SPOT is used and save in home directory
         """
+
         path = self.get_stage_path(dataset, stage)
         if save_path is None:
             save_path = os.path.join(os.path.expanduser('~'), path.split('/')[-1])
@@ -311,11 +430,21 @@ class SpotClient(NewtClient):
         Download a dataset as a generator (yields the fraction downloaded)
         Useful to know the status of a download (for gui purposes)
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :param save_path: str, path and name to save file locally. If None name on SPOT is used and save in home directory
-        :param chunk_size
-        :return: None
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        save_path : str
+            path and name to save file locally. If None name on SPOT is used and save in home directory
+        chunk_size : int
+            Chuck size of data in bytes
+
+        Yields
+        ------
+        float
+            Percent downloaded
         """
 
         path = self.get_stage_path(dataset, stage)
@@ -343,10 +472,14 @@ class SpotClient(NewtClient):
         """
         Transfer a dataset to NERSC
 
-        :param dataset: str, dataset name
-        :param stage: str, stage name
-        :param path: str, absolute dest path on NERSC
-        :return:
+        Parameters
+        ----------
+        dataset : str
+            name of dataset
+        stage : str
+            stage name
+        path : str
+            absolute destination path on NERSC
         """
 
         r = self.stage_tape_2_disk(dataset, stage)
@@ -358,6 +491,7 @@ class SpotClient(NewtClient):
 class SPOTError(Exception):
     """Raised when SPOT gets angry"""
     pass
+
 
 if __name__ == '__main__':
     import time
