@@ -3,11 +3,51 @@ import pickle
 import pyFAI
 from pyFAI import geometry
 
-
 from pyqtgraph.parametertree import Parameter
 import numpy as np
+import yaml
+from pipeline import pathtools
+import os
+from pipeline import msg
 
 
+class settingstracker(object):
+    settingspath = os.path.join(pathtools.user_config_dir, 'settings.yml')
+
+    def __init__(self):
+        if os.path.isfile(self.settingspath):
+            with open(self.settingspath,'r') as stream:
+                try:
+                    self.settings = yaml.load(stream)
+                except yaml.YAMLError as exc:
+                    msg.logMessage(exc, msg.WARNING)
+        else:
+            self.settings = dict()
+
+    def __del__(self):
+        # Necessary to explicitly import these, since they might be disposed at this point
+        import os
+        from pipeline import pathtools
+        import yaml
+
+        if not os.path.exists(pathtools.user_config_dir):
+            os.makedirs(pathtools.user_config_dir)
+        with open(self.settingspath,'w') as stream:
+            try:
+                stream.write(yaml.dump(self.settings))
+            except yaml.YAMLError as exc:
+                print exc
+
+    def __getitem__(self, item):
+        try:
+            return self.settings[item]
+        except KeyError:
+            return None
+
+    def __setitem__(self, key, value):
+        self.settings[key]=value
+
+settings=settingstracker()
 
 class PyFAIGeometry(pyFAI.geometry.Geometry):
     def set_fit2d(self,
@@ -33,7 +73,7 @@ class PyFAIGeometry(pyFAI.geometry.Geometry):
 class experiment(Parameter):
     def __init__(self, path=None):
 
-        self.imageshape=(1475, 1709)
+        self.imageshape = (1475, 1709)
 
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
@@ -54,7 +94,7 @@ class experiment(Parameter):
                       {'name': 'Energy', 'type': 'float', 'value': 10000, 'siPrefix': True, 'suffix': 'eV'},
                       {'name': 'Wavelength', 'type': 'float', 'value': 1, 'siPrefix': True, 'suffix': 'm'},
                       # {'name': 'View Mask', 'type': 'action'},
-                      {'name': 'Incidence Angle (GIXS)','type':'float','value':0.1,'suffix':u'°'},
+                      {'name': 'Incidence Angle (GIXS)', 'type': 'float', 'value': 0.1, 'suffix': u'°'},
                       {'name': 'Notes', 'type': 'text', 'value': ''}]
             super(experiment, self).__init__(name='Experiment Properties', type='group', children=config)
 
@@ -73,11 +113,11 @@ class experiment(Parameter):
             with open(path, 'r') as f:
                 self.config = pickle.load(f)
 
-        self.headermap = {'Beam Energy':'Beam Energy',
-                          'Sample Alpha Stage':'Sample Alpha Stage',
-                          'Detector Vertical':'Detector Vertical',
-                          'Detector Horizontal':'Detector Horizontal',
-                          'I1 AI':'I1 AI'}
+        self.headermap = {'Beam Energy': 'Beam Energy',
+                          'Sample Alpha Stage': 'Sample Alpha Stage',
+                          'Detector Vertical': 'Detector Vertical',
+                          'Detector Horizontal': 'Detector Horizontal',
+                          'I1 AI': 'I1 AI'}
 
     # Make the mask accessible as a property
     @property
@@ -108,7 +148,6 @@ class experiment(Parameter):
             edf.write('mask.edf')
         except Exception:
             pass
-
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match
@@ -143,14 +182,13 @@ class experiment(Parameter):
         self.setvalue('Center X', cen[0])
         self.setvalue('Center Y', cen[1])
 
-
     def getAI(self):
         """
         :rtype : pyFAI.AzimuthalIntegrator
         """
         # print(self.getDetector().MAX_SHAPE)
         AI = pyFAI.AzimuthalIntegrator(
-                                       wavelength=self.getvalue('Wavelength'))
+            wavelength=self.getvalue('Wavelength'))
         #                                dist=self.getvalue('Detector Distance'),
         #                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
         #                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
@@ -160,14 +198,14 @@ class experiment(Parameter):
         #                                pixel1=self.getvalue('Pixel Size Y'),
         #                                pixel2=self.getvalue('Pixel Size X'),
         #                                detector=self.getDetector(),
-        AI.setFit2D(self.getvalue('Detector Distance')*1000.,
+        AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
                     self.getvalue('Center X'),
                     self.getvalue('Center Y'),
                     self.getvalue('Detector Tilt'),
-                    360.-self.getvalue('Detector Rotation'),
-                    self.getvalue('Pixel Size Y')*1.e6,
-                    self.getvalue('Pixel Size X')*1.e6)
-        #print AI
+                    360. - self.getvalue('Detector Rotation'),
+                    self.getvalue('Pixel Size Y') * 1.e6,
+                    self.getvalue('Pixel Size X') * 1.e6)
+        # print AI
         return AI
 
     def getGeometry(self):
@@ -176,15 +214,15 @@ class experiment(Parameter):
         """
         # print(self.getDetector().MAX_SHAPE)
         geo = PyFAIGeometry(dist=self.getvalue('Detector Distance'),
-                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
-                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
-                                rot1=0,
-                                rot2=0,
-                                rot3=0,
-                                pixel1=self.getvalue('Pixel Size Y'),
-                                pixel2=self.getvalue('Pixel Size X'),
-                                detector=self.getDetector(),
-                                wavelength=self.getvalue('Wavelength'))
+                            poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+                            poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+                            rot1=0,
+                            rot2=0,
+                            rot3=0,
+                            pixel1=self.getvalue('Pixel Size Y'),
+                            pixel2=self.getvalue('Pixel Size X'),
+                            detector=self.getDetector(),
+                            wavelength=self.getvalue('Wavelength'))
         # geo = PyFAIGeometry(wavelength=self.getvalue('Wavelength'))
         # geo.setFit2D(self.getvalue('Detector Distance'),
         #             self.getvalue('Center Y'),
@@ -210,18 +248,18 @@ class experiment(Parameter):
         # edit the data
         # config['key3'] = 'value3'
 
-        #write it back to the file
-        #with open('config.json', 'w') as f:
+        # write it back to the file
+        # with open('config.json', 'w') as f:
         #    json.dump(config, f)
 
     def iscalibrated(self):
         return (self.getvalue('Pixel Size X') > 0) and (self.getvalue('Pixel Size Y') > 0) and (
             self.getvalue('Detector Distance') > 0)
 
-    def setHeaderMap(self,xikey,headerkey):
-        self.headermap[xikey]=headerkey
+    def setHeaderMap(self, xikey, headerkey):
+        self.headermap[xikey] = headerkey
 
-    def mapHeader(self,xikey):
+    def mapHeader(self, xikey):
         return self.headermap[xikey]
 
     @property
@@ -237,9 +275,4 @@ class experiment(Parameter):
         #     qFunction(d1, d2, param=None, path='cython')
 
 
-
 activeExperiment = experiment()
-
-
-
-
