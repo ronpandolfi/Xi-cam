@@ -24,11 +24,7 @@ class settingstracker(object):
         else:
             self.settings = dict()
 
-    def __del__(self):
-        # Necessary to explicitly import these, since they might be disposed at this point
-        import os
-        from pipeline import pathtools
-        import yaml
+    def write(self):
 
         if not os.path.exists(pathtools.user_config_dir):
             os.makedirs(pathtools.user_config_dir)
@@ -46,6 +42,7 @@ class settingstracker(object):
 
     def __setitem__(self, key, value):
         self.settings[key]=value
+        self.write()
 
 settings=settingstracker()
 
