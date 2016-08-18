@@ -1,10 +1,7 @@
 from PySide import QtCore, QtGui
-from pyqtgraph.parametertree import ParameterTree
-from functools import partial
+
 import widgets
-from xicam import config
-from xicam import models, xglobals
-from xicam.plugins import explorer, login
+from xicam.widgets import explorer, login
 
 activeplugin = None
 
@@ -18,7 +15,6 @@ l.setSpacing(0)
 
 loginwidget = login.LoginDialog()
 
-import os
 preview = widgets.previewwidget()
 w.addWidget(preview)
 
@@ -26,7 +22,7 @@ fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
 fileexplorer.sigLoginRequest.connect(loginwidget.loginRequest)
-fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
+fileexplorer.sigLoginSuccess.connect(loginwidget.loginResult)
 fileexplorer.sigPreview.connect(preview.loaditem)
 
 l.addWidget(loginwidget)
@@ -59,7 +55,6 @@ w.addWidget(panelwidget)
 w.setSizes([250, w.height() - 250])
 
 
-
 class IconTabBar(QtGui.QTabBar):
     def tabSizeHint(self, index):
         return QtCore.QSize(32+12, 32+12)
@@ -69,6 +64,7 @@ class IconTabWidget(QtGui.QTabWidget):
         super(IconTabWidget, self).__init__()
         self.setTabBar(IconTabBar())
         self.setIconSize(QtCore.QSize(32, 32))
+
 
 leftwidget = IconTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
@@ -89,7 +85,6 @@ class plugin(QtCore.QObject):
             self.centerwidget = None
 
         if not hasattr(self, 'rightwidget'):
-            # TODO this property table and configtree should not be defaults in base plugin.
             self.rightwidget = rightwidget
 
         if not hasattr(self, 'bottomwidget'):
@@ -99,9 +94,6 @@ class plugin(QtCore.QObject):
             self.leftwidget = leftwidget
             self.booltoolbar = booltoolbar
             self.filetree = filetree
-
-
-
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None
@@ -147,7 +139,7 @@ class plugin(QtCore.QObject):
         global leftwidget, rightwidget  # if these will become attributes then the check will need to be different
         if self.leftwidget is leftwidget:
             if self.leftwidget.count() > 1:
-                for idx in range(self.leftwidget.count() - 1):
+                for idx in reversed(range(self.leftwidget.count() - 1)):
                     self.leftwidget.removeTab(idx + 1)
             if hasattr(self, 'leftmodes'):
                 for widget, icon in self.leftmodes:
@@ -157,9 +149,8 @@ class plugin(QtCore.QObject):
                 self.leftwidget.tabBar().hide()
 
         if self.rightwidget is rightwidget:
-            if self.rightwidget.count() > 0:
-                for idx in range(self.rightwidget.count()):
-                    self.rightwidget.removeTab(idx)
+            for idx in reversed(range(self.rightwidget.count())):
+                self.rightwidget.removeTab(idx)
             if hasattr(self, 'rightmodes'):
                 for widget, icon in self.rightmodes:
                     self.rightwidget.addTab(widget, icon, '')

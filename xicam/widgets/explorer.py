@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 19 17:22:00 2015
 
-@author: lbluque
-"""
+__author__ = "Luis Barroso-Luque"
+__copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__license__ = ""
+__version__ = "1.2.1"
+__maintainer__ = "Ronald J Pandolfi"
+__email__ = "ronpandolfi@lbl.gov"
+__status__ = "Beta"
+
 
 import os
 import tempfile

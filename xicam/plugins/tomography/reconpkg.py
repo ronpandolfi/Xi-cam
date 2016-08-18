@@ -1,19 +1,21 @@
+import importlib
 from pipeline import msg
 
+# Packages to import
+PACKAGE_LIST =['tomopy', 'astra', 'dxchange']
+
+# Dictionary with package names as keys and package objects as values
 packages = {}
-try:
-    import tomopy
-    packages['tomopy'] = tomopy
-    msg.logMessage('tomopy module loaded')
-except ImportError:
-    msg.logMessage('tomopy module not available', level=30)  # 30 -> warning
-    packages['tomopy'] = None
-    tomopy = None
-try:
-    import astra
-    packages['astra'] = astra
-    msg.logMessage('Astra module loaded')
-except ImportError:
-    msg.logMessage('astra module not available', level=30)
-    packages['astra'] = None
-    astra = None
+
+for name in PACKAGE_LIST:
+    try:
+        package = importlib.import_module(name)
+        print package
+        packages[name] = package
+        msg.logMessage('{} module loaded'.format(name), level=20)
+    except ImportError:
+        msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning
+
+# Add the extra functions
+import pipelinefunctions
+packages['pipelinefunctions'] = pipelinefunctions

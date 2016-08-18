@@ -1,162 +1,191 @@
-import os
+
+
+__author__ = "Luis Barroso-Luque"
+__copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__license__ = ""
+__version__ = "1.2.1"
+__maintainer__ = "Ronald J Pandolfi"
+__email__ = "ronpandolfi@lbl.gov"
+__status__ = "Beta"
+
+
 from functools import partial
-import numpy as np
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
-import toolbar as ttoolbar
-import fdata
-import fmanager
-import widgets
-
-blankform = None
-propertytable = None
-configparams = None
-paramformstack = None
-functionwidget = None
-centerwidget = None
-bottomwidget = None
+import reconpkg
+import viewers
 
 
-def loadUi():
-    global blankform, propertytable, configparams, functionwidget, paramformstack, centerwidget, bottomwidget
+class UIform(object):
+    """
+    Class for tomography plugin ui setup.
 
-    toolbar = ttoolbar.tomotoolbar()
+    Attributes
+    ----------
 
-    centerwidget = QtGui.QTabWidget()
+    toolbar : QtGui.QToolBar
+        Toolbar shown in plugin
+    leftmodes : list of tuples
+        leftmodes list for standard base plugin initialization [widget, tab icon]
+    righmodes : list of tuples
+        rightmodes list for standard base plugin initialization [widget, tab icon]
+    param_form : QtGui.QStackedWidget
+        Container for ParameterTree's used to display function parameters
+    functionWidget : QtGui.QWidget
+        Workflow pipeline GUI in plugin's leftmodes
+    property_table : pyqtgraph.TableWidget
+        TableWidget to display dataset metadata on right widget
+    config_params : pyqtgraph.Parameter
+        Parameter holding the run configuration parameters (ie sino start, sino end, sino step, number of cores)
 
-    centerwidget.setDocumentMode(True)
-    centerwidget.setTabsClosable(True)
+    Methods
+    -------
+    connectTriggers
+        Connect leftwidget (function mangement buttons) triggers to corresponding slots
+    setConfigParams
+        Sets configuration parameters in pg.Parameter inside rightwidget
+    """
 
-    bottomwidget = widgets.RunViewer()
+    def setupUi(self):
+        """Set up the UI for tomography plugin"""
 
-    # Load the gui from file
-    functionwidget = QUiLoader().load('gui/tomographyleft.ui')
+        self.toolbar = Toolbar()
+        self.centerwidget = QtGui.QTabWidget()
+        self.centerwidget.setDocumentMode(True)
+        self.centerwidget.setTabsClosable(True)
+        self.bottomwidget = viewers.RunConsole()
+        self.functionwidget = QUiLoader().load('gui/tomographyleft.ui')
+        self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
 
-    # Add some tool tips
-    functionwidget.addFunctionButton.setToolTip('Add function to pipeline')
-    functionwidget.clearButton.setToolTip('Clear pipeline')
-    functionwidget.fileButton.setToolTip('Save/Load pipeline')
-    functionwidget.moveDownButton.setToolTip('Move selected function down')
-    functionwidget.moveUpButton.setToolTip('Move selected function up')
+        self.functionwidget.addFunctionButton.setToolTip('Add function to pipeline')
+        self.functionwidget.clearButton.setToolTip('Clear pipeline')
+        self.functionwidget.fileButton.setToolTip('Save/Load pipeline')
+        self.functionwidget.moveDownButton.setToolTip('Move selected function down')
+        self.functionwidget.moveUpButton.setToolTip('Move selected function up')
 
-    functionwidget.clearButton.clicked.connect(fmanager.clear_action)
-    functionwidget.moveUpButton.clicked.connect(
-        lambda: fmanager.swap_functions(fmanager.currentindex,
-                                        fmanager.currentindex - 1))
-    functionwidget.moveDownButton.clicked.connect(
-        lambda: fmanager.swap_functions(fmanager.currentindex,
-                                        fmanager.currentindex + 1))
+        self.addfunctionmenu = QtGui.QMenu()
+        self.functionwidget.addFunctionButton.setMenu(self.addfunctionmenu)
+        self.functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
 
-    addfunctionmenu = QtGui.QMenu()
-    buildfunctionmenu(addfunctionmenu, fdata.funcs['Functions'], fmanager.add_action)
+        filefuncmenu = QtGui.QMenu()
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.openaction = QtGui.QAction(icon, 'Open', filefuncmenu)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.refreshaction = QtGui.QAction(icon, 'Reset', filefuncmenu)
+        filefuncmenu.addActions([self.openaction, self.saveaction, self.refreshaction])
 
-    functionwidget.addFunctionButton.setMenu(addfunctionmenu)
-    functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
-    functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
+        self.functionwidget.fileButton.setMenu(filefuncmenu)
+        self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
 
-    filefuncmenu = QtGui.QMenu()
-    icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    openaction = QtGui.QAction(icon, 'Open', filefuncmenu,)
-    openaction.triggered.connect(fmanager.open_pipeline_file)
-    icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
-    saveaction.triggered.connect(lambda :fmanager.save_function_pipeline(fmanager.create_pipeline_dict()))
-    icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-    refreshaction = QtGui.QAction(icon, 'Refresh', filefuncmenu)
-    refreshaction.triggered.connect(lambda: fmanager.load_function_pipeline('yaml/tomography/default_pipeline.yml'))
-    filefuncmenu.addActions([openaction, saveaction, refreshaction])
+        leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
-    functionwidget.fileButton.setMenu(filefuncmenu)
-    functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
-    functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
+        paramtree = pt.ParameterTree()
+        self.param_form = QtGui.QStackedWidget()
+        self.param_form.addWidget(paramtree)
+        leftwidget.addWidget(self.param_form)
+        leftwidget.addWidget(self.functionwidget)
 
-    leftwidget = QtGui.QWidget()
+        icon = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
+        self.leftmodes = [(leftwidget, icon)]
 
-    l = QtGui.QVBoxLayout()
-    l.setContentsMargins(0, 0, 0, 0)
+        rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
-    paramtree = pt.ParameterTree()
-    paramformstack = QtGui.QStackedWidget()
-    paramformstack.addWidget(paramtree)
-    paramformstack.setFixedHeight(160)
-    l.addWidget(paramformstack)
-    l.addWidget(functionwidget)
+        configtree = pt.ParameterTree()
+        configtree.setMinimumHeight(230)
 
-    leftwidget.setLayout(l)
-    icon = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-    leftmodes = [(leftwidget, icon)]
+        params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
+                  {'name': 'End Sinogram', 'type': 'int'},
+                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
+                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'End Projection', 'type': 'int'},
+                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
+                  {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
+                  {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
+                   'limits':[1, cpu_count()]}]
 
-    rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
+        self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
+        configtree.setParameters(self.config_params, showTop=False)
 
-    configtree = pt.ParameterTree()
-    configtree.setMinimumHeight(230)
+        rightwidget.addWidget(configtree)
 
-    params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
-              {'name': 'End Sinogram', 'type': 'int'},
-              {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-              {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-              {'name': 'End Projection', 'type': 'int'},
-              {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-              # {'name': 'Ouput Format', 'type': 'list', 'values': ['TIFF (.tiff)'], 'default': 'TIFF (.tiff)'},
-              # {'name': 'Output Name', 'type': 'str'},
-              # {'name': 'Browse', 'type': 'action'},
-              {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
-              {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
-               'limits':[1, cpu_count()]}]
+        self.property_table = pg.TableWidget()
+        self.property_table.verticalHeader().hide()
+        self.property_table.horizontalHeader().setStretchLastSection(True)
+        self.property_table.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
 
-    configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
-    configtree.setParameters(configparams, showTop=False)
-    # configparams.param('Browse').sigActivated.connect(
-    #     lambda: configparams.param('Output Name').setValue(
-    #         str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',
-    #                                               configparams.param('Output Name').value())[0])))
+        rightwidget.addWidget(self.property_table)
+        self.property_table.hide()
+        self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
-    # sinostart = configparams.param('Start Sinogram')
-    # sinoend = configparams.param('End Sinogram')
-    # sinostep = configparams.param('Step Sinogram')
-    # nsino = lambda: (sinoend.value() - sinostart.value() + 1) // sinostep.value()
-    # sinos = configparams.param('Sinograms/Chunk')
-    # chunkschanged = lambda: sinos.setValue(np.round(nsino() / chunks.value()), blockSignal=sinoschanged)
-    # sinoschanged = lambda: chunks.setValue((nsino() - 1) // sinos.value() + 1, blockSignal=chunkschanged)
-    # chunks.sigValueChanged.connect(chunkschanged)
-    # sinos.sigValueChanged.connect(sinoschanged)
-    # sinostart.sigValueChanged.connect(chunkschanged)
-    # sinoend.sigValueChanged.connect(chunkschanged)
-    # sinostep.sigValueChanged.connect(chunkschanged)
-    # chunks.setValue(1)
+    def connectTriggers(self, open, save, reset, moveup, movedown, clear):
+        """
+        Connect leftwidget (function mangement buttons) triggers to corresponding slots
 
-    rightwidget.addWidget(configtree)
+        Parameters
+        ----------
+        open : QtCore.Slot
+            Slot to handle signal from open button
+        save QtCore.Slot
+            Slot to handle signal from save button
+        reset QtCore.Slot
+            Slot to handle signal from reset button
+        moveup QtCore.Slot
+            Slot to handle signal to move a function widget upwards
+        movedown QtCore.Slot
+            Slot to handle signal to move a function widget downwards
+        clear QtCore.Slot
+            Slot to handle signal from clear button
+        """
 
-    propertytable = pg.TableWidget() #QtGui.QTableView()
-    propertytable.verticalHeader().hide()
-    propertytable.horizontalHeader().setStretchLastSection(True)
-    propertytable.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+        self.openaction.triggered.connect(open)
+        self.saveaction.triggered.connect(save)
+        self.refreshaction.triggered.connect(reset)
+        self.functionwidget.moveDownButton.clicked.connect(moveup)
+        self.functionwidget.moveUpButton.clicked.connect(movedown)
+        self.functionwidget.clearButton.clicked.connect(clear)
 
-    rightwidget.addWidget(propertytable)
-    propertytable.hide()
-    rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
-
-    blankform = QtGui.QLabel('Select a function from\n below to set parameters...')
-    blankform.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-    blankform.setAlignment(QtCore.Qt.AlignCenter)
-    showform(blankform)
-
-    return leftmodes, centerwidget, rightwidget, bottomwidget, toolbar
-
-
-def showform(widget):
-    paramformstack.addWidget(widget)
-    paramformstack.setCurrentWidget(widget)
+    def setConfigParams(self, proj, sino):
+        self.config_params.child('End Sinogram').setLimits([0, sino])
+        self.config_params.child('Start Sinogram').setLimits([0, sino])
+        self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
+        self.config_params.child('End Sinogram').setValue(sino)
+        self.config_params.child('End Sinogram').setDefault(sino)
+        self.config_params.child('End Projection').setLimits([0, proj])
+        self.config_params.child('Start Projection').setLimits([0, proj])
+        self.config_params.child('Step Projection').setLimits([0, proj + 1])
+        self.config_params.child('End Projection').setValue(proj)
+        self.config_params.child('End Projection').setDefault(proj)
 
 
-def buildfunctionmenu(menu, fdata, actionslot):
-    for func,subfuncs in fdata.iteritems():
+def build_function_menu(menu, functree, functiondata, actionslot):
+    """
+    Builds the function menu's and submenu's anc connects them to the corresponding slot to add them to the workflow
+    pipeline
+
+    Parameters
+    ----------
+    menu : QtGui.QMenu
+        Menu object to populate with submenu's and actions
+    functree : dict
+        Dictionary specifying the depth levels of functions. See functions.yml entry "Functions"
+    functiondata : dict
+        Dictionary with function information. See function_names.yml
+    actionslot : QtCore.Slot
+        slot where the function action triggered signal shoud be connected
+    """
+
+    for func, subfuncs in functree.iteritems():
         if len(subfuncs) > 1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             menu.addMenu(funcmenu)
@@ -166,26 +195,152 @@ def buildfunctionmenu(menu, fdata, actionslot):
                     funcmenu.addMenu(optsmenu)
                     for opt in subfuncs[subfunc]:
                         funcaction = QtGui.QAction(opt, funcmenu)
-                        funcaction.triggered.connect(partial(actionslot, func, opt))
-                        optsmenu.addAction(funcaction)
+                        try:
+                            funcaction.triggered.connect(partial(actionslot, func, opt,
+                                                                 reconpkg.packages[functiondata[opt][1]]))
+                            optsmenu.addAction(funcaction)
+                        except KeyError:
+                            pass
                 else:
                     funcaction = QtGui.QAction(subfunc, funcmenu)
-                    funcaction.triggered.connect(partial(actionslot, func, subfunc))
-                    funcmenu.addAction(funcaction)
+                    try:
+                        funcaction.triggered.connect(partial(actionslot, func, subfunc,
+                                                             reconpkg.packages[functiondata[subfunc][1]]))
+                        funcmenu.addAction(funcaction)
+                    except KeyError:
+                        pass
         elif len(subfuncs) == 1:
-            funcaction = QtGui.QAction(func, menu)
-            funcaction.triggered.connect(partial(actionslot, func, func))
-            menu.addAction(funcaction)
+            try:
+                funcaction = QtGui.QAction(func, menu)
+                funcaction.triggered.connect(partial(actionslot, func, func, reconpkg.packages[functiondata[func][1]]))
+                menu.addAction(funcaction)
+            except KeyError:
+                pass
 
 
-def setconfigparams(sino, proj):
-    configparams.child('End Sinogram').setValue(sino)
-    configparams.child('End Sinogram').setLimits([0, sino])
-    configparams.child('Start Sinogram').setLimits([0, sino])
-    configparams.child('Step Sinogram').setLimits([0, sino])
-    configparams.child('End Projection').setValue(proj)
-    configparams.child('End Projection').setLimits([0, proj])
-    configparams.child('Start Projection').setLimits([0, proj])
-    configparams.child('Step Projection').setLimits([0, proj])
-    # configparams.child('Output Name').setValue(outname)
+class Toolbar(QtGui.QToolBar):
+    """
+    QToolbar subclass used in Tomography plugin
 
+    Attributes
+    ----------
+    actionRun_SlicePreview : QtGui.QAction
+    actionRun_3DPreview : QtGui.QAction
+    actionRun_FullRecon : QtGui.QAction
+    actionCenter : QtGui.QAction
+    actionROI : QtGui.QAction
+    actionPolyMask : QtGui.QAction
+    actionCircMask : QtGui.QAction
+    actionRectMask : QtGui.QAction
+    actionMask : QtGui.QAction
+
+    Methods
+    -------
+    connecttriggers
+        Connect toolbar action signals to give slots
+    """
+
+    def __init__(self):
+        super(Toolbar, self).__init__()
+
+        self.actionRun_SlicePreview = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_50.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionRun_SlicePreview.setIcon(icon)
+        self.actionRun_SlicePreview.setToolTip('Slice preview')
+
+        self.actionRun_3DPreview = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionRun_3DPreview.setIcon(icon)
+        self.actionRun_3DPreview.setToolTip('3D preview')
+
+        self.actionRun_FullRecon = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionRun_FullRecon.setIcon(icon)
+        self.actionRun_FullRecon.setToolTip('Full reconstruction')
+
+        self.actionCenter = QtGui.QWidgetAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionCenter.setIcon(icon)
+        self.actionCenter.setToolTip('Overlay center of rotation detection')
+        self.toolbuttonCenter = QtGui.QToolButton(parent=self)
+        self.toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.actionCenter.setDefaultWidget(self.toolbuttonCenter)
+        self.actionCenter.setCheckable(True)
+        self.toolbuttonCenter.setDefaultAction(self.actionCenter)
+
+        self.actionPolyMask = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionPolyMask.setIcon(icon)
+        self.actionPolyMask.setText("Polygon mask")
+
+        self.actionCircMask = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionCircMask.setIcon(icon)
+        self.actionCircMask.setText("Circular mask")
+
+        self.actionRectMask = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionRectMask.setIcon(icon)
+        self.actionRectMask.setText('Rectangular mask')
+
+        self.actionMask = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_03.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionMask.setIcon(icon)
+
+        maskmenu = QtGui.QMenu(self)
+        maskmenu.addAction(self.actionRectMask)
+        maskmenu.addAction(self.actionCircMask)
+        maskmenu.addAction(self.actionPolyMask)
+        toolbuttonMasking = QtGui.QToolButton(self)
+        toolbuttonMasking.setDefaultAction(self.actionMask)
+        toolbuttonMasking.setMenu(maskmenu)
+        toolbuttonMasking.setPopupMode(QtGui.QToolButton.InstantPopup)
+        toolbuttonMaskingAction = QtGui.QWidgetAction(self)
+        toolbuttonMaskingAction.setDefaultWidget(toolbuttonMasking)
+
+        # TODO working on ROI Selection TOOL
+        self.actionROI = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionROI.setIcon(icon)
+        self.actionROI.setToolTip('Select region of interest')
+
+        self.setIconSize(QtCore.QSize(32, 32))
+
+        self.addAction(self.actionRun_FullRecon)
+        self.addAction(self.actionRun_SlicePreview)
+        self.addAction(self.actionRun_3DPreview)
+        self.addAction(self.actionCenter)
+        # self.addAction(self.actionROI)
+        # self.addAction(toolbuttonMaskingAction)
+
+
+    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
+        """
+        Connect toolbar action signals to give slots
+
+        Parameters
+        ----------
+        slicepreview : QtCore.Slot
+            Slot to connect actionRun_SlicePreview
+        preview3D : QtCore.Slot
+            Slot to connect actionRun_3DPreview
+        fullrecon : QtCore.Slot
+            Slot to connect actionRun_FullRecon
+        center : QtCore.Slot
+            Slot to connect actionCenter
+        """
+
+        self.actionRun_SlicePreview.triggered.connect(slicepreview)
+        self.actionRun_3DPreview.triggered.connect(preview3D)
+        self.actionRun_FullRecon.triggered.connect(fullrecon)
+        self.actionCenter.toggled.connect(center)
+        self.actionROI.triggered.connect(roiselection)
