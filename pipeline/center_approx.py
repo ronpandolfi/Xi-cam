@@ -227,7 +227,7 @@ def center_approx(img, log=False):
 
     #testimg(img)
 
-    con = signal.fftconvolve(img, img)
+    con = signal.fftconvolve(img, img) / signal.fftconvolve(np.ones_like(img), np.ones_like(img))
     #testimg(con)
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.
