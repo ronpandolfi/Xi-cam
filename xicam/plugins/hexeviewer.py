@@ -10,8 +10,16 @@ from pipeline import loader, hig
 import pyqtgraph as pg
 import numpy as np
 
+"""
+Bugs:
+    1. User can resize ROI after recentering
+    2. rmc does not work yet
+
+"""
 
 class plugin(base.plugin):
+
+    # name can be changed upon request
     name = "HexeViewer"
 
     #center widget is something, rightwidget is none, and leftwidget inherits the default from parent base.plugin
