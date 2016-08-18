@@ -50,13 +50,27 @@ with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
 
 
 def load_pipeline(yaml_file):
-    global functions, currentindex
+    """
+    Load a workflow pipeline from a yaml file
+    """
+
     with open(yaml_file, 'r') as y:
         pipeline = yamlmod.ordered_load(y)
     return pipeline
 
 
 def save_function_pipeline(pipeline, file_name):
+    """
+    Save a workflow pipeline from dict
+
+    Parameters
+    ----------
+    pipeline : dict
+        dictionary specifying the workflow pipeline
+    file_name : str
+        file name to save as yml
+    """
+
     if file_name != '':
         file_name = file_name.split('.')[0] + '.yml'
         with open(file_name, 'w') as y:
@@ -64,6 +78,17 @@ def save_function_pipeline(pipeline, file_name):
 
 
 def set_als832_defaults(mdata, funcwidget_list):
+    """
+    Set defaults for ALS Beamline 8.3.2 from dataset metadata
+
+    Parameters
+    ----------
+    mdata : dict
+        dataset metadata
+    funcwidget_list : list of FunctionWidgets
+        list of FunctionWidgets exposed in the UI workflow pipeline
+    """
+
     for f in funcwidget_list:
         if f is None:
             continue
@@ -89,6 +114,20 @@ def set_als832_defaults(mdata, funcwidget_list):
 
 
 def extract_pipeline_dict(funwidget_list):
+    """
+    Extract a dictionary from a FunctionWidget list in the appropriate format to save as a yml file
+
+    Parameters
+    ----------
+    funwidget_list : list of FunctionWidgets
+        list of FunctionWidgets exposed in the UI workflow pipeline
+
+    Returns
+    -------
+    dict
+        dictionary specifying the workflow pipeline
+    """
+
     d = OrderedDict()
     for f in funwidget_list:
         d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}

@@ -1,24 +1,21 @@
 # -*- coding: UTF-8 -*-
 
-import fabio
-from fabio import fabioutils
-import pyfits
 import os
+
+import fabio
 import numpy as np
+import pyfits
+
 # from nexpy.api import nexus as nx
-from copy import copy
 from pyFAI import detectors
 import pyFAI
 import glob
 import re
-import time
-import scipy.ndimage
 import writer
 from xicam import debugtools, config
 from pipeline.formats import TiffStack
 from PySide import QtGui
 from collections import OrderedDict
-import warnings
 from pipeline import msg
 # try:
 #     import libtiff
@@ -28,7 +25,6 @@ from pipeline import msg
 import numpy as nx
 
 import detectors  # injects pyFAI with custom detectors
-import formats  # injects fabio with custom formats
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
@@ -954,45 +950,6 @@ class StackImage(object):
             self.fabimage.close()
         except ValueError:
             pass
-
-
-class ProjectionStack(StackImage):
-    """
-    Simply subclass of StackImage for Tomography Projection stacks.
-    """
-
-    def __init__(self, filepath=None, data=None):
-        super(ProjectionStack, self).__init__(filepath=filepath, data=data)
-        self.flats = self.fabimage.flats
-        self.darks = self.fabimage.darks
-
-
-class SinogramStack(StackImage):
-    """
-    Simply subclass of StackImage for Tomography Sinogram stacks.
-    """
-
-    def __init__(self, filepath=None, data=None):
-        super(SinogramStack, self).__init__(filepath=filepath, data=data)
-        self._cachesize = 10
-
-    def __new__(cls):
-        cls.invalidatecache()
-
-    @classmethod
-    def cast(cls, obj):
-        """
-        Use this to cast a ProjectionStack into a SinogramStack
-        :param obj: PorjectionStack Instance to cas
-        :return:
-        """
-        new_obj = copy(obj)
-        new_obj.__class__ = cls
-        new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
-        return new_obj
-
-    def _getimage(self, frame):
-        return self.fabimage[:, frame, :].transpose()
 
 
 class diffimage2(object):

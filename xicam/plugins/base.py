@@ -22,7 +22,7 @@ fileexplorer = explorer.MultipleFileExplorer(w)
 filetree = fileexplorer.explorers['Local'].file_view
 
 fileexplorer.sigLoginRequest.connect(loginwidget.loginRequest)
-fileexplorer.sigLoginSuccess.connect(loginwidget.loginSuccessful)
+fileexplorer.sigLoginSuccess.connect(loginwidget.loginResult)
 fileexplorer.sigPreview.connect(preview.loaditem)
 
 l.addWidget(loginwidget)
@@ -55,7 +55,6 @@ w.addWidget(panelwidget)
 w.setSizes([250, w.height() - 250])
 
 
-
 class IconTabBar(QtGui.QTabBar):
     def tabSizeHint(self, index):
         return QtCore.QSize(32+12, 32+12)
@@ -65,6 +64,7 @@ class IconTabWidget(QtGui.QTabWidget):
         super(IconTabWidget, self).__init__()
         self.setTabBar(IconTabBar())
         self.setIconSize(QtCore.QSize(32, 32))
+
 
 leftwidget = IconTabWidget()
 leftwidget.addTab(w, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder), '')
@@ -85,7 +85,6 @@ class plugin(QtCore.QObject):
             self.centerwidget = None
 
         if not hasattr(self, 'rightwidget'):
-            # TODO this property table and configtree should not be defaults in base plugin.
             self.rightwidget = rightwidget
 
         if not hasattr(self, 'bottomwidget'):
@@ -95,9 +94,6 @@ class plugin(QtCore.QObject):
             self.leftwidget = leftwidget
             self.booltoolbar = booltoolbar
             self.filetree = filetree
-
-
-
 
         if not hasattr(self, 'toolbar'):
             self.toolbar = None

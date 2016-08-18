@@ -23,14 +23,27 @@ DTYPE_RANGE = {'uint8': (0, 255),
 def crop(arr, p11, p12, p21, p22, axis=0):
     """
     Crops a 3D array along a given axis. Equivalent to slicing the array
-    :param arr: ndarray
-    :param p11: int, first point along first axis
-    :param p12: int, second point along first axis
-    :param p21: int, first point along second axis
-    :param p22: int, second point along second axis
-    :param axis: int, axis to crop along
-    :return: ndarray, cropped array
+
+    Parameters
+    ----------
+    arr : ndarray
+    p11 : int
+        First point along first axis
+    p12 : int
+        Second point along first axis
+    p21 : int
+        First point along second axis
+    p22 : int
+        Second point along second axis
+    axis : int
+        Axis to crop along
+
+    Returns
+    -------
+    ndarray:
+        Cropped array
     """
+
     slc = []
     pts = [p11, p12, p21, p22]
     for n in range(len(arr.shape)):
@@ -43,13 +56,31 @@ def crop(arr, p11, p12, p21, p22, axis=0):
 
 def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
     """
-    Convert an image or 3D array to another datatype
+    Convert an image or 3D array to another datatype using numexpr
+
     :param arr: ndarray, data array
     :param dtype: dataype keyword
     :param imin,
     :param imax,
     :param intcast: datatype to cast ints to
     :return: ndarry, converted to dtype
+
+    Parameters
+    ----------
+    arr : ndarray, data array
+    imin : int/float, optional
+        Minimum bound of input array. If not given the minimum value of the array is used
+    imax : int/float, optional
+        Maximum bound of input array. If not given the maximum value of the array is used
+    dtype : str
+        Dataype keyword. See DTYPE_RANGE keys
+    intcast : str
+        intermediate cast type if casting to ints (numexpr will complain otherwise)
+
+    Returns
+    -------
+    ndarray
+        Converted array
     """
 
     allowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')
@@ -99,6 +130,10 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
 
 
 def array_operation(arr, value, operation='divide'):
+    """
+    Simple wrapper function to expose array element by element operations in workflow pipeline GUI
+    """
+
     if operation not in ('add', 'subtract', 'multiply', 'divide'):
         raise ValueError('Operation {} is not a valid array operation'.format(operation))
     elif operation == 'add':

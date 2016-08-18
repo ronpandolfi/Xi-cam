@@ -230,7 +230,7 @@ class plugin(base.plugin):
 
 
     def loginSuccess(self,client):
-        self.loginwidget.loginSuccessful(True)
+        self.loginwidget.loginResult(True)
         sftp = client.open_sftp()
         timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
         sftp.put('test.yml',timestamp+'.yml')

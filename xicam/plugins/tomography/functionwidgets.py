@@ -31,37 +31,55 @@ class FunctionWidget(fw.FeatureWidget):
     with the given parameters. These should be used with the corresponding FunctionManager to run Tomography pipeline
     workflows
 
+
     Attributes
     ----------
+    func_name : str
+        Function name
+    subfunc_name : str
+        Specific function name
+    input_functions : dict
+        dictionary with keys being parameters of this function to be overriden, and values being a FunctionWidget
+        whose function will override said parameter
+    param_dict : dict
+        Dictionary with parameter names and values
+    _function : function
+        Function object corresponding to the function represented by widget
+    params : pyqtgraph.Parameter
+        Parameter instance with function parameter exposed in UI
+    missing_args : list of str
+        Names of missing arguments not contained in param_dict
 
-    Methods
+    Signals
     -------
+    sigTestRange(QtGui.QWidget, str, tuple)
+        Emitted when parameter range test is requested. Emits the sending widget, a string with a message to log, and
+        a tuple with the range values for the parameter
 
+
+    Parameters
+    ----------
+    name : str
+        generic name of function
+    subname : str
+        specific name of function under the generic name category
+    package : python package
+        package
+    input_functions : dict, optional
+        dictionary with keys being parameters of this function to be overriden, and values being a FunctionWidget
+        whose function will override said parameter
+    checkable : bool, optional
+        bool to set the function to be toggled on and of when running constructed workflows
+    closeable : bool, optional
+        bool to set if the function can be deleted from the pipeline editor
+    parent : QWidget
+        parent of this FunctionWidget
     """
+
     sigTestRange = QtCore.Signal(QtGui.QWidget, str, tuple)
 
     # TODO perhaps its better to not pass in the package object but only a string, package object can be retrived from reconpkgs.packages dict
     def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
-        """
-        Parameters
-        ----------
-        name : str
-            generic name of function
-        subname : str
-            specific name of function under the generic name category
-        package : python package
-            package
-        input_functions : dict, optional
-            dictionary with keys being parameters of this function to be overriden, and values being a FunctionWidget
-            whose function will override said parameter
-        checkable : bool, optional
-            bool to set the function to be toggled on and of when running constructed workflows
-        closeable : bool, optional
-            bool to set if the function can be deleted from the pipeline editor
-        parent : QWidget
-            parent of this FunctionWidget
-        """
-
         self.name = name
         if name != subname:
             self.name += ' (' + subname + ')'
@@ -112,14 +130,18 @@ class FunctionWidget(fw.FeatureWidget):
 
     @property
     def enabled(self):
-        """Boolean showing if the function widget is enabled (eye open/closed)"""
+        """
+        Boolean showing if the function widget is enabled (eye open/closed)
+        """
         if self.previewButton.isChecked() or not self.previewButton.isCheckable():
             return True
         return False
 
     @enabled.setter
     def enabled(self, val):
-        """Set enabled value by toggling the previewButton only if the widget is checkable"""
+        """
+        Set enabled value by toggling the previewButton only if the widget is checkable
+        """
         if val and self.previewButton.isCheckable():
             self.previewButton.setChecked(True)
         else:
@@ -127,19 +149,25 @@ class FunctionWidget(fw.FeatureWidget):
 
     @property
     def exposed_param_dict(self):
-        """Parameter dictionary with only the parameters that are shown in GUI"""
+        """
+        Parameter dictionary with only the parameters that are shown in GUI
+        """
         param_dict = {key: val for (key, val) in self.param_dict.iteritems()
                       if key in [param.name() for param in self.params.children()]}
         return param_dict
 
     @property
     def partial(self):
-        """Package up all parameters into a functools.partial"""
+        """
+        Package up all parameters into a functools.partial
+        """
         return partial(self._function, **self.param_dict)
 
     @property
     def func_signature(self):
-        """String for function signature. Hopefully this can eventually be used to save workflows as scripts :)"""
+        """
+        String for function signature. Hopefully this can eventually be used to save workflows as scripts :)
+        """
         signature = str(self._function.__name__) + '('
         for arg in self.missing_args:
             signature += '{},'.format(arg)
@@ -149,7 +177,9 @@ class FunctionWidget(fw.FeatureWidget):
         return signature[:-1] + ')'
 
     def updateParamsDict(self):
-        """Update the values of the parameter dictionary with the current values in UI"""
+        """
+        Update the values of the parameter dictionary with the current values in UI
+        """
         self.param_dict.update({param.name(): param.value() for param in self.params.children()})
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
@@ -166,11 +196,14 @@ class FunctionWidget(fw.FeatureWidget):
             FunctionWidget representing the input function
 
         """
+
         if parameter in self.input_functions:  # Check to see if parameter already has input function
-            self.removeInputFunction(parameter)  # Remove it
+            if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
+                raise AttributeError('Input function already exists')  # skip if the input function already exists
+            self.removeInputFunction(parameter)  # Remove it if it will be replaced
         self.input_functions[parameter] = functionwidget
-        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
         self.addSubFeature(functionwidget)
+        functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
 
     def removeInputFunction(self, parameter):
         """
@@ -183,28 +216,38 @@ class FunctionWidget(fw.FeatureWidget):
 
         """
         function = self.input_functions.pop(parameter)
-        del function
+        self.removeSubFeature(function)
 
     def paramChanged(self, param):
-        """Slot connected to a pg.Parameter.sigChanged signal"""
+        """
+        Slot connected to a pg.Parameter.sigChanged signal
+        """
         self.param_dict.update({param.name(): param.value()})
 
     def allReadOnly(self, boolean):
-        """Make all parameter read only"""
+        """
+        Make all parameter read only
+        """
         for param in self.params.children():
             param.setReadonly(boolean)
 
     def menuRequested(self):
-        """Context menu for functionWidget. Default is not menu."""
+        """
+        Context menu for functionWidget. Default is not menu.
+        """
         pass
 
     def paramMenuRequested(self, pos):
-        """Menus when a parameter in the form is right clicked"""
+        """
+        Menus when a parameter in the form is right clicked
+        """
         if self.form.currentItem().parent():
             self.parammenu.exec_(self.form.mapToGlobal(pos))
 
     def testParamTriggered(self):
-        """Slot when a parameter range is clicked. Will emit the parameter name and the chosen range"""
+        """
+        Slot when a parameter range is clicked. Will emit the parameter name and the chosen range
+        """
         param = self.form.currentItem().param
         if param.type() == 'int' or param.type() == 'float':
             start, end, step = None, None, None
@@ -224,7 +267,17 @@ class FunctionWidget(fw.FeatureWidget):
 
 class TomoPyReconFunctionWidget(FunctionWidget):
     """
-    Subclass of FunctionWidget used for Tomopy recon functions
+    Subclass of FunctionWidget used for Tomopy recon functions. Allows adding input functions for center of rotation
+    detection. And has a default Projection Angles function to provide the theta parameter to the function.
+
+    Parameters
+    ----------
+    name : str
+        generic name of function
+    subname : str
+        specific name of function under the generic name category
+    package : python package
+        package
     """
 
     def __init__(self, name, subname, package):
@@ -246,7 +299,9 @@ class TomoPyReconFunctionWidget(FunctionWidget):
 
     @property
     def partial(self):
-        """Reimplement parents partial property to do some cleanup before creating the partial"""
+        """
+        Overrides partial property to do some cleanup before creating the partial
+        """
         kwargs = deepcopy(self.param_dict)
         # 'cutoff' and 'order' are not passed into the tomopy recon function as {'filter_par': [cutoff, order]}
         if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
@@ -266,16 +321,23 @@ class TomoPyReconFunctionWidget(FunctionWidget):
             specific name of function under the generic name category
         package : python package
             package where function is defined
-
         """
-        self.input_functions['center'] = FunctionWidget(name, subname, package=package)
-        self.addInputFunction('center', self.input_functions['center'])
+        try:
+            self.addInputFunction('center', FunctionWidget(name, subname, package=package))
+        except AttributeError:
+            pass
 
     def setCenterParam(self, value):
+        """
+        Sets the center parameter for the FunctionWidget to give value
+        """
         self.params.child('center').setValue(value)
         self.params.child('center').setDefault(value)
 
     def menuRequested(self, pos):
+        """
+        Slot when menu is requested from FeatureWidget ui (ie to add input functions)
+        """
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
 
@@ -295,6 +357,9 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
 
     @property
     def partial(self):
+        """
+        Return the base FunctionWidget partial property
+        """
         return FunctionWidget.partial(self)
 
 
@@ -302,6 +367,15 @@ class WriteFunctionWidget(FunctionWidget):
     """
     Subclass of FunctionWidget for write functions to have a Browse button to use a QFileDialog for setting 'fname'
     parameter
+
+    Parameters
+    ----------
+    name : str
+        generic name of function
+    subname : str
+        specific name of function under the generic name category
+    package : python package
+        package where function is defined
     """
     def __init__(self, name, subname, package):
         super(WriteFunctionWidget, self).__init__(name, subname, package)
@@ -310,6 +384,9 @@ class WriteFunctionWidget(FunctionWidget):
             'Save reconstruction as', self.params.child('fname').value())[0])))
 
     def updateParamsDict(self):
+        """
+        Overrides updating the parameter_dict to avoid adding the 'Browse' action
+        """
         self.param_dict.update({param.name(): param.value() for param in self.params.children()
                                 if param.name() != 'Browse'})  # skip the Browse parameter!
         for p, ipf in self.input_functions.iteritems():
@@ -413,15 +490,40 @@ class TestListRangeDialog(QtGui.QDialog):
 
 class FunctionManager(fw.FeatureManager):
     """
-    Class to manage tomography workflow/pipeline FunctionWidgets
+    Subclass of FeatureManager used to manage tomography workflow/pipeline FunctionWidgets
 
     Attributes
     ----------
+    cor_offest : function/lambda
+        function to correct for an offset in the COR location. As when padding the input array
+    corr_scale : function/lambda
+        function to correct for a scaling in the COR location. As when subsampling the input array
 
+    recon_function : FunctionWidget
+        FunctionWidget representing the Reconstruction Function in worflow pipeline
+
+    Parameters
+    ----------
+    list_layout : QtGui.QLayout
+        Layout to display the list of FunctionWidgets
+    form_layout : QtGui.QLayout
+        Layout to display the FunctionWidgets form (pyqtgraph.Parameter)
+    function_widgets : list of FunctionWidgets, optional
+        List with functionwidgets for initialization
+    blank_form : QtGui.QWidget, optional
+        Widget to display in form_layout when not FunctionWidget is selected
+
+    Signals
+    -------
+    sigTestRange(str, object)
+    sigPipelineChanged()
+        Emitted when the pipeline changes or the reconstruction function is changed
     """
 
     sigTestRange = QtCore.Signal(str, object)
-    center_func_slc = {'Phase Correlation': (0, -1)}
+    sigPipelineChanged = QtCore.Signal()
+
+    center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
@@ -429,16 +531,29 @@ class FunctionManager(fw.FeatureManager):
         self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
-        self.pipeline_yaml = {}
 
     # TODO fix this astra check raise error if package not available
     def addFunction(self, function, subfunction, package):
+        """
+        Adds a Function to the workflow pipeline
+
+        Parameters
+        ----------
+        function : str
+            generic name of function
+        subfunction : str
+            specific name of function under the generic name category
+        package : python package
+            package where function is defined
+        """
+
         if function == 'Reconstruction':
             if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
                 func_widget = AstraReconFuncWidget(function, subfunction, package)
             else:
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
+            self.sigPipelineChanged.emit()
         elif function == 'Write':
             func_widget = WriteFunctionWidget(function, subfunction, package)
         else:
@@ -448,23 +563,64 @@ class FunctionManager(fw.FeatureManager):
         return func_widget
 
     def addInputFunction(self, funcwidget, parameter, function, subfunction, package, **kwargs):
-        ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
-        funcwidget.addInputFunction(parameter, ipf_widget)
+        """
+        Adds an input function to the give function widget
+
+        Parameters
+        ----------
+        funcwidget : FunctionWidget
+            Widget to add subfunction to
+        parameter : str
+            Parameter name that will be overriden by return value of input function
+        function : str
+            generic name of function
+        subfunction : str
+            specific name of function under the generic name category
+        package : python package
+            package where function is defined
+        kwargs
+            Additional keyword arguments
+        """
+        try:
+            ipf_widget = FunctionWidget(function, subfunction, package, **kwargs)
+            funcwidget.addInputFunction(parameter, ipf_widget)
+        except AttributeError:
+            ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
 
     def updateParameters(self):
+        """
+        Updates all parameters for the current function list
+        """
         for function in self.features:
             function.updateParamsDict()
 
     def lockParams(self, boolean):
+        """
+        Locks all parameters for the current function list
+        """
         for func in self.features:
             func.allReadOnly(boolean)
 
     def resetCenterCorrection(self):
+        """
+        Resets the center correction functions to dummy lambdas
+        """
         self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
 
     def setCenterCorrection(self, name, param_dict):
+        """
+        Sets the center correction lambda's according to the effect of function given to the input array
+
+        Parameters
+        ----------
+        name : str
+            Name of function that has an effect on the COR value
+        param_dict : dict
+            Parameter dictionary of the function give
+        """
+
         if 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
             self.cor_offset = lambda x: x + n
@@ -476,6 +632,26 @@ class FunctionManager(fw.FeatureManager):
             self.cor_scale = lambda x: x * 2 ** s
 
     def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
+        """
+        Updates the given FunctionWidget's partial
+
+        Parameters
+        ----------
+        funcwidget : FunctionWidget
+            Widget whos partial is to be updated
+        datawidget
+            Class holding the input dataset
+        stack_dict : dict, optional
+            Copy FunctionWidget's param_dict
+        slc : slice
+            Slice object to extract flat/dark fields when appropriate
+
+        Returns
+        -------
+        functools.partial
+            partial object with updated keywords
+        """
+
         fpartial = funcwidget.partial
         for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
             if argname in 'flats':
@@ -515,6 +691,33 @@ class FunctionManager(fw.FeatureManager):
         return fpartial
 
     def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
+        """
+        Create the function stack and summary dictionary used for running slice previews and 3D previews
+
+        Parameters
+        ----------
+        datawidget
+            Class holding the input dataset
+        slc slice
+            Slice object to extract tomography/flat/dark data when appropriate
+        ncore : int
+            number of cores to set the appropriate functions to run on
+        skip_names : list of str, optional
+            Names of functions to skip when running but still add to the dict representing the pipeline to run.
+            Currently only the Writing functions are skipped as writing is not necessary in previews.
+        fixed_func : type class
+            A dynamic class with only the necessary attributes to be run in a workflow pipeline. This is used for
+            parameter range tests to create the class with the parameter to be run and send it to a background thread.
+            See testParameterRange for more details
+
+        Returns
+        -------
+        list of partials:
+            List with function partials needed to run preview
+        dict
+            Dictionary summarizing functions and parameters representing the pipeline (used for the list of partials)
+        """
+
         stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
@@ -540,10 +743,48 @@ class FunctionManager(fw.FeatureManager):
         self.lockParams(False)
         return partial_stack, stack_dict
 
-    def foldFunctionStack(self, partial_stack, initializer):
+    @staticmethod
+    def foldFunctionStack(partial_stack, initializer):
+        """
+        Static class method to fold a partial function stack given an initializer
+
+        Parameters
+        ----------
+        partial_stack : list of functools.partial
+            List of partials that require only the input array to run.
+        initializer : ndarray
+            Array to use as initializer for folding operation
+
+        Returns
+        -------
+        Return value of last partial in stack
+            Result of folding operation
+        """
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
     def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, xbounds=None, ncore=None):
+        """
+        Generator for running full reconstruction. Yields messages representing the status of reconstruction
+        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
+
+        Parameters
+        ----------
+        datawidget
+        proj : tuple of int
+            Projection range indices (start, end, step)
+        sino : tuple of int
+            Sinogram range indices (start, end, step)
+        sino_p_chunk : int
+            Number of sinograms per chunk
+        ncore : int
+            Number of cores to run functions
+
+        Yields
+        -------
+        str
+            Message of current status of function
+        """
+
         write_start = sino[0]
         nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
         total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
@@ -581,6 +822,20 @@ class FunctionManager(fw.FeatureManager):
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
     def testParameterRange(self, function, parameter, prange):
+        """
+        Used to set off parameter range tests. Emits sigTestRange with message and a fixed_func object representing the
+        function who's parameter is to be changed
+
+        Parameters
+        ----------
+        function : FunctionWidget
+            Widget containing the parameter to be evaluated
+        parameter : str
+            Parameter name
+        prange : tuple/list
+            Range of parameters to be evaluated
+        """
+
         self.updateParameters()
         for i in prange:
             function.param_dict[parameter] = i
@@ -594,12 +849,25 @@ class FunctionManager(fw.FeatureManager):
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func)
 
-    def setPipelineFromYAML(self, pipeline, setdefaults=False, config_file=config.names):
+    def setPipelineFromYAML(self, pipeline, setdefaults=False, config_dict=config.names):
+        """
+        Sets the managers function/feature list from a dictionary from a YAML file.
+
+        Parameters
+        ----------
+        pipeline : dict
+            Dict extracted from YAML file
+        setdefaults : bool
+            Set the given parameter values as defaults
+        config_dict : dict, optional
+            Dictionary with configuration specifications/function parameter details
+        """
+
         self.removeAllFeatures()
         # Way too many for loops, oops... may want to restructure the yaml files
         for func, subfuncs in pipeline.iteritems():
             for subfunc in subfuncs:
-                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_file[subfunc][1]])
+                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
                 if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
                     funcWidget.enabled = False
                 if 'Parameters' in subfuncs[subfunc]:
@@ -616,7 +884,7 @@ class FunctionManager(fw.FeatureManager):
                                     ifwidget = funcWidget.input_functions[param]
                                 else:
                                     ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf,
-                                                                     package=reconpkg.packages[config_file[sipf][1]])
+                                                                     package=reconpkg.packages[config_dict[sipf][1]])
                                 if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
                                     ifwidget.enabled = False
                                 if 'Parameters' in sipfs[sipf]:
@@ -626,13 +894,25 @@ class FunctionManager(fw.FeatureManager):
                                             ifwidget.params.child(p).setDefault(v)
                                 ifwidget.updateParamsDict()
                 funcWidget.updateParamsDict()
+        self.sigPipelineChanged.emit()
 
+    def setPipelineFromDict(self, pipeline, config_dict=config.names):
+        """
+        Sets the managers function/feature list from a dictionary extracted from a summary dictionary as the ones
+        displayed in previews
 
-    def setPipelineFromDict(self, pipeline, config_file=config.names):
+        Parameters
+        ----------
+        pipeline : dict
+            Dict representing the workflow pipeline
+        config_dict : dict, optional
+            Dictionary with configuration specifications/function parameter details
+        """
+
         self.removeAllFeatures()
         for func, subfuncs in pipeline.iteritems():
             for subfunc in subfuncs:
-                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_file[subfunc][1]])
+                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
                 for param, value in subfuncs[subfunc].iteritems():
                     if param == 'Package':
                         continue
@@ -640,14 +920,14 @@ class FunctionManager(fw.FeatureManager):
                         for param, ipfs in value.iteritems():
                             for ipf, sipf in ipfs.iteritems():
                                 ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf.keys()[0],
-                                                          package=reconpkg.packages[config_file[sipf.keys()[0]][1]])
+                                                                 package=reconpkg.packages[config_dict[sipf.keys()[0]][1]])
                                 for p, v in sipf[sipf.keys()[0]].items():
                                     ifwidget.params.child(p).setValue(v)
                                 ifwidget.updateParamsDict()
                     else:
                         funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
-
+        self.sigPipelineChanged.emit()
 
 def map_loc(slc, loc):
     """

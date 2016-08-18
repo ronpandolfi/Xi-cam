@@ -1,7 +1,10 @@
 import importlib
 from pipeline import msg
 
+# Packages to import
 PACKAGE_LIST =['tomopy', 'astra', 'dxchange']
+
+# Dictionary with package names as keys and package objects as values
 packages = {}
 
 for name in PACKAGE_LIST:
@@ -13,5 +16,6 @@ for name in PACKAGE_LIST:
     except ImportError:
         msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning
 
+# Add the extra functions
 import pipelinefunctions
 packages['pipelinefunctions'] = pipelinefunctions
