@@ -3,17 +3,17 @@ from PySide import QtGui, QtCore
 from xicam.plugins import base
 from xicam import config
 from pyqtgraph import parametertree as pt
-# from fabio import open
+from fabio import tifimage
 # from PIL import Image
 from pipeline import loader, hig
 #from hiprmc import hiprmc
 import pyqtgraph as pg
 import numpy as np
+import subprocess
 
 """
 Bugs:
     1. User can resize ROI after recentering
-    2. rmc does not work yet
 
 """
 
@@ -82,7 +82,10 @@ class inOutViewer(QtGui.QWidget, ):
 
 
         self.view_stack = pg.ImageView(self)
-        self.path = paths[0]
+        if type(paths) == list:
+            self.path = paths[0]
+        else:
+            self.path = paths
 
         # import using pipeline function
         self.stack_image = np.transpose(loader.loadimage(self.path))
@@ -95,13 +98,14 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
+        start_size = max(self.stack_image.shape)
         self.scatteringParams = pt.ParameterTree()
         params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Loading factor', 'type': 'int', 'value': 1},
-                  {'name': 'Scale factor', 'type': 'int', 'value': 1, 'default': 1},
+                  {'name': 'Loading factor', 'type': 'float', 'value': 0.111, 'default': 0.111},
+                  {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
-                  {'name': 'Model start size', 'type': 'int', 'value': 1},
-                  {'name': 'Save Name', 'type': 'str', 'value': 'test.tif'}]
+                  {'name': 'Model start size', 'type': 'int', 'value': start_size},
+                  {'name': 'Save Name', 'type': 'str', 'value': 'processed'}]
         self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
         self.scatteringParams.setParameters(self.configparams, showTop=False)
 
@@ -112,18 +116,14 @@ class inOutViewer(QtGui.QWidget, ):
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
-        saveButton = QtGui.QPushButton("Save centered image")
         sideWidgetFormat.addWidget(scatteringHolder)
         sideWidgetFormat.addSpacing(50)
         sideWidgetFormat.addWidget(centerButton)
-        sideWidgetFormat.addSpacing(5)
-        sideWidgetFormat.addWidget(saveButton)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(runButton)
 
         centerButton.clicked.connect(self.center)
         runButton.clicked.connect(self.runRMC)
-        saveButton.clicked.connect(self.save)
 
         self.heading_box = QtGui.QComboBox()
         self.heading_box.addItems(['Original Image', 'Recentered Image'])
@@ -148,17 +148,6 @@ class inOutViewer(QtGui.QWidget, ):
         self.heading_box.activated.connect(self.image_holder.setCurrentIndex)
 
 
-    def save(self):
-        pass
-        # if type(self.edited_image) == None:
-        #     pass
-        #
-        # write_path = self.path
-        # if write_path.endswith()
-        #
-        # with open(path, 'w') as f:
-        #         f.write(str(self))
-
 
     def center(self):
 
@@ -180,6 +169,18 @@ class inOutViewer(QtGui.QWidget, ):
 
         self.edited_image[lowleft_corner_x:lowleft_corner_x+xdim,lowleft_corner_y: lowleft_corner_y+ydim] \
             = self.stack_image
+
+        # save image
+        image = self.edited_image
+        self.write_path = self.path
+        if self.write_path.endswith('.tif'):
+            self.write_path = self.write_path[:-4]+'centered.tif'
+        else:
+            self.write_path += '_centered.tif'
+
+        img = tifimage.tifimage(np.rot90((self.edited_image.astype(float)/
+                                          self.edited_image.max()*2**16).astype(np.int16)))
+        img.write(self.write_path)
 
 
         self.show_edited = pg.ImageView(self)
@@ -213,10 +214,14 @@ class inOutViewer(QtGui.QWidget, ):
 
     def runRMC(self):
 
+        if type(self.edited_image) == None:
+            pass
+
+
         params = self.configparams
 
 
-        hig_info = {'hipRMCInput': {'instrumentation': {'inputimage': "{}".format(self.path),
+        hig_info = {'hipRMCInput': {'instrumentation': {'inputimage': "{}".format(self.write_path),
                                              'imagesize': [self.new_dim, self.new_dim ],
                                              'numtiles': params.child('Num tiles').value(),
                                              'loadingfactors': [params.child('Loading factor').value()]},
@@ -227,12 +232,14 @@ class inOutViewer(QtGui.QWidget, ):
                                          'scalefactor': params.child('Scale factor').value()}}}
 
         h = hig.hig(**hig_info)
-        save_name = './' + params.child('Save Name').value()
-        if not save_name.endswith('.hig'):
-            save_name += '.hig'
+        hig_name = './' + params.child('Save Name').value()
+        if not hig_name.endswith('.hig'):
+            hig_name += '.hig'
 
+        h.write(hig_name)
 
-        h.write(save_name)
+        print "Running RMC: results writing to current working directory"
+        subprocess.call(['./hiprmc/bin/hiprmc', hig_name])
 
 
 
