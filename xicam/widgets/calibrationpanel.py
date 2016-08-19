@@ -8,7 +8,8 @@ from pipeline import calibration
 
 class calibrationpanel(ParameterTree):
     algorithms = OrderedDict(
-        [('Fourier Autocorrelation', calibration.fourierAutocorrelation), ('2D Ricker Wavelet', None)])
+        [('Fourier Autocorrelation', calibration.fourierAutocorrelation),
+         ('2D Ricker Wavelet', calibration.rickerWavelets)])
     sigCalibrate = QtCore.Signal(object, str)
     def __init__(self):
         super(calibrationpanel, self).__init__()
