@@ -198,6 +198,14 @@ class peak(object):
     def pos(self):
         return self.x, self.y
 
+    # qz, alphaf and y-poition are going to be different
+    def copy(self):
+        val = peak(self.mode)
+        val.twotheta = self.twotheta
+        val.qpar = self.qpar
+        val.hkl = self.hkl
+        val.x = self.x
+        return val
 
     def position(self, center, sdd, pixels):
         tan_2t = np.tan(self.twotheta)
@@ -227,14 +235,25 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
     return np.sqrt(qx**2 + qy**2), qz
 
 def dwba_componets(Gz, k, nu, alphai):
-    alphaf = np.zeros(2, dtype=np.float)
-    t1 = (Gz/k)**2
-    nu2 = 2 * nu ** 2
-    cosai = np.cos(alphai)
-    alphaf[0] = np.arccos(cosai - t1)
-    alphaf[1] = np.arccos(nu2 - cosai - t1)
-    #alphaf[2] = np.arccos(t1 + nu2 - cosai)
-    #alphaf[3] = np.arccos(t1 + cosai)
+    alphaf = np.zeros(4, dtype=np.float)
+    gprime = Gz/k
+    t1 = nu**2 - np.cos(alphai)**2
+    if np.real(t1) < 0:
+        print 'Error: incoming angle is below the critical angle'
+        return None
+    cprime = np.sqrt(t1)
+    cosa1 = nu**2 - (gprime + cprime)**2 
+    cosa2 = nu**2 - (gprime - cprime)**2 
+    a1 = np.arccos(np.sqrt(cosa1))
+    a2 = np.arccos(np.sqrt(cosa2))
+    #TODO: this is a hack a1 should always be transmission
+    if abs(a2) > abs(a1):
+        alphaf[0] = a1
+        alphaf[1] = a2
+    else:
+        alphaf[0] = a2
+        alphaf[1] = a1
+    
     return alphaf
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
@@ -289,7 +308,6 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     k = 2 * np.pi / wavelen
     peaks = list()
     for hkl in HKL:
-        #if hkl[2] < 0: continue
         if not sgexclusions.check(hkl, space_grp): continue
         if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
@@ -299,6 +317,8 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
             # compute DWBA components
             alphaf = dwba_componets(G[2], k, nu, alphai)
+            if alphaf is None:
+                continue
 
             # get the transmission peaks
             transmission = peak('Transmission')
