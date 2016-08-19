@@ -1,4 +1,3 @@
-import multiprocessing
 from collections import OrderedDict
 
 LUT = None
@@ -11,19 +10,3 @@ lastroi = None
 statusbar = None
 app = None
 
-def load():
-    global pool
-    multiprocessing.freeze_support()
-    pool = multiprocessing.Pool()
-
-
-def hardresetpool():
-    global pool
-    endpool()
-    pool = multiprocessing.Pool()
-
-
-def endpool():
-    global pool
-    pool.terminate()
-    pool.join()

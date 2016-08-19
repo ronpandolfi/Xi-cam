@@ -21,6 +21,8 @@ from pipeline import loader
 from xicam import config
 import fabio
 
+from xicam.widgets.calibrationpanel import calibrationpanel
+
 # Globals so Timeline can share the same rightmodes
 configtree = ParameterTree()
 configtree.setParameters(config.activeExperiment, showTop=False)
@@ -62,6 +64,12 @@ class plugin(base.plugin):
 
         self.propertytable = widgets.frameproptable()
         self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
+
+        self.calibrationPanel = calibrationpanel()
+        calicon = QtGui.QIcon()
+        calicon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rightmodes.append((self.calibrationPanel, calicon))
+        self.calibrationPanel.sigCalibrate.connect(self.calibrate)
 
         super(plugin, self).__init__(*args, **kwargs)
 
@@ -171,8 +179,8 @@ class plugin(base.plugin):
         if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
-    def calibrate(self):
-        self.getCurrentTab().calibrate()
+    def calibrate(self, algorithm, calibrant):
+        self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):
         self.getCurrentTab().centerfind()

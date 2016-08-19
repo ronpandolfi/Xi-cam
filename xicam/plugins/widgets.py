@@ -565,36 +565,9 @@ class dimgViewer(QtGui.QWidget):
                 item.setPos(center)
 
     @debugtools.timeit
-    def calibrate(self):
-        if self.dimg.transformdata is None:
-            return
+    def calibrate(self, algorithm, calibrant):
 
-
-
-        self.findcenter(skipdraw=True)
-        radialprofile = integration.pixel_2Dintegrate(self.dimg,mask=self.dimg.mask)
-
-        peaks = np.array(peakfinding.findpeaks(np.arange(len(radialprofile)), radialprofile)).T
-
-        peaks = peaks[peaks[:, 1].argsort()[::-1]]
-
-        for peak in peaks:
-            if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
-                bestpeak = peak[0]
-                # print peak
-                break
-
-        # Calculate sample to detector distance for lowest q peak
-        tth = 2 * np.arcsin(0.5 * config.activeExperiment.getvalue('Wavelength') / 58.367e-10)
-        tantth = np.tan(tth)
-        sdd = bestpeak * config.activeExperiment.getvalue('Pixel Size X') / tantth
-
-        config.activeExperiment.setvalue('Detector Distance', sdd)
-
-#        self.refinecenter()
-        xglobals.hardresetpool()
-
-        self.dimg.invalidatecache()
+        algorithm(self.dimg, calibrant)
 
         self.replot()
         self.drawcenter()
@@ -1273,10 +1246,14 @@ class integrationsubwidget(pg.PlotWidget):
             qvrt = None
             qpar = None
 
-        xglobals.pool.apply_async(integrationfunction, args=(data, mask, dimg.experiment.getAI().getPyFAI(), None,
-                                                                       None, self.requestkey, qvrt, qpar),
-                                  callback=self.replotcallback)
+        # xglobals.pool.apply_async(integrationfunction, args=(data, mask, dimg.experiment.getAI().getPyFAI(), None,
+        #                                                                None, self.requestkey, qvrt, qpar),
+        #                           callback=self.replotcallback)
 
+        runnable = threads.RunnableMethod(integrationfunction, method_args=(
+        data, mask, dimg.experiment.getAI().getPyFAI(), None, None, self.requestkey, qvrt, qpar),
+                                          callback_slot=self.replotcallback)
+        threads.add_to_queue(runnable)
         # replot roi integration
         for roi in rois:
             if roi.isdeleting:
@@ -1287,9 +1264,13 @@ class integrationsubwidget(pg.PlotWidget):
             msg.logMessage(('Cut:', cut.shape),msg.DEBUG)
 
             if cut is not None:
-                xglobals.pool.apply_async(integrationfunction,
-                                          args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
-                                          callback=self.replotcallback)
+                # xglobals.pool.apply_async(integrationfunction,
+                #                           args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
+                #                           callback=self.replotcallback)
+                runnable = threads.RunnableMethod(integrationfunction, method_args=(
+                data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
+                                                  callback_slot=self.replotcallback)
+                threads.add_to_queue(runnable)
     def movPosLine(self, qx,qz,dimg=None):
         pass #raise NotImplementedError
 
