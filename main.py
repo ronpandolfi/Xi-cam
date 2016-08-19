@@ -12,7 +12,6 @@ from xicam.splash import SplashScreen
 
 def main():
     from xicam import xglobals
-    xglobals.load()
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
     for path in sys.path:
         print 'path:', path

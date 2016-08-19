@@ -118,6 +118,12 @@ class MyMainWindow(QtCore.QObject):
 
         # Grab status bar
         msg.statusbar = self.ui.statusbar
+        pb = QtGui.QProgressBar()
+        pb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Ignored)
+        msg.progressbar = pb
+        pb.setAccessibleName('progressbar')
+        msg.statusbar.addPermanentWidget(pb)
+        pb.hide()
         msg.showMessage('Ready...')
         xglobals.statusbar = self.ui.statusbar  # TODO: Deprecate this by replacing all statusbar calls with msg module
 
@@ -203,7 +209,6 @@ class MyMainWindow(QtCore.QObject):
                 self.closeAllConnections()
                 QtGui.QApplication.quit()
                 threads.worker.stop()  # ask worker to stop nicely
-                xglobals.pool.join()
                 return True
             else:
                 return False

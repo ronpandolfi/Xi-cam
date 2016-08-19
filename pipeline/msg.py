@@ -4,6 +4,7 @@ import sys
 import time
 
 statusbar = None # Must be registered to output to a ui status bar
+progressbar = None
 
 stdch = logging.StreamHandler(sys.stdout)
 
@@ -18,9 +19,31 @@ CRITICAL = logging.CRITICAL     # 50
 logbacklog=[]
 
 
+def showProgress(value, min=0, max=100):
+    if progressbar:
+        progressbar.show()
+        progressbar.setRange(min, max)
+        progressbar.setValue(value)
+
+
+def showBusy():
+    if progressbar:
+        progressbar.show()
+        progressbar.setRange(0, 0)
+
+
+def hideBusy():
+    if progressbar:
+        progressbar.hide()
+        progressbar.setRange(0, 100)
+
+
+hideProgress = hideBusy
+
+
 def showMessage(s,timeout=0):
     if statusbar is not None:
-        statusbar.showMessage(s,timeout)
+        statusbar.showMessage(s, timeout * 1000)
 
     logMessage(s)
 
