@@ -17,6 +17,7 @@ Bugs:
     1. User can resize ROI after recentering
     2. Centering/running RMC causes gui to return to original image tab, instead of staying on the current tab
         or going to the tab relevant for the button pressed
+    3. RMC code runs on main thread and does not have outputs on terminal (hard to tell if frozen or not)
 
 """
 
@@ -183,7 +184,6 @@ class inOutViewer(QtGui.QWidget, ):
             = self.stack_image
 
         # save image
-        image = self.edited_image
         self.write_path = self.path
         if self.write_path.endswith('.tif'):
             self.write_path = self.write_path[:-4]+'centered.tif'
@@ -252,11 +252,11 @@ class inOutViewer(QtGui.QWidget, ):
 
         h.write(hig_name)
         proc = subprocess.Popen(['./hiprmc/bin/hiprmc', hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output = proc.read()
+        output, err = proc.communicate()
 
-        subprocess.call(['./hiprmc/bin/hiprmc', hig_name])
-        all_subdirs = [d for d in os.listdir('.') if os.path.isdir(d)]
-        rmc_folder = './{}'.format(max(all_subdirs, key=os.path.getmtime))
+        # complicated way of finding and writing to folder name written by hiprmc
+        ind = output.index(params.child('Save Name').value())
+        rmc_folder = './{}'.format(output[ind:].split("\n")[0])
         os.rename(hig_name, '{}/{}.hig'.format(rmc_folder,params.child('Save Name').value()))
 
         # add rmcView to tabwidget
