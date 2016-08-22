@@ -1400,11 +1400,12 @@ class multifilediffimage2(diffimage2):
         self.currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
+        self._xvals = None
 
         self.dtype = self.rawdata.dtype
         self.max = np.max(self.rawdata)
         self.min = np.min(self.rawdata)
-        self.shape = self.rawdata.shape[0], self.rawdata.shape[1], len(filepaths)
+        self.shape = len(filepaths), self.rawdata.shape[0], self.rawdata.shape[1]
         self.size = np.product(self.shape)
 
     @property
@@ -1414,8 +1415,17 @@ class multifilediffimage2(diffimage2):
 
         return self._headers
 
+    def iHeaders(self, i):
+        return loadparas(self.filepaths[i])
+
     def xvals(self, _):
-        return np.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
+        if self._xvals is None:
+            timekey = config.activeExperiment.headermap['Timeline Axis']
+            if timekey:
+                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+            else:
+                self._xvals = np.arange(len(self.filepaths))
+        return self._xvals
 
     def first(self):
         if len(self.filepaths) > 0:
@@ -1457,7 +1467,7 @@ class multifilediffimage2(diffimage2):
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
         # print 'frame:',frame
         if frame is None: frame = self.currentframe
-        if type(frame) is list: frame = frame[1].step
+        if type(frame) is list: frame = frame[2].step
         self.currentframe = frame
         if not frame in self._framecache:
             if len(self._framecache) > 2: del self._framecache.keys()[0]  # del the first cached item
@@ -1471,7 +1481,7 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None

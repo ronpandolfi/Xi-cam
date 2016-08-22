@@ -116,7 +116,8 @@ class experiment(Parameter):
                           'Sample Alpha Stage': 'Sample Alpha Stage',
                           'Detector Vertical': 'Detector Vertical',
                           'Detector Horizontal': 'Detector Horizontal',
-                          'I1 AI': 'I1 AI'}
+                          'I1 AI': 'I1 AI',
+                          'Timeline Axis': None}
 
     # Make the mask accessible as a property
     @property
