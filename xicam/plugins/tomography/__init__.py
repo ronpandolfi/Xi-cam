@@ -440,7 +440,11 @@ class plugin(base.plugin):
         recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
                    self.ui.config_params.child('Sinograms/Chunk').value(),
                    ncore=self.ui.config_params.child('CPU Cores').value())
-        self.recon_start_time = time.time()
+
+
+        # for feature in self.manager.features:
+        #     if feature.func_name == "Write":
+        #         print feature.param_dict
 
     @QtCore.Slot()
     def reconstructionFinished(self):
@@ -448,6 +452,15 @@ class plugin(base.plugin):
         Slot to revieve the reconstruction background threads finished signal. The total time the reconstruction took is
         displayed in the console.
         """
+
+        for feature in self.manager.features:
+            if feature.func_name == "Write":
+                save_file = feature.param_dict['fname'] + '.yml'
+
+
+        with open(save_file, 'w') as yml:
+            pipeline = config.extract_pipeline_dict(self.manager.features)
+            yamlmod.ordered_dump(pipeline, yml)
 
         run_time = time.time() - self.recon_start_time
         self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
