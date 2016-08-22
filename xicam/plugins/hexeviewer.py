@@ -10,10 +10,13 @@ from pipeline import loader, hig
 import pyqtgraph as pg
 import numpy as np
 import subprocess
+import xicam.RmcView as rmc
 
 """
 Bugs:
     1. User can resize ROI after recentering
+    2. Centering/running RMC causes gui to return to original image tab, instead of staying on the current tab
+        or going to the tab relevant for the button pressed
 
 """
 
@@ -101,7 +104,7 @@ class inOutViewer(QtGui.QWidget, ):
         start_size = max(self.stack_image.shape)
         self.scatteringParams = pt.ParameterTree()
         params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Loading factor', 'type': 'float', 'value': 0.111, 'default': 0.111},
+                  {'name': 'Loading factor', 'type': 'float', 'value': 0.5, 'default': 0.5},
                   {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                   {'name': 'Model start size', 'type': 'int', 'value': start_size},
@@ -125,8 +128,13 @@ class inOutViewer(QtGui.QWidget, ):
         centerButton.clicked.connect(self.center)
         runButton.clicked.connect(self.runRMC)
 
-        self.heading_box = QtGui.QComboBox()
-        self.heading_box.addItems(['Original Image', 'Recentered Image'])
+        self.headings = QtGui.QTabBar(self)
+        self.headings.addTab('Original Image')
+        self.headings.addTab('Recentered Image')
+        self.headings.addTab('RMC Timeline')
+        self.headings.setShape(QtGui.QTabBar.TriangularSouth)
+
+
 
         self.image_holder = QtGui.QStackedWidget()
         self.view_stack.setImage(self.stack_image)
@@ -134,19 +142,23 @@ class inOutViewer(QtGui.QWidget, ):
         self.view_stack.autoRange()
         self.image_holder.addWidget(self.view_stack)
 
+        self.show_edited = pg.ImageView(self)
+        self.image_holder.addWidget(self.show_edited)
+
 
         sidelayout = QtGui.QVBoxLayout()
-        sidelayout.addWidget(self.heading_box)
-        sidelayout.addSpacing(5)
         sidelayout.addWidget(self.image_holder)
+        sidelayout.addWidget(self.headings)
 
         layout.addLayout(sidelayout,10)
         layout.addLayout(sideWidgetFormat,4)
         self.setLayout(layout)
 
+        self.headings.currentChanged.connect(self.currentChanged)
+        self.image_holder.currentChanged.connect(self.headings.setCurrentIndex)
 
-        self.heading_box.activated.connect(self.image_holder.setCurrentIndex)
-
+    def currentChanged(self,index):
+        self.image_holder.setCurrentIndex(index)
 
 
     def center(self):
@@ -183,12 +195,14 @@ class inOutViewer(QtGui.QWidget, ):
         img.write(self.write_path)
 
 
-        self.show_edited = pg.ImageView(self)
         self.show_edited.setImage(self.edited_image)
         self.image_holder.addWidget(self.show_edited)
 
         box = self.drawCameraLocation(self.show_edited,new_center)
         self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim, box)
+
+        # this is a temporary fix for a bug: pushing a button changes tab back to first
+        self.image_holder.setCurrentIndex(1)
 
     def drawCameraLocation(self,imageView_item,location):
 
@@ -237,11 +251,20 @@ class inOutViewer(QtGui.QWidget, ):
             hig_name += '.hig'
 
         h.write(hig_name)
+        proc = subprocess.Popen(['./hiprmc/bin/hiprmc', hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = proc.read()
 
-        print "Running RMC: results writing to current working directory"
         subprocess.call(['./hiprmc/bin/hiprmc', hig_name])
+        all_subdirs = [d for d in os.listdir('.') if os.path.isdir(d)]
+        rmc_folder = './{}'.format(max(all_subdirs, key=os.path.getmtime))
+        os.rename(hig_name, '{}/{}.hig'.format(rmc_folder,params.child('Save Name').value()))
 
+        # add rmcView to tabwidget
+        self.rmc_view = rmc.rmcView(rmc_folder)
+        self.image_holder.addWidget(self.rmc_view)
 
+        # this is a temporary fix for a bug: pressing either buttton changes tab back to first
+        self.image_holder.setCurrentIndex(2)
 
 
 
