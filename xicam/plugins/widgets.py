@@ -947,7 +947,7 @@ class timelineViewer(dimgViewer):
         #img = np.array(self.simg.thumbs)
         #img = (np.log(img * (img > 0) + (img < 1)))
 
-        self.imgview.setImage(simg,xvals=simg.xvals(None))
+        self.imgview.setImage(simg, xvals=simg.xvals(''))
 
         # self.imageitem.sigImageChanged.connect(self.setscale)
 
@@ -1050,10 +1050,10 @@ class timelineViewer(dimgViewer):
                     # print 'Warning: error displaying ROI variation.'
                     #    print ex.message
 
-    def plotvariation(self, variationx, variationy, color=None):
-        # variation=variation[0]
-        if variationx == None:
-            return
+    def plotvariation(self, variation, color=None):
+        if not variation: return
+        variationx, variationy = variation
+        if not variationx: return
 
         if color is None:
             color = [255, 255, 255]
@@ -1435,29 +1435,41 @@ class ImageView(pg.ImageView):
         del kwargs['actionLog_Intensity']
         super(ImageView, self).__init__(*args,**kwargs)
 
-
     def buildMenu(self):
         super(ImageView, self).buildMenu()
         self.menu.removeAction(self.normAction)
 
-    def keyReleaseEvent(self, ev):
-        super(ImageView, self).keyReleaseEvent(ev)
-        if ev.key() in [QtCore.Qt.Key_Right, QtCore.Qt.Key_Left, QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
-            ev.accept()
-            self.sigKeyRelease.emit()
+    def timeIndex(self, slider):
+        ## Return the time and frame index indicated by a slider
+        if self.image is None:
+            return (0, 0)
+
+        t = slider.value()
+
+        xv = self.tVals
+        if xv is None:
+            ind = int(t)
+        else:
+            if len(xv) < 2:
+                return (0, 0)
+            inds = np.argwhere(xv <= t)  # <- The = is import to reach the last value
+            if len(inds) < 1:
+                return (0, t)
+            ind = inds[-1, 0]
+        return ind, t
 
     def setImage(self,*args,**kwargs):
         super(ImageView, self).setImage(*args,**kwargs)
-        if self.actionLog_Intensity.isChecked():
-            levelmin = np.log(self.levelMin)
-            levelmax = np.log(self.levelMax)
-            if np.isnan(levelmin): levelmin = 0
-            if np.isnan(levelmax): levelmax = 1
-            if np.isinf(levelmin): levelmin = 0
-            msg.logMessage(('min:',levelmin),msg.DEBUG)
-            msg.logMessage(('max:',levelmax),msg.DEBUG)
-
-            self.ui.histogram.setLevels(levelmin, levelmax)
+        # if self.actionLog_Intensity.isChecked():
+        #     levelmin = np.log(self.levelMin)
+        #     levelmax = np.log(self.levelMax)
+        #     if np.isnan(levelmin): levelmin = 0
+        #     if np.isnan(levelmax): levelmax = 1
+        #     if np.isinf(levelmin): levelmin = 0
+        #     msg.logMessage(('min:',levelmin),msg.DEBUG)
+        #     msg.logMessage(('max:',levelmax),msg.DEBUG)
+        #
+        #     self.ui.histogram.setLevels(levelmin, levelmax)
 
     # def updateImage(self, autoHistogramRange=True): # inject logarithm action
     #     ## Redraw image on screen
@@ -1691,6 +1703,7 @@ class frameproptable(pg.TableWidget):
         useAsMenu = QtGui.QMenu(u'Use as...',parent=self.contextMenu)
         useAsMenu.addAction('Beam Energy').triggered.connect(self.useAsEnergy)
         useAsMenu.addAction('Downstream Intensity').triggered.connect(self.useAsI1)
+        useAsMenu.addAction('Timeline Axis').triggered.connect(self.useAsTimeline)
         self.contextMenu.addMenu(useAsMenu)
 
     def setData(self,data):
@@ -1709,6 +1722,9 @@ class frameproptable(pg.TableWidget):
 
     def useAsEnergy(self):
         config.activeExperiment.setHeaderMap('Beam Energy',self.getSelectedKey())
+
+    def useAsTimeline(self):
+        config.activeExperiment.setHeaderMap('Timeline Axis', self.getSelectedKey())
 
     def getSelectedKey(self):
         return self.item(self.selectedIndexes()[0].row(),0).value

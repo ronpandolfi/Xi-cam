@@ -20,6 +20,7 @@ from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
 from xicam import config
 import fabio
+from pipeline import calibration
 
 from xicam.widgets.calibrationpanel import calibrationpanel
 
@@ -179,7 +180,7 @@ class plugin(base.plugin):
         if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
-    def calibrate(self, algorithm, calibrant):
+    def calibrate(self, algorithm=calibration.fourierAutocorrelation, calibrant='AgBh'):
         self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):

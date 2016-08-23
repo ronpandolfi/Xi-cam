@@ -8,7 +8,7 @@ import msg
 
 def variationiterator(simg,operationindex,roi=None,color=None):
     for i in range(len(simg)):
-        yield i,simg.calcVariation(i,operationindex,roi),color
+        yield simg.calcVariation(i, operationindex, roi), color
 
 def scanvariation(filepaths):
     simg = loader.multifilediffimage2(filepaths)
