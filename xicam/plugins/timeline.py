@@ -17,6 +17,7 @@ import os
 import numpy as np
 
 import widgets
+from pipeline import calibration
 
 
 class plugin(base.plugin):  ##### Inherit viewer instead!!!
@@ -72,8 +73,8 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
     def currentImage(self):
         return self.getCurrentTab()
 
-    def calibrate(self):
-        self.getCurrentTab().calibrate()
+    def calibrate(self, algorithm=calibration.fourierAutocorrelation, calibrant='AgBh'):
+        self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):
         self.getCurrentTab().centerfind()

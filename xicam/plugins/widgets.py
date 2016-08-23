@@ -1460,16 +1460,16 @@ class ImageView(pg.ImageView):
 
     def setImage(self,*args,**kwargs):
         super(ImageView, self).setImage(*args,**kwargs)
-        if self.actionLog_Intensity.isChecked():
-            levelmin = np.log(self.levelMin)
-            levelmax = np.log(self.levelMax)
-            if np.isnan(levelmin): levelmin = 0
-            if np.isnan(levelmax): levelmax = 1
-            if np.isinf(levelmin): levelmin = 0
-            msg.logMessage(('min:',levelmin),msg.DEBUG)
-            msg.logMessage(('max:',levelmax),msg.DEBUG)
-
-            self.ui.histogram.setLevels(levelmin, levelmax)
+        # if self.actionLog_Intensity.isChecked():
+        #     levelmin = np.log(self.levelMin)
+        #     levelmax = np.log(self.levelMax)
+        #     if np.isnan(levelmin): levelmin = 0
+        #     if np.isnan(levelmax): levelmax = 1
+        #     if np.isinf(levelmin): levelmin = 0
+        #     msg.logMessage(('min:',levelmin),msg.DEBUG)
+        #     msg.logMessage(('max:',levelmax),msg.DEBUG)
+        #
+        #     self.ui.histogram.setLevels(levelmin, levelmax)
 
     # def updateImage(self, autoHistogramRange=True): # inject logarithm action
     #     ## Redraw image on screen

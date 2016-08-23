@@ -1026,6 +1026,73 @@ class diffimage2(object):
         else:
             return np.ones_like(self.rawdata)
 
+
+    @property
+    def transformdata(self):
+        # Not cached
+        img = self.rawdata
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cake(img, self.mask)
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask)
+
+        return img
+
+    @property
+    def transformmask(self):
+        img = self.mask
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cakemask
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask) > 0
+
+        return img
+
+    def radialsymmetryfill(self, img):
+        centerx = config.activeExperiment.center[0]
+        centery = config.activeExperiment.center[1]
+        symimg = np.rot90(img.copy(), 2)
+
+        xshift = -(img.shape[0] - 2 * centerx)
+        yshift = -(img.shape[1] - 2 * centery)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        symimg = np.roll(symimg, int(yshift), axis=1)
+
+        marginmask = config.activeExperiment.mask
+
+        x, y = np.indices(img.shape)
+        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
+
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
+    def mirrorsymmetryfill(self, img):
+        centerx = config.activeExperiment.getvalue('Center X')
+        symimg = np.flipud(img.copy())
+        self.imtest(symimg)
+        xshift = -(img.shape[1] - 2 * centerx)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        self.imtest(symimg)
+        marginmask = config.activeExperiment.mask
+        self.imtest(marginmask)
+
+        x, y = np.indices(img.shape)
+        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
+        self.imtest(padmask)
+        self.imtest(symimg * padmask * (1 - marginmask))
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
     @property
     def params(self):
         if self._params is None:
@@ -1322,72 +1389,6 @@ class singlefilediffimage2(diffimage2):
             if mask is not None: self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
 
-    @property
-    def transformdata(self):
-        # Not cached
-        img = self._rawdata
-        if self.radialsymmetrymode:
-            img = self.radialsymmetryfill(img)
-        elif self.mirrorsymmetrymode:
-            img = self.mirrorsymmetryfill(img)
-
-        if self.cakemode:
-            img = self.cake(img, self.mask)
-        elif self.remeshmode:
-            img = self.remesh(img, self.mask)
-
-        return img
-
-    @property
-    def transformmask(self):
-        img = self.mask
-        if self.radialsymmetrymode:
-            img = self.radialsymmetryfill(img)
-        elif self.mirrorsymmetrymode:
-            img = self.mirrorsymmetryfill(img)
-
-        if self.cakemode:
-            img = self.cakemask
-        elif self.remeshmode:
-            img = self.remesh(img, self.mask) > 0
-
-        return img
-
-    def radialsymmetryfill(self, img):
-        centerx = config.activeExperiment.center[0]
-        centery = config.activeExperiment.center[1]
-        symimg = np.rot90(img.copy(), 2)
-
-        xshift = -(img.shape[0] - 2 * centerx)
-        yshift = -(img.shape[1] - 2 * centery)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        symimg = np.roll(symimg, int(yshift), axis=1)
-
-        marginmask = config.activeExperiment.mask
-
-        x, y = np.indices(img.shape)
-        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
-    def mirrorsymmetryfill(self, img):
-        centerx = config.activeExperiment.getvalue('Center X')
-        symimg = np.flipud(img.copy())
-        self.imtest(symimg)
-        xshift = -(img.shape[1] - 2 * centerx)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        self.imtest(symimg)
-        marginmask = config.activeExperiment.mask
-        self.imtest(marginmask)
-
-        x, y = np.indices(img.shape)
-        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
-        self.imtest(padmask)
-        self.imtest(symimg * padmask * (1 - marginmask))
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
     def implements(self, t):
         if t == 'MetaArray': return True
 
@@ -1471,7 +1472,7 @@ class multifilediffimage2(diffimage2):
         self.currentframe = frame
         if not frame in self._framecache:
             if len(self._framecache) > 2: del self._framecache.keys()[0]  # del the first cached item
-            self._framecache[frame] = np.rot90(loadimage(self.filepaths[frame]), 3)
+            self._framecache[frame] = singlefilediffimage2(self.filepaths[frame]).displaydata
         return self._framecache[frame]
 
     def calcVariation(self, i, operationindex, roi):
