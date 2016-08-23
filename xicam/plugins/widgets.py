@@ -47,8 +47,8 @@ class OOMTabItem(QtGui.QWidget):
         if not self.isloaded:
             if 'operation' in self.kwargs:
                 if self.kwargs['operation'] is not None:
-                    msg.logMessage(self.kwargs['paths'],msg.DEBUG)
-                    imgdata = [loader.loadimage(path) for path in self.kwargs['paths']]
+                    msg.logMessage(self.kwargs['src'], msg.DEBUG)
+                    imgdata = [loader.loadimage(path) for path in self.kwargs['src']]
                     imgdata = self.kwargs['operation'](imgdata)
                     dimg = loader.datadiffimage2(data=imgdata)
                     self.kwargs['dimg'] = dimg
@@ -379,7 +379,8 @@ class dimgViewer(QtGui.QWidget):
         self.hLine.setVisible(False)
         self.vLine.setVisible(False)
         # self.coordslabel.setVisible(False)
-        self.plotwidget.hidePosLine()
+        if self.plotwidget:
+            self.plotwidget.hidePosLine()
 
     def enterEvent(self, evt):
         """
@@ -1002,6 +1003,9 @@ class timelineViewer(dimgViewer):
         self.simg.mirrorsymmetrymode = self.ismirrorsymmetry
         self.simg.logscale = self.islogintensity
         super(timelineViewer, self).redrawimage(returnimg)
+        timelineplot = self.imgview.getRoiPlot()
+        self.timeline = timelineplot.getPlotItem()
+        self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
 
     def processtimeline(self):
         self.rescan()
@@ -1014,11 +1018,11 @@ class timelineViewer(dimgViewer):
         pass
         # self.skipframes = (self.variationy[0:-1] / self.variationy[1:]) > 0.1
 
-    def appendimage(self, d, paths):
+    def appendimage(self, d, paths):  # WIP
         paths = [os.path.join(d, path) for path in paths]
         self.simg.appendimages(paths)
 
-        self.plotvariation()
+
 
     def rescan(self):
         #return
@@ -1074,13 +1078,12 @@ class timelineViewer(dimgViewer):
 
         data = self.variationcurve[colorhash].getData()
         if data[0] is None :
-            x = np.array(variationx)
-            y = np.array(variationx)
+            x = np.array([variationx])
+            y = np.array([variationx])
         else:
             x = np.append(data[0],variationx)
             y = np.append(data[1],variationy)
 
-        #print 'data:',data
 
         self.variationcurve[colorhash].setData(x=x,y=y)
         self.variationcurve[colorhash].setPen(pg.mkPen(color=color))

@@ -29,6 +29,16 @@ configtree = ParameterTree()
 configtree.setParameters(config.activeExperiment, showTop=False)
 
 
+def tiltStyleMenuRequested(pos):
+    config.activeExperiment.tiltStyleMenu.exec_(configtree.mapToGlobal(pos))
+
+
+configtree.customContextMenuRequested.connect(tiltStyleMenuRequested)
+configtree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+
+
+
 rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
 class plugin(base.plugin):

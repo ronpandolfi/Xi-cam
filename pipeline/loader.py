@@ -1216,9 +1216,9 @@ class diffimage2(object):
             msg.logMessage('Using incidence angle value: ' + str(alphai))
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+                                             self.experiment.getAI(), alphai)
             remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+                                             self.experiment.getAI(), alphai)
 
             self.cache['remesh'] = remeshdata
             self.cache['remeshmask'] = remeshmask > 0
@@ -1481,7 +1481,8 @@ class multifilediffimage2(diffimage2):
         if type(frame) is list: frame = frame[2].step
         self.currentframe = frame
         if not frame in self._framecache:
-            if len(self._framecache) > 3: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            if len(self._framecache) > 3: del self._framecache[
+                sorted(self._framecache.keys())[0]]  # del the first cached item
             self._framecache[frame] = self.displaydata
         return self._framecache[frame]
 
