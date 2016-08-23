@@ -93,11 +93,17 @@ class UIform(object):
         paramtree = pt.ParameterTree()
         self.param_form = QtGui.QStackedWidget()
         self.param_form.addWidget(paramtree)
+        self.property_table = pg.TableWidget()
+        self.property_table.verticalHeader().hide()
+        self.property_table.horizontalHeader().setStretchLastSection(True)
+        self.property_table.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
-        icon = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-        self.leftmodes = [(leftwidget, icon)]
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png"))
+        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
+
 
         rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
@@ -118,14 +124,6 @@ class UIform(object):
         configtree.setParameters(self.config_params, showTop=False)
 
         rightwidget.addWidget(configtree)
-
-        self.property_table = pg.TableWidget()
-        self.property_table.verticalHeader().hide()
-        self.property_table.horizontalHeader().setStretchLastSection(True)
-        self.property_table.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-
-        rightwidget.addWidget(self.property_table)
-        self.property_table.hide()
         self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):

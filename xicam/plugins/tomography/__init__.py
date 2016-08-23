@@ -441,11 +441,6 @@ class plugin(base.plugin):
                    self.ui.config_params.child('Sinograms/Chunk').value(),
                    ncore=self.ui.config_params.child('CPU Cores').value())
 
-
-        # for feature in self.manager.features:
-        #     if feature.func_name == "Write":
-        #         print feature.param_dict
-
     @QtCore.Slot()
     def reconstructionFinished(self):
         """
@@ -453,10 +448,10 @@ class plugin(base.plugin):
         displayed in the console.
         """
 
+        # save function pipeline as yml when reconstruction is run
         for feature in self.manager.features:
             if feature.func_name == "Write":
                 save_file = feature.param_dict['fname'] + '.yml'
-
 
         with open(save_file, 'w') as yml:
             pipeline = config.extract_pipeline_dict(self.manager.features)
