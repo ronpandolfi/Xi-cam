@@ -995,6 +995,14 @@ class timelineViewer(dimgViewer):
 
         self.rescan()
 
+    def redrawimage(self, returnimg=False):
+        self.simg.cakemode = self.iscake
+        self.simg.remeshmode = self.isremesh
+        self.simg.radialsymmetrymode = self.isradialsymmetry
+        self.simg.mirrorsymmetrymode = self.ismirrorsymmetry
+        self.simg.logscale = self.islogintensity
+        super(timelineViewer, self).redrawimage(returnimg)
+
     def processtimeline(self):
         self.rescan()
         self.toolbar.actionProcess.setChecked(False)
@@ -1427,6 +1435,53 @@ class remeshzintegrationwidget(integrationsubwidget):
     def movPosLine(self, qx,qz,dimg=None):
         self.posLine.setPos(qz)
         self.posLine.show()
+
+
+def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+    """Returns x and y arrays containing the histogram values for the current image.
+    For an explanation of the return format, see numpy.histogram().
+
+    The *step* argument causes pixels to be skipped when computing the histogram to save time.
+    If *step* is 'auto', then a step is chosen such that the analyzed data has
+    dimensions roughly *targetImageSize* for each axis.
+
+    The *bins* argument and any extra keyword arguments are passed to
+    np.histogram(). If *bins* is 'auto', then a bin number is automatically
+    chosen based on the image characteristics:
+
+    * Integer images will have approximately *targetHistogramSize* bins,
+      with each bin having an integer width.
+    * All other types will have *targetHistogramSize* bins.
+
+    This method is also used when automatically computing levels.
+    """
+    if self.image is None:
+        return None, None
+    if step == 'auto':
+        step = (np.ceil(self.image.shape[0] / targetImageSize),
+                np.ceil(self.image.shape[1] / targetImageSize))
+    if np.isscalar(step):
+        step = (step, step)
+    stepData = self.image[::step[0], ::step[1]]
+
+    if bins == 'auto':
+        if stepData.dtype.kind in "ui":
+            mn = stepData.min()
+            mx = stepData.max()
+            step = np.ceil((mx - mn) / 500.)
+            bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
+            if len(bins) == 0:
+                bins = [mn, mx]
+        else:
+            bins = 500
+
+    kwds['bins'] = bins
+    hist = np.histogram(stepData, **kwds)
+    hist[0][0] = 0
+    return hist[1][:-1], hist[0]
+
+
+pg.ImageItem.getHistogram = getHistogram
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()

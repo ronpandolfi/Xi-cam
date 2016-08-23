@@ -4,6 +4,7 @@ import loader
 from scipy import signal
 import integration
 import writer
+from skimage.measure import block_reduce  # Use this to subsample if you want
 
 # README!
 #

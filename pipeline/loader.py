@@ -1398,7 +1398,7 @@ class multifilediffimage2(diffimage2):
 
     def __init__(self, filepaths, detector=None, experiment=None):
         self.filepaths = sorted(list(filepaths))
-        self.currentframe = 0
+        self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
         self._xvals = None
@@ -1408,6 +1408,16 @@ class multifilediffimage2(diffimage2):
         self.min = np.min(self.rawdata)
         self.shape = len(filepaths), self.rawdata.shape[0], self.rawdata.shape[1]
         self.size = np.product(self.shape)
+
+    @property
+    def currentframe(self):
+        return self._currentframe
+
+    @currentframe.setter
+    def currentframe(self, frame):
+        if frame != self._currentframe: self._rawdata = None
+        self._currentframe = frame
+
 
     @property
     def headers(self):
@@ -1439,7 +1449,7 @@ class multifilediffimage2(diffimage2):
     def rawdata(self):
         # 'Permanently' cached
         if self._rawdata is None:
-            self._rawdata = self._getframe()
+            self._rawdata = np.rot90(loadimage(self.filepaths[self.currentframe]), 3)
         return self._rawdata
 
     @property
@@ -1460,7 +1470,7 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
-        msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
+        # msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
@@ -1471,8 +1481,8 @@ class multifilediffimage2(diffimage2):
         if type(frame) is list: frame = frame[2].step
         self.currentframe = frame
         if not frame in self._framecache:
-            if len(self._framecache) > 2: del self._framecache.keys()[0]  # del the first cached item
-            self._framecache[frame] = singlefilediffimage2(self.filepaths[frame]).displaydata
+            if len(self._framecache) > 3: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            self._framecache[frame] = self.displaydata
         return self._framecache[frame]
 
     def calcVariation(self, i, operationindex, roi):
