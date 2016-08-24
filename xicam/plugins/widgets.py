@@ -1415,7 +1415,7 @@ class remeshzintegrationwidget(integrationsubwidget):
         self.posLine.show()
 
 
-def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+def getHistogram(self, bins='auto', step='auto', targetImageSize=None, targetHistogramSize=500, **kwds):
     """Returns x and y arrays containing the histogram values for the current image.
     For an explanation of the return format, see numpy.histogram().
 
@@ -1435,6 +1435,9 @@ def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHist
     """
     if self.image is None:
         return None, None
+
+    if not targetImageSize: targetImageSize = min(200, self.image.shape[0], self.image.shape[1])
+
     if step == 'auto':
         step = (np.ceil(self.image.shape[0] / targetImageSize),
                 np.ceil(self.image.shape[1] / targetImageSize))
