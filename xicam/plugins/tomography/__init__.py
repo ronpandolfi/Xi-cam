@@ -27,6 +27,7 @@ from pipeline import msg
 from xicam import threads
 from viewers import TomoViewer
 import ui
+import Queue
 import config
 from functionwidgets import FunctionManager
 
@@ -84,6 +85,11 @@ class plugin(base.plugin):
 
         # Keep a timer for reconstructions
         self.recon_start_time = 0
+
+        no_globals = Queue.Queue()
+        self.worker = threads.Worker(no_globals)
+
+
 
         # Setup FunctionManager
         self.manager = FunctionManager(self.ui.functionwidget.functionsList, self.ui.param_form,
@@ -421,25 +427,38 @@ class plugin(base.plugin):
                                            'You are about to run a full reconstruction.'
                                            'This step can take some minutes. Do you want to continue?',
                                    (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-        if value is QtGui.QMessageBox.No:
+        if value is QtGui.QMessageBox.Cancel:
             return
 
         name = self.centerwidget.tabText(self.centerwidget.currentIndex())
         msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
         self.bottomwidget.local_console.clear()
         self.manager.updateParameters()
-        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                      interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-                                      finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+        # recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
+        #                               interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+        #                               finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
         pstart = self.ui.config_params.child('Start Projection').value()
         pend = self.ui.config_params.child('End Projection').value()
         pstep = self.ui.config_params.child('Step Projection').value()
         sstart = self.ui.config_params.child('Start Sinogram').value()
         send = self.ui.config_params.child('End Sinogram').value()
         sstep =  self.ui.config_params.child('Step Sinogram').value()
-        recon_iter(self.currentWidget(), (pstart, pend, pstep), (sstart, send, sstep),
-                   self.ui.config_params.child('Sinograms/Chunk').value(),
-                   ncore=self.ui.config_params.child('CPU Cores').value())
+        # recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
+        #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
+        #            ncore=self.ui.config_params.child('CPU Cores').value())
+
+        args = (self.currentWidget(), (pstart, pend, pstep),(sstart, send, sstep),
+                self.ui.config_params.child('Sinograms/Chunk').value(), self.ui.config_params.child('CPU Cores').value())
+
+        recon_iter = threads.RunnableIterator(iterator = self.manager.functionStackGenerator,iterator_args = args,
+                                        finished_slot=self.reconstructionFinished,
+                                        callback_slot=self.bottomwidget.log2local,
+                                        interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
+        self.worker.queue.put(recon_iter)
+        # runnable = self.worker.queue.get()
+        if not self.worker.isRunning():
+            self.worker.start()
+
 
     @QtCore.Slot()
     def reconstructionFinished(self):
