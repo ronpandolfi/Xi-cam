@@ -175,8 +175,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
         mask = np.ones_like(data)
         msg.logMessage(('emptymask:', mask.shape),msg.DEBUG)
 
-
-    if cut is not None:
+    if cut is not None and type(cut) is np.ndarray:
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask = mask.astype(bool) & cut.astype(bool)
 

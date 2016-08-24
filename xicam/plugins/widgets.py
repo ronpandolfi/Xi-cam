@@ -931,6 +931,8 @@ class dimgViewer(QtGui.QWidget):
 
 
 class timelineViewer(dimgViewer):
+    sigAddTimelineData = QtCore.Signal(tuple, list)
+    sigClearTimeline = QtCore.Signal()
     def __init__(self, simg=None, files=None, toolbar=None):
         self.variationcurve = dict()
         self.toolbar = toolbar
@@ -1038,7 +1040,7 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=lambda ret: self.plotvariation(*ret),
+        bg_variation = threads.iterator(callback_slot=lambda ret: self.sigAddTimelineData.emit(*ret),
                                         finished_slot=self.processingfinished)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
@@ -1062,31 +1064,6 @@ class timelineViewer(dimgViewer):
                     # print 'Warning: error displaying ROI variation.'
                     #    print ex.message
 
-    def plotvariation(self, variation, color=None):
-        if not variation: return
-        variationx, variationy = variation
-        if not variationx: return
-
-        if color is None:
-            color = [255, 255, 255]
-
-        colorhash = ','.join([str(c) for c in color])
-        if not colorhash in self.variationcurve:
-            self.variationcurve[colorhash] = self.timeline.plot()
-
-        #print 'preappend:',self.variationcurve.getData()
-
-        data = self.variationcurve[colorhash].getData()
-        if data[0] is None :
-            x = np.array([variationx])
-            y = np.array([variationx])
-        else:
-            x = np.append(data[0],variationx)
-            y = np.append(data[1],variationy)
-
-
-        self.variationcurve[colorhash].setData(x=x,y=y)
-        self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
     def processingfinished(self, *args, **kwargs):
         msg.showMessage('Processing complete.',4)
@@ -1095,9 +1072,7 @@ class timelineViewer(dimgViewer):
         self.operationindex = index
 
     def cleartimeline(self):
-        for item in self.variationcurve.values():
-            self.timeline.removeItem(item)
-        self.variationcurve=dict()
+        self.sigClearTimeline.emit()
 
     # def plotvariation(self, variation, color=None):
     #     if len(variation) == 0:

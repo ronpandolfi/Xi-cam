@@ -18,6 +18,7 @@ import numpy as np
 
 import widgets
 from pipeline import calibration
+from xicam.widgets.NDTimelinePlotWidget import TimelinePlot
 
 
 class plugin(base.plugin):  ##### Inherit viewer instead!!!
@@ -30,6 +31,9 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
+        self.bottomwidget = TimelinePlot()
+
 
         # Share right modes with viewer
         self.rightmodes = viewer.rightmodes
@@ -47,7 +51,6 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
-
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -150,6 +153,8 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         widget = widgets.OOMTabItem(itemclass=widgets.timelineViewer, files=files, toolbar=self.toolbar)
         self.centerwidget.addTab(widget, 'Timeline: ' + os.path.basename(files[0]) + ', ...')
         self.centerwidget.setCurrentWidget(widget)
+        self.getCurrentTab().sigAddTimelineData.connect(self.bottomwidget.addData)
+        self.getCurrentTab().sigClearTimeline.connect(self.bottomwidget.clearData)
 
 
 def convertto8bit(image):
