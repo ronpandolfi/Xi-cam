@@ -8,5 +8,4 @@ pool = None
 window = None
 lastroi = None
 statusbar = None
-app = None
 

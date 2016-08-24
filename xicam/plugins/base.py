@@ -106,7 +106,7 @@ class plugin(QtCore.QObject):
 
     def openSelected(self, operation=None, operationname=None):
         indices = self.filetree.selectedIndexes()
-        paths = [self.filetree.filetreemodel.filePath(index) for index in indices]
+        paths = [self.filetree.file_model.filePath(index) for index in indices]
         self.openfiles(paths, operation, operationname)
 
     def openfiles(self, files, operation=None, operationname=None):

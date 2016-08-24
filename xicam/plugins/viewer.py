@@ -20,12 +20,23 @@ from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
 from xicam import config
 import fabio
+from pipeline import calibration
 
 from xicam.widgets.calibrationpanel import calibrationpanel
 
 # Globals so Timeline can share the same rightmodes
 configtree = ParameterTree()
 configtree.setParameters(config.activeExperiment, showTop=False)
+
+
+def tiltStyleMenuRequested(pos):
+    config.activeExperiment.tiltStyleMenu.exec_(configtree.mapToGlobal(pos))
+
+
+configtree.customContextMenuRequested.connect(tiltStyleMenuRequested)
+configtree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+
 
 
 rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
@@ -179,7 +190,7 @@ class plugin(base.plugin):
         if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
-    def calibrate(self, algorithm, calibrant):
+    def calibrate(self, algorithm=calibration.fourierAutocorrelation, calibrant='AgBh'):
         self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):

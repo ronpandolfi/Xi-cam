@@ -1026,6 +1026,73 @@ class diffimage2(object):
         else:
             return np.ones_like(self.rawdata)
 
+
+    @property
+    def transformdata(self):
+        # Not cached
+        img = self.rawdata
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cake(img, self.mask)
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask)
+
+        return img
+
+    @property
+    def transformmask(self):
+        img = self.mask
+        if self.radialsymmetrymode:
+            img = self.radialsymmetryfill(img)
+        elif self.mirrorsymmetrymode:
+            img = self.mirrorsymmetryfill(img)
+
+        if self.cakemode:
+            img = self.cakemask
+        elif self.remeshmode:
+            img = self.remesh(img, self.mask) > 0
+
+        return img
+
+    def radialsymmetryfill(self, img):
+        centerx = config.activeExperiment.center[0]
+        centery = config.activeExperiment.center[1]
+        symimg = np.rot90(img.copy(), 2)
+
+        xshift = -(img.shape[0] - 2 * centerx)
+        yshift = -(img.shape[1] - 2 * centery)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        symimg = np.roll(symimg, int(yshift), axis=1)
+
+        marginmask = config.activeExperiment.mask
+
+        x, y = np.indices(img.shape)
+        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
+
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
+    def mirrorsymmetryfill(self, img):
+        centerx = config.activeExperiment.getvalue('Center X')
+        symimg = np.flipud(img.copy())
+        self.imtest(symimg)
+        xshift = -(img.shape[1] - 2 * centerx)
+        symimg = np.roll(symimg, int(xshift), axis=0)
+        self.imtest(symimg)
+        marginmask = config.activeExperiment.mask
+        self.imtest(marginmask)
+
+        x, y = np.indices(img.shape)
+        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
+        self.imtest(padmask)
+        self.imtest(symimg * padmask * (1 - marginmask))
+        img = img * marginmask + symimg * padmask * (1 - marginmask)
+        return img
+
     @property
     def params(self):
         if self._params is None:
@@ -1149,9 +1216,9 @@ class diffimage2(object):
             msg.logMessage('Using incidence angle value: ' + str(alphai))
 
             remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+                                             self.experiment.getAI(), alphai)
             remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
-                                             self.experiment.getGeometry(), alphai)
+                                             self.experiment.getAI(), alphai)
 
             self.cache['remesh'] = remeshdata
             self.cache['remeshmask'] = remeshmask > 0
@@ -1322,72 +1389,6 @@ class singlefilediffimage2(diffimage2):
             if mask is not None: self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
 
-    @property
-    def transformdata(self):
-        # Not cached
-        img = self._rawdata
-        if self.radialsymmetrymode:
-            img = self.radialsymmetryfill(img)
-        elif self.mirrorsymmetrymode:
-            img = self.mirrorsymmetryfill(img)
-
-        if self.cakemode:
-            img = self.cake(img, self.mask)
-        elif self.remeshmode:
-            img = self.remesh(img, self.mask)
-
-        return img
-
-    @property
-    def transformmask(self):
-        img = self.mask
-        if self.radialsymmetrymode:
-            img = self.radialsymmetryfill(img)
-        elif self.mirrorsymmetrymode:
-            img = self.mirrorsymmetryfill(img)
-
-        if self.cakemode:
-            img = self.cakemask
-        elif self.remeshmode:
-            img = self.remesh(img, self.mask) > 0
-
-        return img
-
-    def radialsymmetryfill(self, img):
-        centerx = config.activeExperiment.center[0]
-        centery = config.activeExperiment.center[1]
-        symimg = np.rot90(img.copy(), 2)
-
-        xshift = -(img.shape[0] - 2 * centerx)
-        yshift = -(img.shape[1] - 2 * centery)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        symimg = np.roll(symimg, int(yshift), axis=1)
-
-        marginmask = config.activeExperiment.mask
-
-        x, y = np.indices(img.shape)
-        padmask = ((yshift < y) & (y < (yshift + img.shape[1])) & (xshift < x) & (x < (xshift + img.shape[0])))
-
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
-    def mirrorsymmetryfill(self, img):
-        centerx = config.activeExperiment.getvalue('Center X')
-        symimg = np.flipud(img.copy())
-        self.imtest(symimg)
-        xshift = -(img.shape[1] - 2 * centerx)
-        symimg = np.roll(symimg, int(xshift), axis=0)
-        self.imtest(symimg)
-        marginmask = config.activeExperiment.mask
-        self.imtest(marginmask)
-
-        x, y = np.indices(img.shape)
-        padmask = ((xshift < x) & (x < (xshift + img.shape[1])))
-        self.imtest(padmask)
-        self.imtest(symimg * padmask * (1 - marginmask))
-        img = img * marginmask + symimg * padmask * (1 - marginmask)
-        return img
-
     def implements(self, t):
         if t == 'MetaArray': return True
 
@@ -1397,15 +1398,26 @@ class multifilediffimage2(diffimage2):
 
     def __init__(self, filepaths, detector=None, experiment=None):
         self.filepaths = sorted(list(filepaths))
-        self.currentframe = 0
+        self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
+        self._xvals = None
 
         self.dtype = self.rawdata.dtype
         self.max = np.max(self.rawdata)
         self.min = np.min(self.rawdata)
-        self.shape = self.rawdata.shape[0], self.rawdata.shape[1], len(filepaths)
+        self.shape = len(filepaths), self.rawdata.shape[0], self.rawdata.shape[1]
         self.size = np.product(self.shape)
+
+    @property
+    def currentframe(self):
+        return self._currentframe
+
+    @currentframe.setter
+    def currentframe(self, frame):
+        if frame != self._currentframe: self._rawdata = None
+        self._currentframe = frame
+
 
     @property
     def headers(self):
@@ -1414,8 +1426,17 @@ class multifilediffimage2(diffimage2):
 
         return self._headers
 
+    def iHeaders(self, i):
+        return loadparas(self.filepaths[i])
+
     def xvals(self, _):
-        return np.array([fabio.fabioutils.getnum(path) for path in self.filepaths])
+        if self._xvals is None:
+            timekey = config.activeExperiment.headermap['Timeline Axis']
+            if timekey:
+                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+            else:
+                self._xvals = np.arange(len(self.filepaths))
+        return self._xvals
 
     def first(self):
         if len(self.filepaths) > 0:
@@ -1428,7 +1449,7 @@ class multifilediffimage2(diffimage2):
     def rawdata(self):
         # 'Permanently' cached
         if self._rawdata is None:
-            self._rawdata = self._getframe()
+            self._rawdata = np.rot90(loadimage(self.filepaths[self.currentframe]), 3)
         return self._rawdata
 
     @property
@@ -1449,7 +1470,7 @@ class multifilediffimage2(diffimage2):
     @property
     def displaydata(self):
         # Not cached
-        msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
+        # msg.logMessage(('applyinglog:', self.logscale),msg.DEBUG)
         if self.logscale:
             return np.log(self.transformdata * (self.transformdata > 0) + (self.transformdata < 1))
         return self.transformdata
@@ -1457,11 +1478,12 @@ class multifilediffimage2(diffimage2):
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
         # print 'frame:',frame
         if frame is None: frame = self.currentframe
-        if type(frame) is list: frame = frame[1].step
+        if type(frame) is list: frame = frame[2].step
         self.currentframe = frame
         if not frame in self._framecache:
-            if len(self._framecache) > 2: del self._framecache.keys()[0]  # del the first cached item
-            self._framecache[frame] = np.rot90(loadimage(self.filepaths[frame]), 3)
+            if len(self._framecache) > 3: del self._framecache[
+                sorted(self._framecache.keys())[0]]  # del the first cached item
+            self._framecache[frame] = self.displaydata
         return self._framecache[frame]
 
     def calcVariation(self, i, operationindex, roi):
@@ -1471,7 +1493,7 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None

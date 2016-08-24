@@ -2,7 +2,7 @@
 import pickle
 import pyFAI
 from pyFAI import geometry
-
+from PySide import QtGui
 from pyqtgraph.parametertree import Parameter
 import numpy as np
 import yaml
@@ -103,6 +103,23 @@ class experiment(Parameter):
             EnergyParam.sigValueChanged.connect(self.EnergyChanged)
             WavelengthParam.sigValueChanged.connect(self.WavelengthChanged)
 
+            # Add tilt style dialog
+            tilt = self.param('Detector Tilt')
+            rot = self.param('Detector Rotation')
+            self.tiltStyleMenu = QtGui.QMenu()
+            grp = QtGui.QActionGroup(self)
+            self.fit2dstyle = QtGui.QAction('Use Fit2D style rot/tilt', self.tiltStyleMenu)
+            self.wxdiffstyle = QtGui.QAction('Use WxDiff style rot/tilt', self.tiltStyleMenu)
+            self.fit2dstyle.setCheckable(True)
+            self.wxdiffstyle.setCheckable(True)
+            self.fit2dstyle.setActionGroup(grp)
+            self.wxdiffstyle.setActionGroup(grp)
+            self.fit2dstyle.setChecked(True)
+            self.fit2dstyle.triggered.connect(self.resetUnits)
+            self.wxdiffstyle.triggered.connect(self.resetUnits)
+
+            self.tiltStyleMenu.addActions([self.fit2dstyle, self.wxdiffstyle])
+
             # Start with a null mask
             self._mask = None
 
@@ -116,7 +133,8 @@ class experiment(Parameter):
                           'Sample Alpha Stage': 'Sample Alpha Stage',
                           'Detector Vertical': 'Detector Vertical',
                           'Detector Horizontal': 'Detector Horizontal',
-                          'I1 AI': 'I1 AI'}
+                          'I1 AI': 'I1 AI',
+                          'Timeline Axis': None}
 
     # Make the mask accessible as a property
     @property
@@ -197,31 +215,40 @@ class experiment(Parameter):
         #                                pixel1=self.getvalue('Pixel Size Y'),
         #                                pixel2=self.getvalue('Pixel Size X'),
         #                                detector=self.getDetector(),
-        AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
-                    self.getvalue('Center X'),
-                    self.getvalue('Center Y'),
-                    self.getvalue('Detector Tilt'),
-                    360. - self.getvalue('Detector Rotation'),
-                    self.getvalue('Pixel Size Y') * 1.e6,
-                    self.getvalue('Pixel Size X') * 1.e6)
+        if self.fit2dstyle.isChecked():
+            AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
+                        self.getvalue('Center X'),
+                        self.getvalue('Center Y'),
+                        self.getvalue('Detector Tilt'),
+                        360. - self.getvalue('Detector Rotation'),
+                        self.getvalue('Pixel Size Y') * 1.e6,
+                        self.getvalue('Pixel Size X') * 1.e6)
+        elif self.wxdiffstyle.isChecked():
+            AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
+                        self.getvalue('Center X'),
+                        self.getvalue('Center Y'),
+                        self.getvalue('Detector Tilt') / 2. / np.pi * 360.,
+                        360. - (2 * np.pi - self.getvalue('Detector Rotation')) / 2. / np.pi * 360.,
+                        self.getvalue('Pixel Size Y') * 1.e6,
+                        self.getvalue('Pixel Size X') * 1.e6)
         # print AI
         return AI
 
-    def getGeometry(self):
-        """
-        :rtype : pyFAI.Geometry
-        """
-        # print(self.getDetector().MAX_SHAPE)
-        geo = PyFAIGeometry(dist=self.getvalue('Detector Distance'),
-                            poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
-                            poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
-                            rot1=0,
-                            rot2=0,
-                            rot3=0,
-                            pixel1=self.getvalue('Pixel Size Y'),
-                            pixel2=self.getvalue('Pixel Size X'),
-                            detector=self.getDetector(),
-                            wavelength=self.getvalue('Wavelength'))
+        # def getGeometry(self):
+        #     """
+        #     :rtype : pyFAI.Geometry
+        #     """
+        #     # print(self.getDetector().MAX_SHAPE)
+        #     geo = PyFAIGeometry(dist=self.getvalue('Detector Distance'),
+        #                         poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
+        #                         poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
+        #                         rot1=0,
+        #                         rot2=0,
+        #                         rot3=0,
+        #                         pixel1=self.getvalue('Pixel Size Y'),
+        #                         pixel2=self.getvalue('Pixel Size X'),
+        #                         detector=self.getDetector(),
+        #                         wavelength=self.getvalue('Wavelength'))
         # geo = PyFAIGeometry(wavelength=self.getvalue('Wavelength'))
         # geo.setFit2D(self.getvalue('Detector Distance'),
         #             self.getvalue('Center Y'),
@@ -272,6 +299,17 @@ class experiment(Parameter):
         # from pyFAI import geometry
         # l=geometry.Geometry.qFunction()
         #     qFunction(d1, d2, param=None, path='cython')
+
+    def resetUnits(self):
+        tilt = self.param('Detector Tilt')
+        rot = self.param('Detector Rotation')
+        if self.fit2dstyle.isChecked():
+            tilt.setOpts(**{'suffix': u'°'})
+            rot.setOpts(**{'suffix': u'°'})
+        elif self.wxdiffstyle.isChecked():
+            rot.setOpts(**{'suffix': ' rad'})
+            tilt.setOpts(**{'suffix': ' rad'})
+
 
 
 activeExperiment = experiment()
