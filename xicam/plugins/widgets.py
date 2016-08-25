@@ -1818,6 +1818,6 @@ class filesListWidget(QtGui.QWidget):
         self.paths.addItems(paths)
 
     def removefiles(self):
-        for index in self.paths.selectedIndexes():
+        for index in self.paths.selectedIndexes()[::-1]:
             item = self.paths.takeItem(index.row())
             item = None

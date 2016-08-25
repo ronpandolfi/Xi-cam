@@ -13,6 +13,7 @@ from xicam import xglobals
 import re
 
 from xicam.plugins import widgets
+from xicam.widgets.workfloweditor import workflowEditorWidget
 from pipeline import msg
 
 
@@ -20,6 +21,8 @@ class plugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
+
+        self.leftwidget = workflowEditorWidget()
 
         self.centerwidget = QtGui.QWidget()
         self.fileslistwidget = widgets.filesListWidget()
