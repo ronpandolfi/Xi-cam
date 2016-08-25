@@ -1,6 +1,6 @@
 # avg dphi correlation (mask normalized) for each q
 
-import base
+from xicam.plugins import base
 from PySide import QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -12,7 +12,7 @@ import numpy as np
 from xicam import xglobals
 import re
 
-import widgets
+from xicam.plugins import widgets
 from pipeline import msg
 
 
