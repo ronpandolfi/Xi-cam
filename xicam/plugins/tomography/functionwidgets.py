@@ -631,7 +631,7 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
-    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
+    def updateFunctionPartial(self, funcwidget, datawidget, save_name, stack_dict=None, slc=None):
         """
         Updates the given FunctionWidget's partial
 
@@ -685,6 +685,8 @@ class FunctionManager(fw.FeatureManager):
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
             self.resetCenterCorrection()
+        elif 'Write' in funcwidget.func_name:
+            fpartial.keywords['fname'] = save_name
         return fpartial
 
     def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
@@ -759,7 +761,7 @@ class FunctionManager(fw.FeatureManager):
         """
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
-    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, ncore=None):
+    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, save_name, ncore=None):
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
         This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
@@ -799,7 +801,7 @@ class FunctionManager(fw.FeatureManager):
                 ts = time.time()
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
                                                                                               end, total_sino)
-                fpartial = self.updateFunctionPartial(function, datawidget,
+                fpartial = self.updateFunctionPartial(function, datawidget, save_name,
                                                       slc=(slice(*proj), slice(start, end, sino[2]),
                                                            slice(None, None, None)))
                 if init:

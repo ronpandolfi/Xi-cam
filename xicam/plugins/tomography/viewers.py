@@ -66,6 +66,7 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
+
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
@@ -79,6 +80,13 @@ class TomoViewer(QtGui.QWidget):
             self.data = data
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
+
+            # create file name to pass to manager (?)
+            file_name = paths.split("/")[-1]
+            body = paths.split(file_name)[0]
+            self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
+
+
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])

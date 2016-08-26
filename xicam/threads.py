@@ -324,7 +324,7 @@ class Worker(QtCore.QThread):
         """
         while True:
             runnable = self.queue.get()
-            # print "Worker got item {} off queue".format(type(item))
+            # print "Worker got item {} off queue".format(type(runnable))
             if runnable is None:
                 break
             self.pool.start(runnable, runnable._priority)

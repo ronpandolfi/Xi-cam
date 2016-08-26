@@ -86,10 +86,10 @@ class plugin(base.plugin):
         # Keep a timer for reconstructions
         self.recon_start_time = 0
 
-        no_globals = Queue.Queue()
-        self.worker = threads.Worker(no_globals)
-
-
+        # Queue for reconstruction
+        # for recon on multiple nodes, implement the threads.Worker class
+        self.recon_queue = Queue.Queue()
+        self.recon_running = False
 
         # Setup FunctionManager
         self.manager = FunctionManager(self.ui.functionwidget.functionsList, self.ui.param_form,
@@ -103,7 +103,7 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         # Connect toolbar signals and ui button signals
-        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.runFullReconstruction,
+        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.loadFullReconstruction,
                                      self.manualCenter, self.roiSelection)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
@@ -145,6 +145,11 @@ class plugin(base.plugin):
         self.activate()
         if type(paths) is list:
             paths = paths[0]
+
+        # create file name to pass to manager (?)
+        file_name = paths.split("/")[-1]
+        body = paths.split(file_name)[0]
+        self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
 
         widget = TomoViewer(paths=paths)
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
@@ -415,7 +420,7 @@ class plugin(base.plugin):
                                  except_slot=except_slot)
         bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
 
-    def runFullReconstruction(self):
+    def loadFullReconstruction(self):
         """
         Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
         workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
@@ -434,30 +439,43 @@ class plugin(base.plugin):
         msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
         self.bottomwidget.local_console.clear()
         self.manager.updateParameters()
-        # recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-        #                               interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-        #                               finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+
+        # self.manager.getFunctionPipeline or something
+
+        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
+                                      interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+                                      finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
         pstart = self.ui.config_params.child('Start Projection').value()
         pend = self.ui.config_params.child('End Projection').value()
         pstep = self.ui.config_params.child('Step Projection').value()
         sstart = self.ui.config_params.child('Start Sinogram').value()
         send = self.ui.config_params.child('End Sinogram').value()
         sstep =  self.ui.config_params.child('Step Sinogram').value()
+
         # recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
         #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
         #            ncore=self.ui.config_params.child('CPU Cores').value())
 
         args = (self.currentWidget(), (pstart, pend, pstep),(sstart, send, sstep),
-                self.ui.config_params.child('Sinograms/Chunk').value(), self.ui.config_params.child('CPU Cores').value())
+                self.ui.config_params.child('Sinograms/Chunk').value(), self.currentWidget().path,
+                self.ui.config_params.child('CPU Cores').value())
 
-        recon_iter = threads.RunnableIterator(iterator = self.manager.functionStackGenerator,iterator_args = args,
-                                        finished_slot=self.reconstructionFinished,
-                                        callback_slot=self.bottomwidget.log2local,
-                                        interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
-        self.worker.queue.put(recon_iter)
-        # runnable = self.worker.queue.get()
-        if not self.worker.isRunning():
-            self.worker.start()
+
+        # recon_iter = threads.RunnableIterator(iterator = self.manager.functionStackGenerator,iterator_args = args,
+        #                                 finished_slot=self.reconstructionFinished,
+        #                                 callback_slot=self.bottomwidget.log2local,
+        #                                 interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
+
+        self.recon_queue.put([recon_iter, args])
+        self.runReconstruction()
+
+    def runReconstruction(self):
+        if not self.recon_queue.empty() and not self.recon_running:
+            self.recon_running = True
+            recon_job = self.recon_queue.get()
+            recon_job[0](*recon_job[1])
+
+
 
 
     @QtCore.Slot()
@@ -468,10 +486,15 @@ class plugin(base.plugin):
         """
 
         # save function pipeline as yml when reconstruction is run
-        for feature in self.manager.features:
-            if feature.func_name == "Write":
-                save_file = feature.param_dict['fname'] + '.yml'
 
+        # for feature in self.manager.features:
+        #     print feature.func_name, ",", feature.subfunc_name,","
+        #     for p in feature.params.children():
+        #         print p.name(), ",",p.value()
+        #     print "-----------------"
+
+
+        save_file = self.currentWidget().path + ".yml"
         with open(save_file, 'w') as yml:
             pipeline = config.extract_pipeline_dict(self.manager.features)
             yamlmod.ordered_dump(pipeline, yml)
@@ -479,4 +502,9 @@ class plugin(base.plugin):
         run_time = time.time() - self.recon_start_time
         self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
         msg.showMessage('Reconstruction complete.', timeout=10)
+
+        self.recon_running = False
+        self.runReconstruction()
+
+
 
