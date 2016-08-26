@@ -77,7 +77,7 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
 
 
 class rmcView(QtGui.QTabWidget):
-    def __init__(self, root, loadingfactors=None):
+    def __init__(self, root, loadingfactors=[None]):
         super(rmcView, self).__init__()
 
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':  # Start Qt event loop unless running in interactive 
 
     app = QtGui.QApplication([])  # Launches an app
     root = '/Users/austinblair/Downloads/test_20150714_144045/'
-    root = '/home/ablair/test_20150714_144045/'
+    root = '/home/hparks/Desktop/processed_20160822_095903'
 
     win = QtGui.QMainWindow()  # Create window with two ImageView widgets
     win.resize(800, 800)

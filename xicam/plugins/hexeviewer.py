@@ -5,7 +5,7 @@ from xicam import config
 from pyqtgraph import parametertree as pt
 from fabio import tifimage
 # from PIL import Image
-from pipeline import loader, hig
+from pipeline import loader, hig, msg
 #from hiprmc import hiprmc
 import pyqtgraph as pg
 import numpy as np
@@ -40,6 +40,7 @@ class plugin(base.plugin):
         self.centerwidget.setAcceptDrops(True)
         # self.centerwidget.dragEnterEvent = self.dragEnterEvent
         # self.centerwidget.dropEvent = self.dropEvent
+
 
 
 
@@ -83,9 +84,12 @@ class inOutViewer(QtGui.QWidget, ):
         layout = QtGui.QHBoxLayout()
         self.cameraLocation = config.activeExperiment.center
 
+        self.rmc_view= None
+        self.edited_image = None
 
 
         self.view_stack = pg.ImageView(self)
+        self.view_stack.setContentsMargins(0,0,0,0)
         if type(paths) == list:
             self.path = paths[0]
         else:
@@ -94,15 +98,15 @@ class inOutViewer(QtGui.QWidget, ):
         # import using pipeline function
         self.stack_image = np.transpose(loader.loadimage(self.path))
 
-
-        # import using python image library (PIL)
-        # self.stack_image = np.transpose(np.array(Image.open(path)))
-
         # configuring right widget
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
-        start_size = max(self.stack_image.shape)
+        try:
+            start_size = max(self.stack_image.shape)
+        except ValueError:
+            print "Image must be 2-D"
+
         self.scatteringParams = pt.ParameterTree()
         params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
                   {'name': 'Loading factor', 'type': 'float', 'value': 0.5, 'default': 0.5},
@@ -117,14 +121,16 @@ class inOutViewer(QtGui.QWidget, ):
         scatteringHolder = QtGui.QStackedWidget()
         scatteringHolder.addWidget(self.scatteringParams)
         scatteringHolder.setFixedHeight(300)
+        scatteringHolder.setSizePolicy(QtGui.QSizePolicy.Fixed,QtGui.QSizePolicy.Fixed)
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
         sideWidgetFormat.addWidget(scatteringHolder)
-        sideWidgetFormat.addSpacing(50)
+        sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(centerButton)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(runButton)
+
 
         centerButton.clicked.connect(self.center)
         runButton.clicked.connect(self.runRMC)
@@ -138,8 +144,10 @@ class inOutViewer(QtGui.QWidget, ):
 
 
         self.image_holder = QtGui.QStackedWidget()
+        self.image_holder.setContentsMargins(0,0,0,0)
         self.view_stack.setImage(self.stack_image)
-        self.view_stack.autoLevels()
+        self.drawROI(0,0,self.stack_image.shape[0],self.stack_image.shape[1],
+                     self.view_stack.getImageItem().getViewBox())
         self.view_stack.autoRange()
         self.image_holder.addWidget(self.view_stack)
 
@@ -164,8 +172,14 @@ class inOutViewer(QtGui.QWidget, ):
 
     def center(self):
 
+        if self.edited_image is not None:
+            self.image_holder.removeWidget(self.show_edited)
+            self.show_edited = pg.ImageView(self)
+            self.image_holder.addWidget(self.show_edited)
+
         #resize image so that it's in center
         #displays output on stackwidget
+
 
         xdim= self.stack_image.shape[0]
         ydim = self.stack_image.shape[1]
@@ -174,7 +188,7 @@ class inOutViewer(QtGui.QWidget, ):
         newy = ydim + 2*abs(self.cameraLocation[1]-ydim/2)
         self.new_dim = max(newx,newy)
 
-        self.edited_image = np.zeros((self.new_dim,self.new_dim),dtype = np.int)
+        self.edited_image = np.ones((self.new_dim,self.new_dim),dtype = np.int)
         new_center = (self.new_dim/2,self.new_dim/2)
 
         lowleft_corner_x = new_center[0]-self.cameraLocation[0]
@@ -200,6 +214,7 @@ class inOutViewer(QtGui.QWidget, ):
 
         box = self.drawCameraLocation(self.show_edited,new_center)
         self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim, box)
+        self.drawROI(0,0,self.new_dim,self.new_dim,box)
 
         # this is a temporary fix for a bug: pushing a button changes tab back to first
         self.image_holder.setCurrentIndex(1)
@@ -227,9 +242,16 @@ class inOutViewer(QtGui.QWidget, ):
 
 
     def runRMC(self):
+        msg.showMessage('Running RMC for centered version of {}'.format(self.path), timeout=0)
 
-        if type(self.edited_image) == None:
-            pass
+        if self.rmc_view is not None:
+            self.image_holder.removeWidget(self.rmc_view)
+
+        if self.edited_image is None:
+            msg.showMessage('Error: no image loaded',timeout = 0)
+            msg.clearMessage()
+            return
+
 
 
         params = self.configparams
@@ -254,13 +276,22 @@ class inOutViewer(QtGui.QWidget, ):
         proc = subprocess.Popen(['./hiprmc/bin/hiprmc', hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = proc.communicate()
 
-        # complicated way of finding and writing to folder name written by hiprmc
+        msg.showMessage('Done')
+
+        # complicated way of finding and writing into folder name written by hiprmc
         ind = output.index(params.child('Save Name').value())
         rmc_folder = './{}'.format(output[ind:].split("\n")[0])
         os.rename(hig_name, '{}/{}.hig'.format(rmc_folder,params.child('Save Name').value()))
 
+        # write output of RMC to file in hiprmc output folder
+        output_path = rmc_folder + "/{}_rmc_output.txt".format(params.child('Save Name').value())
+        with open(output_path, 'w') as txt:
+            txt.write(output)
+
         # add rmcView to tabwidget
         self.rmc_view = rmc.rmcView(rmc_folder)
+        self.rmc_view.findChild(QtGui.QTabBar).hide()
+        self.rmc_view.setContentsMargins(0,0,0,0)
         self.image_holder.addWidget(self.rmc_view)
 
         # this is a temporary fix for a bug: pressing either buttton changes tab back to first
