@@ -13,12 +13,10 @@ import inspect
 
 class workflowEditorWidget(QtGui.QSplitter):
     # override this to set your default workflow
-    def __init__(self, DEFAULT_PIPELINE_YAML, funcs, names, params, packages):
+    def __init__(self, DEFAULT_PIPELINE_YAML, module):  # TODO: make modules a list
 
         self.DEFAULT_PIPELINE_YAML = DEFAULT_PIPELINE_YAML
-        self.packages = packages
-        self.names = names
-        self.params = params
+        self.manifest = yamlmod.ordered_load(module.functionManifest)
 
         super(workflowEditorWidget, self).__init__()
         self.setOrientation(QtCore.Qt.Vertical)
@@ -63,8 +61,7 @@ class workflowEditorWidget(QtGui.QSplitter):
                                        blank_form='Select a function from\n below to set parameters...')
         self.manager.setPipelineFromYAML(load_pipeline(self.DEFAULT_PIPELINE_YAML))
 
-        self.build_function_menu(self.addfunctionmenu, funcs,
-                                 names, self.manager.addFunction)
+        self.build_function_menu()
 
 
 
@@ -95,7 +92,8 @@ class workflowEditorWidget(QtGui.QSplitter):
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
 
-    def build_function_menu(self, menu, functree, functiondata, actionslot):
+    def build_function_menu(
+            self):  # , menu, functree, functiondata, actionslot):#, self.addfunctionmenu, self.manager.addFunction):
         """
         Builds the function menu's and submenu's anc connects them to the corresponding slot to add them to the workflow
         pipeline
@@ -112,40 +110,29 @@ class workflowEditorWidget(QtGui.QSplitter):
             slot where the function action triggered signal shoud be connected
         """
 
-        for func, subfuncs in functree.iteritems():
-            if len(subfuncs) > 1 or func != subfuncs[0]:
-                funcmenu = QtGui.QMenu(func)
-                menu.addMenu(funcmenu)
-                for subfunc in subfuncs:
-                    if isinstance(subfuncs, dict) and len(subfuncs[subfunc]) > 0:
-                        optsmenu = QtGui.QMenu(subfunc)
-                        funcmenu.addMenu(optsmenu)
-                        for opt in subfuncs[subfunc]:
-                            funcaction = QtGui.QAction(opt, funcmenu)
-                            try:
-                                funcaction.triggered.connect(partial(actionslot, func, opt,
-                                                                     self.packages[functiondata[opt][1]]))
-                                optsmenu.addAction(funcaction)
-                            except KeyError:
-                                pass
-                    else:
-                        funcaction = QtGui.QAction(subfunc, funcmenu)
-                        try:
-                            subfuncname = self.names[subfunc][0]
-                            funcaction.triggered.connect(partial(actionslot, func, subfunc, subfuncname,
-                                                                 self.params[subfuncname],
-                                                                 self.packages[functiondata[subfunc][1]]))
-                            funcmenu.addAction(funcaction)
-                        except KeyError:
-                            pass
-            elif len(subfuncs) == 1:
-                try:
-                    funcaction = QtGui.QAction(func, menu)
-                    funcaction.triggered.connect(
-                        partial(actionslot, func, func, self.packages[functiondata[func][1]]))
-                    menu.addAction(funcaction)
-                except KeyError:
-                    pass
+        for group, items in self.manifest.iteritems():
+            funcmenu = QtGui.QMenu(group)
+            self.addfunctionmenu.addMenu(funcmenu)
+            for item in items:
+
+                if 'displayName' in item:  # The subgroup is a function, not a group!
+                    # try:
+                    self.buildFunction(group, item, funcmenu)
+                    # except KeyError:
+                    #    pass
+                else:
+                    funcsubmenu = QtGui.QMenu(group)
+                    funcmenu.addMenu(funcsubmenu)
+                    for group, function in item.iteritems():
+                        # try:
+                        self.buildFunction(group, function, funcsubmenu)
+                        # except KeyError:
+                        #    pass
+
+    def buildFunction(self, group, function, menu):
+        funcAction = QtGui.QAction(function['displayName'], self.addfunctionmenu)
+        funcAction.triggered.connect(partial(self.manager.addFunction, function))
+        menu.addAction(funcAction)
 
     def loadPipeline(self):
         """
@@ -541,7 +528,7 @@ class FunctionWidget(FeatureWidget):
     """
 
     # TODO perhaps its better to not pass in the package object but only a string, package object can be retrived from reconpkgs.packages dict
-    def __init__(self, name, subname, funcname, params, package, input_functions=None, checkable=True, closeable=True,
+    def __init__(self, name, subname, input_functions=None, checkable=True, closeable=True,
                  parent=None):
         self.name = name
         if name != subname:
@@ -948,7 +935,7 @@ class FunctionManager(FeatureManager):
         self.recon_function = None
 
     # TODO fix this astra check raise error if package not available
-    def addFunction(self, function, subfunction, funcname, params, package):
+    def addFunction(self, function, subfunction):
         """
         Adds a Function to the workflow pipeline
 
@@ -962,7 +949,7 @@ class FunctionManager(FeatureManager):
             package where function is defined
         """
 
-        func_widget = FunctionWidget(function, subfunction, funcname, params, package)
+        func_widget = FunctionWidget(function, subfunction)
         self.addFeature(func_widget)
         return func_widget
 
@@ -1338,17 +1325,17 @@ def map_loc(slc, loc):
 
     return np.ndarray.tolist(loc)
 
-
-
 if __name__ == '__main__':
 
     app = QtGui.QApplication([])
     import numpy
 
-    w = workflowEditorWidget('../plugins/batch/defaultworkflow.yml', {'Zeros': ['Zeros Like']},
-                             {'Zeros Like': ['zeros_like', 'numpy']},
-                             {'zeros_like': [{'type': 'int', 'limits': [0, 10], 'name': 'blah'}]},
-                             packages={'numpy': numpy})
+    import imp
+
+    module = imp.load_source('saxsfunctions',
+                             '/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/saxsfunctions.py')
+
+    w = workflowEditorWidget('../plugins/batch/defaultworkflow.yml', module)
     w.show()
 
     import sys
