@@ -146,7 +146,7 @@ class inOutViewer(QtGui.QWidget, ):
         self.headings.addTab('RMC Timeline')
         self.headings.setShape(QtGui.QTabBar.TriangularSouth)
 
-        self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1],
+        self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1], 'r',
                      self.orig_view.getImageItem().getViewBox())
 
         self.edited_view = pg.ImageView(self)
@@ -210,8 +210,8 @@ class inOutViewer(QtGui.QWidget, ):
         self.edited_view.setImage(self.edited_image)
 
         box = self.drawCameraLocation(self.edited_view,new_center)
-        self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim, box)
-        self.drawROI(0,0,self.new_dim,self.new_dim,box)
+        self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim,'r', box)
+        self.drawROI(0,0,self.new_dim,self.new_dim, 'b', box)
 
         # this is a temporary fix for a bug: pushing a button changes tab back to first
         self.image_holder.setCurrentIndex(1)
@@ -227,13 +227,10 @@ class inOutViewer(QtGui.QWidget, ):
         return cameraBox
 
 
-    def drawROI(self, xpos, ypos, xdim,ydim, view_box):
+    def drawROI(self, xpos, ypos, xdim,ydim, color, view_box):
 
         roi = pg.RectROI((xpos,ypos),(xdim,ydim),movable = False,removable=True)
-
-        # for handle in roi.getHandles():
-        #     print handle.scene()
-        #     roi.removeHandle(handle)
+        roi.setPen(color = color)
 
         view_box.addItem(roi)
 
