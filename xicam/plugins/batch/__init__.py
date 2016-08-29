@@ -15,14 +15,16 @@ import re
 from xicam.plugins import widgets
 from xicam.widgets.workfloweditor import workflowEditorWidget
 from pipeline import msg
-
+import imp
 
 class plugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
 
-        self.leftwidget = workflowEditorWidget()
+        module = imp.load_source('saxsfunctions',
+                                 '/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/saxsfunctions.py')
+        self.leftwidget = workflowEditorWidget('xicam/plugins/batch/defaultworkflow.yml', module)
 
         self.centerwidget = QtGui.QWidget()
         self.fileslistwidget = widgets.filesListWidget()

@@ -9,7 +9,8 @@ from modpkgs import yamlmod
 from collections import OrderedDict
 from pipeline import msg
 import inspect
-
+import importlib
+import time
 
 class workflowEditorWidget(QtGui.QSplitter):
     # override this to set your default workflow
@@ -528,9 +529,14 @@ class FunctionWidget(FeatureWidget):
     """
 
     # TODO perhaps its better to not pass in the package object but only a string, package object can be retrived from reconpkgs.packages dict
-    def __init__(self, name, subname, input_functions=None, checkable=True, closeable=True,
+    def __init__(self, function, input_functions=None, checkable=True, closeable=True,
                  parent=None):
-        self.name = name
+        self.name = function['displayName']
+        self.subname = function['displayName']
+        name = self.name
+        subname = self.subname
+        package = importlib.import_module(function['moduleName'])
+        funcname = function['functionName']
         if name != subname:
             self.name += ' (' + subname + ')'
         super(FunctionWidget, self).__init__(self.name, checkable=checkable, closeable=closeable, parent=parent)
@@ -538,27 +544,29 @@ class FunctionWidget(FeatureWidget):
         self.func_name = name
         self.subfunc_name = subname
         self.input_functions = {}
-        self.param_dict = {}
+        if 'parameters' in function:
+            self.param_dict = function['parameters']
+        else:
+            self.param_dict = []
         self._function = getattr(package, funcname)
 
         # TODO have the children kwarg be passed to __init__
-        self.params = Parameter.create(name=self.name, children=params, type='group')  #
+        self.params = Parameter.create(name=self.name, children=self.param_dict, type='group')  #
 
         self.form = ParameterTree(showHeader=False)
         self.form.setParameters(self.params, showTop=True)
 
         # Initialize parameter dictionary with keys and default values
-        self.updateParamsDict()
         argspec = inspect.getargspec(self._function)
-        default_argnum = len(argspec[3])
-        self.param_dict.update({key: val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
-        for key, val in self.param_dict.iteritems():
-            if key in [p.name() for p in self.params.children()]:
-                self.params.child(key).setValue(val)
-                self.params.child(key).setDefault(val)
-
-        # Create a list of argument names (this will most generally be the data passed to the function)
-        self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
+        # default_argnum = len(argspec[3])
+        # self.param_dict.update({key: val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
+        # for key, val in self.param_dict.iteritems():
+        #     if key in [p.name() for p in self.params.children()]:
+        #         self.params.child(key).setValue(val)
+        #         self.params.child(key).setDefault(val)
+        #
+        # # Create a list of argument names (this will most generally be the data passed to the function)
+        # self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
 
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
         self.menu = QtGui.QMenu()
@@ -679,6 +687,45 @@ class FunctionWidget(FeatureWidget):
         Context menu for functionWidget. Default is not menu.
         """
         pass
+
+    def functionExectutionGenerator(self, ncore=None):
+        """
+        Generator for running full reconstruction. Yields messages representing the status of reconstruction
+        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
+
+        Parameters
+        ----------
+        ncore : int
+            Number of cores to run functions
+
+        Yields
+        -------
+        str
+            Message of current status of function
+        """
+
+        for function in self.features:
+            if not function.enabled:
+                continue
+            ts = time.time()
+            yield 'Running {0}...'.format(function.name)
+            fpartial = self.updateFunctionPartial(function)
+            if init:
+                tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
+                                               slice(None, None, None)))
+                init = False
+            elif 'Tiff' in function.name:
+                fpartial.keywords['start'] = write_start
+                write_start += tomo.shape[0]
+            # elif 'Reconstruction' in fname:
+            #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+            #     # and set the reconstruction partial to the updated one.
+            #     if ipartials is not None:
+            #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
+            #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
+            #     tomo = fpartial(tomo)
+            tomo = fpartial(tomo)
+            yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
 
 class ROlineEdit(QtGui.QLineEdit):
@@ -935,7 +982,7 @@ class FunctionManager(FeatureManager):
         self.recon_function = None
 
     # TODO fix this astra check raise error if package not available
-    def addFunction(self, function, subfunction):
+    def addFunction(self, function):
         """
         Adds a Function to the workflow pipeline
 
@@ -949,7 +996,7 @@ class FunctionManager(FeatureManager):
             package where function is defined
         """
 
-        func_widget = FunctionWidget(function, subfunction)
+        func_widget = FunctionWidget(function)
         self.addFeature(func_widget)
         return func_widget
 
