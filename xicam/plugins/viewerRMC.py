@@ -118,7 +118,7 @@ class inOutViewer(QtGui.QWidget, ):
                   {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                   {'name': 'Model start size', 'type': 'int', 'value': start_size},
-                  {'name': 'Save Name', 'type': 'str'}]
+                  {'name': 'Save Name', 'type': 'str', 'value': 'processed'}]
         self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
         self.scatteringParams.setParameters(self.configparams, showTop=False)
 
