@@ -17,14 +17,12 @@ Bugs:
     1. User can resize ROI after recentering
     2. Centering/running RMC causes gui to return to original image tab, instead of staying on the current tab
         or going to the tab relevant for the button pressed
-    3. RMC code runs on main thread and does not have outputs on terminal (hard to tell if frozen or not)
-
 """
 
 class plugin(base.plugin):
 
     # name can be changed upon request
-    name = "HexeViewer"
+    name = "ViewerRMC"
 
     #center widget is something, rightwidget is none, and leftwidget inherits the default from parent base.plugin
     def __init__(self, *args, **kwargs):
@@ -33,11 +31,11 @@ class plugin(base.plugin):
         self.centerwidget = QtGui.QTabWidget()
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
-        self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+        self.centerwidget.tabCloseRequested.connect(self.tabClose)
         self.rightwidget = None
 
         # DRAG-DROP
-        self.centerwidget.setAcceptDrops(True)
+        # self.centerwidget.setAcceptDrops(True)
         # self.centerwidget.dragEnterEvent = self.dragEnterEvent
         # self.centerwidget.dropEvent = self.dropEvent
 
@@ -52,7 +50,7 @@ class plugin(base.plugin):
         view_widget = inOutViewer(paths = paths)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(view_widget)
-        view_widget.drawCameraLocation(view_widget.view_stack,view_widget.cameraLocation)
+        view_widget.drawCameraLocation(view_widget.orig_view,view_widget.cameraLocation)
 
 
     # Do I need these??
@@ -72,40 +70,47 @@ class plugin(base.plugin):
     #     e.accept()
 
 
-    def tabCloseRequested(self,index):
+    def tabClose(self,index):
         self.centerwidget.widget(index).deleteLater()
 
 
 
 class inOutViewer(QtGui.QWidget, ):
     def __init__(self, paths, parent=None):
+
         super(inOutViewer, self).__init__(parent=parent)
 
         layout = QtGui.QHBoxLayout()
         self.cameraLocation = config.activeExperiment.center
-
         self.rmc_view= None
         self.edited_image = None
 
 
-        self.view_stack = pg.ImageView(self)
-        self.view_stack.setContentsMargins(0,0,0,0)
+        # load and display image
+        self.orig_view = pg.ImageView(self)
+        self.orig_view.setContentsMargins(0,0,0,0)
         if type(paths) == list:
             self.path = paths[0]
         else:
             self.path = paths
 
-        # import using pipeline function
-        self.stack_image = np.transpose(loader.loadimage(self.path))
+        self.orig_image = np.transpose(loader.loadimage(self.path))
+        try:
+            start_size = max(self.orig_image.shape)
+        except ValueError:
+            print "Image must be 2-D"
+
+
+        self.image_holder = QtGui.QStackedWidget()
+        self.image_holder.setContentsMargins(0,0,0,0)
+        self.orig_view.setImage(self.orig_image)
+        self.orig_view.autoRange()
+        self.image_holder.addWidget(self.orig_view)
 
         # configuring right widget
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
-        try:
-            start_size = max(self.stack_image.shape)
-        except ValueError:
-            print "Image must be 2-D"
 
         self.scatteringParams = pt.ParameterTree()
         params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
@@ -113,7 +118,7 @@ class inOutViewer(QtGui.QWidget, ):
                   {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                   {'name': 'Model start size', 'type': 'int', 'value': start_size},
-                  {'name': 'Save Name', 'type': 'str', 'value': 'processed'}]
+                  {'name': 'Save Name', 'type': 'str'}]
         self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
         self.scatteringParams.setParameters(self.configparams, showTop=False)
 
@@ -141,18 +146,11 @@ class inOutViewer(QtGui.QWidget, ):
         self.headings.addTab('RMC Timeline')
         self.headings.setShape(QtGui.QTabBar.TriangularSouth)
 
+        self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1],
+                     self.orig_view.getImageItem().getViewBox())
 
-
-        self.image_holder = QtGui.QStackedWidget()
-        self.image_holder.setContentsMargins(0,0,0,0)
-        self.view_stack.setImage(self.stack_image)
-        self.drawROI(0,0,self.stack_image.shape[0],self.stack_image.shape[1],
-                     self.view_stack.getImageItem().getViewBox())
-        self.view_stack.autoRange()
-        self.image_holder.addWidget(self.view_stack)
-
-        self.show_edited = pg.ImageView(self)
-        self.image_holder.addWidget(self.show_edited)
+        self.edited_view = pg.ImageView(self)
+        self.image_holder.addWidget(self.edited_view)
 
 
         sidelayout = QtGui.QVBoxLayout()
@@ -173,16 +171,16 @@ class inOutViewer(QtGui.QWidget, ):
     def center(self):
 
         if self.edited_image is not None:
-            self.image_holder.removeWidget(self.show_edited)
-            self.show_edited = pg.ImageView(self)
-            self.image_holder.addWidget(self.show_edited)
+            self.image_holder.removeWidget(self.edited_view)
+            self.edited_view = pg.ImageView(self)
+            self.image_holder.addWidget(self.edited_view)
 
         #resize image so that it's in center
         #displays output on stackwidget
 
 
-        xdim= self.stack_image.shape[0]
-        ydim = self.stack_image.shape[1]
+        xdim= self.orig_image.shape[0]
+        ydim = self.orig_image.shape[1]
 
         newx = xdim + 2*abs(self.cameraLocation[0]-xdim/2)
         newy = ydim + 2*abs(self.cameraLocation[1]-ydim/2)
@@ -195,7 +193,7 @@ class inOutViewer(QtGui.QWidget, ):
         lowleft_corner_y = new_center[1]-self.cameraLocation[1]
 
         self.edited_image[lowleft_corner_x:lowleft_corner_x+xdim,lowleft_corner_y: lowleft_corner_y+ydim] \
-            = self.stack_image
+            = self.orig_image
 
         # save image
         self.write_path = self.path
@@ -209,10 +207,9 @@ class inOutViewer(QtGui.QWidget, ):
         img.write(self.write_path)
 
 
-        self.show_edited.setImage(self.edited_image)
-        self.image_holder.addWidget(self.show_edited)
+        self.edited_view.setImage(self.edited_image)
 
-        box = self.drawCameraLocation(self.show_edited,new_center)
+        box = self.drawCameraLocation(self.edited_view,new_center)
         self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim, box)
         self.drawROI(0,0,self.new_dim,self.new_dim,box)
 
