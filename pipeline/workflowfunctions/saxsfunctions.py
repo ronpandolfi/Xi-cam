@@ -18,27 +18,6 @@ Center Finding:
 
 """
 
-functionNameRegister = """
-Fourier Autocorrellation:
-
-RickerWaveletCenterFind:
-
-"""
-
-functionParameters = """
-Fourier Autocorrellation:
-Ricker Wavelets:
-  - Search minimum:
-        type:   int
-        limits: [1,100000]
-        suffix: ' px'
-  - Search maximum:
-        type:   int
-        limits: [1,100000]
-        suffix: ' px'
-
-"""
-
 
 def FourierAutocorrelationCenterFind(**workspace):
     from pipeline.center_approx import center_approx
