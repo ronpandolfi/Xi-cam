@@ -152,7 +152,8 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
 
 #@debugtools.timeit
-def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
+def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey=None, qvrt=None,
+                         qpar=None, **kwargs):
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()

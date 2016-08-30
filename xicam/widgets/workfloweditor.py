@@ -15,6 +15,11 @@ from copy import deepcopy
 
 class workflowEditorWidget(QtGui.QSplitter):
     # override this to set your default workflow
+
+    sigExecute = QtCore.Signal()
+
+
+
     def __init__(self, DEFAULT_PIPELINE_YAML, module):  # TODO: make modules a list
 
         self.DEFAULT_PIPELINE_YAML = DEFAULT_PIPELINE_YAML
@@ -71,7 +76,7 @@ class workflowEditorWidget(QtGui.QSplitter):
         # self.functionwidget.moveDownButton.clicked.connect(moveup)
         # self.functionwidget.moveUpButton.clicked.connect(movedown)
         # self.functionwidget.clearButton.clicked.connect(clear)
-        self.functionwidget.runWorkflowButton.clicked.connect(self.runWorkflow)
+        self.functionwidget.runWorkflowButton.clicked.connect(self.sigExecute)
 
     def build_function_menu(
             self):  # , menu, functree, functiondata, actionslot):#, self.addfunctionmenu, self.manager.addFunction):
@@ -185,12 +190,13 @@ class workflowEditorWidget(QtGui.QSplitter):
         """
         return True
 
-    def runWorkflow(self):
+    def runWorkflow(self, **workspace):
         from xicam import threads
         workflowIterator = threads.iterator(callback_slot=self.callback,
                                             interrupt_signal=None,
                                             finished_slot=self.finished)(self.manager.workflowExectutionGenerator)
-        workflowIterator(ncore=1)
+        workspace['ncore'] = 1
+        workflowIterator(**workspace)
 
     def callback(self, msg):
         if type(msg) is unicode:
@@ -524,11 +530,17 @@ class FunctionWidget(FeatureWidget):
         parent of this FunctionWidget
     """
 
+    INPUT = 'INPUT'
+    PROCESS = 'PROCESS'
+    OUTPUT = 'OUTPUT'
+    VISUALIZE = 'VISUALIZE'
+
     # TODO perhaps its better to not pass in the package object but only a string, package object can be retrived from reconpkgs.packages dict
     def __init__(self, function, input_functions=None, checkable=True, closeable=True,
                  parent=None):
         self.name = function['displayName']
         self.subname = function['displayName']
+        self.functionType = function['functionType']
         name = self.name
         subname = self.subname
         package = importlib.import_module('pipeline.workflowfunctions.' + function['moduleName'])
@@ -1236,7 +1248,7 @@ class FunctionManager(FeatureManager):
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
 
-    def workflowExectutionGenerator(self, ncore=None):
+    def workflowExectutionGenerator(self, **workspace):
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
         This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
@@ -1255,8 +1267,6 @@ class FunctionManager(FeatureManager):
         stack_dict = OrderedDict()
         partial_stack = []
 
-        workspace = dict()
-
         for func in self.features:
             if not func.enabled:
                 continue
@@ -1266,16 +1276,12 @@ class FunctionManager(FeatureManager):
 
             stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
             p = self.updateFunctionPartial(func, stack_dict[func.func_name][func.subfunc_name])
-            if 'ncore' in p.keywords:
-                p.keywords['ncore'] = ncore
             partial_stack.append(p)
-            # for param, ipf in func.input_functions.iteritems():
-            #     if ipf.enabled:
-            #         if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
-            #             stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
-            #         ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-            #         stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
-            workspace = p(**workspace)
+
+            if func.functionType == func.PROCESS:
+                workspace, updates = p(**workspace)
+            elif func.functionType == func.OUTPUT:
+                p(updates, **workspace)
         # self.lockParams(False)
         yield 'Finished in {:.3f} s\n'.format(time.time() - ts)
         yield workspace
