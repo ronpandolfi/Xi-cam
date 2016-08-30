@@ -1333,6 +1333,10 @@ if __name__ == '__main__':
     w = workflowEditorWidget('/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/testworkflow.yml', module)
     w.show()
 
+    w.sigExecute.connect(lambda: w.runWorkflow(**{'testvar': 'THIS IS TEST INPUT'}))
+
+
+
     import sys
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):

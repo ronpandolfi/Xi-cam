@@ -1,3 +1,5 @@
+from pipeline.workflowfunctions import updateworkspace
+
 functionManifest = """
 Test functions:
     - displayName:  Set A to 3
@@ -19,11 +21,13 @@ Test functions:
 
 
 def setAto3(**workspace):
-    workspace['A'] = 3
-    return workspace
+    updates = {'A': 3}
+    workspace = updateworkspace(workspace, updates)
+    return workspace, updates
 
 
 def setValue(varname, value, **workspace):
     print 'setting', varname, 'to', value
-    workspace[varname] = value
-    return workspace
+    updates = {varname: value}
+    workspace = updateworkspace(workspace, updates)
+    return workspace, updates

@@ -52,7 +52,7 @@ def FourierAutocorrelationCenterFind(**workspace):
 
     config.activeExperiment.center = center
     updates = {'center': center}
-    updateworkspace(workspace, updates)
+    workspace = updateworkspace(workspace, updates)
     return workspace, updates
 
 
@@ -76,7 +76,7 @@ def RickerWaveletCenterFind(minr, maxr, **workspace):
 
     config.activeExperiment.center = center
     updates = {'center': center}
-    updateworkspace(workspace, updates)
+    workspace = updateworkspace(workspace, updates)
     return workspace, updates
 
 
@@ -88,7 +88,7 @@ def RadialIntegrate(bins, **workspace):
     q, radialprofile, _, _ = integration.qintegrate(data, **workspace)
 
     updates = {'radialintegration': [q, radialprofile]}
-    updateworkspace(workspace, updates)
+    workspace = updateworkspace(workspace, updates)
     return workspace, updates
 
 

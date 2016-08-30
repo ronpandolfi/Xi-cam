@@ -1,9 +1,11 @@
 - displayName:  Set A to 3
   functionName: setAto3
   moduleName:   testfunctions
+  functionType: PROCESS
 - displayName:  Set Value
   functionName: setValue
   moduleName:   testfunctions
+  functionType: PROCESS
   parameters:
       - name:   Variable Name
         type:   str
