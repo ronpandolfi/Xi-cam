@@ -11,6 +11,9 @@ import pyqtgraph as pg
 import numpy as np
 import subprocess
 import xicam.RmcView as rmc
+import time
+from xicam import threads
+import Queue
 
 """
 Bugs:
@@ -34,6 +37,10 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabClose)
         self.rightwidget = None
 
+        self.threadWorker = threads.Worker(Queue.Queue())
+        self.threadWorker.pool.setExpiryTimeout(1)
+
+
         # DRAG-DROP
         # self.centerwidget.setAcceptDrops(True)
         # self.centerwidget.dragEnterEvent = self.dragEnterEvent
@@ -47,7 +54,7 @@ class plugin(base.plugin):
 
     def openfiles(self, paths):
         self.activate()
-        view_widget = inOutViewer(paths = paths)
+        view_widget = inOutViewer(paths = paths, worker = self.threadWorker)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(view_widget)
         view_widget.drawCameraLocation(view_widget.orig_view,view_widget.cameraLocation)
@@ -76,14 +83,17 @@ class plugin(base.plugin):
 
 
 class inOutViewer(QtGui.QWidget, ):
-    def __init__(self, paths, parent=None):
+    def __init__(self, paths, worker, parent=None):
 
         super(inOutViewer, self).__init__(parent=parent)
+
+        self.emitter = threads.Emitter()
 
         layout = QtGui.QHBoxLayout()
         self.cameraLocation = config.activeExperiment.center
         self.rmc_view= None
         self.edited_image = None
+        self.worker = worker
 
 
         # load and display image
@@ -126,7 +136,6 @@ class inOutViewer(QtGui.QWidget, ):
         scatteringHolder = QtGui.QStackedWidget()
         scatteringHolder.addWidget(self.scatteringParams)
         scatteringHolder.setFixedHeight(300)
-        scatteringHolder.setSizePolicy(QtGui.QSizePolicy.Fixed,QtGui.QSizePolicy.Fixed)
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
@@ -213,7 +222,7 @@ class inOutViewer(QtGui.QWidget, ):
         self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim,'r', box)
         self.drawROI(0,0,self.new_dim,self.new_dim, 'b', box)
 
-        # this is a temporary fix for a bug: pushing a button changes tab back to first
+        # this is a temporary fix for a problem: pushing a button changes tab back to first
         self.image_holder.setCurrentIndex(1)
 
     def drawCameraLocation(self,imageView_item,location):
@@ -262,48 +271,60 @@ class inOutViewer(QtGui.QWidget, ):
                                          'scalefactor': params.child('Scale factor').value()}}}
 
         h = hig.hig(**hig_info)
-        hig_name = './' + params.child('Save Name').value()
-        if not hig_name.endswith('.hig'):
-            hig_name += '.hig'
+        self.hig_name = './' + params.child('Save Name').value()
+        if not self.hig_name.endswith('.hig'):
+            self.hig_name += '.hig'
 
-        h.write(hig_name)
-        proc = subprocess.Popen(['./hiprmc/bin/hiprmc', hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, err = proc.communicate()
+        h.write(self.hig_name)
+        self.save_name = self.configparams.child('Save Name').value()
+        self.start_time = time.time()
 
-        msg.showMessage('Done')
+        process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done)
+        self.worker.queue.put(process)
+
+        if not self.worker.isRunning():
+            self.worker.start()
+
+        # connects finished HipRMC to write/display
+        self.emitter.sigFinished.connect(self.write_and_display)
+
+
+    def run_RMCthread(self):
+
+        proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.output, self.err = proc.communicate()
+
+
+    @QtCore.Slot()
+    def RMC_done(self):
+
+        run_time = time.time() - self.start_time
+        msg.showMessage('HipRMC complete. Run time: {:.2f} s'.format(run_time))
+        self.emitter.sigFinished.emit()
+
+
+    @QtCore.Slot()
+    def write_and_display(self):
 
         # complicated way of finding and writing into folder name written by hiprmc
-        ind = output.index(params.child('Save Name').value())
-        rmc_folder = './{}'.format(output[ind:].split("\n")[0])
-        os.rename(hig_name, '{}/{}.hig'.format(rmc_folder,params.child('Save Name').value()))
+        ind = self.output.index(self.save_name)
+        rmc_folder = './{}'.format(self.output[ind:].split("\n")[0])
+        os.rename(self.hig_name, '{}/{}.hig'.format(rmc_folder, self.save_name))
 
         # write output of RMC to file in hiprmc output folder
-        output_path = rmc_folder + "/{}_rmc_output.txt".format(params.child('Save Name').value())
+        output_path = rmc_folder + "/{}_rmc_output.txt".format(self.save_name)
         with open(output_path, 'w') as txt:
-            txt.write(output)
+            txt.write(self.output)
 
         # add rmcView to tabwidget
         self.rmc_view = rmc.rmcView(rmc_folder)
         self.rmc_view.findChild(QtGui.QTabBar).hide()
-        self.rmc_view.setContentsMargins(0,0,0,0)
+        self.rmc_view.setContentsMargins(0, 0, 0, 0)
+
         self.image_holder.addWidget(self.rmc_view)
 
-        # this is a temporary fix for a bug: pressing either buttton changes tab back to first
+        # this is a temporary fix for a problem: pressing either buttton changes tab back to first
         self.image_holder.setCurrentIndex(2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
