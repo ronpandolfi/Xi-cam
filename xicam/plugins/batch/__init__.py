@@ -32,18 +32,18 @@ class plugin(base.plugin):
         self.centerwidget.setLayout(QtGui.QVBoxLayout())
         self.centerwidget.layout().addWidget(self.fileslistwidget)
 
-        self.rightwidget = ParameterTree()
-        self.remeshOption = pTypes.SimpleParameter(type='bool', name='GIXS remeshing', value=False)
-        self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
-        self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
-        self.logOption = pTypes.SimpleParameter(type='bool', name='Log scale image', value=False)
-        self.cakeOption = pTypes.SimpleParameter(type='bool', name='Cake (q/chi)', value=False)
-        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
-        self.processButton = pTypes.ActionParameter(name='Process')
-        # self.abortButton = pTypes.ActionParameter(name='Abort')
-        params = [self.remeshOption, self.cakeOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
-        paramgroup = Parameter.create(name='params', type='group', children=params)
-        self.rightwidget.setParameters(paramgroup, showTop=False)
+        self.rightwidget = None
+        # self.remeshOption = pTypes.SimpleParameter(type='bool', name='GIXS remeshing', value=False)
+        # self.integrateOption = pTypes.SimpleParameter(type='bool', name='Azimuthal integration', value=True)
+        # self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
+        # self.logOption = pTypes.SimpleParameter(type='bool', name='Log scale image', value=False)
+        # self.cakeOption = pTypes.SimpleParameter(type='bool', name='Cake (q/chi)', value=False)
+        # self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
+        # self.processButton = pTypes.ActionParameter(name='Process')
+        # # self.abortButton = pTypes.ActionParameter(name='Abort')
+        # params = [self.remeshOption, self.cakeOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
+        # paramgroup = Parameter.create(name='params', type='group', children=params)
+        # self.rightwidget.setParameters(paramgroup, showTop=False)
 
         # self.processButton.sigActivated.connect(self.processfiles)
 
