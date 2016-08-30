@@ -11,6 +11,7 @@ from pipeline import msg
 import inspect
 import importlib
 import time
+from copy import deepcopy
 
 class workflowEditorWidget(QtGui.QSplitter):
     # override this to set your default workflow
@@ -64,34 +65,13 @@ class workflowEditorWidget(QtGui.QSplitter):
 
         self.build_function_menu()
 
-
-
-    def connectTriggers(self, open, save, reset, moveup, movedown, clear):
-        """
-        Connect leftwidget (function mangement buttons) triggers to corresponding slots
-
-        Parameters
-        ----------
-        open : QtCore.Slot
-            Slot to handle signal from open button
-        save QtCore.Slot
-            Slot to handle signal from save button
-        reset QtCore.Slot
-            Slot to handle signal from reset button
-        moveup QtCore.Slot
-            Slot to handle signal to move a function widget upwards
-        movedown QtCore.Slot
-            Slot to handle signal to move a function widget downwards
-        clear QtCore.Slot
-            Slot to handle signal from clear button
-        """
-
-        self.openaction.triggered.connect(open)
-        self.saveaction.triggered.connect(save)
-        self.refreshaction.triggered.connect(reset)
-        self.functionwidget.moveDownButton.clicked.connect(moveup)
-        self.functionwidget.moveUpButton.clicked.connect(movedown)
-        self.functionwidget.clearButton.clicked.connect(clear)
+        # self.openaction.triggered.connect(open)
+        # self.saveaction.triggered.connect(save)
+        # self.refreshaction.triggered.connect(reset)
+        # self.functionwidget.moveDownButton.clicked.connect(moveup)
+        # self.functionwidget.moveUpButton.clicked.connect(movedown)
+        # self.functionwidget.clearButton.clicked.connect(clear)
+        self.functionwidget.runWorkflowButton.clicked.connect(self.runWorkflow)
 
     def build_function_menu(
             self):  # , menu, functree, functiondata, actionslot):#, self.addfunctionmenu, self.manager.addFunction):
@@ -204,6 +184,22 @@ class workflowEditorWidget(QtGui.QSplitter):
         eventually be added here to ensure the wp makes sense.
         """
         return True
+
+    def runWorkflow(self):
+        from xicam import threads
+        workflowIterator = threads.iterator(callback_slot=self.callback,
+                                            interrupt_signal=None,
+                                            finished_slot=self.finished)(self.manager.workflowExectutionGenerator)
+        workflowIterator(ncore=1)
+
+    def callback(self, msg):
+        if type(msg) is unicode:
+            print msg
+        elif type(msg) is dict:
+            print 'Finished workspace:', msg
+
+    def finished(self):
+        print 'Finished!'
 
 
 def load_pipeline(yaml_file):
@@ -493,7 +489,7 @@ class FunctionWidget(FeatureWidget):
     input_functions : dict
         dictionary with keys being parameters of this function to be overriden, and values being a FunctionWidget
         whose function will override said parameter
-    param_dict : dict
+    exposedParameters : dict
         Dictionary with parameter names and values
     _function : function
         Function object corresponding to the function represented by widget
@@ -535,7 +531,7 @@ class FunctionWidget(FeatureWidget):
         self.subname = function['displayName']
         name = self.name
         subname = self.subname
-        package = importlib.import_module(function['moduleName'])
+        package = importlib.import_module('pipeline.workflowfunctions.' + function['moduleName'])
         funcname = function['functionName']
         if name != subname:
             self.name += ' (' + subname + ')'
@@ -545,19 +541,20 @@ class FunctionWidget(FeatureWidget):
         self.subfunc_name = subname
         self.input_functions = {}
         if 'parameters' in function:
-            self.param_dict = function['parameters']
+            params = function['parameters']
         else:
-            self.param_dict = []
+            params = []
         self._function = getattr(package, funcname)
 
         # TODO have the children kwarg be passed to __init__
-        self.params = Parameter.create(name=self.name, children=self.param_dict, type='group')  #
+        self.params = Parameter.create(name=self.name, children=params, type='group')  #
 
         self.form = ParameterTree(showHeader=False)
         self.form.setParameters(self.params, showTop=True)
 
         # Initialize parameter dictionary with keys and default values
-        argspec = inspect.getargspec(self._function)
+        # self.updateParamsDict()
+        # argspec = inspect.getargspec(self._function)
         # default_argnum = len(argspec[3])
         # self.param_dict.update({key: val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
         # for key, val in self.param_dict.iteritems():
@@ -603,8 +600,7 @@ class FunctionWidget(FeatureWidget):
         """
         Parameter dictionary with only the parameters that are shown in GUI
         """
-        param_dict = {key: val for (key, val) in self.param_dict.iteritems()
-                      if key in [param.name() for param in self.params.children()]}
+        param_dict = {param.name(): param.value() for param in self.params.childs}
         return param_dict
 
     @property
@@ -612,7 +608,7 @@ class FunctionWidget(FeatureWidget):
         """
         Package up all parameters into a functools.partial
         """
-        return partial(self._function, **self.param_dict)
+        return partial(self._function, *self.exposed_param_dict.values())
 
     @property
     def func_signature(self):
@@ -622,7 +618,7 @@ class FunctionWidget(FeatureWidget):
         signature = str(self._function.__name__) + '('
         for arg in self.missing_args:
             signature += '{},'.format(arg)
-        for param, value in self.param_dict.iteritems():
+        for param, value in self.exposedParameters.iteritems():
             signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
                 '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
@@ -631,7 +627,7 @@ class FunctionWidget(FeatureWidget):
         """
         Update the values of the parameter dictionary with the current values in UI
         """
-        self.param_dict.update({param.name(): param.value() for param in self.params.children()})
+        self.exposedParameters.update({param.name(): param.value() for param in self.params.children()})
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
 
@@ -673,7 +669,7 @@ class FunctionWidget(FeatureWidget):
         """
         Slot connected to a pg.Parameter.sigChanged signal
         """
-        self.param_dict.update({param.name(): param.value()})
+        pass
 
     def allReadOnly(self, boolean):
         """
@@ -687,45 +683,6 @@ class FunctionWidget(FeatureWidget):
         Context menu for functionWidget. Default is not menu.
         """
         pass
-
-    def functionExectutionGenerator(self, ncore=None):
-        """
-        Generator for running full reconstruction. Yields messages representing the status of reconstruction
-        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
-
-        Parameters
-        ----------
-        ncore : int
-            Number of cores to run functions
-
-        Yields
-        -------
-        str
-            Message of current status of function
-        """
-
-        for function in self.features:
-            if not function.enabled:
-                continue
-            ts = time.time()
-            yield 'Running {0}...'.format(function.name)
-            fpartial = self.updateFunctionPartial(function)
-            if init:
-                tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
-                                               slice(None, None, None)))
-                init = False
-            elif 'Tiff' in function.name:
-                fpartial.keywords['start'] = write_start
-                write_start += tomo.shape[0]
-            # elif 'Reconstruction' in fname:
-            #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
-            #     # and set the reconstruction partial to the updated one.
-            #     if ipartials is not None:
-            #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
-            #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
-            #     tomo = fpartial(tomo)
-            tomo = fpartial(tomo)
-            yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
 
 class ROlineEdit(QtGui.QLineEdit):
@@ -1091,38 +1048,6 @@ class FunctionManager(FeatureManager):
         """
 
         fpartial = funcwidget.partial
-        for argname in funcwidget.missing_args:  # find a more elegant way to point to the flats and darks
-            if argname in 'flats':
-                fpartial.keywords[argname] = datawidget.getflats(slc=slc)
-            if argname in 'darks':
-                fpartial.keywords[argname] = datawidget.getdarks(slc=slc)
-            if argname in 'flat_loc':  # I don't like this at all
-                if slc is not None and slc[0].start is not None:
-                    slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                            else slc[0])
-                    fpartial.keywords[argname] = map_loc(slc_, datawidget.data.fabimage.flatindices())
-                else:
-                    fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
-        for param, ipf in funcwidget.input_functions.iteritems():
-            args = []
-            if not ipf.enabled:
-                continue
-            if param == 'center':  # Need to find a cleaner solution to this
-                if ipf.subfunc_name in FunctionManager.center_func_slc:
-                    map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
-                else:
-                    args.append(datawidget.getsino())
-                if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
-                    ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
-            fpartial.keywords[param] = ipf.partial(*args)
-            if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
-                stack_dict[param] = fpartial.keywords[param]
-        if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
-            self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
-        elif 'Reconstruction' in funcwidget.func_name:
-            fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-            self.resetCenterCorrection()
         return fpartial
 
     def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
@@ -1272,36 +1197,9 @@ class FunctionManager(FeatureManager):
         """
 
         self.removeAllFeatures()
-        # Way too many for loops, oops... may want to restructure the yaml files
-        for func, subfuncs in pipeline.iteritems():
-            for subfunc in subfuncs:
-                funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
-                if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
-                    funcWidget.enabled = False
-                if 'Parameters' in subfuncs[subfunc]:
-                    for param, value in subfuncs[subfunc]['Parameters'].iteritems():
-                        child = funcWidget.params.child(param)
-                        child.setValue(value)
-                        if setdefaults:
-                            child.setDefault(value)
-                if 'Input Functions' in subfuncs[subfunc]:
-                    for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
-                        for ipf, sipfs in ipfs.iteritems():
-                            for sipf in sipfs:
-                                if param in funcWidget.input_functions:
-                                    ifwidget = funcWidget.input_functions[param]
-                                else:
-                                    ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf,
-                                                                     package=reconpkg.packages[config_dict[sipf][1]])
-                                if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
-                                    ifwidget.enabled = False
-                                if 'Parameters' in sipfs[sipf]:
-                                    for p, v in sipfs[sipf]['Parameters'].iteritems():
-                                        ifwidget.params.child(p).setValue(v)
-                                        if setdefaults:
-                                            ifwidget.params.child(p).setDefault(v)
-                                ifwidget.updateParamsDict()
-                funcWidget.updateParamsDict()
+        for func in pipeline:
+            self.addFunction(func)
+
         self.sigPipelineChanged.emit()
 
     def setPipelineFromDict(self, pipeline, config_dict={}):
@@ -1337,6 +1235,50 @@ class FunctionManager(FeatureManager):
                         funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
+
+    def workflowExectutionGenerator(self, ncore=None):
+        """
+        Generator for running full reconstruction. Yields messages representing the status of reconstruction
+        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
+
+        Parameters
+        ----------
+        ncore : int
+            Number of cores to run functions
+
+        Yields
+        -------
+        str
+            Message of current status of function
+        """
+
+        stack_dict = OrderedDict()
+        partial_stack = []
+
+        workspace = dict()
+
+        for func in self.features:
+            if not func.enabled:
+                continue
+
+            ts = time.time()
+            yield 'Running {0}...'.format(func.name)
+
+            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            p = self.updateFunctionPartial(func, stack_dict[func.func_name][func.subfunc_name])
+            if 'ncore' in p.keywords:
+                p.keywords['ncore'] = ncore
+            partial_stack.append(p)
+            # for param, ipf in func.input_functions.iteritems():
+            #     if ipf.enabled:
+            #         if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
+            #             stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+            #         ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+            #         stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+            workspace = p(**workspace)
+        # self.lockParams(False)
+        yield 'Finished in {:.3f} s\n'.format(time.time() - ts)
+        yield workspace
 
 
 def map_loc(slc, loc):
@@ -1380,9 +1322,9 @@ if __name__ == '__main__':
     import imp
 
     module = imp.load_source('saxsfunctions',
-                             '/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/saxsfunctions.py')
+                             '/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/testfunctions.py')
 
-    w = workflowEditorWidget('../plugins/batch/defaultworkflow.yml', module)
+    w = workflowEditorWidget('/home/rp/PycharmProjects/xicam/pipeline/workflowfunctions/testworkflow.yml', module)
     w.show()
 
     import sys
