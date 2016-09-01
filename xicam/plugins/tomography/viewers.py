@@ -725,7 +725,6 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
-        functree.SelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
         functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
