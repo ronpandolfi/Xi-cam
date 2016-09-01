@@ -7,6 +7,7 @@ class SplashScreen(QtGui.QSplashScreen):
         self.pixmap = pixmap
         self.timer = QtCore.QTimer(self)
         self.timer.singleShot(1000, self.launchwindow)
+        self.timer.singleShot(3000, self.hide)
         self._launching = False
 
     def mousePressEvent(self, *args, **kwargs):
