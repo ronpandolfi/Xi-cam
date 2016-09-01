@@ -313,7 +313,7 @@ class plugin(base.plugin):
         # currentWidget.pipeline['features'] = self.manager.features
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
-        print self.centerwidget.widget(self.currentWidget()).pipeline
+        # print self.centerwidget.widget(self.currentWidget()).pipeline
 
 
     def tabCloseRequested(self, index):
@@ -454,9 +454,12 @@ pipe
             See FunctionManager.testParameterRange for more details
         """
 
+        self.loadPipelineDictionary()
+
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.previewFunctionStack)
-        bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
+        bg_functionstack(self.centerwidget.widget(self.currentWidget()),
+                         self.centerwidget.widget(self.currentWidget()).pipeline, slc=slc,
                          ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func)
 
     def foldPreviewStack(self, partial_stack, initializer, callback, error_message):

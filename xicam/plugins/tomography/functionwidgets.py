@@ -686,6 +686,9 @@ class FunctionManager(fw.FeatureManager):
 
             fpartial.keywords[param] = ipf_dict['func'].partial(*args)
 
+            if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
+                stack_dict[param] = fpartial.keywords[param]
+
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
@@ -712,7 +715,6 @@ class FunctionManager(fw.FeatureManager):
         #         if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
         #             ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
         #     fpartial.keywords[param] = ipf.partial(*args)
-        #     # these lines don't seem to do anything - Holden
         #     # if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
         #     #     stack_dict[param] = fpartial.keywords[param]
         # if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
@@ -724,7 +726,8 @@ class FunctionManager(fw.FeatureManager):
         #     fpartial.keywords['fname'] = save_name
         # return fpartial
 
-    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
+    def previewFunctionStack(self, datawidget, pipeline_dict, slc=None, ncore=None, skip_names=['Write'],
+                                                                                               fixed_func=None):
         """
         Create the function stack and summary dictionary used for running slice previews and 3D previews
 
@@ -755,28 +758,58 @@ class FunctionManager(fw.FeatureManager):
         self.stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
-        for func in self.features:
-            if not func.enabled:
+
+
+
+        for function in self.features:
+            if not pipeline_dict[function.name]['enabled']:
                 continue
-            elif func.func_name in skip_names:
-                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            elif function.func_name in skip_names:
+                # possible problem: user can change params in middle of a run
+                self.stack_dict[function.func_name] = {function.subfunc_name: deepcopy(function.exposed_param_dict)}
                 continue
-            elif fixed_func is not None and func.func_name == fixed_func.func_name:
-                func = fixed_func  # replace the function with the fixed function
-            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-            p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.func_name][func.subfunc_name], slc)
+            elif fixed_func is not None and function.func_name == fixed_func.func_name:
+                function = fixed_func  # replace the function with the fixed function
+            self.stack_dict[function.func_name] = {function.subfunc_name: deepcopy(function.exposed_param_dict)}
+            p = self.updateFunctionPartial(function, datawidget, pipeline_dict,
+                                           self.stack_dict[function.func_name][function.subfunc_name], slc)
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
             partial_stack.append(p)
-            for param, ipf in func.input_functions.iteritems():
+
+            for param, ipf in function.input_functions.iteritems():
                 if ipf.enabled:
-                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
-                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+                    if 'Input Functions' not in self.stack_dict[function.func_name][function.subfunc_name]:
+                        self.stack_dict[function.func_name][function.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+                    self.stack_dict[function.func_name][function.subfunc_name]['Input Functions'].update(ipf_dict)
         self.lockParams(False)
-        print self.stack_dict
+        # print self.stack_dict
         return partial_stack, self.stack_dict
+
+
+        # for func in self.features:
+        #     if not func.enabled:
+        #         continue
+        #     elif func.func_name in skip_names:
+        #         self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+        #         continue
+        #     elif fixed_func is not None and func.func_name == fixed_func.func_name:
+        #         func = fixed_func  # replace the function with the fixed function
+        #     self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+        #     p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.func_name][func.subfunc_name], slc)
+        #     if 'ncore' in p.keywords:
+        #         p.keywords['ncore'] = ncore
+        #     partial_stack.append(p)
+        #     for param, ipf in func.input_functions.iteritems():
+        #         if ipf.enabled:
+        #             if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
+        #                 self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+        #             ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+        #             self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+        # self.lockParams(False)
+        # print self.stack_dict
+        # return partial_stack, self.stack_dict
 
     @staticmethod
     def foldFunctionStack(partial_stack, initializer):
