@@ -725,8 +725,12 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
+        functree.SelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
+        functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        functree.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
         self.slice_numbers.appendleft(slice_number)
