@@ -813,6 +813,8 @@ class FunctionManager(fw.FeatureManager):
             Number of sinograms per chunk
         ncore : int
             Number of cores to run functions
+        pipeline_dict: dictionary
+            Dictionary of parameters referenced during reconstruction
 
         Yields
         -------
@@ -870,7 +872,7 @@ class FunctionManager(fw.FeatureManager):
             with open(save_file, 'w') as yml:
                 yamlmod.ordered_dump(pipeline_dict['pipeline_for_yaml'], yml)
         except NameError:
-            print "Error: function pipeline yaml not written - path could not be found"
+            yield "Error: function pipeline yaml not written - path could not be found"
 
         # print final 'finished with recon' message
         yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)

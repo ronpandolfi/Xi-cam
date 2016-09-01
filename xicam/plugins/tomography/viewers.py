@@ -41,6 +41,9 @@ class TomoViewer(QtGui.QWidget):
         Viewer class to hold a set of preview reconstructions of a single sinogram/slice
     preview3DViewer : Preview3DViewer
         Viewer class to visualize a reconstruction of subsampled set of the raw data
+    pipeline : OrderedDict
+        Dictionary to hold parameters for reconstruction, referenced by the iterations
+        of the reconstruction function
 
     Signals
     -------
