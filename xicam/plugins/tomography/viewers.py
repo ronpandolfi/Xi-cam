@@ -2,6 +2,7 @@ from collections import deque
 import numpy as np
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
+from collections import OrderedDict
 from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
@@ -66,6 +67,8 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
+        self.pipeline = OrderedDict()
+
 
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
@@ -76,15 +79,18 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('3D Preview')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
+        # keep a timer for reconstruction
+        self.recon_start_time = 0
+
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-            # create file name to pass to manager (?)
-            file_name = paths.split("/")[-1]
-            body = paths.split(file_name)[0]
-            self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
+            # # create file name to pass to manager (?)
+            # file_name = paths.split("/")[-1]
+            # body = paths.split(file_name)[0]
+            # self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
 
 
 

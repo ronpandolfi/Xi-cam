@@ -16,6 +16,7 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
+from modpkgs import yamlmod
 import numpy as np
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -631,7 +632,7 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
-    def updateFunctionPartial(self, funcwidget, datawidget, save_name, stack_dict=None, slc=None):
+    def updateFunctionPartial(self, funcwidget, datawidget, function_dict, stack_dict=None, slc=None):
         """
         Updates the given FunctionWidget's partial
 
@@ -653,7 +654,9 @@ class FunctionManager(fw.FeatureManager):
         """
 
         fpartial = funcwidget.partial
-        for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
+        func_params = function_dict[funcwidget.name]
+        missing_args = func_params["missing_args"]
+        for argname in missing_args: # find a more elegant way to point to the flats and darks
             if argname in 'flats':
                 fpartial.keywords[argname] = datawidget.getflats(slc=slc)
             if argname in 'darks':
@@ -665,29 +668,61 @@ class FunctionManager(fw.FeatureManager):
                     fpartial.keywords[argname] = map_loc(slc_, datawidget.data.fabimage.flatindices())
                 else:
                     fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
-        for param, ipf in funcwidget.input_functions.iteritems():
+
+        input_funcs = func_params['input_functions']
+        for param, ipf_dict in input_funcs.iteritems():
             args = []
-            if not ipf.enabled:
+            if not ipf_dict['enabled']:
                 continue
-            if param == 'center':  # Need to find a cleaner solution to this
-                if ipf.subfunc_name in FunctionManager.center_func_slc:
+            if param == 'center':
+                if ipf_dict['subfunc_name'] in FunctionManager.center_func_slc:
                     map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                                         FunctionManager.center_func_slc[ipf_dict['subfunc_name']]))
                 else:
                     args.append(datawidget.getsino())
-                if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
-                    ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
-            fpartial.keywords[param] = ipf.partial(*args)
-            if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
-                stack_dict[param] = fpartial.keywords[param]
+
+                if ipf_dict['subfunc_name'] == 'Nelder Mead':
+                    ipf_dict['func'].partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
+
+            fpartial.keywords[param] = ipf_dict['func'].partial(*args)
+
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
             self.resetCenterCorrection()
         elif 'Write' in funcwidget.func_name:
-            fpartial.keywords['fname'] = save_name
+            fpartial.keywords['fname'] = func_params['fname']
+
         return fpartial
+
+
+
+        # for param, ipf in funcwidget.input_functions.iteritems():
+        #     # print param,",", ipf.name
+        #     args = []
+        #     if not ipf.enabled:
+        #         continue
+        #     if param == 'center':  # Need to find a cleaner solution to this
+        #         if ipf.subfunc_name in FunctionManager.center_func_slc:
+        #             map(args.append, map(datawidget.data.fabimage.__getitem__,
+        #                                  FunctionManager.center_func_slc[ipf.subfunc_name]))
+        #         else:
+        #             args.append(datawidget.getsino())
+        #         if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
+        #             ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
+        #     fpartial.keywords[param] = ipf.partial(*args)
+        #     # these lines don't seem to do anything - Holden
+        #     # if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
+        #     #     stack_dict[param] = fpartial.keywords[param]
+        # if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
+        #     self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
+        # elif 'Reconstruction' in funcwidget.func_name:
+        #     fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
+        #     self.resetCenterCorrection()
+        # elif 'Write' in funcwidget.func_name:
+        #     fpartial.keywords['fname'] = save_name
+        # return fpartial
 
     def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
         """
@@ -717,30 +752,31 @@ class FunctionManager(fw.FeatureManager):
             Dictionary summarizing functions and parameters representing the pipeline (used for the list of partials)
         """
 
-        stack_dict = OrderedDict()
+        self.stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
         for func in self.features:
             if not func.enabled:
                 continue
             elif func.func_name in skip_names:
-                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
                 func = fixed_func  # replace the function with the fixed function
-            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-            p = self.updateFunctionPartial(func, datawidget, stack_dict[func.func_name][func.subfunc_name], slc)
+            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.func_name][func.subfunc_name], slc)
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
             partial_stack.append(p)
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
-                    if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
-                        stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
+                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
         self.lockParams(False)
-        return partial_stack, stack_dict
+        print self.stack_dict
+        return partial_stack, self.stack_dict
 
     @staticmethod
     def foldFunctionStack(partial_stack, initializer):
@@ -761,7 +797,7 @@ class FunctionManager(fw.FeatureManager):
         """
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
-    def functionStackGenerator(self, datawidget, proj, sino, sino_p_chunk, save_name, ncore=None):
+    def functionStackGenerator(self, datawidget, pipeline_dict, proj, sino, sino_p_chunk, ncore=None):
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
         This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
@@ -784,6 +820,7 @@ class FunctionManager(fw.FeatureManager):
             Message of current status of function
         """
 
+        start_time = time.time()
         write_start = sino[0]
         nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
         total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
@@ -795,13 +832,17 @@ class FunctionManager(fw.FeatureManager):
             start, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
             end = end if end < sino[1] else sino[1]
 
+
+
             for function in self.features:
-                if not function.enabled:
+                # if not function.enabled:
+                if not pipeline_dict[function.name]['enabled']:
                     continue
                 ts = time.time()
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
                                                                                               end, total_sino)
-                fpartial = self.updateFunctionPartial(function, datawidget, save_name,
+
+                fpartial = self.updateFunctionPartial(function, datawidget, pipeline_dict,
                                                       slc=(slice(*proj), slice(start, end, sino[2]),
                                                            slice(None, None, None)))
                 if init:
@@ -820,6 +861,20 @@ class FunctionManager(fw.FeatureManager):
                 #     tomo = fpartial(tomo)
                 tomo = fpartial(tomo)
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
+
+        # save yaml in reconstruction folder
+        for key in pipeline_dict.iterkeys():
+            if 'Write' in key:
+                save_file = pipeline_dict[key]['fname'] + '.yml'
+        try:
+            with open(save_file, 'w') as yml:
+                yamlmod.ordered_dump(pipeline_dict['pipeline_for_yaml'], yml)
+        except NameError:
+            print "Error: function pipeline yaml not written - path could not be found"
+
+        # print final 'finished with recon' message
+        yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)
+
 
     def testParameterRange(self, function, parameter, prange):
         """

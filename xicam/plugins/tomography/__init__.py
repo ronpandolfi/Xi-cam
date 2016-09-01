@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr#! /usr/bin/env python
 
 
 __author__ = "Luis Barroso-Luque"
@@ -21,6 +21,7 @@ import os
 import time
 from functools import partial
 from PySide import QtGui, QtCore
+from collections import OrderedDict
 from modpkgs import yamlmod
 from xicam.plugins import base
 from pipeline import msg
@@ -157,15 +158,24 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
+    # def currentWidget(self):
+    #     """
+    #     Return the current widget (viewer.TomoViewer) from the centerwidgets tabs
+    #     """
+    #
+    #     try:
+    #         return self.centerwidget.currentWidget()
+    #     except AttributeError:
+    #         return None
+
+
+
     def currentWidget(self):
-        """
-        Return the current widget (viewer.TomoViewer) from the centerwidgets tabs
-        """
 
         try:
-            return self.centerwidget.currentWidget()
+            return self.centerwidget.currentIndex()
         except AttributeError:
-            return None
+            raise
 
     def currentChanged(self, index):
         """
@@ -232,13 +242,31 @@ class plugin(base.plugin):
         self.setPipelineValues()
         self.manager.updateParameters()
 
+    # def setPipelineValues(self):
+    #     """
+    #     Sets up the metadata table and default values in configuration parameters and functions based on the selected
+    #     dataset
+    #     """
+    #
+    #     widget = self.currentWidget()
+    #     if widget is not None:
+    #         self.ui.property_table.setData(widget.data.header.items())
+    #         self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
+    #         self.ui.property_table.show()
+    #         self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
+    #         config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features)
+    #         recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
+    #         for rfunc in recon_funcs:
+    #             rfunc.params.child('center').setValue(widget.data.shape[1]/2)
+    #             rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
+
     def setPipelineValues(self):
         """
         Sets up the metadata table and default values in configuration parameters and functions based on the selected
         dataset
         """
 
-        widget = self.currentWidget()
+        widget =  self.centerwidget.widget(self.currentWidget())
         if widget is not None:
             self.ui.property_table.setData(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
@@ -249,6 +277,44 @@ class plugin(base.plugin):
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)
                 rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
+
+
+    def loadPipelineDictionary(self):
+        """
+        Loads a pipeline dictionary containing information relevant to reconstruction, including parameters and
+        arguments that are held by FunctionWidgets. This information can be updated on the  widgets in the middle of a
+        run, so the reconstruction should refer to this dictionary for relevant parameters
+        """
+
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+
+        for function in self.manager.features:
+            currentWidget.pipeline[function.name] = OrderedDict()
+            for (key,val) in function.param_dict.iteritems():
+                currentWidget.pipeline[function.name][key] = val
+            currentWidget.pipeline[function.name]['enabled'] = function.enabled
+
+
+
+            lst = []
+            for item in function.missing_args:
+                lst.append(item)
+                currentWidget.pipeline[function.name]['missing_args'] = lst
+
+            input_dict = OrderedDict()
+            for key,val in function.input_functions.iteritems():
+                dict = OrderedDict()
+                dict['func'] = val
+                dict['enabled'] = val.enabled
+                dict['subfunc_name'] = val.subfunc_name
+                input_dict[key] = dict
+            # if len(input_dict.items()) is not 0:
+            currentWidget.pipeline[function.name]["input_functions"] = input_dict
+        # currentWidget.pipeline['features'] = self.manager.features
+        currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
+
+        print self.centerwidget.widget(self.currentWidget()).pipeline
+
 
     def tabCloseRequested(self, index):
         """
@@ -270,20 +336,16 @@ class plugin(base.plugin):
         Slot to receive signal from roi button in toolbar. Simply calls onROIselection from current widget
         """
 
-        self.currentWidget().onROIselection()
+        self.centerwidget.widget(self.currentWidget()).onROIselection()
 
     def manualCenter(self, value):
         """
         Slot to receive signal from center detection button in toolbar. Simply calls onManualCenter(value) from current
         widget
-
-        Parameters
-        ----------
-        index : bool
-            Boolean for toggling center detection on/off
+pipe
         """
 
-        self.currentWidget().onManualCenter(value)
+        self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
 
     def checkPipeline(self):
         """
@@ -291,7 +353,7 @@ class plugin(base.plugin):
         eventually be added here to ensure the wp makes sense.
         """
 
-        if len(self.manager.features) < 1 or self.currentWidget() is None:
+        if len(self.manager.features) < 1 or self.currentWidget() == -1:
             return False
         elif 'Reconstruction' not in [func.func_name for func in self.manager.features]:
             QtGui.QMessageBox.warning(None, 'Reconstruction method required',
@@ -332,9 +394,9 @@ class plugin(base.plugin):
             the viewer.TomoViewer.previewViewer
         """
 
-        initializer = self.currentWidget().getsino()
-        slice_no = self.currentWidget().sinogramViewer.currentIndex
-        callback = partial(self.currentWidget().addSlicePreview, stack_dict, slice_no=slice_no)
+        initializer = self.centerwidget.widget(self.currentWidget()).getsino()
+        slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
+        callback = partial(self.centerwidget.widget(self.currentWidget()).addSlicePreview, stack_dict, slice_no=slice_no)
         message = 'Unable to compute slice preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, message)
 
@@ -394,8 +456,8 @@ class plugin(base.plugin):
 
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.previewFunctionStack)
-        bg_functionstack(self.currentWidget(), slc=slc, ncore=self.ui.config_params.child('CPU Cores').value(),
-                         fixed_func=fixed_func)
+        bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
+                         ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func)
 
     def foldPreviewStack(self, partial_stack, initializer, callback, error_message):
         """
@@ -437,14 +499,16 @@ class plugin(base.plugin):
 
         name = self.centerwidget.tabText(self.centerwidget.currentIndex())
         msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
-        self.bottomwidget.local_console.clear()
+        # self.bottomwidget.local_console.clear()
         self.manager.updateParameters()
 
-        # self.manager.getFunctionPipeline or something
+        self.loadPipelineDictionary()
+
+
 
         recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                      interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-                                      finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+                            interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+                            finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
         pstart = self.ui.config_params.child('Start Projection').value()
         pend = self.ui.config_params.child('End Projection').value()
         pstep = self.ui.config_params.child('Step Projection').value()
@@ -456,8 +520,9 @@ class plugin(base.plugin):
         #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
         #            ncore=self.ui.config_params.child('CPU Cores').value())
 
-        args = (self.currentWidget(), (pstart, pend, pstep),(sstart, send, sstep),
-                self.ui.config_params.child('Sinograms/Chunk').value(), self.currentWidget().path,
+        args = (self.centerwidget.widget(self.currentWidget()),
+                self.centerwidget.widget(self.currentWidget()).pipeline,
+                (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
                 self.ui.config_params.child('CPU Cores').value())
 
 
@@ -470,7 +535,7 @@ class plugin(base.plugin):
         self.runReconstruction()
 
     def runReconstruction(self):
-        if not self.recon_queue.empty() and not self.recon_running:
+        if (not self.recon_queue.empty()) and (not self.recon_running):
             self.recon_running = True
             recon_job = self.recon_queue.get()
             recon_job[0](*recon_job[1])
@@ -493,14 +558,23 @@ class plugin(base.plugin):
         #         print p.name(), ",",p.value()
         #     print "-----------------"
 
-
-        save_file = self.currentWidget().path + ".yml"
-        with open(save_file, 'w') as yml:
-            pipeline = config.extract_pipeline_dict(self.manager.features)
-            yamlmod.ordered_dump(pipeline, yml)
-
-        run_time = time.time() - self.recon_start_time
-        self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
+        # # save yaml in reconstruction folder
+        # for key in pipeline_dict.iterkeys():
+        #     if 'Write' in key:
+        #         save_file = pipeline_dict[key]['fname'] + '.yml'
+        #
+        # print pipeline_dict['features']
+        # try:
+        #     with open(save_file, 'w') as yml:
+        #         pipeline = config.extract_pipeline_dict(pipeline_dict['features'])
+        #         yamlmod.ordered_dump(pipeline, yml)
+        # except NameError:
+        #     print "function pipeline yaml not written - path could not be found"
+        #
+        # run_time = time.time() - pipeline_dict['recon_start_time']
+        # # self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
+        #
+        #
         msg.showMessage('Reconstruction complete.', timeout=10)
 
         self.recon_running = False
