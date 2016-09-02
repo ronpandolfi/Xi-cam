@@ -654,6 +654,10 @@ class FunctionManager(fw.FeatureManager):
         """
 
         fpartial = funcwidget.partial
+
+
+        # function_dict['signature'][funcwidget.func_name] = funcwidget.func_signature()
+        # function_dict['signature'][fpartial.name] = fpartial.func_signature()
         func_params = function_dict[funcwidget.name]
         missing_args = func_params["missing_args"]
         for argname in missing_args: # find a more elegant way to point to the flats and darks

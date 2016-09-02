@@ -90,10 +90,6 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
-            # # create file name to pass to manager (?)
-            # file_name = paths.split("/")[-1]
-            # body = paths.split(file_name)[0]
-            # self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
 
 
 
