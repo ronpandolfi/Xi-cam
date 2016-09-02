@@ -313,6 +313,9 @@ class plugin(base.plugin):
         # currentWidget.pipeline['features'] = self.manager.features
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
+        # code for potential pipeline
+        # currentWidget.pipeline['signature'] = OrderedDict()
+
         # print self.centerwidget.widget(self.currentWidget()).pipeline
 
 
@@ -502,8 +505,6 @@ pipe
         if value is QtGui.QMessageBox.Cancel:
             return
 
-        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
-        msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
         # self.bottomwidget.local_console.clear()
         self.manager.updateParameters()
 
@@ -537,13 +538,22 @@ pipe
         #                                 interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
 
         self.recon_queue.put([recon_iter, args])
+
+        if self.recon_running:
+            name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+            msg.showMessage('Queued reconstruction for {}.'.format(name), timeout=0)
+
         self.runReconstruction()
 
     def runReconstruction(self):
         if (not self.recon_queue.empty()) and (not self.recon_running):
             self.recon_running = True
             recon_job = self.recon_queue.get()
-            recon_job[0](*recon_job[1])
+            args = recon_job[1]
+            name = self.centerwidget.tabText(self.centerwidget.indexOf(args[0]))
+            msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
+
+            recon_job[0](*args)
 
 
 
