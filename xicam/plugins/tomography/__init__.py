@@ -353,7 +353,7 @@ pipe
         eventually be added here to ensure the wp makes sense.
         """
 
-        if len(self.manager.features) < 1 or self.currentWidget() == -1:
+        if len(self.manager.features) < 1 or self.centerwidget.widget(self.currentWidget()) == -1:
             return False
         elif 'Reconstruction' not in [func.func_name for func in self.manager.features]:
             QtGui.QMessageBox.warning(None, 'Reconstruction method required',
@@ -428,9 +428,11 @@ pipe
         """
 
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-        initializer = self.currentWidget().getsino(slc)  # this step takes quite a bit, think of running a thread
+
+        # this step takes quite a bit, think of running a thread
+        initializer = self.centerwidget.widget(self.currentWidget()).getsino(slc)
         self.manager.updateParameters()
-        callback = partial(self.currentWidget().add3DPreview, stack_dict)
+        callback = partial(self.centerwidget.widget(self.currentWidget()).add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, callback, err_message)
 
