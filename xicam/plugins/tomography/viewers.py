@@ -858,12 +858,15 @@ class RunConsole(QtGui.QTabWidget):
 
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon_clear = QtGui.QIcon()
+    icon_clear.addPixmap(QtGui.QPixmap("gui/icons_57.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunConsole, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
         # Text Browser for local run console
-        self.local_console, self.local_cancelButton = self.addConsole('Local')
+        self.local_console, self.local_cancelButton, self.local_clearButton = self.addConsole('Local')
+        self.local_clearButton.clicked.connect(self.local_console.clear)
 
     def addConsole(self, name):
         """
@@ -875,8 +878,12 @@ class RunConsole(QtGui.QTabWidget):
         name : str
             Name to be used in tab for console added
         """
+
+        # TODO: finish adding message clear button
         console = QtGui.QTextEdit()
         button = QtGui.QToolButton()
+        button_clear = QtGui.QToolButton()
+
         console.setObjectName(name)
         console.setReadOnly(True)
         console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
@@ -884,17 +891,23 @@ class RunConsole(QtGui.QTabWidget):
         button.setIconSize(QtCore.QSize(24, 24))
         button.setFixedSize(32, 32)
         button.setToolTip('Cancel running process')
+        button_clear.setIcon(self.icon_clear)
+        button_clear.setIconSize(QtCore.QSize(24,24))
+        button_clear.setFixedSize(32,32)
+        button_clear.setToolTip('Clear console log')
+
         w = QtGui.QWidget()
         w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         w.setContentsMargins(0, 0, 0, 0)
         l = QtGui.QGridLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.setSpacing(0)
-        l.addWidget(console, 0, 0, 2, 2)
-        l.addWidget(button, 1, 2, 1, 1)
+        l.addWidget(console, 0, 0, 3, 2)
+        l.addWidget(button, 0, 2, 1, 1)
+        l.addWidget(button_clear,1,2,1,1)
         w.setLayout(l)
         self.addTab(w, console.objectName())
-        return console, button
+        return console, button, button_clear
 
     def log2local(self, msg):
         """
