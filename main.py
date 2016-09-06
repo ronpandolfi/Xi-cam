@@ -30,12 +30,12 @@ def main():
         import xicam
         from xicam import xglobals
 
-        xglobals.window = xicam.xicamwindow.MyMainWindow(xglobals.app)
+        xglobals.window = xicam.xicamwindow.MyMainWindow(app)
 
         xglobals.window.ui.show()
         xglobals.window.ui.raise_()
         xglobals.window.ui.activateWindow()
-        xglobals.app.setActiveWindow(xglobals.window.ui)
+        app.setActiveWindow(xglobals.window.ui)
 
     app.processEvents()
 
