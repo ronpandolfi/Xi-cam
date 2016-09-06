@@ -28,6 +28,39 @@ OS X Notes:
         except:
             return ['<unkown>',0]
 
+4. skimage missing docs? -> modify skimage/measure/_regionprops.py
+    def _parse_docs():
+        import re
+        import textwrap
+
+        try:
+
+            doc = regionprops.__doc__
+            matches = re.finditer('\*\*(\w+)\*\* \:.*?\n(.*?)(?=\n    [\*\S]+)',
+                                  doc, flags=re.DOTALL)
+            prop_doc = dict((m.group(1), textwrap.dedent(m.group(2))) for m in matches)
+
+        except TypeError:
+            return dict()
+
+        return prop_doc
+
+
+    def _install_properties_docs():
+        prop_doc = _parse_docs()
+
+        for p in [member for member in dir(_RegionProperties)
+                  if not member.startswith('_')]:
+            try:
+                getattr(_RegionProperties, p).__doc__ = prop_doc[p]
+            except AttributeError:
+                # For Python 2.x
+                getattr(_RegionProperties, p).im_func.__doc__ = prop_doc[p]
+            except KeyError:
+                pass
+
+            setattr(_RegionProperties, p, property(getattr(_RegionProperties, p)))
+
 """
 import sys
 sys.setrecursionlimit(1500)
