@@ -11,6 +11,7 @@ from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer
 from xicam.widgets.volumeviewers import VolumeViewer
 
+
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -70,8 +71,8 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
+        # pipeline dictionary of parameters
         self.pipeline = OrderedDict()
-
 
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
@@ -82,8 +83,12 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('3D Preview')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
+
         # keep a timer for reconstruction
         self.recon_start_time = 0
+
+
+
 
         if data is not None:
             self.data = data
@@ -92,10 +97,12 @@ class TomoViewer(QtGui.QWidget):
 
 
 
-
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.viewstack.addWidget(self.projectionViewer)
+
+
+
 
         self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
@@ -116,8 +123,10 @@ class TomoViewer(QtGui.QWidget):
         v.addWidget(self.viewmode)
         self.setLayout(v)
 
+
         self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
+
 
     def wireupCenterSelection(self, recon_function):
         """
@@ -368,17 +377,20 @@ class ProjectionViewer(QtGui.QWidget):
 
     def __init__(self, data, view_label=None, center=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
+
+
+
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
-        self.flat = np.median(self.data.flats, axis=0).transpose()
-        self.dark = np.median(self.data.darks, axis=0).transpose()
-
+        # self.flat = np.median(self.data.flats, axis=0).transpose()
+        # self.dark = np.median(self.data.darks, axis=0).transpose()
         self.imgoverlay_roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+
 
         # roi to select region of interest
         self.selection_roi = None
@@ -409,6 +421,10 @@ class ProjectionViewer(QtGui.QWidget):
         h1.addWidget(olabel)
         h1.addWidget(originBox)
 
+
+
+
+
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
@@ -438,7 +454,6 @@ class ProjectionViewer(QtGui.QWidget):
         # h2.addWidget(rotateCheckBox) # This needs to be implemented correctly
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
-
         spinBox.setFixedWidth(spinBox.width())
         v = QtGui.QVBoxLayout(self.cor_widget)
         v.addLayout(h1)
@@ -456,12 +471,12 @@ class ProjectionViewer(QtGui.QWidget):
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
         constrainYCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainY(v))
         constrainXCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainX(v))
+
         # rotateCheckBox.stateChanged.connect(self.addRotateHandle)
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.imgoverlay_roi.sigTranslated.connect(self.setCenter)
         self.imgoverlay_roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
-
         self.hideCenterDetection()
 
     def changeOverlayProj(self, idx):
@@ -563,7 +578,11 @@ class ProjectionViewer(QtGui.QWidget):
             Boolean specifying to normalize image
         """
 
+
         if val and not self.normalized:
+            self.flat = np.median(self.data.flats, axis=0).transpose()
+            self.dark = np.median(self.data.darks, axis=0).transpose()
+
             proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
             overlay = self.imgoverlay_roi.currentImage
             if self.imgoverlay_roi.flipped:
