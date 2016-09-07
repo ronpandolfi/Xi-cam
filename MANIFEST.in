@@ -1,2 +1,7 @@
-include README.md
+include README.rst
 include gui/*
+include samples/*
+include yaml/attributions/*
+include yaml/tomography/*
+include cext/*
+include LICENSE.txt
