@@ -5,6 +5,7 @@ import numpy as np
 # import scipy.sparse.csgraph._validation
 sys.path.append('xicam/')
 import zmq.libzmq
+import pyFAI
 import os
 
 # Notes:
@@ -85,7 +86,7 @@ buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub','distributed','cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['tiff.dll','hipgisaxs.exe','gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__],
+                'include_files': ['tiff.dll','hipgisaxs.exe','gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
@@ -111,7 +112,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.11',
+      version='1.2.12',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',

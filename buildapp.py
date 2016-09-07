@@ -36,6 +36,7 @@ from numpy.distutils.core import Extension
 import numpy as np
 
 
+
 #os.environ["CC"] = "gcc"
 #os.environ["CXX"] = "g++"
 
@@ -60,9 +61,10 @@ OPTIONS = {'argv_emulation': False,
                'distributed', 'cryptography.hazmat.backends.openssl', 'cryptography.hazmat.backends.commoncrypto'
            ],
            'excludes': [
-               'matplotlib', 'sympy', 'PyQt4', 'PyQt5', 'pyglet', 'matplotlib.tests', 'matplotlib.testing'
+               'sympy', 'PyQt4', 'PyQt5', 'pyglet'  # , 'matplotlib.tests', 'matplotlib.testing', 'matplotlib',
            ],
-           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'h5py', 'vispy', 'cryptography']
+           'packages': ['pipeline', 'daemon', 'xicam', 'PIL', 'h5py', 'vispy', 'cryptography', 'pyFAI', 'tomopy',
+                        'dxchange', 'skimage']  #import skimage.feature._texture
 }
 
 EXT = Extension(name='pipeline.cWarpImage',
