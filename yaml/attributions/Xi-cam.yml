@@ -1,7 +1,16 @@
 title: Xi-cam
-Authors:
-- Ronald Pandolfi
+authors:
+- Ronald J Pandolfi
 - Dinesh Kumar
 - Singanallur Venkatakrishnan
 - Luis Barrosso-Luque
+- Austin Blair
 - Hari Krishnan
+- James A Sethian
+- Alexander Hexemer
+organizations:
+- Advanced Light Source (ALS)
+- Center for Advanced Mathematics for Energy Research Applications (CAMERA)
+citation: testcitation 2016.
+logos:
+- gui/camera.jpg
