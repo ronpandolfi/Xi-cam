@@ -46,6 +46,8 @@ class FunctionWidget(fw.FeatureWidget):
         Dictionary with parameter names and values
     _function : function
         Function object corresponding to the function represented by widget
+    package : str
+        name of package to which function belongs
     params : pyqtgraph.Parameter
         Parameter instance with function parameter exposed in UI
     missing_args : list of str
@@ -91,6 +93,7 @@ class FunctionWidget(fw.FeatureWidget):
         self.input_functions = {}
         self.param_dict = {}
         self._function = getattr(package, config.names[self.subfunc_name][0])
+        self.package = package.__name__
 
         # TODO have the children kwarg be passed to __init__
         self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
@@ -164,6 +167,7 @@ class FunctionWidget(fw.FeatureWidget):
         """
         return partial(self._function, **self.param_dict)
 
+
     @property
     def func_signature(self):
         """
@@ -176,6 +180,7 @@ class FunctionWidget(fw.FeatureWidget):
             signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
                 '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
+
 
     def updateParamsDict(self):
         """
@@ -655,9 +660,9 @@ class FunctionManager(fw.FeatureManager):
 
         fpartial = funcwidget.partial
 
+        # print funcwidget.name, ": ", fpartial.args, ",", fpartial.keywords
 
-        # function_dict['signature'][funcwidget.func_name] = funcwidget.func_signature()
-        # function_dict['signature'][fpartial.name] = fpartial.func_signature()
+
         func_params = function_dict[funcwidget.name]
         missing_args = func_params["missing_args"]
         for argname in missing_args: # find a more elegant way to point to the flats and darks
@@ -679,6 +684,7 @@ class FunctionManager(fw.FeatureManager):
             if not ipf_dict['enabled']:
                 continue
             if param == 'center':
+                ipf_dict['func'].partial.keywords['tol'] = ipf_dict['vals']['tol']
                 if ipf_dict['subfunc_name'] in FunctionManager.center_func_slc:
                     map(args.append, map(datawidget.data.fabimage.__getitem__,
                                          FunctionManager.center_func_slc[ipf_dict['subfunc_name']]))
@@ -687,16 +693,24 @@ class FunctionManager(fw.FeatureManager):
 
                 if ipf_dict['subfunc_name'] == 'Nelder Mead':
                     ipf_dict['func'].partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
+            if param == 'theta': # makes sure that angle values don't change between iterations
+                ipf_dict['func'].partial.keywords['nang'] = ipf_dict['vals']['nang']
+                ipf_dict['func'].partial.keywords['ang1'] = ipf_dict['vals']['ang1']
+                ipf_dict['func'].partial.keywords['ang2'] = ipf_dict['vals']['ang2']
 
             fpartial.keywords[param] = ipf_dict['func'].partial(*args)
 
             if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
                 stack_dict[param] = fpartial.keywords[param]
 
+
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
+            # print fpartial.keywords['center']
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
+            # print fpartial.keywords['center']
+            # print "---------------------------"
             self.resetCenterCorrection()
         elif 'Write' in funcwidget.func_name:
             fpartial.keywords['fname'] = func_params['fname']
@@ -942,6 +956,8 @@ class FunctionManager(fw.FeatureManager):
                                                 'input_functions': function.input_functions})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func)
+
+
 
     def setPipelineFromYAML(self, pipeline, setdefaults=False, config_dict=config.names):
         """
