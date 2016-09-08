@@ -17,13 +17,17 @@ import Queue
 Bugs:
     1. User can resize ROI after recentering
     2. Centering/running RMC causes gui to return to original image tab, instead of staying on the current tab
-        or going to the tab relevant for the button pressed
+        or going to the tab relevant for the button pressed (has a quickfix)
 """
 
 class plugin(base.plugin):
 
     """
     HipRMC plugin class - centers images, calls HipRMC as subprocess, then displays output
+
+    NOTE: Running HipRMC assumes that there is a HipRMC folder containing the executable in the working
+          directory. If this is not the case, you will need to change the path in inOutViewer.run_RMC where
+          HipRMC is called as an executable.
 
 
     Attributes
