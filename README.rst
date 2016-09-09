@@ -17,13 +17,13 @@ Linux
 
 To install Xi-cam, you must first have ``numpy`` and ``scipy`` installed. You can install these with:
 
-.. codeblock:: bash
+.. code-block:: bash
 
  pip install numpy scipy
 
 You can then install Xi-cam with:
 
-.. codeblock:: bash
+.. code-block:: bash
 
  pip install xi-cam
 
