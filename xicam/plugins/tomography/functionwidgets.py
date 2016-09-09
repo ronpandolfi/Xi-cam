@@ -93,6 +93,8 @@ class FunctionWidget(fw.FeatureWidget):
         self.input_functions = {}
         self.param_dict = {}
         self._function = getattr(package, config.names[self.subfunc_name][0])
+
+        #perhaps unnecessary
         self.package = package.__name__
 
         # TODO have the children kwarg be passed to __init__
@@ -637,6 +639,20 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
+    def saveState(self):
+        lst = []
+        for function in self.features:
+            fpartial = function.partial
+            for item in function.enabled_args:
+                for i in len(item):
+                    fpartial.keywords[function.missing_args[i]] = item[i]
+                lst.append(fpartial)
+
+
+            # save func partials with keyword args
+            # save multiple copies if multiple args wanted
+            # return a list of function partials with args attached, so they can run in order!
+
     def updateFunctionPartial(self, funcwidget, datawidget, function_dict, stack_dict=None, slc=None):
         """
         Updates the given FunctionWidget's partial
@@ -659,7 +675,6 @@ class FunctionManager(fw.FeatureManager):
         """
 
         fpartial = funcwidget.partial
-
         # print funcwidget.name, ": ", fpartial.args, ",", fpartial.keywords
 
 
@@ -677,6 +692,7 @@ class FunctionManager(fw.FeatureManager):
                     fpartial.keywords[argname] = map_loc(slc_, datawidget.data.fabimage.flatindices())
                 else:
                     fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
+
 
         input_funcs = func_params['input_functions']
         for param, ipf_dict in input_funcs.iteritems():

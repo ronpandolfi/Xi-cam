@@ -292,31 +292,32 @@ class plugin(base.plugin):
             currentWidget.pipeline[function.name] = OrderedDict()
             for (key,val) in function.param_dict.iteritems():
                 currentWidget.pipeline[function.name][key] = val
+            currentWidget.pipeline[function.name]['func_name'] = str(function.package) + "." + \
+                                                                 str(function._function.__name__)
             currentWidget.pipeline[function.name]['enabled'] = function.enabled
-
 
 
             lst = []
             for item in function.missing_args:
                 lst.append(item)
-                currentWidget.pipeline[function.name]['missing_args'] = lst
+            currentWidget.pipeline[function.name]['missing_args'] = lst
 
             input_dict = OrderedDict()
             for key,val in function.input_functions.iteritems():
+                # print key, ",", val.params.children()
                 dict = OrderedDict()
                 dict['func'] = val
                 dict['enabled'] = val.enabled
                 dict['subfunc_name'] = val.subfunc_name
+                dict['vals'] = OrderedDict()
+                for child in val.params.children():
+                    dict['vals'][child.name()] = child.value()
                 input_dict[key] = dict
-            # if len(input_dict.items()) is not 0:
             currentWidget.pipeline[function.name]["input_functions"] = input_dict
-        # currentWidget.pipeline['features'] = self.manager.features
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
-        # code for potential pipeline
-        # currentWidget.pipeline['signature'] = OrderedDict()
+        print currentWidget.pipeline
 
-        # print self.centerwidget.widget(self.currentWidget()).pipeline
 
 
     def tabCloseRequested(self, index):
@@ -554,6 +555,115 @@ pipe
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
 
             recon_job[0](*args)
+
+            pipeline = args[1]
+            proj = args[2]; sino = args[3]
+            sino_p_chunk = args[4]; ncore = args[5]
+            path = args[0].path
+
+            # save pipeline as python file
+            self.savePipelineAsRunnable(pipeline, proj, sino, sino_p_chunk, path, ncore)
+
+    def savePipelineAsRunnable(self, pipeline, proj, sino, sino_p_chunk, path, ncore = None):
+        """
+        Saves the function pipeline as a runnable (Python) file. Must be of TomoViewer.pipeline format
+
+        Parameters
+        ----------
+        pipeline : dict
+            Dictionary of functions and their necessary parameters to write the function information
+        """
+
+        signature = "import time \nimport tomopy \nimport dxchange\nimport fabio\nimport " \
+                    "xicam.plugins.tomography.pipelinefunctions\n\n"
+
+        # rewrite functions used for processing
+        signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
+        signature += "\tind = range(slc.start, slc.stop, step)\n\tloc = np.array(loc)\n\tlow, upp = ind[0], ind[-1]\n"
+        signature += "\tbuff = (loc[-1] - loc[0]) / len(loc)\n\tmin_loc = low - buff\n\tmax_loc = upp + buff\n"
+        signature += "\tloc = np.intersect1d(loc[loc > min_loc], loc[loc < max_loc])\n\tnew_upp = len(ind)\n"
+        signature += "\tloc = (new_upp * (loc - low)) // (upp - low)\n\tif loc[0] < 0:\n\t\tloc[0] = 0\n"
+        signature += "\treturn np.ndarray.tolist(loc)\n\n"
+
+        # set up function pipeline
+        func_list = []
+        meta_params = ['missing_args', 'input_functions', 'func_name', 'enabled']
+        for function, dict in pipeline.iteritems():
+            if (function == 'pipeline_for_yaml') or (not dict['enabled']):
+                continue
+            func_signature = dict['func_name'] + '('
+
+            missing_args = dict['missing_args']
+            for arg in missing_args:
+                func_signature += '{}, '.format(arg)
+
+            for param, value in dict.iteritems():
+                if 'Reconstruction' in function:
+                    angles = dict['input_functions']['theta']['vals']
+                if param in meta_params:
+                    continue
+                else:
+                    func_signature += '{0}={1}, '.format(param,value) if not isinstance(value,str) else \
+                        '{0}=\'{1}\', '.format(param,value)
+            func_signature = func_signature[:-1] + ')'
+            func_list.append(func_signature)
+
+        signature += str(func_list) + "\n"
+
+        signature += "def main():\n"
+        signature += "\tstart_time = time.time()\n"
+
+        signature += "\ttheta = tomopy.angle(nang = {0},ang1 = {1}, ang2 = {2})\n\n".format\
+            (angles['nang'], angles['ang1'], angles['ang2'])
+
+        signature += "\tdata = fabio.open('{}')\n".format(path)
+        signature += "\tflat_data = data.flats; dark_data = data.darks\n"
+        signature += "\tproj = {0}; sino = {1}\n".format("put something here", "put something here")
+        signature += "\tsino_p_chunk = {2}\n\n".format(proj,sino,sino_p_chunk)
+        signature += "\twrite_start = sino[0]\n"
+        signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
+        signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
+        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n"
+
+        # for key in pipeline.iterkeys():
+        #     if "Reconstruction" in key:
+        #         recon_widget = pipeline[key]
+        #     recon_widget = pipeline[]
+
+
+
+        signature += "\tfor i in range(nchunk):\n\t\tinit = True\n"
+        signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
+        signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
+        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
+        signature += " \t\tflats = flat_data[slc]\n\t\tdark = dark_data[slc]\n"
+        signature += "\t\ttomo = data[slc]\n"
+        signature += "\t\tif slc is not None and slc[0].start is not None:\n"
+        signature += "\t\t\tslc_ = (slice(slc[0].start,data.shape[0],slc[0].step)\n"
+        signature += "\t\t\tflat_loc = map_loc(slc_, data.flatindices())\n"
+        signature += "\t\telse:\n\t\t\tflat_loc = data.flatindices()\n\n"
+        # signature += "flat = flats[" \
+        #              "slc=(slice(*proj), slice(start, end, sino[2]),
+        #                                                    slice(None, None, None)))"
+
+        for func in func_list:
+            signature += "\tts = time.time()\n"
+            signature += ""
+
+
+
+
+        signature += "for func in func_list\n\tts = time.time()\n"
+        signature += "\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format(" \
+                     "func.split('('), start, end, total_sino)\n "
+        signature
+
+
+
+        with open('/home/hparks/Desktop/example.py','w') as something:
+            something.write(signature)
+
+
 
 
 
