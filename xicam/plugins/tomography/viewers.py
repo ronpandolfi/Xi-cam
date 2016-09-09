@@ -74,6 +74,9 @@ class TomoViewer(QtGui.QWidget):
         # pipeline dictionary of parameters
         self.pipeline = OrderedDict()
 
+        # set path as field of TomoViewer
+        self.path = paths
+
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
