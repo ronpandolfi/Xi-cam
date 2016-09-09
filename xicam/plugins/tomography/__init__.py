@@ -316,7 +316,7 @@ class plugin(base.plugin):
             currentWidget.pipeline[function.name]["input_functions"] = input_dict
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
-        print currentWidget.pipeline
+        # print currentWidget.pipeline
 
 
 
