@@ -1,0 +1,13 @@
+title: Tomopy
+authors:
+- Doga Gursoy
+- Francesco De Carlo
+- Xianghui Xiao
+- Chris Jacobsen
+organizations:
+- Argonne National Lab
+- Advanced Photon Source
+logos:
+- static/Argonnelablogo.PNG
+- static/Tomopy-logo-wiki.png
+citation: "Gürsoy D, De Carlo F, Xiao X, and Jacobsen C. Tomopy: a framework for the analysis of synchrotron tomographic data. Journal of Synchrotron Radiation, 21(5):1188–1193, 2014."

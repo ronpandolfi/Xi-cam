@@ -13,4 +13,7 @@ organizations:
 - Center for Advanced Mathematics for Energy Research Applications (CAMERA)
 citation: testcitation 2016.
 logos:
-- gui/camera.jpg
+- static/camera.jpg
+- static/Berkeley_Lab_Logo_Small.jpg
+- static/4206860375_5cb494745d_z.jpg
+toplevel:

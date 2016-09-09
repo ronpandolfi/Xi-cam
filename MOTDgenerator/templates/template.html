@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 {% block content %}
    <div align='center'>
+       <br />
+       <br />
        <img src='/static/camera.jpg' width='200'/>
        <h1 style='font-family:Zero Threes;'>
            Welcome to Xi-cam
@@ -33,7 +35,37 @@
                     </ul>
                 </div>
                 <div style="clear:both;"></div>
+                <div style="position:relative;width:600px;display:block;margin:0 auto;">
+                    {% for logo in item['logos'] %}
+                        <img class="slide{{item['codename']}}" src="{{logo}}" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+                    {% endfor %}
+                    {% if 'logos' in item %}
+                        <a class="w3-btn-floating" onclick="plusDivs{{item['codename']}}(-1)" style="position:absolute;top:45%;left:0">&#10094;</a>
+                        <a class="w3-btn-floating" onclick="plusDivs{{item['codename']}}(+1)" style="position:absolute;top:45%;right:0">&#10095;</a>
+                    {% endif %}
+                </div>
             </span>
         </div>
+        {% if 'logos' in item %}
+          <script>
+            var slideIndex{{item['codename']}} = 1;
+            showDivs{{item['codename']}}(slideIndex{{item['codename']}});
+
+            function plusDivs{{item['codename']}}(n) {
+                showDivs{{item['codename']}}(slideIndex{{item['codename']}} += n);
+            }
+
+            function showDivs{{item['codename']}}(n) {
+                var i;
+                var x = document.getElementsByClassName("slide{{item['codename']}}");
+                if (n > x.length) {slideIndex{{item['codename']}} = 1}
+                if (n < 1) {slideIndex{{item['codename']}} = x.length} ;
+                for (i = 0; i < x.length; i++) {
+                    x[i].style.display = "none";
+                }
+                x[slideIndex{{item['codename']}}-1].style.display = "block";
+            }
+          </script>
+        {% endif %}
     {% endfor %}
 {% endblock %}
