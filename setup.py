@@ -1,7 +1,8 @@
 """
 Usage: python setup.py install
        python setup.py bdist_wheel
-       python setup.py sdist
+       python setup.py sdist bdist_egg
+       twine upload dist/*
 """
 
 # if __name__ == "__main__":
@@ -25,7 +26,7 @@ print find_packages(exclude=['contrib', 'docs', 'tests'])
 
 here = path.abspath(path.dirname(__file__))
 
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:  # rst?
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:  # rst?
     long_description = f.read()
 
 EXT = Extension(name='pipeline.cWarpImage',
@@ -40,7 +41,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.2.2',
+    version='1.2.10',
 
     description='A synchrotron data analysis interface',
     long_description=long_description,
@@ -92,8 +93,8 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'cython', 'pyFAI', 'fabio', 'h5py', 'shiboken', 'PySide', 'PyQtGraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs'],
+    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'Shiboken', 'PySide', 'pyqtgraph', 'QDarkStyle',
+                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
 
     setup_requires=['numpy', 'cython'],
 
@@ -125,9 +126,10 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'gui_scripts': [
-            'xicam=xicam.main:main',
+            'xicam=xicamlauncher.main:main',
         ],
     },
 
-    ext_modules=[EXT]
+    ext_modules=[EXT],
+    include_package_data=True
 )

@@ -1,4 +1,4 @@
-__all__ = ['xicamwindow.py', 'colormap', 'config', 'debug', 'library',
-           'models', 'timeline', 'viewer', 'watcher','splash','xglobals']
+__all__ = ['xicamwindow', 'colormap', 'config', 'debugtools',
+           'models', 'watcher','xglobals']
 
-from xicamwindow import *
+from xicam import *
