@@ -318,6 +318,7 @@ class cosmicsimage:
             self.backgroundlevel = np.median(self.rawarray.ravel())  # 0.0666739940643 s
         return self.backgroundlevel
 
+    ### whhhhaaa
     def positive_laplacian2(self):
         laplacian = np.zeros(self.rawarray.shape)
         l_0_plus = self.rawarray[1:, :] - self.rawarray[:-1, :]
