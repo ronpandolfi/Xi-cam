@@ -10,11 +10,12 @@ if sys.platform == 'win32':
 from splash import SplashScreen
 
 def main():
+
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
     for path in sys.path:
         print 'path:', path
+    import xicam  # IMPORTANT! DO NOT REMOVE! Xicam must be loaded early to avoid graphical bugs on mac (?!)
     app=QtGui.QApplication(sys.argv)
-
     pixmap = QtGui.QPixmap(os.path.join(os.getcwd(), "gui/splash.gif"))
     print 'CWD:', os.getcwd()
     if True:  # Disable to bypass splashscreen for testing on windows
