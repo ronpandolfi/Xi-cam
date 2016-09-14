@@ -18,6 +18,12 @@ Polar Mean Filter:
 - name: rwidth
   suffix: px
   type: int
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
 Vo:
 - name: ind
   type: int
@@ -64,6 +70,12 @@ Fourier-Wavelet:
   type: float
 - name: pad
   type: bool
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Remove NAN:
 - name: val
   type: float
@@ -79,7 +91,19 @@ Padding:
   values:
   - constant
   - edge
-Negative Logarithm: []
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Negative Logarithm:
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Phase Correlation:
 - name: tol
   suffix: px
@@ -136,6 +160,12 @@ Circular Mask:
   default: 0
   value: 0
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
 Phase Retrieval:
 - name: pixel_size
   suffix: cm
@@ -158,6 +188,12 @@ Remove Outliers:
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Projection Angles:
 - name: nang
   type: int
@@ -219,6 +255,12 @@ Gridrec:
     type: float
   - name: order
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 MLEM:
   - name: center
     type: float

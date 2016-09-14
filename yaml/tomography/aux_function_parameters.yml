@@ -10,6 +10,12 @@ Crop:
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Convert Data Type:
 - name: dtype
   type: list
@@ -23,6 +29,12 @@ Convert Data Type:
   type: float
 - name: imax
   type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Array Operation:
 - name: value
   type: float
@@ -33,3 +45,9 @@ Array Operation:
   - subtract
   - multiply
   - divide
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
