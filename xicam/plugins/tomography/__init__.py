@@ -505,8 +505,9 @@ pipe
 
         # self.bottomwidget.local_console.clear()
         currentWidget = self.centerwidget.widget(self.currentWidget())
-        self.loadPipelineDictionary()
         self.manager.updateParameters()
+        self.loadPipelineDictionary()
+
 
         # run_state = self.manager.saveState(currentWidget)
 
