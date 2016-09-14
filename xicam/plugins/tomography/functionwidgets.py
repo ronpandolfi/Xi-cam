@@ -462,12 +462,6 @@ class WriteFunctionWidget(FunctionWidget):
         """
         Overrides updating the parameter_dict to avoid adding the 'Browse' action
         """
-        parent = self.params.child('parent folder')
-        file = self.params.child('folder name')
-        # if parent is not None and parent.value()[-1] is not '/':
-        #     parent.setValue(parent.value()+'/')
-        # if file is not None and file.value()[-1] is not '/':
-        #     file.setValue(file.value()+'/')
 
 
         self.param_dict.update({param.name(): param.value() for param in self.params.children()
