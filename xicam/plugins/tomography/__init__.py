@@ -28,7 +28,6 @@ from pipeline import msg
 from xicam import threads
 from viewers import TomoViewer
 import ui
-import Queue
 import config
 from functionwidgets import FunctionManager
 
@@ -87,9 +86,7 @@ class plugin(base.plugin):
         # Keep a timer for reconstructions
         self.recon_start_time = 0
 
-        # Queue for reconstruction
-        # for recon on multiple nodes, implement the threads.Worker class
-        self.recon_queue = Queue.Queue()
+        # Flag to set if reconstruction is running
         self.recon_running = False
 
         # Setup FunctionManager
@@ -507,9 +504,11 @@ pipe
             return
 
         # self.bottomwidget.local_console.clear()
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+        self.loadPipelineDictionary()
         self.manager.updateParameters()
 
-        self.loadPipelineDictionary()
+        # run_state = self.manager.saveState(currentWidget)
 
 
 
@@ -527,8 +526,10 @@ pipe
         #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
         #            ncore=self.ui.config_params.child('CPU Cores').value())
 
-        args = (self.centerwidget.widget(self.currentWidget()),
-                self.centerwidget.widget(self.currentWidget()).pipeline,
+        # args = (currentWidget, run_state,
+        #         (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
+        #         self.ui.config_params.child('CPU Cores').value())
+        args = (currentWidget, currentWidget.pipeline,
                 (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
                 self.ui.config_params.child('CPU Cores').value())
 
@@ -538,7 +539,7 @@ pipe
         #                                 callback_slot=self.bottomwidget.log2local,
         #                                 interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
 
-        self.recon_queue.put([recon_iter, args])
+        self.manager.recon_queue.put([recon_iter, args])
 
         if self.recon_running:
             name = self.centerwidget.tabText(self.centerwidget.currentIndex())
@@ -547,9 +548,9 @@ pipe
         self.runReconstruction()
 
     def runReconstruction(self):
-        if (not self.recon_queue.empty()) and (not self.recon_running):
+        if (not self.manager.recon_queue.empty()) and (not self.recon_running):
             self.recon_running = True
-            recon_job = self.recon_queue.get()
+            recon_job = self.manager.recon_queue.get()
             args = recon_job[1]
             name = self.centerwidget.tabText(self.centerwidget.indexOf(args[0]))
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
@@ -562,7 +563,7 @@ pipe
             path = args[0].path
 
             # save pipeline as python file
-            self.savePipelineAsRunnable(pipeline, proj, sino, sino_p_chunk, path, ncore)
+            # self.savePipelineAsRunnable(pipeline, proj, sino, sino_p_chunk, path, ncore)
 
     def savePipelineAsRunnable(self, pipeline, proj, sino, sino_p_chunk, path, ncore = None):
         """

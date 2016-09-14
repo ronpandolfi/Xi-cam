@@ -23,6 +23,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
 import reconpkg
 import ui
+import Queue
 from xicam.widgets import featurewidgets as fw
 
 
@@ -540,6 +541,10 @@ class FunctionManager(fw.FeatureManager):
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
 
+        # queue for reconstructions
+        self.recon_queue = Queue.Queue()
+
+
     # TODO fix this astra check raise error if package not available
     def addFunction(self, function, subfunction, package):
         """
@@ -639,19 +644,150 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
-    def saveState(self):
-        lst = []
-        for function in self.features:
-            fpartial = function.partial
-            for item in function.enabled_args:
-                for i in len(item):
-                    fpartial.keywords[function.missing_args[i]] = item[i]
-                lst.append(fpartial)
+    # def saveState(self, datawidget):
+    #
+    #     # extract function pipeline
+    #     lst = []; theta = []; center = -1
+    #     for function in self.features:
+    #         if not function.enabled:
+    #             continue
+    #         fpartial = function.partial
+    #         for arg in inspect.getargspec(function._function)[0]:
+    #             if arg not in fpartial.keywords.iterkeys():
+    #                 fpartial.keywords[arg] = '{}'.format(arg)
+    #         # get rid of degenerate keyword arguments
+    #         if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
+    #             fpartial.keywords['tomo'] = fpartial.keywords['arr']
+    #             fpartial.keywords.pop('arr', None)
+    #
+    #         if 'start' in fpartial.keywords:
+    #             fpartial.keywords['start'] = 'start'
+    #
+    #         lst.append((fpartial, function.name))
+    #
+    #         if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
+    #             for param,ipf in function.input_functions.iteritems():
+    #                 # extract theta values
+    #                 if 'theta' in param:
+    #                     theta = ipf.partial()
+    #
+    #                 # extract center value
+    #                 if 'center' in param:
+    #                     # this portion is taken from old updateFunctionPartial code
+    #                     args = []
+    #                     if ipf.subfunc_name in FunctionManager.center_func_slc:
+    #                         map(args.append, map(datawidget.data.fabimage.__getitem__,
+    #                                                      FunctionManager.center_func_slc[ipf.subfunc_name]))
+    #                     else:
+    #                         args.append(datawidget.getsino())
+    #                     if ipf.subfunc_name == 'Nelder Mead':
+    #                         ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
+    #                     center = ipf.partial(*args)
+    #
+    #
+    #     # for func in lst:
+    #     #     print func.func, ",", func.args, ",", func.keywords
+    #     # print theta
+    #     # print center
+    #
+    #
+    #     return [lst, theta, center, config.extract_pipeline_dict(self.features)]
+    #
+    # def functionStackGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
+    #     start_time = time.time()
+    #     write_start = sino[0]
+    #     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
+    #     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
+    #     if total_sino < sino_p_chunk:
+    #         sino_p_chunk = total_sino
+    #
+    #     func_pipeline, theta, center, yaml_pipe = run_state
+    #     data_dict = OrderedDict()
+    #
+    #     for i in range(nchunk):
+    #
+    #         # make copy of pipeline for run
+    #         pipeline = []
+    #         for function_tuple in func_pipeline:
+    #             fpartial = partial(function_tuple[0])
+    #             for key, val in function_tuple[0].keywords.iteritems():
+    #                 fpartial.keywords[key] = val
+    #             pipeline.append([fpartial, function_tuple[1]])
+    #
+    #
+    #         start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
+    #         end = end if end < sino[1] else sino[1]
+    #
+    #         slc = (slice(*proj), slice(start, end, sino[2]), slice(None, None, None))
+    #         if slc is not None and slc[0].start is not None:
+    #             slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+    #                     else slc[0])
+    #             flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+    #         else:
+    #             flat_loc = datawidget.data.fabimage.flatindices()
+    #
+    #         # load data dictionary
+    #         print slc
+    #
+    #         data_dict['tomo'] = datawidget.getsino(slc = slc)
+    #         data_dict['flats'] = datawidget.getflats(slc = slc)
+    #         print "flats, ", data_dict['flats'].shape
+    #         data_dict['dark'] = datawidget.getdarks(slc = slc)
+    #         print 'dark, ', data_dict['dark'].shape
+    #         data_dict['flat_loc'] = flat_loc
+    #         data_dict['theta'] = theta
+    #         data_dict['center'] = center
+    #         data_dict['start'] = write_start
+    #         shape = data_dict['tomo'].shape
+    #         print shape
+    #
+    #
+    #
+    #         for function_tuple in pipeline:
+    #
+    #             ts = time.time()
+    #             function = function_tuple[0]
+    #             name = function_tuple[1]
+    #             # if 'Write' in name:
+    #             #     print function.func
+    #             #     print function.keywords
+    #             yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
+    #                                                                                           start, end, total_sino)
+    #             write = 'tomo'
+    #             for key,val in function.keywords.iteritems():
+    #                 if val in data_dict.iterkeys():
+    #                     if 'arr' in key:
+    #                         write = val
+    #                     function.keywords[key] = data_dict[val]
+    #
+    #             # if 'Write' in name:
+    #             #     print function.func
+    #             #     print function.keywords
+    #             #     print "----------------------------------"
+    #
+    #             data_dict[write] = function()
+    #             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
+    #
+    #         data_dict['start'] += shape
+    #         # print data_dict['start']
+    #
+    #     # for function in pipeline:
+    #     #     print function.func, ",", function.keywords
+    #
+    #     # save yaml in reconstruction folder
+    #     for function_tuple in pipeline:
+    #         if 'fname' in function_tuple[0].keywords:
+    #             save_file = function_tuple[0].keywords['fname'] + '.yml'
+    #     try:
+    #         with open(save_file, 'w') as yml:
+    #             yamlmod.ordered_dump(yaml_pipe, yml)
+    #     except NameError:
+    #         yield "Error: function pipeline yaml not written - path could not be found"
+    #
+    #     # print final 'finished with recon' message
+    #     yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
 
 
-            # save func partials with keyword args
-            # save multiple copies if multiple args wanted
-            # return a list of function partials with args attached, so they can run in order!
 
     def updateFunctionPartial(self, funcwidget, datawidget, function_dict, stack_dict=None, slc=None):
         """
@@ -895,6 +1031,8 @@ class FunctionManager(fw.FeatureManager):
         total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
         if total_sino < sino_p_chunk:
             sino_p_chunk = total_sino
+
+        # self.saveState(datawidget)
 
         for i in range(nchunk):
             init = True
