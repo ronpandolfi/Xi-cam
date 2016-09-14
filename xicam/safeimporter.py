@@ -28,7 +28,11 @@ def import_module(modname,packagename=None):
         if response == QtGui.QMessageBox.Yes:
             import pip
 
-            if not pip.main(['install', '--user', missingpackage]):
+            failure=pip.main(['install', '--user', missingpackage])
+            if failure:
+                failure=pip.main(['install', missingpackage])
+
+            if not failure:
                 msgBox = QtGui.QMessageBox()
                 msgBox.setText('Success! The missing package, ' + missingpackage + ', has been installed!')
                 msgBox.setInformativeText('Please restart Xi-cam now.')
