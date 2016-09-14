@@ -77,7 +77,7 @@ def save_function_pipeline(pipeline, file_name):
             yamlmod.ordered_dump(pipeline, y)
 
 
-def set_als832_defaults(mdata, funcwidget_list):
+def set_als832_defaults(mdata, funcwidget_list, data_dir):
     """
     Set defaults for ALS Beamline 8.3.2 from dataset metadata
 
@@ -88,6 +88,7 @@ def set_als832_defaults(mdata, funcwidget_list):
     funcwidget_list : list of FunctionWidgets
         list of FunctionWidgets exposed in the UI workflow pipeline
     """
+
 
     for f in funcwidget_list:
         if f is None:
@@ -107,10 +108,13 @@ def set_als832_defaults(mdata, funcwidget_list):
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
         elif f.func_name == 'Write':
-            outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
+            outname = os.path.join(data_dir, *2*('RECON_' + mdata['dataset'],))
+            f.params.child('parent folder').setValue(data_dir)
+            f.params.child('folder name').setValue('RECON_' + mdata['dataset'])
+            f.params.child('file name').setValue('RECON_' + mdata['dataset'])
             f.params.child('fname').setValue(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values())
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), data_dir=data_dir)
 
 
 def extract_pipeline_dict(funwidget_list):

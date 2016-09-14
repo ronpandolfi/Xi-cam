@@ -5,6 +5,12 @@ Tiff Stack:
   type: int
 - name: overwrite
   type: bool
+- name: parent folder
+  type: str
+- name: folder name
+  type: str
+- name: file name
+  type: str
 - name: fname
   type: str
 - name: Browse

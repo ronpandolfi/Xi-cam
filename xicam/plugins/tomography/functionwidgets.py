@@ -13,6 +13,7 @@ __status__ = "Beta"
 
 import inspect
 import time
+import os
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
@@ -385,17 +386,90 @@ class WriteFunctionWidget(FunctionWidget):
         specific name of function under the generic name category
     package : python package
         package where function is defined
+
+    Attributes
+    ----------
+    parent : str
+        string of the parent folder holding data set
+    folder : str
+        string of new folder to be written into
+    file : str
+        file names for reconstruction to write to
     """
+
+    sigPipelineChanged = QtCore.Signal()
+
     def __init__(self, name, subname, package):
         super(WriteFunctionWidget, self).__init__(name, subname, package)
         self.params.child('Browse').sigActivated.connect(
             lambda: self.params.child('fname').setValue( str(QtGui.QFileDialog.getSaveFileName(None,
             'Save reconstruction as', self.params.child('fname').value())[0])))
 
+        self.parent = self.params.param('parent folder')
+        self.folder = self.params.param('folder name')
+        self.file = self.params.param('file name')
+        # self.fname = self.params.param('fname')
+
+        # connect signals to change full file name whenever smaller names are changed
+        self.parent.sigValueChanged.connect(self.pathChanged)
+        self.folder.sigValueChanged.connect(self.pathChanged)
+        self.file.sigValueChanged.connect(self.pathChanged)
+
+        # set full file name as read only
+        self.params.param('fname').setReadonly()
+
+        # self.fname.sigValueChanged.connect(self.fileChanged)
+        # self.fname.sigValueChanged.connect(self.folderChanged)
+        # self.fname.sigValueChanged.connect(self.parentChanged)
+
+
+    def pathChanged(self):
+        """
+        Changes write name when one of parent/folder/file fields is changed
+        """
+
+        self.params.param('fname').setValue(os.path.join(self.parent.value(), self.folder.value(),
+                                                         self.file.value()))
+
+    # def parentChanged(self):
+    #     try:
+    #         parent_name = self.fname.value().split(self.folder.value())[0]
+    #         self.parent.setValue(parent_name)
+    #
+    #     except ValueError:
+    #         pass
+    #
+    #
+    # def folderChanged(self):
+    #     try:
+    #         folder_name = self.fname.value().split(self.parent.value())[0]
+    #         self.folder.setValue(folder_name)
+    #
+    #     except ValueError:
+    #         pass
+    #
+    #
+    # def fileChanged(self):
+    #     try:
+    #         file_name = self.fname.value().split(self.parent.value())[-1]
+    #         self.file.setValue(file_name)
+    #     except ValueError:
+    #         pass
+
+
+
     def updateParamsDict(self):
         """
         Overrides updating the parameter_dict to avoid adding the 'Browse' action
         """
+        parent = self.params.child('parent folder')
+        file = self.params.child('folder name')
+        # if parent is not None and parent.value()[-1] is not '/':
+        #     parent.setValue(parent.value()+'/')
+        # if file is not None and file.value()[-1] is not '/':
+        #     file.setValue(file.value()+'/')
+
+
         self.param_dict.update({param.name(): param.value() for param in self.params.children()
                                 if param.name() != 'Browse'})  # skip the Browse parameter!
         for p, ipf in self.input_functions.iteritems():
@@ -1057,6 +1131,9 @@ class FunctionManager(fw.FeatureManager):
                                                    slice(None, None, None)))
                     init = False
                 elif 'Tiff' in function.name:
+                    fpartial.keywords.pop('parent folder', None)
+                    fpartial.keywords.pop('folder name', None)
+                    fpartial.keywords.pop('file name', None)
                     fpartial.keywords['start'] = write_start
                     write_start += tomo.shape[0]
                 # elif 'Reconstruction' in fname:

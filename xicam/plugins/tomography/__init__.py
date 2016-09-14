@@ -108,6 +108,7 @@ class plugin(base.plugin):
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
                                 self.clearPipeline)
         self.manager.sigTestRange.connect(self.slicePreviewAction)
+        self.bottomwidget.local_cancelButton.clicked.connect(self.freeRecon)
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
         super(plugin, self).__init__(placeholders, *args, **kwargs)
@@ -124,6 +125,7 @@ class plugin(base.plugin):
 
     def dragEnterEvent(self, e):
         e.accept()
+
 
     def openfiles(self, paths):
         """
@@ -146,8 +148,8 @@ class plugin(base.plugin):
 
         # create file name to pass to manager (?)
         file_name = paths.split("/")[-1]
-        body = paths.split(file_name)[0]
-        self.path = body + "RECON_" + file_name.split(".")[0] + "/RECON_" + file_name.split(".")[0]
+        self.working_dir = paths.split(file_name)[0]
+
 
         widget = TomoViewer(paths=paths)
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
@@ -193,6 +195,14 @@ class plugin(base.plugin):
         for idx in range(self.centerwidget.count()):
             self.centerwidget.widget(idx).wireupCenterSelection(self.manager.recon_function)
             self.centerwidget.widget(idx).sigSetDefaults.connect(self.manager.setPipelineFromDict)
+
+
+    def freeRecon(self):
+        """
+        Frees plugin to run reconstruction and run next in queue when job is canceled
+        """
+        self.recon_running = False
+        self.runReconstruction()
 
     def loadPipeline(self):
         """
@@ -269,7 +279,8 @@ class plugin(base.plugin):
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
             self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
-            config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features)
+            config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
+                    data_dir=self.working_dir)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)
