@@ -30,13 +30,13 @@ You can then install Xi-cam with:
 Windows
 +++++++
 
-You can download a .msi installer here: (Coming soon)
+Download the `Xi-cam windows installer <http://bit.ly/2ctNh3m>`_.
 
 
 Mac OS X 10.10+
 +++++++++++++++
 
-You can download a Mac .app here: (Coming soon)
+Download the `Xi-cam Mac .app <http://bit.ly/2cjiTy2>`_.
 
 
 Copyright Notice
