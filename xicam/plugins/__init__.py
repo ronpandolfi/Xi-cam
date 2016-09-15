@@ -7,6 +7,8 @@ from pipeline import msg
 import os
 import pkgutil
 from xicam import safeimporter
+import base
+import inspect
 
 modules = []
 plugins = OrderedDict()
@@ -34,10 +36,13 @@ def initplugins(placeholders):
 
 
     for module in modules:
-        msg.logMessage(('Loaded:',module.__name__),msg.DEBUG)
-        link = pluginlink(module, placeholders)
-        if link.name not in disabledatstart: link.enable()
-        plugins[link.name] = link
+        msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
+        for objname,obj in module.__dict__.iteritems():
+            if inspect.isclass(obj):
+                if issubclass(obj, base.plugin):
+                    link = pluginlink(module, obj, placeholders)
+                    if link.name not in disabledatstart: link.enable()
+                    plugins[link.name] = link
     xglobals.plugins = plugins
 
 
@@ -56,8 +61,8 @@ def buildactivatemenu(modewidget):
 
 
 class pluginlink():
-    def __init__(self, module, placeholders):
-        self.plugin = module.plugin
+    def __init__(self, module, plugin, placeholders):
+        self.plugin = plugin
         self.modulename = module.__name__
         self.module = module
         self.instance = None
@@ -70,8 +75,6 @@ class pluginlink():
 
     def enable(self):
        #self.module = reload(sys.modules[self.modulename])
-        self.plugin = self.module.plugin
-
         self.instance = self.plugin(self.placeholders)
 
     def setEnabled(self, enable):

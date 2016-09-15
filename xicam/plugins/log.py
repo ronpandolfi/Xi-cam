@@ -7,7 +7,7 @@ colors = {msg.DEBUG: QtCore.Qt.gray, msg.ERROR: QtCore.Qt.darkRed, msg.CRITICAL:
           msg.INFO: QtCore.Qt.white, msg.WARNING: QtCore.Qt.yellow}
 
 
-class plugin(base.plugin):
+class LogPlugin(base.plugin):
     name = 'Log'
 
     def __init__(self, *args, **kwargs):
@@ -21,7 +21,7 @@ class plugin(base.plugin):
         msg.guilogcallable = self.log
         msg.flushbacklog()
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(LogPlugin, self).__init__(*args, **kwargs)
 
     def log(self, level, timestamp, s, icon=None):  # We can have icons!
         item = QtGui.QListWidgetItem(s)

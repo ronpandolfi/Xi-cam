@@ -6,7 +6,7 @@ from xicam import xglobals
 import widgets
 
 
-class plugin(base.plugin):
+class MOTDPlugin(base.plugin):
     name = 'MOTD'
     hidden = True
 
@@ -26,7 +26,7 @@ class plugin(base.plugin):
         self.centerwidget = QtGui.QLabel(self.MOTD)
         self.rightwidget = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(MOTDPlugin, self).__init__(*args, **kwargs)
 
     # Defer methods to other plugins
 

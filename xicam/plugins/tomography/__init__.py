@@ -34,7 +34,7 @@ from functionwidgets import FunctionManager
 DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
 
 
-class plugin(base.plugin):
+class TomographyPlugin(base.plugin):
     """
     Tomography plugin class
 
@@ -106,7 +106,7 @@ class plugin(base.plugin):
         self.manager.sigTestRange.connect(self.slicePreviewAction)
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
-        super(plugin, self).__init__(placeholders, *args, **kwargs)
+        super(TomographyPlugin, self).__init__(placeholders, *args, **kwargs)
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():

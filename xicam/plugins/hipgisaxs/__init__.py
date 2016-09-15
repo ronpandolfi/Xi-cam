@@ -16,7 +16,7 @@ from xicam import plugins
 from xicam.plugins import base
 
 
-class plugin(base.plugin):
+class HipGISAXSPlugin(base.plugin):
     name = 'HipGISAXS'
 
     def __init__(self, *args, **kwargs):
@@ -67,7 +67,7 @@ class plugin(base.plugin):
         display.redraw()
         self.centerwidget.addWidget(display.viewWidget)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(HipGISAXSPlugin, self).__init__(*args, **kwargs)
 
 
     def newExperiment(self):

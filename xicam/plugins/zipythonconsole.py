@@ -22,7 +22,7 @@ import os
 
 
 
-class plugin(base.plugin):
+class IPythonPlugin(base.plugin):
     name = 'IPython'
 
     def __init__(self, *args, **kwargs):
@@ -64,6 +64,6 @@ class plugin(base.plugin):
 
         self.toolbar = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(IPythonPlugin, self).__init__(*args, **kwargs)
 
 

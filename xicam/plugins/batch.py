@@ -16,7 +16,7 @@ import widgets
 from pipeline import msg
 
 
-class plugin(base.plugin):
+class BatchPlugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +41,7 @@ class plugin(base.plugin):
 
         self.processButton.sigActivated.connect(self.processfiles)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(BatchPlugin, self).__init__(*args, **kwargs)
 
     def processfiles(self):
         pathlist = self.fileslistwidget.paths

@@ -16,7 +16,7 @@ from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
 
 
-class plugin(base.plugin):
+class XASPlugin(base.plugin):
     name = 'XAS'
 
     def __init__(self, *args, **kwargs):

@@ -41,7 +41,7 @@ configtree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
 rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
-class plugin(base.plugin):
+class ViewerPlugin(base.plugin):
     name = 'Viewer'
     sigUpdateExperiment = QtCore.Signal()
 
@@ -82,7 +82,7 @@ class plugin(base.plugin):
         self.rightmodes.append((self.calibrationPanel, calicon))
         self.calibrationPanel.sigCalibrate.connect(self.calibrate)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(ViewerPlugin, self).__init__(*args, **kwargs)
 
         config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
         self.sigUpdateExperiment.connect(self.redrawcurrent)

@@ -7,7 +7,7 @@ import os
 import widgets
 
 
-class plugin(base.plugin):
+class FXSPlugin(base.plugin):
     name = 'FXS'
 
     def __init__(self, *args, **kwargs):

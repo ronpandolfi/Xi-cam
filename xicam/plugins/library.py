@@ -4,7 +4,7 @@ import base
 import viewer
 
 
-class plugin(base.plugin):
+class LibraryPlugin(base.plugin):
     name = 'Library'
 
     def __init__(self, *args, **kwargs):

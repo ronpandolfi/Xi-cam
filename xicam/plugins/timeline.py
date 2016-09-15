@@ -21,9 +21,9 @@ from pipeline import calibration
 from xicam.widgets.NDTimelinePlotWidget import TimelinePlot
 
 
-class plugin(base.plugin):  ##### Inherit viewer instead!!!
+class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
     name = 'Timeline'
-    sigUpdateExperiment = viewer.plugin.sigUpdateExperiment
+    sigUpdateExperiment = viewer.ViewerPlugin.sigUpdateExperiment
 
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QTabWidget()
@@ -43,7 +43,7 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask, process=self.process)
-        super(plugin, self).__init__(*args, **kwargs)
+        super(TimelinePlugin, self).__init__(*args, **kwargs)
 
         self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
 
