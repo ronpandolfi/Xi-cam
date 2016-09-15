@@ -19,7 +19,7 @@ from PySide import QtCore
 
 import config
 import watcher
-import daemon
+#import daemon
 import pipeline
 import qdarkstyle
 import plugins
@@ -83,7 +83,7 @@ class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
 
-        QtGui.QFontDatabase.addApplicationFont("gui/zerothre.ttf")
+        QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
         import plugins
 
@@ -91,15 +91,14 @@ class MyMainWindow(QtCore.QObject):
         # Load the gui from file
         self.app = app
         guiloader = QUiLoader()
-        # print os.getcwd()
-        f = QtCore.QFile("gui/mainwindow.ui")
+        f = QtCore.QFile("xicam/gui/mainwindow.ui")
         f.open(QtCore.QFile.ReadOnly)
         self.ui = guiloader.load(f)
         f.close()
 
         # STYLE
         # self.app.setStyle('Plastique')
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('xicam/gui/style.stylesheet', 'r') as f:
             style = f.read()
         app.setStyleSheet(qdarkstyle.load_stylesheet() + style)
         app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False)

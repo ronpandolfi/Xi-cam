@@ -30,14 +30,14 @@ l.addWidget(fileexplorer)
 
 booltoolbar = QtGui.QToolBar()
 
-booltoolbar.actionTimeline = QtGui.QAction(QtGui.QIcon('gui/icons_26.png'), 'Timeline', w)
-booltoolbar.actionAdd = QtGui.QAction(QtGui.QIcon('gui/icons_11.png'), 'actionAdd', w)
-booltoolbar.actionSubtract = QtGui.QAction(QtGui.QIcon('gui/icons_13.png'), 'actionSubtract', w)
-booltoolbar.actionAdd_with_coefficient = QtGui.QAction(QtGui.QIcon('gui/icons_14.png'), 'actionAdd_with_coefficient', w)
-booltoolbar.actionSubtract_with_coefficient = QtGui.QAction(QtGui.QIcon('gui/icons_15.png'),
+booltoolbar.actionTimeline = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_26.png'), 'Timeline', w)
+booltoolbar.actionAdd = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_11.png'), 'actionAdd', w)
+booltoolbar.actionSubtract = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_13.png'), 'actionSubtract', w)
+booltoolbar.actionAdd_with_coefficient = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_14.png'), 'actionAdd_with_coefficient', w)
+booltoolbar.actionSubtract_with_coefficient = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_15.png'),
                                                             'actionSubtract_with_coefficient', w)
-booltoolbar.actionDivide = QtGui.QAction(QtGui.QIcon('gui/icons_12.png'), 'actionDivide', w)
-booltoolbar.actionAverage = QtGui.QAction(QtGui.QIcon('gui/icons_16.png'), 'actionAverage', w)
+booltoolbar.actionDivide = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_12.png'), 'actionDivide', w)
+booltoolbar.actionAverage = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_16.png'), 'actionAverage', w)
 
 booltoolbar.addAction(booltoolbar.actionTimeline)
 booltoolbar.addAction(booltoolbar.actionAdd)

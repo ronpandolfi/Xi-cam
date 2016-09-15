@@ -32,7 +32,7 @@ class LoginDialog(QtGui.QWidget):
         if remotename not in self.REMOTE_NAMES:
             raise ValueError('Remote must be one of %s, not %s' % (self.REMOTE_NAMES, remotename))
 
-        self.ui = QUiLoader().load('gui/login_widget.ui', self)
+        self.ui = QUiLoader().load('xicam/gui/login_widget.ui', self)
         self.ui.stackedWidget.setCurrentWidget(self.ui.login_page)
         self.ui.pass_box.setEchoMode(QtGui.QLineEdit.Password)
 

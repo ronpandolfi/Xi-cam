@@ -78,7 +78,7 @@ DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
            'qt_plugins': 'imageformats',
            'resources':['gui','yaml'],
-           'iconfile': 'gui/icon.icns',
+           'iconfile': 'xicam/gui/icon.icns',
            'plist': {
                'CFBundleName': 'Xi-cam',
                'CFBundleShortVersionString': '1.2.7',  # must be in X.X.X format

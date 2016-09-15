@@ -82,7 +82,7 @@ class plugin(base.plugin):
 
     def showComputation(self):
         if self.computationForm is None:
-            self.computationForm = featuremanager.loadform('gui/guiComputation.ui')
+            self.computationForm = featuremanager.loadform('xicam/gui/guiComputation.ui')
         self.showForm(self.computationForm)
 
     def showScattering(self):

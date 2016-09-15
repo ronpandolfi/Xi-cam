@@ -9,3 +9,4 @@ window = None
 lastroi = None
 statusbar = None
 
+libroot = None

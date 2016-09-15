@@ -93,11 +93,11 @@ class FeatureWidget(QtGui.QWidget):
         icon = QtGui.QIcon()
 
         if checkable:
-            icon.addPixmap(QtGui.QPixmap("gui/icons_48.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_48.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
             self.previewButton.setCheckable(True)
         else:
-            icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.previewButton.setCheckable(False)
             self.previewButton.setChecked(True)
 
@@ -121,7 +121,7 @@ class FeatureWidget(QtGui.QWidget):
         self.closeButton.setStyleSheet("margin:0 0 0 0;")
         self.closeButton.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("xicam/gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.closeButton.setIcon(icon1)
         self.closeButton.setFlat(True)
         self.closeButton.clicked.connect(self.delete)

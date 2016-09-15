@@ -72,7 +72,7 @@ QListView{
 }
 
 QCheckBox[isFoldingTab="true"]::indicator:checked {
-    image:url(gui/icons_10.png);
+    image:url(xicam/gui/icons_10.png);
 }
 
 QCheckBox::indicator {
@@ -81,7 +81,7 @@ QCheckBox::indicator {
 }
 
 QCheckBox[isFoldingTab="true"]::indicator:unchecked {
-    image:url(gui/icons_09.png);
+    image:url(xicam/gui/icons_09.png);
 }
 
 QToolButton
