@@ -56,7 +56,7 @@ class ThreeDViewer(QtGui.QWidget, ):
         self.subsample_label = QtGui.QLabel('Subsample Level:')
         self.loadVolumeButton = QtGui.QToolButton()
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.loadVolumeButton.setIcon(icon)
         self.loadVolumeButton.setToolTip('Generate Volume')
         hlayout.addWidget(self.combo_box)

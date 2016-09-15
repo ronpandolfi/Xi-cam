@@ -70,7 +70,7 @@ class plugin(base.plugin):
         self.spacegroupwidget = spacegroupwidget()
         self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
         sgicon = QtGui.QIcon()
-        sgicon.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        sgicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
 
         self.propertytable = widgets.frameproptable()
@@ -78,7 +78,7 @@ class plugin(base.plugin):
 
         self.calibrationPanel = calibrationpanel()
         calicon = QtGui.QIcon()
-        calicon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        calicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.calibrationPanel, calicon))
         self.calibrationPanel.sigCalibrate.connect(self.calibrate)
 

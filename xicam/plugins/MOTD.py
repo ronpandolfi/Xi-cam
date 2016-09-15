@@ -12,7 +12,7 @@ class plugin(base.plugin):
 
     MOTD = """
     <div align='center'>
-        <img src='{}/gui/camera.jpg' width='200'/>
+        <img src='xicam/gui/camera.jpg' width='200'/>
         <h1 style='font-family:Zero Threes;'>
             Welcome to Xi-cam
         </h1>
@@ -20,7 +20,7 @@ class plugin(base.plugin):
         Please cite Xi-cam in published work: <br />
         Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A.
         (under preparation)
-    </div>""".format(os.getcwd())
+    </div>"""
 
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QLabel(self.MOTD)

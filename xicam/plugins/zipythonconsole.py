@@ -26,7 +26,7 @@ class plugin(base.plugin):
     name = 'IPython'
 
     def __init__(self, *args, **kwargs):
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('xicam/gui/style.stylesheet', 'r') as f:
             style = f.read()
         style = (qdarkstyle.load_stylesheet() + style)
 

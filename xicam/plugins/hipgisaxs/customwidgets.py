@@ -174,7 +174,7 @@ class featureWidget(QtGui.QWidget):
         self.pushButton.setStyleSheet("margin:0 0 0 0;")
         self.pushButton.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_47.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButton.setIcon(icon)
         self.pushButton.setFlat(True)
         self.pushButton.setObjectName("pushButton")
@@ -212,7 +212,7 @@ class featureWidget(QtGui.QWidget):
         self.pushButton_3.setStyleSheet("margin:0 0 0 0;")
         self.pushButton_3.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("xicam/gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButton_3.setIcon(icon1)
         self.pushButton_3.setFlat(True)
         self.pushButton_3.setObjectName("pushButton_3")
@@ -276,7 +276,7 @@ class featureWidget(QtGui.QWidget):
 
 class substrate(featureWidget):
     def __init__(self, name='Substrate'):
-        self._formpath = 'gui/guiSubstrate.ui'
+        self._formpath = 'xicam/gui/guiSubstrate.ui'
         super(substrate, self).__init__(name)
 
     @property
@@ -335,7 +335,7 @@ class substrate(featureWidget):
 
 class layer(featureWidget):
     def __init__(self, name=None):
-        self._formpath = 'gui/guiLayer.ui'
+        self._formpath = 'xicam/gui/guiLayer.ui'
         if name is None:
             name = 'Layer ' + str(featuremanager.layercount() + 1)
         super(layer, self).__init__(name)
@@ -567,7 +567,7 @@ class form(QtGui.QWidget):
 class ensemble(form):
     def __init__(self, parent, name='Ensemble'):
         self.parent = parent
-        self._formpath = 'gui/guiEnsemble.ui'
+        self._formpath = 'xicam/gui/guiEnsemble.ui'
         super(ensemble, self).__init__(name)
 
 
@@ -635,7 +635,7 @@ class structure(form):
 
     def __init__(self, parent, name='Structure'):
         self.parent = parent
-        self._formpath = 'gui/guiStructure.ui'
+        self._formpath = 'xicam/gui/guiStructure.ui'
         self.vector1 = vector()
         self.vector2 = vector()
         self.vector3 = vector()

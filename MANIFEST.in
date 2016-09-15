@@ -1,7 +1,6 @@
 include README.rst
-include gui/*
-include samples/*
-include yaml/attributions/*
-include yaml/tomography/*
+recursive-include samples *
+recursive-include xicam/gui *
+recursive-include yaml *
 include cext/*
 include LICENSE.txt

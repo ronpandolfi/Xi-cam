@@ -145,10 +145,10 @@ class thumbwidgetitem(QtGui.QFrame):
         path = os.path.normpath(path)
 
         self.foldericon = QtGui.QImage()
-        self.foldericon.load('gui/GenericFolderIcon.png')
+        self.foldericon.load('xicam/gui/GenericFolderIcon.png')
 
         self.fileicon = QtGui.QImage()
-        self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
+        self.fileicon.load('xicam/gui/post-360412-0-09676400-1365986245.png')
 
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow

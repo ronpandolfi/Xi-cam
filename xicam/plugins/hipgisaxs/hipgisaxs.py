@@ -23,7 +23,7 @@ class mainwindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('xicam/gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -72,7 +72,7 @@ class mainwindow():
 
     def showComputation(self):
         if self.computationForm is None:
-            self.computationForm = featuremanager.loadform('gui/guiComputation.ui')
+            self.computationForm = featuremanager.loadform('xicam/gui/guiComputation.ui')
         self.showForm(self.computationForm)
 
     def showScattering(self):

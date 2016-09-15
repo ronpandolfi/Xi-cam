@@ -380,7 +380,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.centerBox.setDecimals(1)
         self.setCenterButton = QtGui.QToolButton()
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setCenterButton.setIcon(icon)
         self.setCenterButton.setToolTip('Set center in pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
@@ -634,12 +634,12 @@ class PreviewViewer(QtGui.QSplitter):
         self.deleteButton = QtGui.QToolButton(self)
         self.deleteButton.setToolTip('Delete this preview')
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.deleteButton.setIcon(icon)
 
         self.setPipelineButton = QtGui.QToolButton(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setPipelineButton.setIcon(icon)
         self.setPipelineButton.setToolTip('Set as pipeline')
 
@@ -781,7 +781,7 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.setPipelineButton = QtGui.QToolButton(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setPipelineButton.setIcon(icon)
         self.setPipelineButton.setToolTip('Set as pipeline')
 
@@ -837,7 +837,7 @@ class RunConsole(QtGui.QTabWidget):
     """
 
     icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunConsole, self).__init__(parent=parent)

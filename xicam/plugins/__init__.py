@@ -71,6 +71,7 @@ class pluginlink():
     def enable(self):
        #self.module = reload(sys.modules[self.modulename])
         self.plugin = self.module.plugin
+
         self.instance = self.plugin(self.placeholders)
 
     def setEnabled(self, enable):

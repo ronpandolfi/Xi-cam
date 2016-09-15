@@ -41,7 +41,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.2.10',
+    version='1.2.12',
 
     description='A synchrotron data analysis interface',
     long_description=long_description,
@@ -81,9 +81,9 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=['xicam','xicamlauncher','pipeline','client','modpkgs'],
 
-    #package_dir={'xicam.plugins':'xicam.plugins'},
+    package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline'},
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -111,15 +111,15 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-         'gui': ['gui'],
+         'xicam': ['gui/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files # noqa
     # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
-    data_files=[('lib/python2.7/site-packages/gui', glob.glob('gui/*')),
-                ('lib/python2.7/site-packages/yaml/tomography',glob.glob('yaml/tomography/*'))],
+    #data_files=[#('lib/python2.7/site-packages/gui', glob.glob('gui/*')),
+    #            ('lib/python2.7/site-packages/yaml/tomography',glob.glob('yaml/tomography/*'))],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow

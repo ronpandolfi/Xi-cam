@@ -12,7 +12,7 @@ def load():
     global leftwidget, centerwidget, rightwidget, blankForm
     # Load the gui from file
     guiloader = QUiLoader()
-    f = QtCore.QFile("gui/hipgisaxsleftwidget.ui")
+    f = QtCore.QFile("xicam/gui/hipgisaxsleftwidget.ui")
     f.open(QtCore.QFile.ReadOnly)
     leftwidget = guiloader.load(f)
     f.close()
