@@ -353,8 +353,7 @@ class plugin(base.plugin):
     def manualCenter(self, value):
         """
         Slot to receive signal from center detection button in toolbar. Simply calls onManualCenter(value) from current
-        widget
-pipe
+        widgetpipe
         """
 
         self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
@@ -508,7 +507,7 @@ pipe
             return
 
         value = QtGui.QMessageBox.question(None, 'Run Full Reconstruction',
-                                           'You are about to run a full reconstruction.'
+                                           'You are about to run a full reconstruction. '
                                            'This step can take some minutes. Do you want to continue?',
                                    (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
         if value is QtGui.QMessageBox.Cancel:

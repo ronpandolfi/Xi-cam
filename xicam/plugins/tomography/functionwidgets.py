@@ -720,8 +720,9 @@ class FunctionManager(fw.FeatureManager):
             if not function.enabled:
                 continue
             fpartial = function.partial
+            # set keywords that will be adjusted later by input functions or users
             for arg in inspect.getargspec(function._function)[0]:
-                if arg not in fpartial.keywords.iterkeys():
+                if arg not in fpartial.keywords.iterkeys() or 'center' in arg:
                     fpartial.keywords[arg] = '{}'.format(arg)
             # get rid of degenerate keyword arguments
             if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
@@ -740,10 +741,8 @@ class FunctionManager(fw.FeatureManager):
 
             if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
                 for param,ipf in function.input_functions.iteritems():
-                    # extract theta values
-                    if 'theta' in param:
-                        theta = ipf.partial()
-
+                    if not ipf.enabled:
+                        pass
                     # extract center value
                     if 'center' in param:
                         # this portion is taken from old updateFunctionPartial code
@@ -757,12 +756,9 @@ class FunctionManager(fw.FeatureManager):
                             ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
                         center = ipf.partial(*args)
 
-
-        # for func in lst:
-        #     print func.func, ",", func.args, ",", func.keywords
-        # print theta
-        # print center
-
+                    # extract theta values
+                    if 'theta' in param:
+                        theta = ipf.partial()
 
         return [lst, theta, center, config.extract_pipeline_dict(self.features)]
 
@@ -775,7 +771,13 @@ class FunctionManager(fw.FeatureManager):
             sino_p_chunk = total_sino
 
         func_pipeline, theta, center, yaml_pipe = run_state
+
+        # set up dictionary of function keywords
+        params_dict = OrderedDict()
+        for tuple in func_pipeline:
+            params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
         data_dict = OrderedDict()
+
 
         # python_runnable = self.extractPipelineRunnable(func_pipeline, proj, sino, sino_p_chunk, datawidget.path)
 
@@ -806,33 +808,35 @@ class FunctionManager(fw.FeatureManager):
 
             for function_tuple in func_pipeline:
 
+
                 ts = time.time()
                 function = function_tuple[0]
                 name = function_tuple[1]
 
+
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(name,
                                                                                               start, end, total_sino)
-                write = 'tomo'
-                for key,val in function.keywords.iteritems():
+
+                write = 'tomo' # the output of the function will write to this key
+
+                # load parameters that change between chunks
+                for key,val in params_dict[name].iteritems():
                     if val in data_dict.iterkeys():
-                        if 'arr' in key:
+                        if 'arr' in key or 'tomo' in key: # change the output destination
                             write = val
                         function.keywords[key] = data_dict[val]
 
-                # special case for padding, downsample, upsample correction
+                # special case: padding, up/downsample require correction to the 'center' parameter
                 if name in ('Padding', 'Downsample', 'Upsample'):
                     self.setCenterCorrection(name, function.keywords)
                 if 'Reconstruction' in name:
-                    data_dict['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
+                    function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
                     self.resetCenterCorrection()
-                print function.func, ",", function.keywords
+
                 data_dict[write] = function()
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
             write_start += shape
-
-        # for function in pipeline:
-        #     print function.func, ",", function.keywords
 
         # save yaml in reconstruction folder
         for function_tuple in func_pipeline:
@@ -1281,12 +1285,9 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn np.ndarray.tolist(loc)\n\n"
 
         # set up function pipeline
-        func_list = []
-        meta_params = ['missing_args', 'input_functions', 'func_name', 'enabled']
-        for function, dict in pipeline.iteritems():
-            if (function == 'pipeline_for_yaml') or (not dict['enabled']):
-                continue
-            func_signature = dict['func_name'] + '('
+        for function_tuple in pipeline:
+            function = function_tuple[0]; name = function_tuple[1]
+            func_signature = function.func.func_name + '('
 
             missing_args = dict['missing_args']
             for arg in missing_args:
