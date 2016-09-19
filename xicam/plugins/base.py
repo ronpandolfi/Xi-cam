@@ -80,6 +80,10 @@ class plugin(QtCore.QObject):
         super(plugin, self).__init__()
 
         self.placeholders = placeholders
+        self.setup()
+
+    def setup(self, placeholders=None):
+        if placeholders: self.placeholders = placeholders
 
         if not hasattr(self, 'centerwidget'):
             self.centerwidget = None
@@ -166,3 +170,41 @@ class plugin(QtCore.QObject):
 
     def currentImage(self):
         pass
+
+import pyqtgraph as pg
+from pyqtgraph.parametertree import Parameter, ParameterTree
+
+class EZplugin(plugin):
+
+    def __init__(self,name='TestPlugin',toolbuttons=[],parameters=[],openfileshandler=None):
+        self.name=name
+
+        self.parameters = Parameter(name='Params',type='group',children=parameters)
+
+        self.centerwidget=pg.ImageView()
+        self.bottomwidget=pg.PlotWidget()
+        self.rightwidget=ParameterTree()
+        self.toolbar=QtGui.QToolBar()
+
+        self.rightwidget.setParameters(self.parameters,showTop=False)
+
+        for toolbutton in toolbuttons:
+            self.addToolButton(*toolbutton)
+
+        if openfileshandler: self.openfiles=openfileshandler
+
+        super(EZplugin, self).__init__([])
+
+    def setImage(self,data):
+        self.centerwidget.setImage(data)
+
+    def plot(self,*args,**kwargs):
+        self.bottomwidget.plot(*args,**kwargs)
+
+    def addParameter(self,**kwargs):
+        self.rightwidget.addParameters(Parameter(**kwargs))
+
+    def addToolButton(self, icon, method, text=None):
+        tb = QtGui.QAction(QtGui.QIcon(icon), text, self.toolbar)
+        tb.triggered.connect(method)
+        self.toolbar.addAction(tb)
