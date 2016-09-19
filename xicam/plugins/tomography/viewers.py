@@ -74,7 +74,6 @@ class TomoViewer(QtGui.QWidget):
         # pipeline dictionary of parameters
         self.pipeline = OrderedDict()
 
-        # Do you need this?
         # set path as field of TomoViewer
         self.path = paths
 

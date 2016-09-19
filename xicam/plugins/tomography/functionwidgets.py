@@ -712,148 +712,143 @@ class FunctionManager(fw.FeatureManager):
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
 
-    # def saveState(self, datawidget):
-    #
-    #     # extract function pipeline
-    #     lst = []; theta = []; center = -1
-    #     for function in self.features:
-    #         if not function.enabled:
-    #             continue
-    #         fpartial = function.partial
-    #         for arg in inspect.getargspec(function._function)[0]:
-    #             if arg not in fpartial.keywords.iterkeys():
-    #                 fpartial.keywords[arg] = '{}'.format(arg)
-    #         # get rid of degenerate keyword arguments
-    #         if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
-    #             fpartial.keywords['tomo'] = fpartial.keywords['arr']
-    #             fpartial.keywords.pop('arr', None)
-    #
-    #         if 'start' in fpartial.keywords:
-    #             fpartial.keywords['start'] = 'start'
-    #
-    #         lst.append((fpartial, function.name))
-    #
-    #         if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
-    #             for param,ipf in function.input_functions.iteritems():
-    #                 # extract theta values
-    #                 if 'theta' in param:
-    #                     theta = ipf.partial()
-    #
-    #                 # extract center value
-    #                 if 'center' in param:
-    #                     # this portion is taken from old updateFunctionPartial code
-    #                     args = []
-    #                     if ipf.subfunc_name in FunctionManager.center_func_slc:
-    #                         map(args.append, map(datawidget.data.fabimage.__getitem__,
-    #                                                      FunctionManager.center_func_slc[ipf.subfunc_name]))
-    #                     else:
-    #                         args.append(datawidget.getsino())
-    #                     if ipf.subfunc_name == 'Nelder Mead':
-    #                         ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
-    #                     center = ipf.partial(*args)
-    #
-    #
-    #     # for func in lst:
-    #     #     print func.func, ",", func.args, ",", func.keywords
-    #     # print theta
-    #     # print center
-    #
-    #
-    #     return [lst, theta, center, config.extract_pipeline_dict(self.features)]
-    #
-    # def functionStackGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
-    #     start_time = time.time()
-    #     write_start = sino[0]
-    #     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-    #     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
-    #     if total_sino < sino_p_chunk:
-    #         sino_p_chunk = total_sino
-    #
-    #     func_pipeline, theta, center, yaml_pipe = run_state
-    #     data_dict = OrderedDict()
-    #
-    #     for i in range(nchunk):
-    #
-    #         # make copy of pipeline for run
-    #         pipeline = []
-    #         for function_tuple in func_pipeline:
-    #             fpartial = partial(function_tuple[0])
-    #             for key, val in function_tuple[0].keywords.iteritems():
-    #                 fpartial.keywords[key] = val
-    #             pipeline.append([fpartial, function_tuple[1]])
-    #
-    #
-    #         start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
-    #         end = end if end < sino[1] else sino[1]
-    #
-    #         slc = (slice(*proj), slice(start, end, sino[2]), slice(None, None, None))
-    #         if slc is not None and slc[0].start is not None:
-    #             slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-    #                     else slc[0])
-    #             flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-    #         else:
-    #             flat_loc = datawidget.data.fabimage.flatindices()
-    #
-    #         # load data dictionary
-    #         print slc
-    #
-    #         data_dict['tomo'] = datawidget.getsino(slc = slc)
-    #         data_dict['flats'] = datawidget.getflats(slc = slc)
-    #         print "flats, ", data_dict['flats'].shape
-    #         data_dict['dark'] = datawidget.getdarks(slc = slc)
-    #         print 'dark, ', data_dict['dark'].shape
-    #         data_dict['flat_loc'] = flat_loc
-    #         data_dict['theta'] = theta
-    #         data_dict['center'] = center
-    #         data_dict['start'] = write_start
-    #         shape = data_dict['tomo'].shape
-    #         print shape
-    #
-    #
-    #
-    #         for function_tuple in pipeline:
-    #
-    #             ts = time.time()
-    #             function = function_tuple[0]
-    #             name = function_tuple[1]
-    #             # if 'Write' in name:
-    #             #     print function.func
-    #             #     print function.keywords
-    #             yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
-    #                                                                                           start, end, total_sino)
-    #             write = 'tomo'
-    #             for key,val in function.keywords.iteritems():
-    #                 if val in data_dict.iterkeys():
-    #                     if 'arr' in key:
-    #                         write = val
-    #                     function.keywords[key] = data_dict[val]
-    #
-    #             # if 'Write' in name:
-    #             #     print function.func
-    #             #     print function.keywords
-    #             #     print "----------------------------------"
-    #
-    #             data_dict[write] = function()
-    #             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-    #
-    #         data_dict['start'] += shape
-    #         # print data_dict['start']
-    #
-    #     # for function in pipeline:
-    #     #     print function.func, ",", function.keywords
-    #
-    #     # save yaml in reconstruction folder
-    #     for function_tuple in pipeline:
-    #         if 'fname' in function_tuple[0].keywords:
-    #             save_file = function_tuple[0].keywords['fname'] + '.yml'
-    #     try:
-    #         with open(save_file, 'w') as yml:
-    #             yamlmod.ordered_dump(yaml_pipe, yml)
-    #     except NameError:
-    #         yield "Error: function pipeline yaml not written - path could not be found"
-    #
-    #     # print final 'finished with recon' message
-    #     yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
+    def saveState(self, datawidget):
+
+        # extract function pipeline
+        lst = []; theta = []; center = -1
+        for function in self.features:
+            if not function.enabled:
+                continue
+            fpartial = function.partial
+            for arg in inspect.getargspec(function._function)[0]:
+                if arg not in fpartial.keywords.iterkeys():
+                    fpartial.keywords[arg] = '{}'.format(arg)
+            # get rid of degenerate keyword arguments
+            if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
+                fpartial.keywords['tomo'] = fpartial.keywords['arr']
+                fpartial.keywords.pop('arr', None)
+
+            # special cases for the 'write' function
+            if 'start' in fpartial.keywords:
+                fpartial.keywords['start'] = 'start'
+            if 'Write' in function.name:
+                fpartial.keywords.pop('parent folder', None)
+                fpartial.keywords.pop('folder name', None)
+                fpartial.keywords.pop('file name', None)
+
+            lst.append((fpartial, function.name))
+
+            if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
+                for param,ipf in function.input_functions.iteritems():
+                    # extract theta values
+                    if 'theta' in param:
+                        theta = ipf.partial()
+
+                    # extract center value
+                    if 'center' in param:
+                        # this portion is taken from old updateFunctionPartial code
+                        args = []
+                        if ipf.subfunc_name in FunctionManager.center_func_slc:
+                            map(args.append, map(datawidget.data.fabimage.__getitem__,
+                                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                        else:
+                            args.append(datawidget.getsino())
+                        if ipf.subfunc_name == 'Nelder Mead':
+                            ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
+                        center = ipf.partial(*args)
+
+
+        # for func in lst:
+        #     print func.func, ",", func.args, ",", func.keywords
+        # print theta
+        # print center
+
+
+        return [lst, theta, center, config.extract_pipeline_dict(self.features)]
+
+    def functionStackGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
+        start_time = time.time()
+        write_start = sino[0]
+        nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
+        total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
+        if total_sino < sino_p_chunk:
+            sino_p_chunk = total_sino
+
+        func_pipeline, theta, center, yaml_pipe = run_state
+        data_dict = OrderedDict()
+
+        # python_runnable = self.extractPipelineRunnable(func_pipeline, proj, sino, sino_p_chunk, datawidget.path)
+
+        for i in range(nchunk):
+
+            start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
+            end = end if end < sino[1] else sino[1]
+
+            slc = (slice(*proj), slice(start, end, sino[2]), slice(None, None, None))
+            if slc is not None and slc[0].start is not None:
+                slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                        else slc[0])
+                flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+            else:
+                flat_loc = datawidget.data.fabimage.flatindices()
+
+            # load data dictionary
+            data_dict['tomo'] = datawidget.getsino(slc = slc)
+            data_dict['flats'] = datawidget.getflats(slc = slc)
+            data_dict['dark'] = datawidget.getdarks(slc = slc)
+            data_dict['flat_loc'] = flat_loc
+            data_dict['theta'] = theta
+            data_dict['center'] = center
+            data_dict['start'] = write_start
+            shape = data_dict['tomo'].shape[1]
+
+
+
+            for function_tuple in func_pipeline:
+
+                ts = time.time()
+                function = function_tuple[0]
+                name = function_tuple[1]
+
+                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(name,
+                                                                                              start, end, total_sino)
+                write = 'tomo'
+                for key,val in function.keywords.iteritems():
+                    if val in data_dict.iterkeys():
+                        if 'arr' in key:
+                            write = val
+                        function.keywords[key] = data_dict[val]
+
+                # special case for padding, downsample, upsample correction
+                if name in ('Padding', 'Downsample', 'Upsample'):
+                    self.setCenterCorrection(name, function.keywords)
+                if 'Reconstruction' in name:
+                    data_dict['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
+                    self.resetCenterCorrection()
+                print function.func, ",", function.keywords
+                data_dict[write] = function()
+                yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
+
+            write_start += shape
+
+        # for function in pipeline:
+        #     print function.func, ",", function.keywords
+
+        # save yaml in reconstruction folder
+        for function_tuple in func_pipeline:
+            if 'fname' in function_tuple[0].keywords:
+                save_file = function_tuple[0].keywords['fname'] + '.yml'
+        try:
+            with open(save_file, 'w') as yml:
+                yamlmod.ordered_dump(yaml_pipe, yml)
+        except NameError:
+            yield "Error: function pipeline yaml not written - path could not be found"
+
+        # print final 'finished with recon' message
+        yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
+
+        # with open('/home/hparks/Desktop/example.py', 'w') as something:
+        #     something.write(python_runnable)
 
 
 
@@ -1068,90 +1063,90 @@ class FunctionManager(fw.FeatureManager):
         """
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
-    def functionStackGenerator(self, datawidget, pipeline_dict, proj, sino, sino_p_chunk, ncore=None):
-        """
-        Generator for running full reconstruction. Yields messages representing the status of reconstruction
-        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
-
-        Parameters
-        ----------
-        datawidget
-        proj : tuple of int
-            Projection range indices (start, end, step)
-        sino : tuple of int
-            Sinogram range indices (start, end, step)
-        sino_p_chunk : int
-            Number of sinograms per chunk
-        ncore : int
-            Number of cores to run functions
-        pipeline_dict: dictionary
-            Dictionary of parameters referenced during reconstruction
-
-        Yields
-        -------
-        str
-            Message of current status of function
-        """
-
-        start_time = time.time()
-        write_start = sino[0]
-        nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-        total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
-        if total_sino < sino_p_chunk:
-            sino_p_chunk = total_sino
-
-        # self.saveState(datawidget)
-
-        for i in range(nchunk):
-            init = True
-            start, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
-            end = end if end < sino[1] else sino[1]
-
-
-
-            for function in self.features:
-                # if not function.enabled:
-                if not pipeline_dict[function.name]['enabled']:
-                    continue
-                ts = time.time()
-                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
-                                                                                              end, total_sino)
-
-                fpartial = self.updateFunctionPartial(function, datawidget, pipeline_dict,
-                                                      slc=(slice(*proj), slice(start, end, sino[2]),
-                                                           slice(None, None, None)))
-                if init:
-                    tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
-                                                   slice(None, None, None)))
-                    init = False
-                elif 'Tiff' in function.name:
-                    fpartial.keywords.pop('parent folder', None)
-                    fpartial.keywords.pop('folder name', None)
-                    fpartial.keywords.pop('file name', None)
-                    fpartial.keywords['start'] = write_start
-                    write_start += tomo.shape[0]
-                # elif 'Reconstruction' in fname:
-                #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
-                #     # and set the reconstruction partial to the updated one.
-                #     if ipartials is not None:
-                #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
-                #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
-                #     tomo = fpartial(tomo)
-                tomo = fpartial(tomo)
-                yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-        # save yaml in reconstruction folder
-        for key in pipeline_dict.iterkeys():
-            if 'Write' in key:
-                save_file = pipeline_dict[key]['fname'] + '.yml'
-        try:
-            with open(save_file, 'w') as yml:
-                yamlmod.ordered_dump(pipeline_dict['pipeline_for_yaml'], yml)
-        except NameError:
-            yield "Error: function pipeline yaml not written - path could not be found"
-
-        # print final 'finished with recon' message
-        yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)
+    # def functionStackGenerator(self, datawidget, pipeline_dict, proj, sino, sino_p_chunk, ncore=None):
+    #     """
+    #     Generator for running full reconstruction. Yields messages representing the status of reconstruction
+    #     This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
+    #
+    #     Parameters
+    #     ----------
+    #     datawidget
+    #     proj : tuple of int
+    #         Projection range indices (start, end, step)
+    #     sino : tuple of int
+    #         Sinogram range indices (start, end, step)
+    #     sino_p_chunk : int
+    #         Number of sinograms per chunk
+    #     ncore : int
+    #         Number of cores to run functions
+    #     pipeline_dict: dictionary
+    #         Dictionary of parameters referenced during reconstruction
+    #
+    #     Yields
+    #     -------
+    #     str
+    #         Message of current status of function
+    #     """
+    #
+    #     start_time = time.time()
+    #     write_start = sino[0]
+    #     nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
+    #     total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
+    #     if total_sino < sino_p_chunk:
+    #         sino_p_chunk = total_sino
+    #
+    #     # self.saveState(datawidget)
+    #
+    #     for i in range(nchunk):
+    #         init = True
+    #         start, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
+    #         end = end if end < sino[1] else sino[1]
+    #
+    #
+    #
+    #         for function in self.features:
+    #             # if not function.enabled:
+    #             if not pipeline_dict[function.name]['enabled']:
+    #                 continue
+    #             ts = time.time()
+    #             yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
+    #                                                                                           end, total_sino)
+    #
+    #             fpartial = self.updateFunctionPartial(function, datawidget, pipeline_dict,
+    #                                                   slc=(slice(*proj), slice(start, end, sino[2]),
+    #                                                        slice(None, None, None)))
+    #             if init:
+    #                 tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
+    #                                                slice(None, None, None)))
+    #                 init = False
+    #             elif 'Tiff' in function.name:
+    #                 fpartial.keywords.pop('parent folder', None)
+    #                 fpartial.keywords.pop('folder name', None)
+    #                 fpartial.keywords.pop('file name', None)
+    #                 fpartial.keywords['start'] = write_start
+    #                 write_start += tomo.shape[0]
+    #             # elif 'Reconstruction' in fname:
+    #             #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
+    #             #     # and set the reconstruction partial to the updated one.
+    #             #     if ipartials is not None:
+    #             #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
+    #             #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
+    #             #     tomo = fpartial(tomo)
+    #             tomo = fpartial(tomo)
+    #             yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
+    #
+    #     # save yaml in reconstruction folder
+    #     for key in pipeline_dict.iterkeys():
+    #         if 'Write' in key:
+    #             save_file = pipeline_dict[key]['fname'] + '.yml'
+    #     try:
+    #         with open(save_file, 'w') as yml:
+    #             yamlmod.ordered_dump(pipeline_dict['pipeline_for_yaml'], yml)
+    #     except NameError:
+    #         yield "Error: function pipeline yaml not written - path could not be found"
+    #
+    #     # print final 'finished with recon' message
+    #     yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)
 
 
     def testParameterRange(self, function, parameter, prange):
@@ -1263,6 +1258,99 @@ class FunctionManager(fw.FeatureManager):
                         funcWidget.params.child(param).setValue(value)
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
+
+    def extractPipelineRunnable(self, pipeline, proj, sino, sino_p_chunk, path, ncore=None):
+        """
+        Saves the function pipeline as a runnable (Python) file. Must be of TomoViewer.pipeline format
+
+        Parameters
+        ----------
+        pipeline : dict
+            Dictionary of functions and their necessary parameters to write the function information
+        """
+
+        signature = "import time \nimport tomopy \nimport dxchange\nimport fabio\nimport " \
+                    "xicam.plugins.tomography.pipelinefunctions\n\n"
+
+        # rewrite functions used for processing
+        signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
+        signature += "\tind = range(slc.start, slc.stop, step)\n\tloc = np.array(loc)\n\tlow, upp = ind[0], ind[-1]\n"
+        signature += "\tbuff = (loc[-1] - loc[0]) / len(loc)\n\tmin_loc = low - buff\n\tmax_loc = upp + buff\n"
+        signature += "\tloc = np.intersect1d(loc[loc > min_loc], loc[loc < max_loc])\n\tnew_upp = len(ind)\n"
+        signature += "\tloc = (new_upp * (loc - low)) // (upp - low)\n\tif loc[0] < 0:\n\t\tloc[0] = 0\n"
+        signature += "\treturn np.ndarray.tolist(loc)\n\n"
+
+        # set up function pipeline
+        func_list = []
+        meta_params = ['missing_args', 'input_functions', 'func_name', 'enabled']
+        for function, dict in pipeline.iteritems():
+            if (function == 'pipeline_for_yaml') or (not dict['enabled']):
+                continue
+            func_signature = dict['func_name'] + '('
+
+            missing_args = dict['missing_args']
+            for arg in missing_args:
+                func_signature += '{}, '.format(arg)
+
+            for param, value in dict.iteritems():
+                if 'Reconstruction' in function:
+                    angles = dict['input_functions']['theta']['vals']
+                if param in meta_params:
+                    continue
+                else:
+                    func_signature += '{0}={1}, '.format(param, value) if not isinstance(value, str) else \
+                        '{0}=\'{1}\', '.format(param, value)
+            func_signature = func_signature[:-1] + ')'
+            func_list.append(func_signature)
+
+        signature += str(func_list) + "\n"
+
+        signature += "def main():\n"
+        signature += "\tstart_time = time.time()\n"
+
+        signature += "\ttheta = tomopy.angle(nang = {0},ang1 = {1}, ang2 = {2})\n\n".format \
+            (angles['nang'], angles['ang1'], angles['ang2'])
+
+        signature += "\tdata = fabio.open('{}')\n".format(path)
+        signature += "\tflat_data = data.flats; dark_data = data.darks\n"
+        signature += "\tproj = {0}; sino = {1}\n".format("put something here", "put something here")
+        signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
+        signature += "\twrite_start = sino[0]\n"
+        signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
+        signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
+        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n"
+
+        # for key in pipeline.iterkeys():
+        #     if "Reconstruction" in key:
+        #         recon_widget = pipeline[key]
+        #     recon_widget = pipeline[]
+
+
+
+        signature += "\tfor i in range(nchunk):\n\t\tinit = True\n"
+        signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
+        signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
+        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
+        signature += " \t\tflats = flat_data[slc]\n\t\tdark = dark_data[slc]\n"
+        signature += "\t\ttomo = data[slc]\n"
+        signature += "\t\tif slc is not None and slc[0].start is not None:\n"
+        signature += "\t\t\tslc_ = (slice(slc[0].start,data.shape[0],slc[0].step)\n"
+        signature += "\t\t\tflat_loc = map_loc(slc_, data.flatindices())\n"
+        signature += "\t\telse:\n\t\t\tflat_loc = data.flatindices()\n\n"
+        # signature += "flat = flats[" \
+        #              "slc=(slice(*proj), slice(start, end, sino[2]),
+        #                                                    slice(None, None, None)))"
+
+        for func in func_list:
+            signature += "\tts = time.time()\n"
+            signature += ""
+
+        signature += "for func in func_list\n\tts = time.time()\n"
+        signature += "\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format(" \
+                     "func.split('('), start, end, total_sino)\n "
+        return signature
+
+
 
 def map_loc(slc, loc):
     """
