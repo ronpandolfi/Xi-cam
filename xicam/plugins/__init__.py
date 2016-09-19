@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZ Test']
 
 
 def initplugins(placeholders):
@@ -21,8 +21,6 @@ def initplugins(placeholders):
 
     packages = pkgutil.iter_modules(__path__)
     msg.logMessage(('packages:',packages),msg.DEBUG)
-    packages = [pkg for pkg in packages if pkg[1] not in ['widgets', 'login', 'base', 'explorer', '__init__']]
-    msg.logMessage(('packages:', packages),msg.DEBUG)
 
     for importer, modname, ispkg in packages:
 
@@ -43,6 +41,11 @@ def initplugins(placeholders):
                     link = pluginlink(module, obj, placeholders)
                     if link.name not in disabledatstart: link.enable()
                     plugins[link.name] = link
+            elif type(obj) is base.EZplugin:
+                link = pluginlink(module, obj, placeholders)
+                if link.name not in disabledatstart: link.enable()
+                plugins[link.name] = link
+
     xglobals.plugins = plugins
 
 
@@ -74,8 +77,12 @@ class pluginlink():
         self.instance = None
 
     def enable(self):
-       #self.module = reload(sys.modules[self.modulename])
-        self.instance = self.plugin(self.placeholders)
+        #self.module = reload(sys.modules[self.modulename])
+        if inspect.isclass(self.plugin):
+            self.instance = self.plugin(self.placeholders)
+        else:
+            self.instance = self.plugin
+            self.plugin.setup(self.placeholders)
 
     def setEnabled(self, enable):
         if enable and not self.enabled:
