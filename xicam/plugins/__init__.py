@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZ Test']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
 
 
 def initplugins(placeholders):
@@ -37,7 +37,7 @@ def initplugins(placeholders):
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
         for objname,obj in module.__dict__.iteritems():
             if inspect.isclass(obj):
-                if issubclass(obj, base.plugin):
+                if issubclass(obj, base.plugin) and not obj is base.plugin and not obj is base.EZplugin:
                     link = pluginlink(module, obj, placeholders)
                     if link.name not in disabledatstart: link.enable()
                     plugins[link.name] = link
@@ -57,7 +57,7 @@ def buildactivatemenu(modewidget):
         action = QtGui.QAction(pluginlink.name, menu)
         action.setCheckable(True)
         action.setChecked(pluginlink.enabled)
-        action.toggled.connect(pluginlink.setEnabled)
+        action.toggled.connect(pluginlink.enable)
         action.toggled.connect(modewidget.reload)
         menu.addAction(action)
     return menu
@@ -71,10 +71,12 @@ class pluginlink():
         self.instance = None
         self.placeholders = placeholders
         self.name = self.plugin.name
+        self._enabled = False
 
     def disable(self):
         del self.instance
         self.instance = None
+        self._enabled = False
 
     def enable(self):
         #self.module = reload(sys.modules[self.modulename])
@@ -83,17 +85,11 @@ class pluginlink():
         else:
             self.instance = self.plugin
             self.plugin.setup(self.placeholders)
-
-    def setEnabled(self, enable):
-        if enable and not self.enabled:
-            self.enable()
-        elif self.enabled and not enable:
-            self.disable()
-
+        self._enabled = True
 
     @property
     def enabled(self):
-        return self.instance is not None
+        return self._enabled
 
     @enabled.setter
     def enabled(self, enabled):
@@ -103,5 +99,5 @@ class pluginlink():
             self.disable()
 
     def activate(self):
-        self.setEnabled(True)
+        self.enabled = True
         self.instance.activate()

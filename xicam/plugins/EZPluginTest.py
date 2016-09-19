@@ -15,5 +15,5 @@ def opentest(filepaths):
         img = fabio.open(filepath).data
         EZTest.setImage(img)
 
-EZTest=base.EZplugin(name='EZ Test',toolbuttons=[('xicam/gui/icons_34.png',runtest)],parameters=[{'name':'Test','value':10,'type':'int'}],openfileshandler=opentest)
+EZTest=base.EZplugin(name='EZTest',toolbuttons=[('xicam/gui/icons_34.png',runtest)],parameters=[{'name':'Test','value':10,'type':'int'}],openfileshandler=opentest)
 
