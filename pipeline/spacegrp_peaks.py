@@ -70,9 +70,9 @@ def orientation_hkl(hkl, R):
     else:
         A_c[0] = 1.;
         if not k == 0:
-            Ac[1] = 1
+            A_c[1] = 1
         else:
-            Ac[2] = 1
+            A_c[2] = 1
 
     # vector Bc
     if not k == 0:
@@ -268,23 +268,16 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
     A = crystal2sample(a, b, c, alpha, beta, gamma)
     # unit vector normal to sample plane
+    normal = np.array(normal)
     if norm_type == "xyz":
-        if isinstance(normal, np.ndarray):
-            e_norm = normal / norm(normal)
-        else:
-            n1 = np.array(normal, dtype=float)
-            e_norm = n1 / norm(n1)
+        e_norm = normal / norm(normal)
     elif norm_type == "hkl":
-        if not normal.dtype.dtype is np.int_:
+        if not normal.dtype.type is np.int_:
             raise TypeError("hkl type must be integer datatype")
         e_norm = orientation_hkl(normal, A)
     elif norm_type == "uvw":
-        if isinstance(normal, np.ndarray):
-            n1 = np.array(normal, dtype=float)
-            e_norm = orientation_uvw(n1, A)
-        else:
-            n1 = np.array(normal, dtype=float)
-            e_norm = orientation_uvw(n1, A)
+        n1 = np.array(normal, dtype=float)
+        e_norm = orientation_uvw(n1, A)
     else:
         raise ValueError("error: unable to process normal direction")
 
