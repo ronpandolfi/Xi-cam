@@ -498,10 +498,12 @@ class plugin(base.plugin):
                                  except_slot=except_slot)
         bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
 
-    def loadFullReconstruction(self):
+    def runFullReconstruction(self):
         """
         Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
         workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
+
+        Deprecated : functionality replaced by self.loadFullReconstruction and self.runReconstruction
         """
         if not self.checkPipeline():
             return
@@ -513,7 +515,45 @@ class plugin(base.plugin):
         if value is QtGui.QMessageBox.Cancel:
             return
 
-        # self.bottomwidget.local_console.clear()
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Computing reconstruction for {}...'.format(name),timeout = 0)
+        self.bottomwidget.local_console.clear()
+        self.manager.updateParameters()
+        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
+                                    interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+                                    finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+
+        pstart = self.ui.config_params.child('Start Projection').value()
+        pend = self.ui.config_params.child('End Projection').value()
+        pstep = self.ui.config_params.child('Step Projection').value()
+        sstart = self.ui.config_params.child('Start Sinogram').value()
+        send = self.ui.config_params.child('End Sinogram').value()
+        sstep =  self.ui.config_params.child('Step Sinogram').value()
+
+        recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
+                   sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
+                   ncore=self.ui.config_params.child('CPU Cores').value())
+
+
+
+
+
+    def loadFullReconstruction(self):
+        """
+        Sets up a full reconstruction for the current dataset based on the current workflow pipeline and configuration
+        parameters. Does not run reconstruction if there is one already running. Called when the corresponding toolbar
+        button is clicked.
+        """
+        if not self.checkPipeline():
+            return
+
+        value = QtGui.QMessageBox.question(None, 'Run Full Reconstruction',
+                                           'You are about to run a full reconstruction. '
+                                           'This step can take some minutes. Do you want to continue?',
+                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
+        if value is QtGui.QMessageBox.Cancel:
+            return
+
         currentWidget = self.centerwidget.widget(self.currentWidget())
         self.manager.updateParameters()
         self.loadPipelineDictionary()
@@ -533,22 +573,9 @@ class plugin(base.plugin):
         send = self.ui.config_params.child('End Sinogram').value()
         sstep =  self.ui.config_params.child('Step Sinogram').value()
 
-        # recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
-        #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
-        #            ncore=self.ui.config_params.child('CPU Cores').value())
-
         args = (currentWidget, run_state,
                 (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
                 self.ui.config_params.child('CPU Cores').value())
-        # args = (currentWidget, currentWidget.pipeline,
-        #         (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
-        #         self.ui.config_params.child('CPU Cores').value())
-
-
-        # recon_iter = threads.RunnableIterator(iterator = self.manager.functionStackGenerator,iterator_args = args,
-        #                                 finished_slot=self.reconstructionFinished,
-        #                                 callback_slot=self.bottomwidget.log2local,
-        #                                 interrupt_signal = self.bottomwidget.local_cancelButton.clicked)
 
         self.manager.recon_queue.put([recon_iter, args])
 
@@ -559,6 +586,10 @@ class plugin(base.plugin):
         self.runReconstruction()
 
     def runReconstruction(self):
+        """
+        Takes reconstruction job from self.manager.recon_queue and runs it on background thread. Saves function
+        pipeline as python runnable after reconstruction is finished.
+        """
         if (not self.manager.recon_queue.empty()) and (not self.recon_running):
             self.recon_running = True
             recon_job = self.manager.recon_queue.get()
