@@ -612,35 +612,10 @@ class plugin(base.plugin):
     @QtCore.Slot()
     def reconstructionFinished(self):
         """
-        Slot to revieve the reconstruction background threads finished signal. The total time the reconstruction took is
-        displayed in the console.
+        Slot to revieve the reconstruction background threads finished signal. Runs another reconstruction is there is
+        one on the queue
         """
 
-        # save function pipeline as yml when reconstruction is run
-
-        # for feature in self.manager.features:
-        #     print feature.func_name, ",", feature.subfunc_name,","
-        #     for p in feature.params.children():
-        #         print p.name(), ",",p.value()
-        #     print "-----------------"
-
-        # # save yaml in reconstruction folder
-        # for key in pipeline_dict.iterkeys():
-        #     if 'Write' in key:
-        #         save_file = pipeline_dict[key]['fname'] + '.yml'
-        #
-        # print pipeline_dict['features']
-        # try:
-        #     with open(save_file, 'w') as yml:
-        #         pipeline = config.extract_pipeline_dict(pipeline_dict['features'])
-        #         yamlmod.ordered_dump(pipeline, yml)
-        # except NameError:
-        #     print "function pipeline yaml not written - path could not be found"
-        #
-        # run_time = time.time() - pipeline_dict['recon_start_time']
-        # # self.bottomwidget.log2local('Reconstruction complete. Run time: {:.2f} s'.format(run_time))
-        #
-        #
         msg.showMessage('Reconstruction complete.', timeout=10)
 
         self.recon_running = False
