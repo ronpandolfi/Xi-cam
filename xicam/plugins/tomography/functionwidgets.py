@@ -763,6 +763,26 @@ class FunctionManager(fw.FeatureManager):
 
         return [lst, theta, center, config.extract_pipeline_dict(self.features)]
 
+    def loadDataDictionary(self, datawidget, theta, center, slc = None):
+        data_dict = OrderedDict()
+
+        if slc is not None and slc[0].start is not None:
+            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                    else slc[0])
+            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+        else:
+            flat_loc = datawidget.data.fabimage.flatindices()
+
+        data_dict['tomo'] = datawidget.getsino(slc=slc)
+        data_dict['flats'] = datawidget.getflats(slc=slc)
+        data_dict['dark'] = datawidget.getdarks(slc=slc)
+        data_dict['flat_loc'] = flat_loc
+        data_dict['theta'] = theta
+        data_dict['center'] = center
+
+        return data_dict
+
+
     def functionStackGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
         start_time = time.time()
         write_start = sino[0]
@@ -777,8 +797,6 @@ class FunctionManager(fw.FeatureManager):
         params_dict = OrderedDict()
         for tuple in func_pipeline:
             params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
-        data_dict = OrderedDict()
-
 
         # python_runnable = self.extractPipelineRunnable(func_pipeline, proj, sino, sino_p_chunk, datawidget.path)
 
@@ -788,20 +806,10 @@ class FunctionManager(fw.FeatureManager):
             end = end if end < sino[1] else sino[1]
 
             slc = (slice(*proj), slice(start, end, sino[2]), slice(None, None, None))
-            if slc is not None and slc[0].start is not None:
-                slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                        else slc[0])
-                flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-            else:
-                flat_loc = datawidget.data.fabimage.flatindices()
+
 
             # load data dictionary
-            data_dict['tomo'] = datawidget.getsino(slc = slc)
-            data_dict['flats'] = datawidget.getflats(slc = slc)
-            data_dict['dark'] = datawidget.getdarks(slc = slc)
-            data_dict['flat_loc'] = flat_loc
-            data_dict['theta'] = theta
-            data_dict['center'] = center
+            data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
             data_dict['start'] = write_start
             shape = data_dict['tomo'].shape[1]
 
@@ -962,27 +970,13 @@ class FunctionManager(fw.FeatureManager):
         func_pipeline, theta, center, yaml_pipe = self.saveState(datawidget)
 
 
-
-        if slc is not None and slc[0].start is not None:
-            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                    else slc[0])
-            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-        else:
-            flat_loc = datawidget.data.fabimage.flatindices()
-
         # set up dictionary of function keywords
         params_dict = OrderedDict()
         for tuple in func_pipeline:
             params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
-        data_dict = OrderedDict()
 
         # load data dictionary
-        data_dict['tomo'] = datawidget.getsino(slc = slc)
-        data_dict['flats'] = datawidget.getflats(slc = slc)
-        data_dict['dark'] = datawidget.getdarks(slc = slc)
-        data_dict['flat_loc'] = flat_loc
-        data_dict['theta'] = theta
-        data_dict['center'] = center
+        data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
 
 
 
@@ -1006,7 +1000,6 @@ class FunctionManager(fw.FeatureManager):
                 fpartial.keywords['tomo'] = fpartial.keywords['arr']
                 fpartial.keywords.pop('arr', None)
 
-            # p, write = self.updatePartial((fpartial, func.name), data_dict, params_dict)
             if 'ncore' in fpartial.keywords:
                 fpartial.keywords['ncore'] = ncore
             partial_stack.append((fpartial, func.name, params_dict))
@@ -1019,6 +1012,37 @@ class FunctionManager(fw.FeatureManager):
 
         self.lockParams(False)
         return partial_stack, self.stack_dict, data_dict
+
+
+
+    # def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
+
+        # """
+        #         Create the function stack and summary dictionary used for running slice previews and 3D previews
+        #
+        #         Parameters
+        #         ----------
+        #         datawidget
+        #             Class holding the input dataset
+        #         slc slice
+        #             Slice object to extract tomography/flat/dark data when appropriate
+        #         ncore : int
+        #             number of cores to set the appropriate functions to run on
+        #         skip_names : list of str, optional
+        #             Names of functions to skip when running but still add to the dict representing the pipeline to run.
+        #             Currently only the Writing functions are skipped as writing is not necessary in previews.
+        #         fixed_func : type class
+        #             A dynamic class with only the necessary attributes to be run in a workflow pipeline. This is used for
+        #             parameter range tests to create the class with the parameter to be run and send it to a background thread.
+        #             See testParameterRange for more details
+        #
+        #         Returns
+        #         -------
+        #         list of partials:
+        #             List with function partials needed to run preview
+        #         dict
+        #             Dictionary summarizing functions and parameters representing the pipeline (used for the list of partials)
+        #         """
 
         # self.stack_dict = OrderedDict()
         # partial_stack = []
