@@ -7,7 +7,7 @@ from pipeline import msg
 import os
 import pkgutil
 from xicam import safeimporter
-import base
+
 import inspect
 
 modules = []
@@ -17,6 +17,7 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
 
 
 def initplugins(placeholders):
+    import base
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
