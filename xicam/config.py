@@ -259,7 +259,7 @@ class experiment(Parameter):
         #             self.getvalue('Pixel Size X')*1.e6)
         # print AI
 
-        return geo
+        # return geo
 
     def getDetector(self):
         key = self.getvalue('Detector')
@@ -311,5 +311,9 @@ class experiment(Parameter):
             tilt.setOpts(**{'suffix': ' rad'})
 
 
+activeExperiment = None
 
-activeExperiment = experiment()
+
+def activate():
+    global activeExperiment
+    activeExperiment = experiment()

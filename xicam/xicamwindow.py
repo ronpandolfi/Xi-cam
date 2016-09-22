@@ -1,17 +1,12 @@
 # -*- coding: UTF-8 -*-
 
-### TODO: Add calibrant selection
 # TODO: Make experiment save/load
 ### TODO: Add peak marking
-### TODO: Add q trace
-# TODO: Confirm q calibration
 ## TODO: Add mask clear
-## TODO: Use detector mask in centerfinder
 
 
-import sys
+
 import os
-import socket
 
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
@@ -25,7 +20,6 @@ import qdarkstyle
 import plugins
 from xicam import xglobals
 import numpy as np
-from pipeline import msg
 
 import client.dask_io_loop
 import client.dask_local_scheduler
@@ -37,16 +31,16 @@ from pipeline import msg
 class ComboBoxAction(QtGui.QWidgetAction):
     def __init__(self, title, parent=None):
         QtGui.QWidgetAction.__init__(self, parent)
-        pWidget = QtGui.QWidget();
-        pLayout = QtGui.QHBoxLayout();
-        pLabel = QtGui.QLabel(title);
-        pLayout.addWidget(pLabel);
+        pWidget = QtGui.QWidget()
+        pLayout = QtGui.QHBoxLayout()
+        pLabel = QtGui.QLabel(title)
+        pLayout.addWidget(pLabel)
 
-        pComboBox = QtGui.QComboBox();
-        pLayout.addWidget(pComboBox);
-        pWidget.setLayout(pLayout);
+        pComboBox = QtGui.QComboBox()
+        pLayout.addWidget(pComboBox)
+        pWidget.setLayout(pLayout)
 
-        self.setDefaultWidget(pWidget);
+        self.setDefaultWidget(pWidget)
 
         # def comboBox (self):
         #    return self.pComboBox
@@ -86,6 +80,8 @@ class MyMainWindow(QtCore.QObject):
         QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
         import plugins
+
+        config.activate()
 
         self._pool = None
         # Load the gui from file

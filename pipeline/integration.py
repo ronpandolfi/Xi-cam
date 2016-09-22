@@ -350,8 +350,6 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
 
-    from matplotlib import pylab as plt
-
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
 

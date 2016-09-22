@@ -21,6 +21,7 @@ def main():
 
     for path in sys.path:
         print 'path:', path
+    import xicam  # IMPORTANT! DO NOT REMOVE! Xicam must be loaded early to avoid graphical bugs on mac (?!)
     app=QtGui.QApplication(sys.argv)
 
     pixmap = QtGui.QPixmap("splash.gif")

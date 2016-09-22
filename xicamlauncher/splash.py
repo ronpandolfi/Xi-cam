@@ -21,7 +21,8 @@ class SplashScreen(QtGui.QSplashScreen):
             self._launching = True
             import xicam
             from xicam import xglobals
-            app = QtCore.QCoreApplication.instance()
+
+            app = QtGui.QApplication.instance()
             xglobals.window = xicam.xicamwindow.MyMainWindow(app)
             self.timer.stop()
 
