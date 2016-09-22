@@ -324,9 +324,6 @@ class plugin(base.plugin):
             currentWidget.pipeline[function.name]["input_functions"] = input_dict
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
-        # print currentWidget.pipeline
-
-
 
     def tabCloseRequested(self, index):
         """
@@ -391,7 +388,7 @@ class plugin(base.plugin):
             msg.showMessage(message, timeout=0)
             self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func)
 
-    def runSlicePreview(self, partial_stack, stack_dict):
+    def runSlicePreview(self, partial_stack, stack_dict, data_dict):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.previewViewer
@@ -409,7 +406,7 @@ class plugin(base.plugin):
         slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
         callback = partial(self.centerwidget.widget(self.currentWidget()).addSlicePreview, stack_dict, slice_no=slice_no)
         message = 'Unable to compute slice preview. Check log for details.'
-        self.foldPreviewStack(partial_stack, initializer, callback, message)
+        self.foldPreviewStack(partial_stack, initializer, data_dict, callback, message)
 
     def preview3DAction(self):
         """
@@ -467,15 +464,12 @@ class plugin(base.plugin):
             See FunctionManager.testParameterRange for more details
         """
 
-        self.loadPipelineDictionary()
-
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.previewFunctionStack)
-        bg_functionstack(self.centerwidget.widget(self.currentWidget()),
-                         self.centerwidget.widget(self.currentWidget()).pipeline, slc=slc,
+        bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
                          ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func)
 
-    def foldPreviewStack(self, partial_stack, initializer, callback, error_message):
+    def foldPreviewStack(self, partial_stack, initializer, data_dict, callback, error_message):
         """
         Calls the managers foldFunctionStack on a background thread. This is what tells the manager to compute a
         slice preview or a 3D preview from a specified workflow pipeline
@@ -496,7 +490,8 @@ class plugin(base.plugin):
         except_slot = lambda: msg.showMessage(error_message)
         bg_fold = threads.method(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
                                  except_slot=except_slot)
-        bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
+        # bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
+        bg_fold(self.manager.foldSliceStack)(partial_stack, data_dict)
 
     def runFullReconstruction(self):
         """

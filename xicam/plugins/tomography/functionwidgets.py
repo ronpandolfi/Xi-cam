@@ -720,6 +720,7 @@ class FunctionManager(fw.FeatureManager):
             if not function.enabled:
                 continue
             fpartial = function.partial
+
             # set keywords that will be adjusted later by input functions or users
             for arg in inspect.getargspec(function._function)[0]:
                 if arg not in fpartial.keywords.iterkeys() or 'center' in arg:
@@ -810,33 +811,19 @@ class FunctionManager(fw.FeatureManager):
 
 
                 ts = time.time()
-                function = function_tuple[0]
-                name = function_tuple[1]
+                # function = function_tuple[0]
+                # name = function_tuple[1]
 
 
-                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(name,
+                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
                                                                                               start, end, total_sino)
 
-                write = 'tomo' # the output of the function will write to this key
-
-                # load parameters that change between chunks
-                for key,val in params_dict[name].iteritems():
-                    if val in data_dict.iterkeys():
-                        if 'arr' in key or 'tomo' in key: # change the output destination
-                            write = val
-                        function.keywords[key] = data_dict[val]
-
-                # special case: padding, up/downsample require correction to the 'center' parameter
-                if name in ('Padding', 'Downsample', 'Upsample'):
-                    self.setCenterCorrection(name, function.keywords)
-                if 'Reconstruction' in name:
-                    function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
-                    self.resetCenterCorrection()
-
+                function, write = self.updatePartial(function_tuple, data_dict, params_dict)
                 data_dict[write] = function()
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
             write_start += shape
+
 
         # save yaml in reconstruction folder
         for function_tuple in func_pipeline:
@@ -856,7 +843,7 @@ class FunctionManager(fw.FeatureManager):
 
 
 
-    def updateFunctionPartial(self, funcwidget, datawidget, function_dict, stack_dict=None, slc=None):
+    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
         """
         Updates the given FunctionWidget's partial
 
@@ -878,12 +865,8 @@ class FunctionManager(fw.FeatureManager):
         """
 
         fpartial = funcwidget.partial
-        # print funcwidget.name, ": ", fpartial.args, ",", fpartial.keywords
 
-
-        func_params = function_dict[funcwidget.name]
-        missing_args = func_params["missing_args"]
-        for argname in missing_args: # find a more elegant way to point to the flats and darks
+        for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
             if argname in 'flats':
                 fpartial.keywords[argname] = datawidget.getflats(slc=slc)
             if argname in 'darks':
@@ -896,28 +879,20 @@ class FunctionManager(fw.FeatureManager):
                 else:
                     fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
 
-
-        input_funcs = func_params['input_functions']
-        for param, ipf_dict in input_funcs.iteritems():
+        for param, ipf in funcwidget.input_functions.iteritems():
             args = []
-            if not ipf_dict['enabled']:
+            if not ipf.enabled:
                 continue
             if param == 'center':
-                ipf_dict['func'].partial.keywords['tol'] = ipf_dict['vals']['tol']
-                if ipf_dict['subfunc_name'] in FunctionManager.center_func_slc:
+                if ipf.subfunc_name in FunctionManager.center_func_slc:
                     map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                         FunctionManager.center_func_slc[ipf_dict['subfunc_name']]))
+                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
                 else:
                     args.append(datawidget.getsino())
 
-                if ipf_dict['subfunc_name'] == 'Nelder Mead':
-                    ipf_dict['func'].partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
-            if param == 'theta': # makes sure that angle values don't change between iterations
-                ipf_dict['func'].partial.keywords['nang'] = ipf_dict['vals']['nang']
-                ipf_dict['func'].partial.keywords['ang1'] = ipf_dict['vals']['ang1']
-                ipf_dict['func'].partial.keywords['ang2'] = ipf_dict['vals']['ang2']
-
-            fpartial.keywords[param] = ipf_dict['func'].partial(*args)
+                if ipf.subfunc_name == 'Nelder Mead':
+                    ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
+            fpartial.keywords[param] = ipf.partial(*args)
 
             if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
                 stack_dict[param] = fpartial.keywords[param]
@@ -926,45 +901,33 @@ class FunctionManager(fw.FeatureManager):
         if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
         elif 'Reconstruction' in funcwidget.func_name:
-            # print fpartial.keywords['center']
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-            # print fpartial.keywords['center']
-            # print "---------------------------"
             self.resetCenterCorrection()
-        elif 'Write' in funcwidget.func_name:
-            fpartial.keywords['fname'] = func_params['fname']
 
         return fpartial
 
 
+    def updatePartial(self, func_tuple, data_dict, param_dict):
+        write = 'tomo'
+        function = func_tuple[0]
+        name = func_tuple[1]
 
-        # for param, ipf in funcwidget.input_functions.iteritems():
-        #     # print param,",", ipf.name
-        #     args = []
-        #     if not ipf.enabled:
-        #         continue
-        #     if param == 'center':  # Need to find a cleaner solution to this
-        #         if ipf.subfunc_name in FunctionManager.center_func_slc:
-        #             map(args.append, map(datawidget.data.fabimage.__getitem__,
-        #                                  FunctionManager.center_func_slc[ipf.subfunc_name]))
-        #         else:
-        #             args.append(datawidget.getsino())
-        #         if ipf.subfunc_name == 'Nelder Mead':  # Also needs a cleaner solution
-        #             ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
-        #     fpartial.keywords[param] = ipf.partial(*args)
-        #     # if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
-        #     #     stack_dict[param] = fpartial.keywords[param]
-        # if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
-        #     self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
-        # elif 'Reconstruction' in funcwidget.func_name:
-        #     fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-        #     self.resetCenterCorrection()
-        # elif 'Write' in funcwidget.func_name:
-        #     fpartial.keywords['fname'] = save_name
-        # return fpartial
+        for key, val in param_dict[name].iteritems():
+            if val in data_dict.iterkeys():
+                if 'arr' in key or 'tomo' in key:
+                    write = val
+                function.keywords[key] = data_dict[val]
 
-    def previewFunctionStack(self, datawidget, pipeline_dict, slc=None, ncore=None, skip_names=['Write'],
-                                                                                               fixed_func=None):
+        if name in ('Padding', 'Downsample', 'Upsample'):
+            self.setCenterCorrection(name, function.keywords)
+        if 'Reconstruction' in name:
+            function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
+            self.resetCenterCorrection()
+
+        return function, write
+
+
+    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
         """
         Create the function stack and summary dictionary used for running slice previews and 3D previews
 
@@ -996,35 +959,72 @@ class FunctionManager(fw.FeatureManager):
         partial_stack = []
         self.lockParams(True)
 
+        func_pipeline, theta, center, yaml_pipe = self.saveState(datawidget)
 
 
-        for function in self.features:
-            if not pipeline_dict[function.name]['enabled']:
+
+        if slc is not None and slc[0].start is not None:
+            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                    else slc[0])
+            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+        else:
+            flat_loc = datawidget.data.fabimage.flatindices()
+
+        # set up dictionary of function keywords
+        params_dict = OrderedDict()
+        for tuple in func_pipeline:
+            params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
+        data_dict = OrderedDict()
+
+        # load data dictionary
+        data_dict['tomo'] = datawidget.getsino(slc = slc)
+        data_dict['flats'] = datawidget.getflats(slc = slc)
+        data_dict['dark'] = datawidget.getdarks(slc = slc)
+        data_dict['flat_loc'] = flat_loc
+        data_dict['theta'] = theta
+        data_dict['center'] = center
+
+
+
+        for func in self.features:
+            if not func.enabled:
                 continue
-            elif function.func_name in skip_names:
-                # possible problem: user can change params in middle of a run
-                self.stack_dict[function.func_name] = {function.subfunc_name: deepcopy(function.exposed_param_dict)}
+            elif func.func_name in skip_names:
+                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
-            elif fixed_func is not None and function.func_name == fixed_func.func_name:
-                function = fixed_func  # replace the function with the fixed function
-            self.stack_dict[function.func_name] = {function.subfunc_name: deepcopy(function.exposed_param_dict)}
-            p = self.updateFunctionPartial(function, datawidget, pipeline_dict,
-                                           self.stack_dict[function.func_name][function.subfunc_name], slc)
-            if 'ncore' in p.keywords:
-                p.keywords['ncore'] = ncore
-            partial_stack.append(p)
+            elif fixed_func is not None and func.func_name == fixed_func.func_name:
+                func = fixed_func  # replace the function with the fixed function
+            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
 
-            for param, ipf in function.input_functions.iteritems():
+            # load partial_stack
+            fpartial = func.partial
+            for arg in inspect.getargspec(func._function)[0]:
+                if arg not in fpartial.keywords.iterkeys() or 'center' in arg:
+                    fpartial.keywords[arg] = '{}'.format(arg)
+            # get rid of degenerate keyword arguments
+            if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
+                fpartial.keywords['tomo'] = fpartial.keywords['arr']
+                fpartial.keywords.pop('arr', None)
+
+            # p, write = self.updatePartial((fpartial, func.name), data_dict, params_dict)
+            if 'ncore' in fpartial.keywords:
+                fpartial.keywords['ncore'] = ncore
+            partial_stack.append((fpartial, func.name, params_dict))
+            for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
-                    if 'Input Functions' not in self.stack_dict[function.func_name][function.subfunc_name]:
-                        self.stack_dict[function.func_name][function.subfunc_name]['Input Functions'] = {}
+                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
+                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    self.stack_dict[function.func_name][function.subfunc_name]['Input Functions'].update(ipf_dict)
+                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+
         self.lockParams(False)
-        # print self.stack_dict
-        return partial_stack, self.stack_dict
+        return partial_stack, self.stack_dict, data_dict
 
-
+        # self.stack_dict = OrderedDict()
+        # partial_stack = []
+        # self.lockParams(True)
+        #
+        #
         # for func in self.features:
         #     if not func.enabled:
         #         continue
@@ -1044,9 +1044,21 @@ class FunctionManager(fw.FeatureManager):
         #                 self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
         #             ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
         #             self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+        #
         # self.lockParams(False)
-        # print self.stack_dict
         # return partial_stack, self.stack_dict
+
+
+
+    def foldSliceStack(self, partial_stack, data_dict):
+
+        for tuple in partial_stack:
+            function, write = self.updatePartial((tuple[0], tuple[1]), data_dict, tuple[2])
+            data_dict[write] = function()
+
+
+        return data_dict['tomo']
+
 
     @staticmethod
     def foldFunctionStack(partial_stack, initializer):
@@ -1065,7 +1077,10 @@ class FunctionManager(fw.FeatureManager):
         Return value of last partial in stack
             Result of folding operation
         """
+
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
+
+
 
     # def functionStackGenerator(self, datawidget, pipeline_dict, proj, sino, sino_p_chunk, ncore=None):
     #     """
