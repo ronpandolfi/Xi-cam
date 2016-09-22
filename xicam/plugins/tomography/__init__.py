@@ -551,8 +551,6 @@ class plugin(base.plugin):
 
         currentWidget = self.centerwidget.widget(self.currentWidget())
         self.manager.updateParameters()
-        self.loadPipelineDictionary()
-
 
         run_state = self.manager.saveState(currentWidget)
 
