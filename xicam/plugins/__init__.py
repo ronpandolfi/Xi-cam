@@ -57,7 +57,7 @@ def buildactivatemenu(modewidget):
         action = QtGui.QAction(pluginlink.name, menu)
         action.setCheckable(True)
         action.setChecked(pluginlink.enabled)
-        action.toggled.connect(pluginlink.enable)
+        action.toggled.connect(pluginlink.toggle)
         action.toggled.connect(modewidget.reload)
         menu.addAction(action)
     return menu
@@ -97,6 +97,9 @@ class pluginlink():
             self.enable()
         else:
             self.disable()
+
+    def toggle(self):
+        self.disable() if self.enabled else self.enable()
 
     def activate(self):
         self.enabled = True

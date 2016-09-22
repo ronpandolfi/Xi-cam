@@ -47,7 +47,7 @@ def showMessage(s,timeout=0):
 
     logMessage(s)
 
-def logMessage(stuple,level=INFO,loggername=None,timestamp=None):
+def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None):
 
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
     if loggername is not None:
@@ -71,19 +71,19 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None):
 
     logger.log(level,m)
     if guilogcallable:
-        guilogcallable(level,timestamp,s)
+        guilogcallable(level,timestamp,s,image)
     else:
         global logbacklog
-        logbacklog.append({'stuple':s,'level':level,'timestamp':timestamp})
+        logbacklog.append({'stuple':s,'level':level,'loggername':loggername,'timestamp':timestamp,'image':image})
     try:
         print m
     except UnicodeEncodeError:
         print 'A unicode string could not be written to console. Some logging will not be displayed.'
 
 def flushbacklog():
+    global logbacklog
     for l in logbacklog:
         logMessage(**l)
-    global logbacklog
     logbacklog=[]
 
 def clearMessage():

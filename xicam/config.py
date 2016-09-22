@@ -158,13 +158,13 @@ class experiment(Parameter):
             # print(self.experiment.mask,maskedarea)
             self._mask = np.bitwise_and(self._mask, maskedarea.astype(np.int))
 
-        try:  # hack for mask export
-            from fabio import edfimage
-
-            edf = edfimage.edfimage(np.rot90(self.mask))
-            edf.write('mask.edf')
-        except Exception:
-            pass
+        # try:  # hack for mask export
+        #     from fabio import edfimage
+        #
+        #     edf = edfimage.edfimage(np.rot90(self.mask))
+        #     edf.write('mask.edf')
+        # except Exception:
+        #     pass
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match

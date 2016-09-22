@@ -156,9 +156,9 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
-        p1 = AI.get_poni1()
-        p2 = AI.get_poni2()
-        msg.logMessage(('poni:', p1, p2),msg.DEBUG)
+        # p1 = AI.get_poni1()
+        # p2 = AI.get_poni2()
+        # msg.logMessage(('poni:', p1, p2),msg.DEBUG)
     else:
         AI = pyFAI.AzimuthalIntegrator()
         AI.setPyFAI(**AIdict)
