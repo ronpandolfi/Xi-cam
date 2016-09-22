@@ -421,7 +421,7 @@ class plugin(base.plugin):
             self.manager.cor_scale = lambda x: x // 8
             self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
 
-    def run3DPreview(self, partial_stack, stack_dict):
+    def run3DPreview(self, partial_stack, stack_dict, data_dict):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
@@ -442,7 +442,8 @@ class plugin(base.plugin):
         self.manager.updateParameters()
         callback = partial(self.centerwidget.widget(self.currentWidget()).add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
-        self.foldPreviewStack(partial_stack, initializer, callback, err_message)
+        # self.foldPreviewStack(partial_stack, initializer, callback, err_message)
+        self.foldPreviewStack(partial_stack, initializer, data_dict, callback, err_message)
 
     def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None):
         """
