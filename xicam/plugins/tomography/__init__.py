@@ -447,13 +447,13 @@ class plugin(base.plugin):
 
     def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None):
         """
-        Runs the FunctionManager's previewFunctionStack on a background thread to create the partial function stack and
+        Runs the FunctionManager's loadPreviewData on a background thread to create the partial function stack and
         corresponding dictionary for running slice previews and 3D previews.
 
         Parameters
         ----------
         callback : function
-            function to be called with the return values of manager.previewFunctionStack: partial_stack, stack_dict
+            function to be called with the return values of manager.loadPreviewData: partial_stack, stack_dict
             This function is either self.run3DPreview or self.runSlicePreview
         finished : function/QtCore.Slot, optional
             Slot to receive the background threads finished signal
@@ -466,7 +466,7 @@ class plugin(base.plugin):
         """
 
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
-                                          lock=threads.mutex)(self.manager.previewFunctionStack)
+                                          lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
                          ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func)
 
@@ -499,7 +499,6 @@ class plugin(base.plugin):
         Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
         workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
 
-        Deprecated : functionality replaced by self.loadFullReconstruction and self.runReconstruction
         """
         if not self.checkPipeline():
             return
@@ -561,7 +560,7 @@ class plugin(base.plugin):
 
         recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
                             interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
-                            finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
+                            finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
         pstart = self.ui.config_params.child('Start Projection').value()
         pend = self.ui.config_params.child('End Projection').value()
         pstep = self.ui.config_params.child('Step Projection').value()
