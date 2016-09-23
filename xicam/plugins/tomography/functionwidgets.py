@@ -722,7 +722,7 @@ class FunctionManager(fw.FeatureManager):
 
         Returns
         -------
-        run_state : list of four elements
+        run_state : list of four elements representing data necessary for reconstruction
             * lst: list of functools.partial which represent the function pipeline
             * theta: array of 'theta' values which represent the angles at which tomography data was taken
             * center: the center of rotation of the data
