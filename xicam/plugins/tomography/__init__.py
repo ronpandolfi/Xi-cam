@@ -146,9 +146,9 @@ class plugin(base.plugin):
         if type(paths) is list:
             paths = paths[0]
 
-        # create file name to pass to manager (?)
-        file_name = paths.split("/")[-1]
-        self.working_dir = paths.split(file_name)[0]
+        # # create file name to pass to manager (?)
+        # file_name = paths.split("/")[-1]
+        # self.working_dir = paths.split(file_name)[0]
 
 
         widget = TomoViewer(paths=paths)
@@ -280,7 +280,7 @@ class plugin(base.plugin):
             self.ui.property_table.show()
             self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
             config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
-                    data_dir=self.working_dir)
+                    path = widget.path)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)
