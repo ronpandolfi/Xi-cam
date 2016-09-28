@@ -730,7 +730,7 @@ class FunctionManager(fw.FeatureManager):
         """
 
         # extract function pipeline
-        lst = []; theta = []; center = -1
+        lst = []; theta = []
         for function in self.features:
             if not function.enabled:
                 continue
@@ -758,7 +758,11 @@ class FunctionManager(fw.FeatureManager):
             if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
                 for param,ipf in function.input_functions.iteritems():
                     if not ipf.enabled:
-                        pass
+                        if 'center' in param:
+                            center = function.partial.keywords['center']
+                            continue
+                        else:
+                            continue
                     # extract center value
                     if 'center' in param:
                         # this portion is taken from old updateFunctionPartial code
@@ -775,7 +779,6 @@ class FunctionManager(fw.FeatureManager):
                     # extract theta values
                     if 'theta' in param:
                         theta = ipf.partial()
-
         return [lst, theta, center, config.extract_pipeline_dict(self.features)]
 
     def loadDataDictionary(self, datawidget, theta, center, slc = None):
@@ -961,7 +964,6 @@ class FunctionManager(fw.FeatureManager):
         self.lockParams(True)
 
         func_pipeline, theta, center, yaml_pipe = self.saveState(datawidget)
-
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
