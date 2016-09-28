@@ -760,9 +760,7 @@ class FunctionManager(fw.FeatureManager):
                     if not ipf.enabled:
                         if 'center' in param:
                             center = function.partial.keywords['center']
-                            continue
-                        else:
-                            continue
+                        continue
                     # extract center value
                     if 'center' in param:
                         # this portion is taken from old updateFunctionPartial code
