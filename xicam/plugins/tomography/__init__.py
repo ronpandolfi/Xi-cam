@@ -592,13 +592,13 @@ class plugin(base.plugin):
 
             recon_job[0](*args)
 
-            pipeline = args[1]
+            run_state = args[1]
             proj = args[2]; sino = args[3]
             sino_p_chunk = args[4]; ncore = args[5]
             path = args[0].path
 
-            # save pipeline as python file
-            # self.savePipelineAsRunnable(pipeline, proj, sino, sino_p_chunk, path, ncore)
+
+
 
 
 

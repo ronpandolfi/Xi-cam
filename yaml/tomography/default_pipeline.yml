@@ -74,7 +74,7 @@ Circular Mask:
 Ring Removal:
   Polar Mean Filter:
     Parameters:
-      arr: tomo
+      rec: tomo
     Enabled: False
 Convert Data Type:
   Convert Data Type:

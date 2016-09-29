@@ -18,7 +18,7 @@ Polar Mean Filter:
 - name: rwidth
   suffix: px
   type: int
-- name: arr
+- name: rec
   type: list
   values:
     - tomo

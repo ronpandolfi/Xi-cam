@@ -10,6 +10,7 @@ __status__ = "Beta"
 
 
 import os
+import inspect
 from collections import OrderedDict
 import yaml
 from pipeline import msg
@@ -161,3 +162,67 @@ def extract_pipeline_dict(funwidget_list):
             id = {ipf.func_name: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
             d[f.func_name][f.subfunc_name]['Input Functions'][param] = id
     return d
+
+def extract_runnable_dict(funwidget_list):
+    """
+    Extract a dictionary from a FunctionWidget list in the appropriate format to save as a python runnable.
+
+    Parameters
+    ----------
+    funwidget_list : list of FunctionWidgets
+        list of FunctionWidgets exposed in the UI workflow pipeline
+
+    Returns
+    -------
+    dict
+        dictionary specifying the workflow pipeline and important parameters
+    """
+
+    d = OrderedDict()
+    func_dict = OrderedDict(); subfuncs = OrderedDict()
+    for f in funwidget_list:
+        keywords = {}
+        if not f.enabled:
+            continue
+
+        func = "{}.{}".format(f.package, f._function.func_name)
+        if 'xicam' in func:
+            func = func.split(".")[-1]
+        for arg in inspect.getargspec(f._function)[0]:
+            if arg not in f.partial.keywords.iterkeys() or 'center' in arg:
+                keywords[arg] = arg
+
+        fpartial = f.partial
+        for key, val in fpartial.keywords.iteritems():
+            keywords[key] = val
+
+        # get rid of degenerate keyword arguments
+        if 'arr' in keywords and 'tomo' in keywords:
+            keywords['tomo'] = keywords['arr']
+            keywords.pop('arr', None)
+
+        # special cases for the 'write' function
+        if 'start' in keywords:
+            keywords['start'] = 'start'
+        if 'Write' in f.name:
+            keywords.pop('parent folder', None)
+            keywords.pop('folder name', None)
+            keywords.pop('file name', None)
+
+
+        if 'Reconstruction' in f.name:
+            for param, ipf in f.input_functions.iteritems():
+                if 'theta' in param:
+                    subfunc = "{}.{}(".format(ipf.package,ipf._function.func_name)
+                    for key, val in ipf.partial.keywords.iteritems():
+                        subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
+                            else '{}=\'{}\','.format(key, val)
+                    subfunc += ")"
+                    subfuncs[param] = subfunc
+
+        func_dict[func] = keywords
+
+    d['func'] = func_dict
+    d['subfunc'] = subfuncs
+    return d
+

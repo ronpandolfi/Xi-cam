@@ -738,7 +738,7 @@ class FunctionManager(fw.FeatureManager):
 
             # set keywords that will be adjusted later by input functions or users
             for arg in inspect.getargspec(function._function)[0]:
-                if arg not in fpartial.keywords.iterkeys() or 'center' in arg:
+                if arg not in fpartial.keywords.iterkeys() or arg in 'center':
                     fpartial.keywords[arg] = '{}'.format(arg)
             # get rid of degenerate keyword arguments
             if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
@@ -777,7 +777,11 @@ class FunctionManager(fw.FeatureManager):
                     # extract theta values
                     if 'theta' in param:
                         theta = ipf.partial()
-        return [lst, theta, center, config.extract_pipeline_dict(self.features)]
+
+
+        extract = (config.extract_pipeline_dict(self.features), config.extract_runnable_dict(self.features))
+
+        return [lst, theta, center, extract]
 
     def loadDataDictionary(self, datawidget, theta, center, slc = None):
         """
@@ -1046,7 +1050,8 @@ class FunctionManager(fw.FeatureManager):
         if total_sino < sino_p_chunk:
             sino_p_chunk = total_sino
 
-        func_pipeline, theta, center, yaml_pipe = run_state
+        func_pipeline, theta, center, extract = run_state
+        yaml_pipe = extract[0]
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
@@ -1081,22 +1086,30 @@ class FunctionManager(fw.FeatureManager):
 
             write_start += shape
 
-
-        # save yaml in reconstruction folder
+        # get save names for pipeline yaml/runnable files
         for function_tuple in func_pipeline:
             if 'fname' in function_tuple[0].keywords:
-                save_file = function_tuple[0].keywords['fname'] + '.yml'
+                yml_file = function_tuple[0].keywords['fname'] + '.yml'
+                python_file = function_tuple[0].keywords['fname']+'.py'
+
+        # save yaml in reconstruction folder
         try:
-            with open(save_file, 'w') as yml:
+            with open(yml_file, 'w') as yml:
                 yamlmod.ordered_dump(yaml_pipe, yml)
         except NameError:
             yield "Error: function pipeline yaml not written - path could not be found"
 
+        # save function pipeline as runnable
+        path = datawidget.path
+        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, path, ncore)
+        try:
+            with open(python_file, 'w') as py:
+                py.write(runnable)
+        except NameError:
+            yield "Error: pipeline runnable not written - path could not be found"
+
         # print final 'finished with recon' message
         yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
-
-        # with open('/home/hparks/Desktop/example.py', 'w') as something:
-        #     something.write(python_runnable)
 
 
 
@@ -1396,7 +1409,7 @@ class FunctionManager(fw.FeatureManager):
                         for param, ipfs in value.iteritems():
                             for ipf, sipf in ipfs.iteritems():
                                 ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf.keys()[0],
-                                                                 package=reconpkg.packages[config_dict[sipf.keys()[0]][1]])
+                                                    package=reconpkg.packages[config_dict[sipf.keys()[0]][1]])
                                 for p, v in sipf[sipf.keys()[0]].items():
                                     ifwidget.params.child(p).setValue(v)
                                 ifwidget.updateParamsDict()
@@ -1405,9 +1418,9 @@ class FunctionManager(fw.FeatureManager):
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
 
-    def extractPipelineRunnable(self, pipeline, proj, sino, sino_p_chunk, path, ncore=None):
+    def extractPipelineRunnable(self, run_state, params, proj, sino, sino_p_chunk, path, ncore=None):
         """
-        Saves the function pipeline as a runnable (Python) file. Must be of TomoViewer.pipeline format
+        Saves the function pipeline as a runnable (Python) file.
 
         Parameters
         ----------
@@ -1415,8 +1428,8 @@ class FunctionManager(fw.FeatureManager):
             Dictionary of functions and their necessary parameters to write the function information
         """
 
-        signature = "import time \nimport tomopy \nimport dxchange\nimport fabio\nimport " \
-                    "xicam.plugins.tomography.pipelinefunctions\n\n"
+        signature = "import time \nimport tomopy \nimport dxchange\nimport fabio\nimport numpy as np\n" \
+                    "import numexpr as ne\nfrom collections import OrderedDict\n\n"
 
         # rewrite functions used for processing
         signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
@@ -1426,71 +1439,146 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tloc = (new_upp * (loc - low)) // (upp - low)\n\tif loc[0] < 0:\n\t\tloc[0] = 0\n"
         signature += "\treturn np.ndarray.tolist(loc)\n\n"
 
+        # function for loading data dictionary
+        signature += "def loadDataDict(data,theta,center,slc=None):\n\tdata_dict = OrderedDict()\n"
+        signature += "\tif slc is not None and slc[0].start is not None:\n"
+        signature += "\t\tslc_ = slice(slc[0].start,data.shape[0],slc[0].step)\n"
+        signature += "\t\tflat_loc = map_loc(slc_, data.flatindices())\n"
+        signature += "\telse:\n\t\tflat_loc = data.flatindices()\n\n"
+        signature += "\tdata_dict['tomo'] = data[slc]\n\tdata_dict['flats'] = data.flats[slc]\n"
+        signature += "\tdata_dict['dark'] = data.darks[slc]\n\tdata_dict['flat_loc'] = flat_loc\n"
+        signature += "\tdata_dict['theta'] = theta\n\tdata_dict['center'] = center\n\n"
+        signature += "\treturn data_dict\n\n"
+
+        signature += "def updateKeywords(function, param_dict, data_dict):\n"
+        signature += "\twrite = 'tomo'\n"
+        signature += "\tkeywords = OrderedDict()\n"
+        signature += "\tfor key, val in param_dict.iteritems():\n"
+        signature += "\t\tif val in data_dict.iterkeys():\n"
+        signature += "\t\t\tif 'arr' in key or 'tomo' in key:\n"
+        signature += "\t\t\t\twrite = val\n"
+        signature += "\t\t\tkeywords[key] = data_dict[val]\n"
+        signature += "\tif 'Reconstruction' in name:\n\t\tkeywords['center'] = data_dict['center']\n"
+        signature += "\treturn keywords, write\n\n"
+
+
+
+
         # set up function pipeline
-        for function_tuple in pipeline:
-            function = function_tuple[0]; name = function_tuple[1]
-            func_signature = function.func.func_name + '('
+        runnable_pipe = run_state[3][1]
+        func_dict = runnable_pipe['func']
+        subfunc_dict = runnable_pipe['subfunc']
+        center = run_state[2]
 
-            missing_args = dict['missing_args']
-            for arg in missing_args:
-                func_signature += '{}, '.format(arg)
+        # write custom functions as functions in python file
+        signature += "def crop(arr, p11, p12, p21, p22, axis=0):\n"
+        signature += "\tslc = []\n"
+        signature += "\tpts = [p11, p12, p21, p22]\n"
+        signature += "\tfor n in range(len(arr.shape)):\n"
+        signature += "\t\tif n == axis:\n"
+        signature += "\t\t\tslc.append(slice(None))\n"
+        signature += "\t\telse:\n"
+        signature += "\t\t\tslc.append(slice(pts.pop(0), -pts.pop(0)))\n"
+        signature += "\t\treturn arr[slc]\n\n"
 
-            for param, value in dict.iteritems():
-                if 'Reconstruction' in function:
-                    angles = dict['input_functions']['theta']['vals']
-                if param in meta_params:
-                    continue
-                else:
-                    func_signature += '{0}={1}, '.format(param, value) if not isinstance(value, str) else \
-                        '{0}=\'{1}\', '.format(param, value)
-            func_signature = func_signature[:-1] + ')'
-            func_list.append(func_signature)
+        signature += "def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):\n"
+        signature += "\tallowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')\n"
+        signature += "\tif dtype not in allowed_dtypes:\n"
+        signature += "\t\traise ValueError('dtype keyword {0} not in allowed keywords {1}'.format(dtype, allowed_dtypes))\n\n"
 
-        signature += str(func_list) + "\n"
+        signature += "\t# Determine range to cast values\n"
+        signature += "\tminset = False\n"
+        signature += "\tif imin is None:\n"
+        signature += "\t\timin = np.min(arr)\n"
+        signature += "\t\tminset = True\n"
+        signature += "\tmaxset = False\n"
+        signature += " \tif imax is None:\n"
+        signature += "\t\timax = np.max(arr)\n"
+        signature += "\t\tmaxset = True\n\n"
 
-        signature += "def main():\n"
-        signature += "\tstart_time = time.time()\n"
+        signature += "\tnp_cast = getattr(np, str(arr.dtype))\n"
+        signature += "\timin, imax = np_cast(imin), np_cast(imax)\n"
 
-        signature += "\ttheta = tomopy.angle(nang = {0},ang1 = {1}, ang2 = {2})\n\n".format \
-            (angles['nang'], angles['ang1'], angles['ang2'])
+        signature += "\t# Determine range of new dtype\n"
+        signature += "\tomin, omax = DTYPE_RANGE[dtype]\n"
+        signature += "\tomin = 0 if imin >= 0 else omin\n"
+        signature += "\tomin, omax = np_cast(omin), np_cast(omax)\n"
+
+        signature += "\tif arr.dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16,"
+        signature += "np.uint32, np.uint64, np.bool_, np.int_, np.intc, np.intp]:\n"
+        signature += "\t\tint_cast = getattr(np, str(intcast))\n"
+        signature += "\t\tout = np.empty(arr.shape, dtype=int_cast)\n"
+        signature += "\t\timin = int_cast(imin)\n"
+        signature += "\t\timax = int_cast(imax)\n"
+        signature += "\t\tdf = int_cast(imax) - int_cast(imin)\n"
+        signature += "\telse:\n"
+        signature += "\t\tout = np.empty(arr.shape, dtype=arr.dtype)\n"
+        signature += "\t\tdf = imax - imin\n"
+        signature += "\tif not minset:\n"
+        signature += "\t\tif np.min(arr) < imin:\n"
+        signature += "\t\t\tarr = ne.evaluate('where(arr < imin, imin, arr)', out=out)\n"
+        signature += "\tif not maxset:\n"
+        signature += "\t\tif np.max(arr) > imax:\n"
+        signature += "\t\t\tarr = ne.evaluate('where(arr > imax, imax, arr)', out=out)\n"
+        signature += "\tne.evaluate('(arr - imin) / df', truediv=True, out=out)\n"
+        signature += "\tne.evaluate('out * (omax - omin) + omin', out=out)\n\n"
+
+        signature += "\t# Cast data to specified type\n"
+        signature += "\treturn out.astype(np.dtype(dtype), copy=False)\n\n"
+
+        signature += "def array_operation(arr, value, operation='divide'):\n\n"
+
+        signature += "\tif operation not in ('add', 'subtract', 'multiply', 'divide'):\n"
+        signature += "\t\traise ValueError('Operation {} is not a valid array operation'.format(operation))\n"
+        signature += "\telif operation == 'add':\n"
+        signature += "\t\treturn ne.evaluate('arr + value')\n"
+        signature += "\telif operation == 'subtract':\n"
+        signature += "\t\treturn ne.evaluate('arr - value', truediv=True)\n"
+        signature += "\telif operation == 'multiply':\n"
+        signature += "\t\treturn ne.evaluate('arr * value')\n"
+        signature += "\telif operation == 'divide':\n"
+        signature += "\t\treturn ne.evaluate('arr / value')\n\n"
+
+        signature += "def main():\n\n"
+        signature += "\t# function pipeline\n"
+        signature += "\tfunc_dict = {}\n".format(func_dict)
+        signature += "\n\n\tstart_time = time.time()\n"
+
+        signature += "\tcenter = {}\n".format(center)
+        for key, val in subfunc_dict.iteritems():
+            signature += "\t{} = {}\n".format(key, val)
 
         signature += "\tdata = fabio.open('{}')\n".format(path)
-        signature += "\tflat_data = data.flats; dark_data = data.darks\n"
-        signature += "\tproj = {0}; sino = {1}\n".format("put something here", "put something here")
+        signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
+        signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
+        signature += "\tproj = (proj_start, proj_end, proj_step)\n"
+        signature += "\tsino = (sino_start, sino_end, sino_step)\n"
         signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
         signature += "\twrite_start = sino[0]\n"
         signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
-        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n"
+        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
 
-        # for key in pipeline.iterkeys():
-        #     if "Reconstruction" in key:
-        #         recon_widget = pipeline[key]
-        #     recon_widget = pipeline[]
-
-
-
-        signature += "\tfor i in range(nchunk):\n\t\tinit = True\n"
+        signature += "\tfor i in range(nchunk):\n"
         signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
         signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
         signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
-        signature += " \t\tflats = flat_data[slc]\n\t\tdark = dark_data[slc]\n"
-        signature += "\t\ttomo = data[slc]\n"
-        signature += "\t\tif slc is not None and slc[0].start is not None:\n"
-        signature += "\t\t\tslc_ = (slice(slc[0].start,data.shape[0],slc[0].step)\n"
-        signature += "\t\t\tflat_loc = map_loc(slc_, data.flatindices())\n"
-        signature += "\t\telse:\n\t\t\tflat_loc = data.flatindices()\n\n"
-        # signature += "flat = flats[" \
-        #              "slc=(slice(*proj), slice(start, end, sino[2]),
-        #                                                    slice(None, None, None)))"
 
-        for func in func_list:
-            signature += "\tts = time.time()\n"
-            signature += ""
+        signature += "\t\tdata_dict = loadDataDict(data, theta, center, slc)\n"
+        signature += "\t\tdata_dict['start'] = write_start\n"
+        signature += "\t\tshape = data_dict['tomo'].shape[1]\n"
 
-        signature += "for func in func_list\n\tts = time.time()\n"
-        signature += "\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format(" \
-                     "func.split('('), start, end, total_sino)\n "
+        signature += "\t\tfor func, param_dict in func_dict.iterkeys():\n\t\t\tts = time.time()\n"
+        signature += "\t\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format(" \
+                     "func, start, end, total_sino)\n "
+        signature += "\t\t\tkeywords, write = updateKeywords(func, param_dict, data_dict)\n"
+        signature += "\t\t\tdata_dict[write] = func(**keywords)\n"
+        signature += "\t\tprint 'Finished in {: .3f} s'.format(time.time()-ts)\n"
+        signature += "\t\twrite_start += shape\n\n"
+        signature += "\tprint 'Reconstruction complete. Run time: {: .2f} s'.format(time.time()-start_time)\n\n"
+
+        signature += "if __name__ == '__main__':\n\tmain()"
+
         return signature
 
 
