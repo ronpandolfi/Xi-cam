@@ -1428,10 +1428,79 @@ class FunctionManager(fw.FeatureManager):
             Dictionary of functions and their necessary parameters to write the function information
         """
 
-        signature = "import time \nimport tomopy \nimport dxchange\nimport fabio\nimport numpy as np\n" \
-                    "import numexpr as ne\nfrom collections import OrderedDict\n\n"
+        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\n" \
+                    "import numpy as np\nimport numexpr as ne\nfrom collections import OrderedDict\n\n"
+
+        # set up function pipeline
+        runnable_pipe = run_state[3][1]
+        func_dict = runnable_pipe['func']
+        subfunc_dict = runnable_pipe['subfunc']
+        center = run_state[2]
+
+        signature += "def main():\n\n"
+        signature += "\n\n\tstart_time = time.time()\n"
+
+        signature += "\tcenter = {}\n".format(center)
+        for key, val in subfunc_dict.iteritems():
+            signature += "\t{} = {}\n".format(key, val)
+
+        signature += "\tdata = dxchange.read_als_832h5('{}')\n".format(path)
+        signature += "\tmdata = read_als_832h5_metadata('{}')\n".format(path)
+        signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
+        signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
+        signature += "\tproj = (proj_start, proj_end, proj_step)\n"
+        signature += "\tsino = (sino_start, sino_end, sino_step)\n"
+        signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
+        signature += "\twrite_start = sino[0]\n"
+        signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
+        signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
+        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
+
+        signature += "\tfor i in range(nchunk):\n"
+        signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
+        signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
+        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
+
+        signature += "\t\tdata_dict = loadDataDict(data, mdata, theta, center, slc)\n"
+        signature += "\t\tdata_dict['start'] = write_start\n"
+        signature += "\t\tshape = data_dict['tomo'].shape[1]\n"
+
+        signature += "\t\t# here's the pipeline!\n"
+        for func, param_dict in func_dict.iteritems():
+            signature += "\t\t# function: {}\n".format(func)
+            signature += "\t\tts = time.time()\n"
+            signature += "\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format("
+            signature += "'{}', start, end, total_sino)\n ".format('{}'.format(func))
+            signature += "\t\tparams = {}\n".format(param_dict)
+            signature += "\t\tkwargs, write = updateKeywords(str({}),params, data_dict)\n".format(func)
+            signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
+            signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
+            signature += "\t\tprint "" #newline \n\n"
+        signature += "\t\twrite_start += shape\n\n"
+        signature += "\tprint 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)\n\n"
+        signature += "\tprint "" #newline"
 
         # rewrite functions used for processing
+        signature += "# helper functions\n\n"
+        signature += "def read_als_832h5_metadata(fname):\n"
+        signature += "\t with h5py.File(fname, 'r') as f:\n\t\tg=_find_dataset_group(f)\n\t\treturn dict(g.attrs)\n\n"
+
+        signature += "def _find_dataset_group(h5object):\n"
+        signature += "\tkeys = h5object.keys()\n \tif len(keys)==1:\n"
+        signature += "\t\tif isinstance(h5object[keys[0]], h5py.Group):\n"
+        signature += "\t\t\tgroup_keys = h5object[keys[0]].keys()\n"
+        signature += "\t\t\tif isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):\n"
+        signature += "\t\t\t\treturn h5object[keys[0]]\n"
+        signature += "\t\t\telse:\n\t\t\t\treturn _find_dataset_group(h5object[keys[0]])\n"
+        signature += "\t\telse:\n\t\t\traise Exception('Unable to find dataset group')\n"
+        signature += "\telse:\n\t\traise Exception('Unable to find dataset group')\n\n"
+
+        signature += "def flatindices(mdata):\n"
+        signature += "\ti0 = int(mdata['i0cycle'])\n\tnproj = int(mdata['nangles'])\n"
+        signature += "\tif i0 > 0:\n\t\tindices = list(range(0, nproj, i0))\n"
+        signature += "\t\tif indices[-1] != nproj - 1:\n\t\t\tindices.append(nproj - 1)\n"
+        signature += "\telif i0 == 0:\n\t\tindices = [0, nproj - 1]\n\treturn indices\n\n"
+
         signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
         signature += "\tind = range(slc.start, slc.stop, step)\n\tloc = np.array(loc)\n\tlow, upp = ind[0], ind[-1]\n"
         signature += "\tbuff = (loc[-1] - loc[0]) / len(loc)\n\tmin_loc = low - buff\n\tmax_loc = upp + buff\n"
@@ -1440,35 +1509,24 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn np.ndarray.tolist(loc)\n\n"
 
         # function for loading data dictionary
-        signature += "def loadDataDict(data,theta,center,slc=None):\n\tdata_dict = OrderedDict()\n"
+        signature += "def loadDataDict(data, mdata, theta,center,slc=None):\n\tdata_dict = OrderedDict()\n"
         signature += "\tif slc is not None and slc[0].start is not None:\n"
-        signature += "\t\tslc_ = slice(slc[0].start,data.shape[0],slc[0].step)\n"
-        signature += "\t\tflat_loc = map_loc(slc_, data.flatindices())\n"
-        signature += "\telse:\n\t\tflat_loc = data.flatindices()\n\n"
-        signature += "\tdata_dict['tomo'] = data[slc]\n\tdata_dict['flats'] = data.flats[slc]\n"
-        signature += "\tdata_dict['dark'] = data.darks[slc]\n\tdata_dict['flat_loc'] = flat_loc\n"
+        signature += "\t\tslc_ = slice(slc[0].start,data[0].shape[0],slc[0].step)\n"
+        signature += "\t\tflat_loc = map_loc(slc_, flatindices(mdata))\n"
+        signature += "\telse:\n\t\tflat_loc = flatindices(mdata)\n\n"
+        signature += "\tdata_dict['tomo'] = data[0][slc]\n\tdata_dict['flats'] = data[1][slc]\n"
+        signature += "\tdata_dict['dark'] = data[2][slc]\n\tdata_dict['flat_loc'] = flat_loc\n"
         signature += "\tdata_dict['theta'] = theta\n\tdata_dict['center'] = center\n\n"
         signature += "\treturn data_dict\n\n"
 
         signature += "def updateKeywords(function, param_dict, data_dict):\n"
         signature += "\twrite = 'tomo'\n"
-        signature += "\tkeywords = OrderedDict()\n"
         signature += "\tfor key, val in param_dict.iteritems():\n"
         signature += "\t\tif val in data_dict.iterkeys():\n"
         signature += "\t\t\tif 'arr' in key or 'tomo' in key:\n"
         signature += "\t\t\t\twrite = val\n"
-        signature += "\t\t\tkeywords[key] = data_dict[val]\n"
-        signature += "\tif 'Reconstruction' in name:\n\t\tkeywords['center'] = data_dict['center']\n"
-        signature += "\treturn keywords, write\n\n"
-
-
-
-
-        # set up function pipeline
-        runnable_pipe = run_state[3][1]
-        func_dict = runnable_pipe['func']
-        subfunc_dict = runnable_pipe['subfunc']
-        center = run_state[2]
+        signature += "\t\t\tparam_dict[key] = data_dict[val]\n"
+        signature += "\treturn param_dict, write\n\n"
 
         # write custom functions as functions in python file
         signature += "def crop(arr, p11, p12, p21, p22, axis=0):\n"
@@ -1538,44 +1596,6 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\treturn ne.evaluate('arr * value')\n"
         signature += "\telif operation == 'divide':\n"
         signature += "\t\treturn ne.evaluate('arr / value')\n\n"
-
-        signature += "def main():\n\n"
-        signature += "\t# function pipeline\n"
-        signature += "\tfunc_dict = {}\n".format(func_dict)
-        signature += "\n\n\tstart_time = time.time()\n"
-
-        signature += "\tcenter = {}\n".format(center)
-        for key, val in subfunc_dict.iteritems():
-            signature += "\t{} = {}\n".format(key, val)
-
-        signature += "\tdata = fabio.open('{}')\n".format(path)
-        signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
-        signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
-        signature += "\tproj = (proj_start, proj_end, proj_step)\n"
-        signature += "\tsino = (sino_start, sino_end, sino_step)\n"
-        signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
-        signature += "\twrite_start = sino[0]\n"
-        signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
-        signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
-        signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
-
-        signature += "\tfor i in range(nchunk):\n"
-        signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
-        signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
-        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
-
-        signature += "\t\tdata_dict = loadDataDict(data, theta, center, slc)\n"
-        signature += "\t\tdata_dict['start'] = write_start\n"
-        signature += "\t\tshape = data_dict['tomo'].shape[1]\n"
-
-        signature += "\t\tfor func, param_dict in func_dict.iterkeys():\n\t\t\tts = time.time()\n"
-        signature += "\t\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format(" \
-                     "func, start, end, total_sino)\n "
-        signature += "\t\t\tkeywords, write = updateKeywords(func, param_dict, data_dict)\n"
-        signature += "\t\t\tdata_dict[write] = func(**keywords)\n"
-        signature += "\t\tprint 'Finished in {: .3f} s'.format(time.time()-ts)\n"
-        signature += "\t\twrite_start += shape\n\n"
-        signature += "\tprint 'Reconstruction complete. Run time: {: .2f} s'.format(time.time()-start_time)\n\n"
 
         signature += "if __name__ == '__main__':\n\tmain()"
 

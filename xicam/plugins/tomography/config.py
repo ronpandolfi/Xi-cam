@@ -188,13 +188,13 @@ def extract_runnable_dict(funwidget_list):
         func = "{}.{}".format(f.package, f._function.func_name)
         if 'xicam' in func:
             func = func.split(".")[-1]
+        fpartial = f.partial
+        for key, val in fpartial.keywords.iteritems():
+            keywords[key] = val
         for arg in inspect.getargspec(f._function)[0]:
             if arg not in f.partial.keywords.iterkeys() or 'center' in arg:
                 keywords[arg] = arg
 
-        fpartial = f.partial
-        for key, val in fpartial.keywords.iteritems():
-            keywords[key] = val
 
         # get rid of degenerate keyword arguments
         if 'arr' in keywords and 'tomo' in keywords:
