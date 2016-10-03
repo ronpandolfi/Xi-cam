@@ -1003,7 +1003,9 @@ class FunctionManager(fw.FeatureManager):
                     if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
                         self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    for
+                    for key, val in ipf_dict.iteritems():
+                        if key in params_dict[func.name].iterkeys():
+                            ipf_dict[key] = params_dict[func.name][key]
                     self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
 
         self.lockParams(False)
