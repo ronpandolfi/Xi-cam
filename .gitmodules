@@ -1,0 +1,3 @@
+[submodule "xicam/plugins/slacx/slacxbase"]
+	path = xicam/plugins/slacx/slacxbase
+	url = https://ronpandolfi@bitbucket.org/smashml/slacx.git
