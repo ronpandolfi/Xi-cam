@@ -1,7 +1,7 @@
 # avg dphi correlation (mask normalized) for each q
 
 import base
-from PySide import QtGui
+from PySide import QtGui, QtCore
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
@@ -52,7 +52,8 @@ class BatchPlugin(base.plugin):
         for path in paths:
 
             xglobals.statusbar.showMessage('Processing item ' + str(paths.index(path)+1) + ' of ' + str(len(paths))+ '...')
-            xglobals.app.processEvents()
+
+            QtCore.QCoreApplication.instance().processEvents()
 
             dimg = loader.diffimage(path)
 
