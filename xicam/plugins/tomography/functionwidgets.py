@@ -888,15 +888,15 @@ class FunctionManager(fw.FeatureManager):
         return fpartial
 
 
-    def updatePartial(self, func_tuple, data_dict, param_dict):
+    def updatePartial(self, function, data_dict, param_dict):
         """
         Updates the given function partial's keywords - the functools.partial object is the first element of func_tuple
 
         Parameters
         ----------
 
-        func_tuple : 2-tuple
-            2-tuple which contains a functools.partial (1st element) and the partial's associated name (2nd element)
+        func_tuple : functools.partial
+            functools.partial of a function in the processing pipeline
         data_dict : dict
             Dictionary which contains all information relevant to a reconstruction - its elements are loaded into the
             functools.partial's keyword arguments
@@ -913,10 +913,8 @@ class FunctionManager(fw.FeatureManager):
             in the pipeline
         """
         write = 'tomo'
-        function = func_tuple[0]
-        name = func_tuple[1]
 
-        for key, val in param_dict[name].iteritems():
+        for key, val in param_dict.iteritems():
             if val in data_dict.iterkeys():
                 if 'arr' in key or 'tomo' in key:
                     write = val
@@ -999,12 +997,13 @@ class FunctionManager(fw.FeatureManager):
 
             if 'ncore' in fpartial.keywords:
                 fpartial.keywords['ncore'] = ncore
-            partial_stack.append((fpartial, func.name, params_dict))
+            partial_stack.append((fpartial, params_dict[func.name]))
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
                     if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
                         self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+                    for
                     self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
 
         self.lockParams(False)
@@ -1077,10 +1076,12 @@ class FunctionManager(fw.FeatureManager):
 
             for function_tuple in func_pipeline:
                 ts = time.time()
+                name = function_tuple[1]
+                function = function_tuple[0]
 
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
                                                                                               start, end, total_sino)
-                function, write = self.updatePartial(function_tuple, data_dict, params_dict)
+                function, write = self.updatePartial(function, data_dict, params_dict[name])
                 data_dict[write] = function()
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
