@@ -1431,7 +1431,7 @@ class FunctionManager(fw.FeatureManager):
             Dictionary of functions and their necessary parameters to write the function information
         """
 
-        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\n" \
+        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\nimport inspect\n" \
                     "import numpy as np\nimport numexpr as ne\nfrom collections import OrderedDict\n\n"
 
         # set up function pipeline
@@ -1441,7 +1441,9 @@ class FunctionManager(fw.FeatureManager):
         center = run_state[2]
 
         signature += "def main():\n\n"
-        signature += "\n\n\tstart_time = time.time()\n"
+        signature += "\tcor_offset = 0\n"
+        signature += "\tcor_scale = 0\n\n"
+        signature += "\tstart_time = time.time()\n\n"
 
         signature += "\tcenter = {}\n".format(center)
         for key, val in subfunc_dict.iteritems():
@@ -1451,9 +1453,9 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tmdata = read_als_832h5_metadata('{}')\n".format(path)
         signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
         signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
-        signature += "\tproj = (proj_start, proj_end, proj_step)\n"
-        signature += "\tsino = (sino_start, sino_end, sino_step)\n"
         signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
+        signature += "\tproj = (proj_start, proj_end, proj_step)\n"
+        signature += "\tsino = (sino_start, sino_end, sino_step)\n\n"
         signature += "\twrite_start = sino[0]\n"
         signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
@@ -1466,22 +1468,24 @@ class FunctionManager(fw.FeatureManager):
 
         signature += "\t\tdata_dict = loadDataDict(data, mdata, theta, center, slc)\n"
         signature += "\t\tdata_dict['start'] = write_start\n"
-        signature += "\t\tshape = data_dict['tomo'].shape[1]\n"
+        signature += "\t\tshape = data_dict['tomo'].shape[1]\n\n"
 
-        signature += "\t\t# here's the pipeline!\n"
+        signature += "\t\t# the function pipeline\n\n"
         for func, param_dict in func_dict.iteritems():
             signature += "\t\t# function: {}\n".format(func)
             signature += "\t\tts = time.time()\n"
             signature += "\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format("
             signature += "'{}', start, end, total_sino)\n ".format('{}'.format(func))
             signature += "\t\tparams = {}\n".format(param_dict)
-            signature += "\t\tkwargs, write = updateKeywords(str({}),params, data_dict)\n".format(func)
+            signature += "\t\tkwargs, write, cor_offset, cor_scale = updateKeywords('{}', params, data_dict,".format(func)
+            signature += " cor_offset, cor_scale)\n"
+            signature += "\t\tkwargs = cleanKeywords({}, kwargs)\n".format(func)
             signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
             signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
             signature += "\t\tprint "" #newline \n\n"
         signature += "\t\twrite_start += shape\n\n"
-        signature += "\tprint 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)\n\n"
-        signature += "\tprint "" #newline"
+        signature += "\tprint 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)\n"
+        signature += "\tprint "" #newline\n\n"
 
         # rewrite functions used for processing
         signature += "# helper functions\n\n"
@@ -1504,6 +1508,27 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\tif indices[-1] != nproj - 1:\n\t\t\tindices.append(nproj - 1)\n"
         signature += "\telif i0 == 0:\n\t\tindices = [0, nproj - 1]\n\treturn indices\n\n"
 
+        signature += "def resetCenterCorrection(cor_offset, cor_scale):\n"
+        signature += "\tcor_offset = 0\n\tcor_scale = 0\n"
+        signature += "\treturn cor_offset, cor_scale\n\n"
+
+        signature += "def setCenterCorrection(name, param_dict, cor_offset, cor_scale):\n"
+        signature += "\tif 'pad' in name and param_dict['axis'] == 2:\n"
+        signature += "\t\tn = param_dict['npad']\n"
+        signature += "\t\tcor_offset = n\n"
+        signature += "\telif 'downsample' in name and param_dict['axis'] == 2:\n"
+        signature += "\t\ts = param_dict['level']\n"
+        signature += "\t\tcor_scale = -s\n"
+        signature += "\telif 'upsample' in name and param_dict['axis'] == 2:\n"
+        signature += "\t\ts = param_dict['level']\n"
+        signature += "\t\tcor_scale = -s\n"
+        signature += "\treturn cor_offset, cor_scale\n\n"
+
+        signature += "def correctCenter(center, cor_offset, cor_scale):\n"
+        signature += "\tif cor_scale<0:\n\t\treturn float(int(center * 2 ** cor_scale)) + cor_offset\n"
+        signature += "\telse:\n\t\treturn (center * 2 ** cor_scale) + cor_offset\n\n"
+
+
         signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
         signature += "\tind = range(slc.start, slc.stop, step)\n\tloc = np.array(loc)\n\tlow, upp = ind[0], ind[-1]\n"
         signature += "\tbuff = (loc[-1] - loc[0]) / len(loc)\n\tmin_loc = low - buff\n\tmax_loc = upp + buff\n"
@@ -1522,14 +1547,27 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tdata_dict['theta'] = theta\n\tdata_dict['center'] = center\n\n"
         signature += "\treturn data_dict\n\n"
 
-        signature += "def updateKeywords(function, param_dict, data_dict):\n"
+        signature += "def updateKeywords(function, param_dict, data_dict, cor_offset, cor_scale):\n"
         signature += "\twrite = 'tomo'\n"
         signature += "\tfor key, val in param_dict.iteritems():\n"
         signature += "\t\tif val in data_dict.iterkeys():\n"
         signature += "\t\t\tif 'arr' in key or 'tomo' in key:\n"
         signature += "\t\t\t\twrite = val\n"
         signature += "\t\t\tparam_dict[key] = data_dict[val]\n"
-        signature += "\treturn param_dict, write\n\n"
+        signature += "\tfor item in ('pad', 'downsample', 'upsample'):\n"
+        signature += "\t\tif item in function:\n "
+        signature += "\t\t\tcor_offset, cor_scale = setCenterCorrection(function, param_dict, cor_offset, cor_scale)\n"
+        signature += "\tif 'recon' in function:\n"
+        signature += "\t\tparam_dict['center'] = correctCenter(param_dict['center'], cor_offset, cor_scale)\n"
+        signature += "\t\tcor_offset, cor_scale = resetCenterCorrection(cor_offset, cor_scale)\n"
+        signature += "\treturn param_dict, write, cor_offset, cor_scale\n\n"
+
+        signature += "def cleanKeywords(function, keywords):\n"
+        signature += "\t# gets rid of keywords that are not function keywords\n"
+        signature += "\tdrop_lst = []\n"
+        signature += "\tfor key in keywords.iterkeys():\n"
+        signature += "\t\tif key not in inspect.getargspec(function)[0]:\n\t\t\tdrop_lst.append(key)\n"
+        signature += "\tfor key in drop_lst:\n\t\tkeywords.pop(key)\n\treturn keywords\n\n"
 
         # write custom functions as functions in python file
         signature += "def crop(arr, p11, p12, p21, p22, axis=0):\n"
