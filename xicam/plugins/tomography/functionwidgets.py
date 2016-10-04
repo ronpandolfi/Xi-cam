@@ -888,7 +888,7 @@ class FunctionManager(fw.FeatureManager):
         return fpartial
 
 
-    def updatePartial(self, function, data_dict, param_dict):
+    def updatePartial(self, function, name, data_dict, param_dict):
         """
         Updates the given function partial's keywords - the functools.partial object is the first element of func_tuple
 
@@ -1083,7 +1083,7 @@ class FunctionManager(fw.FeatureManager):
 
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
                                                                                               start, end, total_sino)
-                function, write = self.updatePartial(function, data_dict, params_dict[name])
+                function, write = self.updatePartial(function, name, data_dict, params_dict[name])
                 data_dict[write] = function()
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
