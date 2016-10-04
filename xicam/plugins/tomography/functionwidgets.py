@@ -1482,7 +1482,7 @@ class FunctionManager(fw.FeatureManager):
             signature += "\t\tkwargs = cleanKeywords({}, kwargs)\n".format(func)
             signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
             signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
-            signature += "\t\tprint "" #newline \n\n"
+            signature += "\t\tprint "" #white space \n\n"
         signature += "\t\twrite_start += shape\n\n"
         signature += "\tprint 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)\n"
         signature += "\tprint "" #newline\n\n"
@@ -1578,7 +1578,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\t\tslc.append(slice(None))\n"
         signature += "\t\telse:\n"
         signature += "\t\t\tslc.append(slice(pts.pop(0), -pts.pop(0)))\n"
-        signature += "\t\treturn arr[slc]\n\n"
+        signature += "\treturn arr[slc]\n\n"
 
         signature += "def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):\n"
         signature += "\tallowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')\n"
