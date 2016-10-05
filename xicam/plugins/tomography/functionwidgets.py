@@ -1085,6 +1085,7 @@ class FunctionManager(fw.FeatureManager):
                                                                                               start, end, total_sino)
                 function, write = self.updatePartial(function, name, data_dict, params_dict[name])
                 data_dict[write] = function()
+
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
             write_start += shape
@@ -1441,6 +1442,7 @@ class FunctionManager(fw.FeatureManager):
         center = run_state[2]
 
         signature += "def main():\n\n"
+        signature += "\t# offset and scale factors in case of padding, upsampling, or downsampling\n"
         signature += "\tcor_offset = 0\n"
         signature += "\tcor_scale = 0\n\n"
         signature += "\tstart_time = time.time()\n\n"
@@ -1449,11 +1451,12 @@ class FunctionManager(fw.FeatureManager):
         for key, val in subfunc_dict.iteritems():
             signature += "\t{} = {}\n".format(key, val)
 
-        signature += "\tdata = dxchange.read_als_832h5('{}')\n".format(path)
-        signature += "\tmdata = read_als_832h5_metadata('{}')\n".format(path)
+        signature += "\n\tdata = dxchange.read_als_832h5('{}')\n".format(path)
+        signature += "\tmdata = read_als_832h5_metadata('{}')\n\n".format(path)
+        signature += "\t# choose which projections and sinograms go into the reconstruction:\n"
         signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
         signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
-        signature += "\tsino_p_chunk = {2}\n\n".format(proj, sino, sino_p_chunk)
+        signature += "\tsino_p_chunk = {2} # chunk size of data during reconstruction\n\n".format(proj, sino, sino_p_chunk)
         signature += "\tproj = (proj_start, proj_end, proj_step)\n"
         signature += "\tsino = (sino_start, sino_end, sino_step)\n\n"
         signature += "\twrite_start = sino[0]\n"
@@ -1470,7 +1473,8 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\tdata_dict['start'] = write_start\n"
         signature += "\t\tshape = data_dict['tomo'].shape[1]\n\n"
 
-        signature += "\t\t# the function pipeline\n\n"
+        signature += "\t\t# the function pipeline: keywords used in each function are located in the\n"
+        signature += "\t\t# 'params' assignment for each function\n\n"
         for func, param_dict in func_dict.iteritems():
             signature += "\t\t# function: {}\n".format(func)
             signature += "\t\tts = time.time()\n"
@@ -1479,13 +1483,12 @@ class FunctionManager(fw.FeatureManager):
             signature += "\t\tparams = {}\n".format(param_dict)
             signature += "\t\tkwargs, write, cor_offset, cor_scale = updateKeywords('{}', params, data_dict,".format(func)
             signature += " cor_offset, cor_scale)\n"
-            signature += "\t\tkwargs = cleanKeywords({}, kwargs)\n".format(func)
             signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
             signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
             signature += "\t\tprint "" #white space \n\n"
         signature += "\t\twrite_start += shape\n\n"
         signature += "\tprint 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)\n"
-        signature += "\tprint "" #newline\n\n"
+        signature += "\tprint # white space\n\n"
 
         # rewrite functions used for processing
         signature += "# helper functions\n\n"
@@ -1508,10 +1511,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\tif indices[-1] != nproj - 1:\n\t\t\tindices.append(nproj - 1)\n"
         signature += "\telif i0 == 0:\n\t\tindices = [0, nproj - 1]\n\treturn indices\n\n"
 
-        signature += "def resetCenterCorrection(cor_offset, cor_scale):\n"
-        signature += "\tcor_offset = 0\n\tcor_scale = 0\n"
-        signature += "\treturn cor_offset, cor_scale\n\n"
-
+        signature += "# sets COR correction in case of padding, upsample, or downsample\n"
         signature += "def setCenterCorrection(name, param_dict, cor_offset, cor_scale):\n"
         signature += "\tif 'pad' in name and param_dict['axis'] == 2:\n"
         signature += "\t\tn = param_dict['npad']\n"
@@ -1523,7 +1523,11 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\ts = param_dict['level']\n"
         signature += "\t\tcor_scale = -s\n"
         signature += "\treturn cor_offset, cor_scale\n\n"
+        signature += "def resetCenterCorrection(cor_offset, cor_scale):\n"
+        signature += "\tcor_offset = 0\n\tcor_scale = 0\n"
+        signature += "\treturn cor_offset, cor_scale\n\n"
 
+        signature += "# performs COR correction\n"
         signature += "def correctCenter(center, cor_offset, cor_scale):\n"
         signature += "\tif cor_scale<0:\n\t\treturn float(int(center * 2 ** cor_scale)) + cor_offset\n"
         signature += "\telse:\n\t\treturn (center * 2 ** cor_scale) + cor_offset\n\n"
@@ -1560,16 +1564,10 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tif 'recon' in function:\n"
         signature += "\t\tparam_dict['center'] = correctCenter(param_dict['center'], cor_offset, cor_scale)\n"
         signature += "\t\tcor_offset, cor_scale = resetCenterCorrection(cor_offset, cor_scale)\n"
-        signature += "\treturn param_dict, write, cor_offset, cor_scale\n\n"
-
-        signature += "def cleanKeywords(function, keywords):\n"
-        signature += "\t# gets rid of keywords that are not function keywords\n"
-        signature += "\tdrop_lst = []\n"
-        signature += "\tfor key in keywords.iterkeys():\n"
-        signature += "\t\tif key not in inspect.getargspec(function)[0]:\n\t\t\tdrop_lst.append(key)\n"
-        signature += "\tfor key in drop_lst:\n\t\tkeywords.pop(key)\n\treturn keywords\n\n"
+        signature += "\treturn param_dict, write, cor_offset, cor_scale\n\n\n"
 
         # write custom functions as functions in python file
+        signature += "# the following three functions may be used in the reconstruction pipeline\n"
         signature += "def crop(arr, p11, p12, p21, p22, axis=0):\n"
         signature += "\tslc = []\n"
         signature += "\tpts = [p11, p12, p21, p22]\n"
