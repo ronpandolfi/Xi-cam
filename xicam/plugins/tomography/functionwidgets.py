@@ -997,7 +997,7 @@ class FunctionManager(fw.FeatureManager):
 
             if 'ncore' in fpartial.keywords:
                 fpartial.keywords['ncore'] = ncore
-            partial_stack.append((fpartial, params_dict[func.name]))
+            partial_stack.append((fpartial, func.name, params_dict[func.name]))
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
                     if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
@@ -1134,7 +1134,7 @@ class FunctionManager(fw.FeatureManager):
         """
 
         for tuple in partial_stack:
-            function, write = self.updatePartial((tuple[0], tuple[1]), data_dict, tuple[2])
+            function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
 
 
@@ -1581,6 +1581,8 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn arr[slc]\n\n"
 
         signature += "def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):\n"
+        signature += "\tDTYPE_RANGE = {'uint8': (0, 255), 'uint16': (0, 65535), 'int8': (-128, 127),"
+        signature += "'int16': (-32768, 32767),'float32': (-1, 1),'float64': (-1, 1)}\n"
         signature += "\tallowed_dtypes = ('uint8', 'uint16', 'int8', 'int16', 'float32', 'float64')\n"
         signature += "\tif dtype not in allowed_dtypes:\n"
         signature += "\t\traise ValueError('dtype keyword {0} not in allowed keywords {1}'.format(dtype, allowed_dtypes))\n\n"
