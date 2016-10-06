@@ -8,3 +8,8 @@
 build/
 dist/
 xicam.egg_info/
+lib/
+bin/
+share/
+local/
+pip-selfcheck.json
