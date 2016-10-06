@@ -1062,7 +1062,47 @@ class FunctionManager(fw.FeatureManager):
         for tuple in func_pipeline:
             params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
 
-        # python_runnable = self.extractPipelineRunnable(func_pipeline, proj, sino, sino_p_chunk, datawidget.path)
+
+        # get save names for pipeline yaml/runnable files
+        dir = ""
+        for function_tuple in func_pipeline:
+            if 'fname' in function_tuple[0].keywords:
+                fname = function_tuple[0].keywords['fname']
+                for item in fname.split('/')[:-1]:
+                    dir += item + '/'
+                yml_file = fname + '.yml'
+                python_file = fname + '.py'
+
+        # make project directory if it isn't made already
+        try:
+            os.stat(dir)
+        except:
+            os.mkdir(dir)
+
+
+        # save function pipeline as runnable
+        path = datawidget.path
+        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, path, ncore)
+        try:
+            with open(python_file, 'w') as py:
+                py.write(runnable)
+        except NameError or IOError:
+            yield "Error: pipeline runnable not written - path could not be found"
+
+
+        # save yaml in reconstruction folder
+        for key in yaml_pipe.iterkeys(): # special case for 'center' param
+            if 'Recon' in key:
+                for subfunc in yaml_pipe[key].iterkeys():
+                    if 'Parameters' in yaml_pipe[key][subfunc].iterkeys():
+                        yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
+
+
+        try:
+            with open(yml_file, 'w') as yml:
+                yamlmod.ordered_dump(yaml_pipe, yml)
+        except NameError or IOError:
+            yield "Error: function pipeline yaml not written - path could not be found"
 
         for i in range(nchunk):
 
@@ -1093,27 +1133,6 @@ class FunctionManager(fw.FeatureManager):
 
             write_start += shape
 
-        # get save names for pipeline yaml/runnable files
-        for function_tuple in func_pipeline:
-            if 'fname' in function_tuple[0].keywords:
-                yml_file = function_tuple[0].keywords['fname'] + '.yml'
-                python_file = function_tuple[0].keywords['fname']+'.py'
-
-        # save yaml in reconstruction folder
-        try:
-            with open(yml_file, 'w') as yml:
-                yamlmod.ordered_dump(yaml_pipe, yml)
-        except NameError:
-            yield "Error: function pipeline yaml not written - path could not be found"
-
-        # save function pipeline as runnable
-        path = datawidget.path
-        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, path, ncore)
-        try:
-            with open(python_file, 'w') as py:
-                py.write(runnable)
-        except NameError:
-            yield "Error: pipeline runnable not written - path could not be found"
 
         # print final 'finished with recon' message
         yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
