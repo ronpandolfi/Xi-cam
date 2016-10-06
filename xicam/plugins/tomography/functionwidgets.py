@@ -1074,11 +1074,8 @@ class FunctionManager(fw.FeatureManager):
                 python_file = fname + '.py'
 
         # make project directory if it isn't made already
-        try:
-            os.stat(dir)
-        except:
-            os.mkdir(dir)
-
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
         # save function pipeline as runnable
         path = datawidget.path
