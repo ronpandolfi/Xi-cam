@@ -959,7 +959,7 @@ class FunctionManager(fw.FeatureManager):
             Dictionary of data necessary to run a reconstruction preview
         """
 
-        self.stack_dict = OrderedDict()
+        stack_dict = OrderedDict()
         partial_stack = []
         self.lockParams(True)
 
@@ -979,11 +979,11 @@ class FunctionManager(fw.FeatureManager):
             if not func.enabled:
                 continue
             elif func.func_name in skip_names:
-                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
                 func = fixed_func  # replace the function with the fixed function
-            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
 
             # load partial_stack
             fpartial = func.partial
@@ -998,18 +998,21 @@ class FunctionManager(fw.FeatureManager):
             if 'ncore' in fpartial.keywords:
                 fpartial.keywords['ncore'] = ncore
             partial_stack.append((fpartial, func.name, params_dict[func.name]))
+
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
-                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
-                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+                    if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
+                        stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    for key, val in ipf_dict.iteritems():
-                        if key in params_dict[func.name].iterkeys():
-                            ipf_dict[key] = params_dict[func.name][key]
-                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+                    stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+
+                    # update input function keywords in slice preview table
+                    if param in stack_dict[func.func_name][func.subfunc_name]:
+                        stack_dict[func.func_name][func.subfunc_name][param] = data_dict[param]
 
         self.lockParams(False)
-        return partial_stack, self.stack_dict, data_dict
+        return partial_stack, stack_dict, data_dict
+
 
 
     def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
