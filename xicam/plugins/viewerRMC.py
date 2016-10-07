@@ -77,6 +77,22 @@ class plugin(base.plugin):
     def tabClose(self,index):
         self.centerwidget.widget(index).deleteLater()
 
+class LogViewer(pg.ImageView):
+
+    def __init__(self):
+        super(LogViewer, self).__init__()
+
+    def setImage(self,*args,**kwargs):
+        super(LogViewer, self).setImage(*args,**kwargs)
+
+        levelmin = np.log(self.levelMin)
+        levelmax = np.log(self.levelMax)
+        if np.isnan(levelmin): levelmin = 0
+        if np.isnan(levelmax): levelmax = 1
+        if np.isinf(levelmin): levelmin = 0
+
+        self.ui.histogram.setLevels(levelmin, levelmax)
+
 
 
 class inOutViewer(QtGui.QWidget, ):
@@ -139,7 +155,7 @@ class inOutViewer(QtGui.QWidget, ):
 
 
         # load and display image
-        self.orig_view = pg.ImageView(self)
+        self.orig_view = LogViewer()
         self.orig_view.setContentsMargins(0,0,0,0)
         if type(paths) == list:
             self.path = paths[0]
@@ -200,7 +216,7 @@ class inOutViewer(QtGui.QWidget, ):
         self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1], 'r',
                      self.orig_view.getImageItem().getViewBox())
 
-        self.edited_view = pg.ImageView(self)
+        self.edited_view = LogViewer()
         self.image_holder.addWidget(self.edited_view)
 
 
@@ -231,7 +247,7 @@ class inOutViewer(QtGui.QWidget, ):
 
         if self.edited_image is not None:
             self.image_holder.removeWidget(self.edited_view)
-            self.edited_view = pg.ImageView(self)
+            self.edited_view = LogViewer()
             self.image_holder.addWidget(self.edited_view)
 
         #resize image so that it's in center
