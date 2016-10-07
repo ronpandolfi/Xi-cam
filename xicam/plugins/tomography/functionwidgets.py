@@ -136,6 +136,22 @@ class FunctionWidget(fw.FeatureWidget):
         for param in self.params.children():
             param.sigValueChanged.connect(self.paramChanged)
 
+        # change on/off icons
+        icon = QtGui.QIcon()
+        if checkable:
+            icon.addPixmap(QtGui.QPixmap("gui/icons_00.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+            self.previewButton.setCheckable(True)
+        else:
+            icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.previewButton.setCheckable(False)
+            self.previewButton.setChecked(True)
+
+        self.previewButton.setIcon(icon)
+        self.previewButton.setFlat(True)
+        self.previewButton.setChecked(True)
+        self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
     @property
     def enabled(self):
         """
