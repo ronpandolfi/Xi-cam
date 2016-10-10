@@ -417,14 +417,16 @@ class WriteFunctionWidget(FunctionWidget):
 
     def __init__(self, name, subname, package):
         super(WriteFunctionWidget, self).__init__(name, subname, package)
-        self.params.child('Browse').sigActivated.connect(
-            lambda: self.params.child('fname').setValue( str(QtGui.QFileDialog.getSaveFileName(None,
-            'Save reconstruction as', self.params.child('fname').value())[0])))
+        # self.params.child('Browse').sigActivated.connect(
+        #     lambda: self.params.child('parent folder').setValue( str(QtGui.QFileDialog.getSaveFileName(None,
+        #     'Save reconstruction as', self.params.child('parent folder').value())[0])))
 
         self.parent = self.params.param('parent folder')
         self.folder = self.params.param('folder name')
         self.file = self.params.param('file name')
-        # self.fname = self.params.param('fname')
+        self.params.child('Browse').sigActivated.connect(self.setBrowse)
+
+
 
         # connect signals to change full file name whenever smaller names are changed
         self.parent.sigValueChanged.connect(self.pathChanged)
@@ -437,6 +439,19 @@ class WriteFunctionWidget(FunctionWidget):
         # self.fname.sigValueChanged.connect(self.fileChanged)
         # self.fname.sigValueChanged.connect(self.folderChanged)
         # self.fname.sigValueChanged.connect(self.parentChanged)
+
+    def setBrowse(self):
+        """
+        Uses result of browse button in 'parent folder' and 'folder name' fields
+        """
+
+        path = str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',self.folder.value())[0])
+
+        folder = path.split('/')[-1]
+        parent = path.split(folder)[0]
+
+        self.parent.setValue(parent)
+        self.folder.setValue(folder)
 
 
     def pathChanged(self):
