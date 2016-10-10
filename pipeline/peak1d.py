@@ -20,8 +20,8 @@ def local_maxima_detector(y):
     length = y.size
     greater_than_follower = np.zeros(length, dtype=bool)
     greater_than_leader = np.zeros(length, dtype=bool)
-    greater_than_follower[:-1] = np.greater(y[:-1], y[1:])
-    greater_than_leader[1:] = np.greater(y[1:], y[:-1])
+    greater_than_follower[:-1] = (y[:-1] > y[1:])
+    greater_than_leader[1:] = (y[1:] > y[:-1])
     maxima = np.logical_and(greater_than_follower, greater_than_leader)
     # End points
     maxima[0] = greater_than_follower[0]
@@ -177,7 +177,7 @@ def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
 
 def nested_boolean_indexing(boolean_slice_1, boolean_slice_2):
     '''
-    Finds one array that slices like two input boolean arrays.
+    Finds one array that slices like two input boolean arrays applied consecutively.
 
     :param boolean_slice_1: 1d numpy bool array
     :param boolean_slice_2: 1d numpy bool array
@@ -571,37 +571,6 @@ def masked_variance_2d_axis_0(y2d, mask2d):
     num_elements = mask2d.sum(axis=0)
     variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
     return variance
-
-
-def read_mega_spreadsheet(filename, data_folder):
-    '''
-    Strictly for reading some data Liheng gave me.
-
-    :param filename:
-    :param data_folder:
-    :return trimmed_data_list: A list of lists of 1d numpy float arrays
-    '''
-    data = np.genfromtxt(data_folder + filename, delimiter=',')
-    # (length, width) = data.shape  # (429, 27)
-    # Split data into components
-    data1 = data[:, 0:3]
-    data2 = data[:, 4:7]
-    data3 = data[:, 8:11]
-    data4 = data[:, 12:15]
-    data5 = data[:, 16:19]
-    data6 = data[:, 20:23]
-    data7 = data[:, 24:27]
-    data_list = [data1, data2, data3, data4, data5, data6, data7]
-    #    print 'data 1 end', data1[-20:, :]
-    #    print 'data 7 end', data7[-20:, :]
-    trimmed_data_list = []
-    for i in data_list:
-        i_mask = ~np.isnan(i[:, 0])
-        x = (i[:, 0])[i_mask]
-        y = (i[:, 1])[i_mask]
-        dy = (i[:, 2])[i_mask]
-        trimmed_data_list.append([x, y, dy])
-    return trimmed_data_list
 
 
 ##### Figure-making functions #####
