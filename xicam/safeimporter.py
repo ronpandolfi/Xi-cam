@@ -1,3 +1,4 @@
+import traceback
 import importlib
 from pipeline import msg
 from PySide import QtGui
@@ -9,6 +10,9 @@ def import_module(modname,packagename=None):
         msg.logMessage(("Imported", modname), msg.DEBUG)
     except ImportError as ex:
         msg.logMessage('Module could not be loaded: ' + modname)
+        tb = traceback.format_exc()
+        msg.logMessage('ImportError message: ' + ex.message)
+        msg.logMessage(tb)
 
         missingpackage = ex.message.replace('No module named ', '')
 
