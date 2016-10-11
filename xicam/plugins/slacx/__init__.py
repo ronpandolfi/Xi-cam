@@ -33,7 +33,7 @@ class SlacxPlugin(base.plugin):
         # rightwidget, bottomwidget, and toolbar (top).
 
         # Load the slacx UI
-        ui_file = QtCore.QFile(os.getcwd()+"xicam/plugins/slacx/slacxbase/ui/basic.ui")
+        ui_file = QtCore.QFile(os.getcwd()+"/xicam/plugins/slacx/slacxbase/ui/basic.ui")
         ui_file.open(QtCore.QFile.ReadOnly)
         slacxui = QtUiTools.QUiLoader().load(ui_file)
         ui_file.close()
@@ -41,20 +41,14 @@ class SlacxPlugin(base.plugin):
         #self.centerwidget = QtGui.QFrame()
         #self.centerwidget.setLayout(QtGui.QGridLayout())
         #self.centerwidget.layout().addItem(slacxui.image_viewer,0,0)
-        self.centerwidget = slacxui.image_viewer
-
-        self.leftwidget = QtGui.QFrame()
-        self.leftwidget.setLayout(slacxui.workflow_layout)
+        self.centerwidget = slacxui.center_frame
+        self.leftwidget = slacxui.left_frame
+        self.rightwidget = slacxui.right_frame
         #self.centerwidget.layout().addItem(slacxui.image_viewer,0,0)
         #self.fileslistwidget = widgets.filesListWidget()
         #self.centerwidget.setLayout(QtGui.QVBoxLayout())
         #self.centerwidget.layout().addWidget(self.fileslistwidget)
-
-
-
-        self.rightwidget = None
-
-        self.processButton.sigActivated.connect(self.processfiles)
+        #self.processButton.sigActivated.connect(self.processfiles)
 
         super(SlacxPlugin, self).__init__(*args, **kwargs)
 

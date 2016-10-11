@@ -8,6 +8,7 @@
 build/
 dist/
 xicam.egg_info/
+*.swp
 lib/
 bin/
 share/
