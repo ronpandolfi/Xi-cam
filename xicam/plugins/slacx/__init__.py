@@ -6,9 +6,10 @@ from PySide import QtGui, QtCore, QtUiTools
 from xicam import config
 from xicam import xglobals
 from pipeline import msg
-from slacxbase.core import slacximgman
-from slacxbase.core.operations import slacxopman
-from slacxbase.core.workflow import slacxwfman
+from slacxbase.slacxui import slacxuiman
+from slacxbase.slacxcore import slacximgman
+from slacxbase.slacxcore.operations import slacxopman
+from slacxbase.slacxcore.workflow import slacxwfman
 
 #import pyqtgraph as pg
 #import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -23,32 +24,41 @@ class SlacxPlugin(base.plugin):
     name = 'Slacx'
 
     def __init__(self, *args, **kwargs):
-        
-        # Start up Slacx model managers
+
+        # start slacx core objects    
         imgman = slacximgman.ImgManager()
         opman = slacxopman.OpManager()
         wfman = slacxwfman.WfManager(imgman=imgman)
 
-        # Plugins may have a centerwidget, leftwidget, 
-        # rightwidget, bottomwidget, and toolbar (top).
+        # start slacx ui objects
+        root_qdir = QtCore.QDir(__file__)
+        rootdir = os.path.split( root_qdir.absolutePath() )[0]+'/slacxbase'
+        uiman = slacxuiman.UiManager(rootdir)
 
-        # Load the slacx UI
-        ui_file = QtCore.QFile(os.getcwd()+"/xicam/plugins/slacx/slacxbase/ui/basic.ui")
-        ui_file.open(QtCore.QFile.ReadOnly)
-        slacxui = QtUiTools.QUiLoader().load(ui_file)
-        ui_file.close()
+        # set up ui-core refs    
+        uiman.imgman = imgman
+        uiman.opman = opman
+        uiman.wfman = wfman
 
-        #self.centerwidget = QtGui.QFrame()
-        #self.centerwidget.setLayout(QtGui.QGridLayout())
-        #self.centerwidget.layout().addItem(slacxui.image_viewer,0,0)
-        self.centerwidget = slacxui.center_frame
-        self.leftwidget = slacxui.left_frame
-        self.rightwidget = slacxui.right_frame
-        #self.centerwidget.layout().addItem(slacxui.image_viewer,0,0)
-        #self.fileslistwidget = widgets.filesListWidget()
-        #self.centerwidget.setLayout(QtGui.QVBoxLayout())
-        #self.centerwidget.layout().addWidget(self.fileslistwidget)
-        #self.processButton.sigActivated.connect(self.processfiles)
+        # Make the slacx title box
+        uiman.make_title()    
+
+        # Connect the menu actions to UiManager functions
+        uiman.connect_actions()
+
+        # Take care of remaining details
+        uiman.final_setup()
+
+        # Set the widgets in base.plugin containers
+        self.centerwidget = uiman.ui.center_frame
+        self.leftwidget = uiman.ui.left_frame
+        self.rightwidget = uiman.ui.right_frame
 
         super(SlacxPlugin, self).__init__(*args, **kwargs)
+
+        # Load the slacx UI
+        #ui_file = QtCore.QFile(os.getcwd()+"/xicam/plugins/slacx/slacxbase/slacxui/basic.ui")
+        #ui_file.open(QtCore.QFile.ReadOnly)
+        #slacxui = QtUiTools.QUiLoader().load(ui_file)
+        #ui_file.close()
 
