@@ -1019,7 +1019,7 @@ class FunctionManager(fw.FeatureManager):
             # load partial_stack
             fpartial = func.partial
             for arg in inspect.getargspec(func._function)[0]:
-                if arg not in fpartial.keywords.iterkeys() or 'center' in arg:
+                if arg not in fpartial.keywords.iterkeys() or arg in 'center':
                     fpartial.keywords[arg] = '{}'.format(arg)
             # get rid of degenerate keyword arguments
             if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
