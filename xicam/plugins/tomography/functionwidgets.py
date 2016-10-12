@@ -1160,6 +1160,7 @@ class FunctionManager(fw.FeatureManager):
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
             write_start += shape
+            del data_dict
 
 
         # print final 'finished with recon' message
