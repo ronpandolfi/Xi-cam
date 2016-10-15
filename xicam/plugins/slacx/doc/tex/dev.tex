@@ -1,0 +1,298 @@
+\chapter{development}
+\label{ch:dev}
+
+This chapter covers the best practices 
+for contributing to \verb|slacx| via git (section~\ref{sec:slacx_dev})
+and instructions for developing operations
+for use in the \verb|slacx| workflow engine (section~\ref{sec:op_dev}).
+These instructions are intended for people
+who are familiar with the \verb|slacx| development team
+and have received an invitation to work in their private repository.
+Public forking of the repository is not currently allowed.
+
+\section{contributing to slacx}
+\label{sec:slacx_dev}
+
+The \verb|slacx| repository is currently private.
+Request access by getting in touch with the \verb|slacx| developers
+at \verb|slacx-developers@slac.stanford.edu|. 
+If you are looking for a long term relationship,
+you can send an email to join the slacx-developers listserv.
+Send an email to 
+\begin{lstlisting}
+listserv@listserv.slac.stanford.edu
+\end{lstlisting}
+with no subject and the following text in the body: 
+\begin{lstlisting}
+SUB SLACX-DEVELOPERS
+\end{lstlisting}
+If you want to unsubscribe, use:
+\begin{lstlisting}
+UNSUB SLACX-DEVELOPERS
+\end{lstlisting}
+If you need to configure your list settings, see the ListServ manual at
+\begin{lstlisting}
+http://www.lsoft.com/manuals/16.0/htmlhelp/list%20subscribers/coverpage.html
+\end{lstlisting}
+
+Code development is currently following the ``shared repository model'',
+meaning developers have write access to the main repository.
+In this model, you must be careful with your edits.
+In particular, \textbf{all coding should be done in feature branches}.
+Never push changes directly to the \verb|master| branch,
+and only push to the \verb|dev| branch if you are absolutely sure it's a good idea.
+If bad commits happen, we will roll back the problematic changes 
+and initiate the process outlined below for pulling the new feature into \verb|dev|.
+
+The repository has a \verb|master| branch that is intended to be the most stable version,
+and a \verb|dev| branch that is intended for development.
+The rest of the branches are feature branches.
+Once you have access, clone the repository
+and create your own development or feature branch.
+When you are satisfied, make sure your feature is up to date with \verb|dev|
+and submit a pull request from your feature branch to \verb|dev|.
+Below are are step-by-step instructions
+for the command line a \verb|PyCharm| interfaces.
+NB: these instructions assume you are developing a feature for the code,
+and it should be incorporated into the \verb|dev| branch.
+If your feature is more appropriate for the \verb|master| branch,
+for example if it is a stability or infrastructure or documentation fix,
+you should rebase on \verb|master| during development,
+and always finish with a pull request.
+ \newline
+
+\textbf{--- start here the first time you work on slacx ---} 
+\begin{enumerate} 
+    \item Clone the repository: 
+    \begin{itemize} 
+        \item CL: \verb|git clone <REPO-URL>|. 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    This copies the remote repository (hosted online)
+    to a local directory (on your machine). 
+    Your new directory contains the source code
+    and a local \verb|master| branch 
+    that tracks the remote \verb|master| branch.
+    \item Create a \verb|dev| branch that tracks the origin's \verb|dev| branch.
+    \begin{itemize} 
+        \item CL: \verb|git checkout -b dev origin/dev|. 
+        %\verb|git checkout dev|, 
+        %which is implied shorthand for
+        %\verb|git checkout --track origin/dev|, which is shorthand for
+        \item \verb|PyCharm|: 
+    \end{itemize} 
+    \item Create your own feature branch. 
+    \label{itm:init_laststep}
+    \begin{itemize} 
+        \item CL: \verb|git branch my-feature-branch| 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+%\end{enumerate} 
+    \item \textbf{--- start here every time you work on your feature ---}
+%\begin{enumerate}
+    %\item Ensure there are no unstaged changes lying around.
+    %\begin{itemize} 
+    %    \item CL: \verb|git status|
+    %    \item \verb|PyCharm|:  
+    %\end{itemize} 
+    %If you have made changes, \verb|git| will track them,
+    %throw errors in the next steps.
+    %Either commit the changes to your feature branch,
+    %or get rid of them. To get rid of them:
+    %\begin{itemize} 
+    %    \item CL: first run \verb|git stash|, then \verb|git stash drop|
+    %    \item \verb|PyCharm|:  
+    %\end{itemize} 
+    \item Check out the \verb|dev| branch.
+    \label{itm:rebase_start}
+    \begin{itemize} 
+        \item CL: \verb|git checkout dev|
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item Pull the latest commits from the remote \verb|dev| branch.
+    \begin{itemize} 
+        \item CL: \verb|git pull origin dev|
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item Check out your feature branch.
+    \begin{itemize} 
+        \item CL: \verb|git checkout my-feature-branch|
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item Rebase your feature branch on the \verb|dev| branch. 
+    \label{itm:rebase_end}
+    \begin{itemize} 
+        \item CL: \verb|git rebase dev| 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    If you have conflicts during the rebase, 
+    this step can be skipped for the moment,
+    but these conflicts will eventually need to be cleaned up
+    so that you can continue rebasing regularly on \verb|dev|.
+    \item Finally, \textbf{work on your feature}. 
+    \item After working, make sure you are still on your feature branch, 
+    then stage your edits. 
+    \begin{itemize} 
+        \item CL: \verb|git add .| 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item After staging your edits, commit them with a description. 
+    \label{itm:commitfeature} 
+    \begin{itemize} 
+        \item CL: \verb|git commit -m 'description of edits'| 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item Push your commits on your feature branch to the origin (remote) repository.
+    \label{itm:pushfeature} 
+    \begin{itemize} 
+        \item CL: \verb|git push origin my-feature-branch| 
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    Now your colleagues can see what you have done,
+    and use your changes in their own code if they need to!
+%\end{enumerate} 
+    \item \textbf{--- start here when you are done with your feature ---}
+%\begin{enumerate}
+    \item Follow steps~\ref{itm:rebase_start} through~\ref{itm:rebase_end} above
+    to rebase your feature branch on \verb|dev| one last time.
+    \item If the rebase changed anything, 
+    use step~\ref{itm:pushfeature} 
+    above for one last push to the remote repo.
+    \item If you think it's safe 
+    (i.e. you know that your changes 
+    are not likely to crash your co-workers' codes 
+    when they are merged to the \verb|dev| branch), 
+    you can now merge your feature into the \verb|dev| branch.
+    \begin{itemize} 
+        \item CL: 
+        %\verb|git checkout dev|, 
+        %then \verb|git merge my-feature-branch|, 
+        %then \verb|git push origin dev|.
+        \begin{lstlisting}
+            git checkout dev 
+            git merge my-feature-branch 
+            % stop and think. any doubts? 
+            git push origin dev
+        \end{lstlisting}
+        \item \verb|PyCharm|:  
+    \end{itemize} 
+    \item If you aren't 100\% sure that it's safe to merge your feature into \verb|dev|,
+    submit a pull request via the online interface.
+    Request to pull \verb|my-feature-branch| into \verb|dev|.
+    The \verb|slacx| development team will discuss, possibly edit, 
+    and ultimately accept your feature.
+    \item If your feature was more appropriate for the \verb|master| branch,
+    submit a pull request for the \verb|master| branch.
+\end{enumerate} 
+
+\section{developing operations for slacx}
+\label{sec:op_dev}
+
+Developing operations for use in the \verb|slacx| workflow engine 
+is meant to be as painless as possible.
+A continuing effort will be made to streamline this process.
+
+The most general description of an operation 
+is to treat it as a black box that takes some inputs (data and parameters),
+performs some processing with those inputs,
+and produces some output (data and other features).
+Users can choose to build their operations in two ways.
+
+One option is to write the function into a python class
+that defines names for its inputs and outputs
+and then stores the input and output data 
+within instances (objects) of that class.
+This process is most easily understood 
+by following the template and instructions 
+provided in section~\ref{sec:op_dev_by_class} below.
+
+Another option (not yet implemented)
+is to write the function into a python module 
+that contains formatted metadata 
+about how the function should be called,
+with input and output data 
+stored in the workflow engine itself.
+
+In either case, the user/developer writes their operation 
+into a module \verb|somefile.py|
+and then places this module in the \verb|slacx/slacxcore/operations/| directory.
+If the implementation obeys the specified format, 
+the operation will automatically be made available 
+to the \verb|slacx| workflow manager
+the next time \verb|slacx| is started.
+If the user/developer is not careful 
+about implementing their operation,
+\verb|slacx| will probably raise exceptions and exit. 
+This could happen at startup (when the operation is read),
+during workflow management (when the operations is loaded with inputs),
+or during execution (when the operation is called upon to compute things),
+depending on where (if any) errors were made.
+
+
+\subsection{operations as python classes}
+\label{sec:op_dev_by_class}
+
+The following code block gives a minimal, 
+commented template for developing
+operations as python classes.
+Users/developers with some programming background
+may find all the information they need in this template alone.
+
+\begin{lstlisting}
+# Users and developers should remove all comments from this template.
+# All text outside comments that is meant to be removed or replaced 
+# is <written within angle brackets>.
+
+# Operations implemented as python classes 
+# have a common interface for communicating 
+# with the slacx workflow manager.
+# That common interface is ensured by inheriting it
+# from an abstract class called 'Operation'.
+from slacxop import Operation
+
+# Name the operation, specify inheritance (Operation)
+class <OperationName>(Operation):
+    # Give a brief description of the operation
+    # bracketed by """triple-double-quotes"""
+    """<Description of Operation>"""
+
+    # Write an __init__() function for the Operation.
+    def __init__(self):
+        # Name the input and output data/parameters for your operation.
+        # Format names as 'single_quotes_without_spaces'.
+        input_names = ['<input_name_1>','<input_name_2>',<...>]
+        output_names = ['<output_name_1>','<output_name_2>',<...>]
+        # Call the __init__ method of the Operation abstract (super)class.
+        # This instantiates {key:value} dictionaries of inputs and outputs, 
+        # which have keys generated from input_names and output_names.
+        # All values in the dictionary are initialized as None. 
+        super(Identity,self).__init__(input_names,output_names)
+        # Write a free-form documentation string describing each item
+        # that was named in input_names and output_names.
+        self.input_doc['<input_name_1>'] = '<expectations for input 1>'
+        self.input_doc['<input_name_2>'] = '<etc>'
+        self.output_doc['<output_name_1>'] = '<form of output 1>'
+        self.output_doc['<output_name_2>'] = '<etc>'
+        # Categorize the operation. Multiple categories are acceptable.
+        # Indicate subcategories with a '.' character.
+        self.categories = ['<CAT1>','<CAT2>.<SUBCAT1>',<...>]
+        
+    # Write a run() function for this Operation.
+    def run(self):
+        # Optional- create references in the local namespace for cleaner code.
+        <inp1> = self.inputs['<input_name_1>']
+        <inp2> = self.inputs['<input_name_2>']
+        <etc>
+        # Perform the computation
+        < ... >
+        # Save the outputs
+        self.outputs['<output_name_1>'] = <computed_value_1>
+        self.outputs['<output_name_2>'] = <etc>
+\end{lstlisting}
+
+
+\subsection{operations as functions in a module}
+\label{sec:op_dev_by_function}
+
+This functionality is not yet implemented.
+

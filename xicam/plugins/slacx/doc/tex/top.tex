@@ -1,0 +1,48 @@
+\documentclass{report}
+
+%\usepackage{marginnote}
+%\reversemarginpar
+%\usepackage{sidenotes}
+%\usepackage{graphicx}
+%\usepackage{program}
+%\usepackage{amsfonts}
+%\usepackage{enumerate}
+%\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% source code setup with listings package
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\footnotesize\ttfamily},
+  numbers=none,
+  numberstyle=\footnotesize\color{gray},
+  %keywordstyle=\color{blue},
+  %commentstyle=\color{dkgreen},
+  %stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+
+\begin{document}
+
+	\title{reference manual and user guide for the slacx image data workflow manager}
+	\author{L. A. Pellouchoud}
+	\date{\today}	
+	\maketitle
+
+	\input{intro}
+	\input{installation}
+    \input{dev}
+
+\end{document}

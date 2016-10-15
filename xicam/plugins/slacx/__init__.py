@@ -6,18 +6,10 @@ from PySide import QtGui, QtCore, QtUiTools
 from xicam import config
 from xicam import xglobals
 from pipeline import msg
-from slacxbase.slacxui import slacxuiman
-from slacxbase.slacxcore import slacximgman
-from slacxbase.slacxcore.operations import slacxopman
-from slacxbase.slacxcore.workflow import slacxwfman
-
-#import pyqtgraph as pg
-#import pyqtgraph.parametertree.parameterTypes as pTypes
-#from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-#from pipeline import loader, writer
-#import re
-#import numpy as np
-#import widgets
+from slacx.slacxui import slacxuiman
+from slacx.slacxcore import slacximgman
+from slacx.slacxcore.operations import slacxopman
+from slacx.slacxcore.workflow import slacxwfman
 
 class SlacxPlugin(base.plugin):
     # The display name in the xi-cam plugin bar
@@ -32,7 +24,7 @@ class SlacxPlugin(base.plugin):
 
         # start slacx ui objects
         root_qdir = QtCore.QDir(__file__)
-        rootdir = os.path.split( root_qdir.absolutePath() )[0]+'/slacxbase'
+        rootdir = os.path.split( root_qdir.absolutePath() )[0]+'/slacx'
         uiman = slacxuiman.UiManager(rootdir)
 
         # set up ui-core refs    
@@ -56,9 +48,4 @@ class SlacxPlugin(base.plugin):
 
         super(SlacxPlugin, self).__init__(*args, **kwargs)
 
-        # Load the slacx UI
-        #ui_file = QtCore.QFile(os.getcwd()+"/xicam/plugins/slacx/slacxbase/slacxui/basic.ui")
-        #ui_file.open(QtCore.QFile.ReadOnly)
-        #slacxui = QtUiTools.QUiLoader().load(ui_file)
-        #ui_file.close()
 
