@@ -116,7 +116,7 @@ class UIform(object):
                   {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'End Projection', 'type': 'int'},
                   {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 10*cpu_count()},
+                  {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
                   {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
                    'limits':[1, cpu_count()]}]
 
