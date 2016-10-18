@@ -180,6 +180,12 @@ Phase Retrieval:
   type: float
 - name: pad
   type: bool
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
 Remove Outliers:
 - name: dif
   type: float
