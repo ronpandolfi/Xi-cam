@@ -100,11 +100,6 @@ class UIform(object):
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
-        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
-        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
-
-
         rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
         configtree = pt.ParameterTree()
@@ -122,9 +117,17 @@ class UIform(object):
 
         self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
         configtree.setParameters(self.config_params, showTop=False)
-
         rightwidget.addWidget(configtree)
-        self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
+        icon_params = QtGui.QIcon(QtGui.QPixmap("gui/icons_54.png")) #parameter tree icon
+        self.leftmodes = [(leftwidget, icon_functions),
+                          (rightwidget, icon_params),
+                          (self.property_table, icon_properties)]
+
+
+
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
         """

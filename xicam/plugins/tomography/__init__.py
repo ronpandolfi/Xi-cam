@@ -7,7 +7,7 @@ __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
-__email__ = "ronpandolfi@lbl.gov"
+__email__ = "ronpandolfi@lbl.govr"
 __status__ = "Beta"
 
 
@@ -78,7 +78,7 @@ class plugin(base.plugin):
         self.centerwidget = self.ui.centerwidget
         self.toolbar = self.ui.toolbar
         self.leftmodes = self.ui.leftmodes
-        self.rightmodes = self.ui.rightmodes
+        self.rightwidget = None
         self.bottomwidget = self.ui.bottomwidget
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
