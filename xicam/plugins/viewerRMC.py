@@ -186,7 +186,8 @@ class inOutViewer(QtGui.QWidget, ):
                   {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                   {'name': 'Model start size', 'type': 'int', 'value': start_size},
-                  {'name': 'Save Name', 'type': 'str', 'value': 'processed'}]
+                  {'name': 'Save name', 'type': 'str', 'value': 'processed'},
+                  {'name': 'Mask image', 'type': 'str'}]
         self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
         self.scatteringParams.setParameters(self.configparams, showTop=False)
 
@@ -355,25 +356,26 @@ class inOutViewer(QtGui.QWidget, ):
 
 
         params = self.configparams
-
+        mask = params.child('Mask image').value()
 
         hig_info = {'hipRMCInput': {'instrumentation': {'inputimage': "{}".format(self.write_path),
+                                             'maskimage': "{}".format(mask) if mask else '',
                                              'imagesize': [self.new_dim, self.new_dim ],
                                              'numtiles': params.child('Num tiles').value(),
                                              'loadingfactors': [params.child('Loading factor').value()]},
-                         'computation': {'runname': "{}".format(params.child('Save Name').value()),
+                         'computation': {'runname': "{}".format(params.child('Save name').value()),
                                          'modelstartsize': [params.child('Model start size').value(),
                                                             params.child('Model start size').value()],
                                          'numstepsfactor': params.child('Numsteps factor').value(),
                                          'scalefactor': params.child('Scale factor').value()}}}
 
         h = hig.hig(**hig_info)
-        self.hig_name = './' + params.child('Save Name').value()
+        self.hig_name = './' + params.child('Save name').value()
         if not self.hig_name.endswith('.hig'):
             self.hig_name += '.hig'
 
         h.write(self.hig_name)
-        self.save_name = self.configparams.child('Save Name').value()
+        self.save_name = self.configparams.child('Save name').value()
         self.start_time = time.time()
 
         process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done)
