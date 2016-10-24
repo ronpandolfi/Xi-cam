@@ -3,11 +3,7 @@ import os
 from xicam.plugins import base
 from PySide import QtGui, QtCore, QtUiTools
 
-from xicam import config
-from xicam import xglobals
-from pipeline import msg
 from slacx.slacxui import slacxuiman
-from slacx.slacxcore import slacximgman
 from slacx.slacxcore.operations import slacxopman
 from slacx.slacxcore.workflow import slacxwfman
 
@@ -18,9 +14,8 @@ class SlacxPlugin(base.plugin):
     def __init__(self, *args, **kwargs):
 
         # start slacx core objects    
-        imgman = slacximgman.ImgManager()
         opman = slacxopman.OpManager()
-        wfman = slacxwfman.WfManager(imgman=imgman)
+        wfman = slacxwfman.WfManager()
 
         # start slacx ui objects
         root_qdir = QtCore.QDir(__file__)
@@ -28,7 +23,6 @@ class SlacxPlugin(base.plugin):
         uiman = slacxuiman.UiManager(rootdir)
 
         # set up ui-core refs    
-        uiman.imgman = imgman
         uiman.opman = opman
         uiman.wfman = wfman
 
