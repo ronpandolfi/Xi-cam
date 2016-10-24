@@ -392,10 +392,24 @@ class inOutViewer(QtGui.QWidget, ):
         """
         Slot to receive signal to run HipRMC as subprocess on background thread
         """
+        cwd = os.getcwd() + '/'
+        self.watcher = QtCore.QFileSystemWatcher([cwd])
+        # self.watcher.connect(self.watcher, QtCore.SIGNAL('directoryChanged(QString)'), self.getpath)
+        print self.watcher.directories()
+        self.watcher.directoryChanged.connect(self.getpath)
+        # self.watcher.fileChanged.connect(self.getpath)
 
         proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print "harhaeg"
+
         self.output, self.err = proc.communicate()
 
+    @QtCore.Slot()
+    def getpath(self, path):
+        print "rgaefaswgfewg"
+        all_subdirs = [d for d in os.listdir(path) if os.path.isdir(d)]
+        print all_subdirs
+        self.watcher.addpath(unicode(max(all_subdirs, key=os.path.getmtime),"utf-8"))
 
     @QtCore.Slot()
     def RMC_done(self):
@@ -410,7 +424,7 @@ class inOutViewer(QtGui.QWidget, ):
     @QtCore.Slot()
     def write_and_display(self):
         """
-        Slot. Connected to RMC_done slot function. Loads images in rmc_viewer and writes HipRMC text output
+        Slot. Connected to RMC_done slot function. Loads images in rmc_viewer and writes HipRMC text output qfilesystemwatcher
         as txt file
         """
         # complicated way of finding and writing into folder name written by hiprmc
