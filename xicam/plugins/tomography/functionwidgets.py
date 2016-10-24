@@ -1004,16 +1004,20 @@ class FunctionManager(fw.FeatureManager):
         # load data dictionary
         data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
 
-
-
         for func in self.features:
+            name = func.name
             if not func.enabled:
                 continue
             elif func.func_name in skip_names:
                 stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
-                func = fixed_func  # replace the function with the fixed function
+                func = fixed_func
+                for key, val in func.exposed_param_dict.iteritems():
+                    if key in 'center':
+                        data_dict[key] = val
+                    elif key in params_dict[name].iterkeys() and key not in 'center':
+                        params_dict[name][key] = val
             stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
 
             # load partial_stack
@@ -1028,7 +1032,7 @@ class FunctionManager(fw.FeatureManager):
 
             if 'ncore' in fpartial.keywords:
                 fpartial.keywords['ncore'] = ncore
-            partial_stack.append((fpartial, func.name, params_dict[func.name]))
+            partial_stack.append((fpartial, name, params_dict[name]))
 
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
@@ -1387,7 +1391,8 @@ class FunctionManager(fw.FeatureManager):
                                                 'param_dict': function.param_dict,
                                                 'exposed_param_dict': function.exposed_param_dict,
                                                 'partial': function.partial,
-                                                'input_functions': function.input_functions})
+                                                'input_functions': function.input_functions,
+                                                '_function': function._function})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func)
 

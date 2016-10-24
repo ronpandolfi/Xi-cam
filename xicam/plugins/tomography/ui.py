@@ -120,8 +120,8 @@ class UIform(object):
         rightwidget.addWidget(configtree)
 
         icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
-        icon_params = QtGui.QIcon(QtGui.QPixmap("gui/icons_61.png")) #parameter tree icon
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_61.png")) #metadata icon
+        icon_params = QtGui.QIcon(QtGui.QPixmap("gui/icons_62.png")) #parameter tree icon
         self.leftmodes = [(leftwidget, icon_functions),
                           (rightwidget, icon_params),
                           (self.property_table, icon_properties)]
