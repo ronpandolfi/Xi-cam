@@ -38,42 +38,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="image_button_box">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="1" column="0">
-           <widget class="QPushButton" name="open_images_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="close_images_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QPushButton" name="display_item_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTreeView" name="image_tree"/>
-       </item>
-       <item>
         <widget class="QPlainTextEdit" name="message_board">
          <property name="undoRedoEnabled">
           <bool>false</bool>
@@ -97,22 +61,8 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
-         <item row="0" column="0" colspan="2">
-          <widget class="QTabWidget" name="image_viewer">
-           <property name="currentIndex">
-            <number>0</number>
-           </property>
-           <widget class="QWidget" name="tab">
-            <attribute name="title">
-             <string>Tab 1</string>
-            </attribute>
-           </widget>
-           <widget class="QWidget" name="tab_2">
-            <attribute name="title">
-             <string>Tab 2</string>
-            </attribute>
-           </widget>
-          </widget>
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="image_viewer"/>
          </item>
         </layout>
        </widget>
@@ -127,61 +77,56 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QFrame" name="workflow_button_box">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="2" column="1">
-           <widget class="QPushButton" name="apply_workflow_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="add_op_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="edit_op_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QPushButton" name="rm_op_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QPushButton" name="display_workflowitem_button">
-            <property name="text">
-             <string>PushButton</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="2" column="0" colspan="2">
         <widget class="QTreeView" name="workflow_tree"/>
        </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="edit_op_button">
+         <property name="text">
+          <string>PushButton</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QTreeView" name="op_tree"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="rm_op_button">
+         <property name="text">
+          <string>PushButton</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QPushButton" name="apply_workflow_button">
+         <property name="text">
+          <string>PushButton</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QPushButton" name="add_op_button">
+         <property name="text">
+          <string>PushButton</string>
+         </property>
+        </widget>
+       </item>
       </layout>
+      <zorder>workflow_tree</zorder>
+      <zorder>edit_op_button</zorder>
+      <zorder>op_tree</zorder>
+      <zorder>edit_op_button</zorder>
+      <zorder>add_op_button</zorder>
+      <zorder>apply_workflow_button</zorder>
+      <zorder>rm_op_button</zorder>
      </widget>
     </item>
    </layout>
+   <zorder>left_frame</zorder>
+   <zorder>right_frame</zorder>
+   <zorder>center_frame</zorder>
+   <zorder>widget</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

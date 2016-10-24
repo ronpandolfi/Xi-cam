@@ -1,14 +1,16 @@
 from PySide import QtCore
+import dask.threaded
 
 from ..treemodel import TreeModel
 from ..treeitem import TreeItem
 from ..operations import optools
+from .slacxwf import Workflow
 
 # TODO: See note on remove_op()
 
 class WfManager(TreeModel):
     """
-    Class for managing a workflow built from slacx operations.
+    Class for managing a Workflow(Operation) built from slacx Operations.
     """
 
     def __init__(self,**kwargs):
@@ -18,8 +20,6 @@ class WfManager(TreeModel):
         #    with f as open(wf_loader,'r'): 
         #        self.load_from_file(f)
         self._wf_dict = {}       # this will be a dict for a dask.threaded graph 
-        if 'imgman' in kwargs:
-            self.imgman = kwargs['imgman'] 
         super(WfManager,self).__init__()
 
     def add_op(self,new_op,tag):
@@ -134,6 +134,7 @@ class WfManager(TreeModel):
         """
         Check the dependencies of the workflow.
         Ensure that all loaded operations have inputs that make sense.
+        Return a status code and message for each of the Operations.
         """
         pass
 
@@ -152,26 +153,26 @@ class WfManager(TreeModel):
                 # Get QModelIndex of this item for later use in updating tree view
                 indx = self.index(j,0,QtCore.QModelIndex())
                 op = item.data[0]
-                #print 'op {}: {}'.format(j,type(op).__name__)
                 for name,val in op.inputs.items():
                     op.inputs[name] = self.locate_input(val)
-                #print 'op {} inputs: {}'.format(j,op.inputs)
-                #print 'BEFORE: op {} outputs: {}'.format(j,op.outputs)
                 op.run()
-                #print 'op {} called run()'.format(j)
-                #print 'AFTER: op {} outputs: {}'.format(j,op.outputs)
                 ops_done.append(j)
                 self.update_op(indx,op)
-                # emit the dataChanged signal
-                #self.dataChanged.emit(QtCore.QModelIndex(),QtCore.QModelIndex()) 
-                #self.dataChanged.emit(indx,indx) 
-                #outputs_indx = self.index(1,0,indx)
-                #self.dataChanged.emit(outputs_indx,outputs_indx) 
-                #outputs_treeitem = item.children[1]
-                #for row in range(len(outputs_treeitem.children)):
-                #    indx = self.index(row,0,outputs_indx)
-                #    self.dataChanged.emit(indx,indx)
             to_run = self.ops_ready(ops_done)
+
+    def run_wf_graph(self):
+        """
+        Run the workflow by building a dask-compatible dict,
+        then calling dask.threaded.get(dict, key)
+        for each of the keys corresponding to operation outputs.
+        TODO: optimize the execution of this by making the smallest
+        possible number of calls to get().
+        """
+        # build the graph, get the list of outputs
+        outputs_list = self.load_wf_dict()
+        print 'workflow graph as dict:'
+        print self._wf_dict
+        
 
     def ops_ready(self,ops_done):
         """
@@ -207,16 +208,28 @@ class WfManager(TreeModel):
                 keyindx += 1
                 input_keys.append(name)
                 input_vals = input_vals + (dask_key)
-            # Add a load_inputs line for each op
+            # Add a load_inputs line for op j
             dask_key = 'op'+str(j)+'_load'
             self._wf_dict[key] = (self.load_inputs, op, input_keys, input_vals) 
-            # Add a run_op line for each op
+            # Add a run_op line for op j
             dask_key = 'op'+str(j)+'_run'
             self._wf_dict[key] = (self.run_op, op) 
+            # Keep track of the keys corresponding to operation outputs.
+            keyindx = 0
+            output_keys = []
+            for name,val in op.outputs.items():
+                # Add a get_output line for each output
+                dask_key = 'op'+str(j)+'out'+str()
+                self._wf_dict[dask_key] = (self.get_output, val)
+                keyindx += 1
+                output_keys.append(name)
 
     @staticmethod
     def load_inputs(op,keys,vals):
-        # fetch Operation at op_row
+        """
+        By the time this is called, vals should be bound to actual input values by dask.
+        Each dask key should have been assigned to a (self.locate_input, val)
+        """
         for i in range(len(keys)):
             key = keys[i]
             val = vals[i] 
@@ -228,32 +241,33 @@ class WfManager(TreeModel):
         return op.run()
 
     def locate_input(self,inplocator):
-        """Return the data pointed to by a given InputLocator object"""
+        """
+        Return the data pointed to by a given InputLocator object.
+        If this is called on anything other than an InputLocator,
+        it does nothing and returns the input argument.
+        """
         if type(inplocator).__name__ == 'InputLocator':
             src = inplocator.src
             val = inplocator.val
             if src in optools.valid_sources:
-                if src == optools.text_input: 
-                    # val will be already typecast during operation loading- return it directly
+                if (src == optools.fs_input
+                   or src == optools.text_input): 
+                    # val will be handled during operation loading- return it directly
                     return val 
-                elif src == optools.image_input: 
-                    # follow val as uri in image tree
-                    trmod = self.imgman
                 elif src == optools.op_input: 
                     # follow val as uri in workflow tree
-                    trmod = self
-                path = val.split('.')
-                parent_indx = QtCore.QModelIndex()
-                for itemtag in path:
-                    # get QModelIndex of item from itemtag
-                    row = trmod.list_tags(parent_indx).index(itemtag)
-                    qindx = trmod.index(row,0,parent_indx)
-                    # get TreeItem from QModelIndex
-                    item = trmod.get_item(qindx)
-                    # set new parent in case the path continues...
-                    parent_indx = qindx
-                # item.data[0] should now be the desired piece of data
-                return item.data[0]
+                    path = val.split('.')
+                    parent_indx = QtCore.QModelIndex()
+                    for itemtag in path:
+                        # get QModelIndex of item from itemtag
+                        row = self.list_tags(parent_indx).index(itemtag)
+                        qindx = self.index(row,0,parent_indx)
+                        # get TreeItem from QModelIndex
+                        item = self.get_item(qindx)
+                        # set new parent in case the path continues...
+                        parent_indx = qindx
+                    # item.data[0] should now be the desired piece of data
+                    return item.data[0]
             else: 
                 msg = 'found input source {}, should be one of {}'.format(
                 src, valid_sources)

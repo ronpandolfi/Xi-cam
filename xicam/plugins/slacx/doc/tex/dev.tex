@@ -44,29 +44,32 @@ and only push to the \verb|dev| branch if you are absolutely sure it's a good id
 If bad commits happen, we will roll back the problematic changes 
 and initiate the process outlined below for pulling the new feature into \verb|dev|.
 
-The repository has a \verb|master| branch that is intended to be the most stable version,
-and a \verb|dev| branch that is intended for development.
-The rest of the branches are feature branches.
+The \verb|master| branch is intended to be the most stable tested version,
+and the \verb|dev| branch is for staging features that have been developed.
+The rest of the branches should contain features being actively developed.
 Once you have access, clone the repository
 and create your own development or feature branch.
-When you are satisfied, make sure your feature is up to date with \verb|dev|
-and submit a pull request from your feature branch to \verb|dev|.
+When you are satisfied, make sure your feature branch 
+includes the latest changes to \verb|dev|
+and either merge your feature into \verb|dev|,
+or (if you're not fully comfortable with that),
+submit a pull request to review the merging of your feature with \verb|dev|.
 Below are are step-by-step instructions
-for the command line a \verb|PyCharm| interfaces.
-NB: these instructions assume you are developing a feature for the code,
-and it should be incorporated into the \verb|dev| branch.
-If your feature is more appropriate for the \verb|master| branch,
+for the command line and \verb|PyCharm| interfaces.
+
+If you are developing a feature that belongs in the \verb|master| branch,
 for example if it is a stability or infrastructure or documentation fix,
-you should rebase on \verb|master| during development,
-and always finish with a pull request.
+please always finish with a pull request.
  \newline
 
 \textbf{--- start here the first time you work on slacx ---} 
 \begin{enumerate} 
+    \item Get in touch with the slacx developers to get access to the repository. 
+        See ~\ref{sec:introduction}.
     \item Clone the repository: 
     \begin{itemize} 
         \item CL: \verb|git clone <REPO-URL>|. 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Checkout from Version Control > enter repository URL
     \end{itemize} 
     This copies the remote repository (hosted online)
     to a local directory (on your machine). 
@@ -79,13 +82,13 @@ and always finish with a pull request.
         %\verb|git checkout dev|, 
         %which is implied shorthand for
         %\verb|git checkout --track origin/dev|, which is shorthand for
-        \item \verb|PyCharm|: 
+        \item \verb|PyCharm|: VCS > Git > Branches, select origin/dev, Checkout as new local branch 
     \end{itemize} 
     \item Create your own feature branch. 
     \label{itm:init_laststep}
     \begin{itemize} 
         \item CL: \verb|git branch my-feature-branch| 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Branches, New branch
     \end{itemize} 
 %\end{enumerate} 
     \item \textbf{--- start here every time you work on your feature ---}
@@ -107,46 +110,49 @@ and always finish with a pull request.
     \label{itm:rebase_start}
     \begin{itemize} 
         \item CL: \verb|git checkout dev|
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Branches, dev -> origin/dev, Checkout 
     \end{itemize} 
     \item Pull the latest commits from the remote \verb|dev| branch.
     \begin{itemize} 
         \item CL: \verb|git pull origin dev|
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Pull Changes 
     \end{itemize} 
     \item Check out your feature branch.
     \begin{itemize} 
         \item CL: \verb|git checkout my-feature-branch|
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Branches, <yourFeatureBranch>, Checkout 
     \end{itemize} 
-    \item Rebase your feature branch on the \verb|dev| branch. 
+    \item Rebase your feature branch onto the \verb|dev| branch. 
     \label{itm:rebase_end}
     \begin{itemize} 
         \item CL: \verb|git rebase dev| 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Rebase
     \end{itemize} 
     If you have conflicts during the rebase, 
+    due to changes in \verb|dev| that disagree with changes in your feature,
     this step can be skipped for the moment,
-    but these conflicts will eventually need to be cleaned up
-    so that you can continue rebasing regularly on \verb|dev|.
+    but these conflicts will eventually need to be cleaned up.
+    Get help from a fellow developer, 
+    or if you are pretty sure your version of the code is better,
+    try a pull request!
     \item Finally, \textbf{work on your feature}. 
     \item After working, make sure you are still on your feature branch, 
     then stage your edits. 
     \begin{itemize} 
         \item CL: \verb|git add .| 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: skip this step 
     \end{itemize} 
     \item After staging your edits, commit them with a description. 
     \label{itm:commitfeature} 
     \begin{itemize} 
         \item CL: \verb|git commit -m 'description of edits'| 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Commit Changes
     \end{itemize} 
     \item Push your commits on your feature branch to the origin (remote) repository.
     \label{itm:pushfeature} 
     \begin{itemize} 
         \item CL: \verb|git push origin my-feature-branch| 
-        \item \verb|PyCharm|:  
+        \item \verb|PyCharm|: VCS > Git > Push 
     \end{itemize} 
     Now your colleagues can see what you have done,
     and use your changes in their own code if they need to!
@@ -155,14 +161,14 @@ and always finish with a pull request.
 %\begin{enumerate}
     \item Follow steps~\ref{itm:rebase_start} through~\ref{itm:rebase_end} above
     to rebase your feature branch on \verb|dev| one last time.
-    \item If the rebase changed anything, 
-    use step~\ref{itm:pushfeature} 
-    above for one last push to the remote repo.
-    \item If you think it's safe 
-    (i.e. you know that your changes 
+    %\item If the rebase changed anything, 
+    %use step~\ref{itm:pushfeature} 
+    %above for one last push to the remote repo.
+    \item If you know that your changes 
     are not likely to crash your co-workers' codes 
-    when they are merged to the \verb|dev| branch), 
-    you can now merge your feature into the \verb|dev| branch.
+    when they are merged to the \verb|dev| branch, 
+    you can now merge your feature into the \verb|dev| branch
+    and push \verb|dev| to the remote repository.
     \begin{itemize} 
         \item CL: 
         %\verb|git checkout dev|, 
@@ -171,10 +177,16 @@ and always finish with a pull request.
         \begin{lstlisting}
             git checkout dev 
             git merge my-feature-branch 
-            % stop and think. any doubts? 
+            % mildly cautious reflection 
             git push origin dev
         \end{lstlisting}
         \item \verb|PyCharm|:  
+        \begin{itemize} 
+            \item VCS > Git > Branches, dev -> origin/dev, Checkout 
+            \item VCS > Git > Branches, <yourFeatureBranch>, Merge 
+            \item mildly cautious reflection
+            \item VCS > Git > Push 
+        \end{itemize} 
     \end{itemize} 
     \item If you aren't 100\% sure that it's safe to merge your feature into \verb|dev|,
     submit a pull request via the online interface.
@@ -201,7 +213,7 @@ Users can choose to build their operations in two ways.
 One option is to write the function into a python class
 that defines names for its inputs and outputs
 and then stores the input and output data 
-within instances (objects) of that class.
+within objects of that class.
 This process is most easily understood 
 by following the template and instructions 
 provided in section~\ref{sec:op_dev_by_class} below.
@@ -222,12 +234,13 @@ to the \verb|slacx| workflow manager
 the next time \verb|slacx| is started.
 If the user/developer is not careful 
 about implementing their operation,
-\verb|slacx| will probably raise exceptions and exit. 
+\verb|slacx| may raise exceptions and exit. 
 This could happen at startup (when the operation is read),
 during workflow management (when the operations is loaded with inputs),
 or during execution (when the operation is called upon to compute things),
 depending on where (if any) errors were made.
-
+Operations that are in development 
+can be safely stored in \verb|slacx/slacxcore/operations/dmz|.
 
 \subsection{operations as python classes}
 \label{sec:op_dev_by_class}
@@ -238,6 +251,7 @@ operations as python classes.
 Users/developers with some programming background
 may find all the information they need in this template alone.
 
+\lstset{language=Python}
 \begin{lstlisting}
 # Users and developers should remove all comments from this template.
 # All text outside comments that is meant to be removed or replaced 

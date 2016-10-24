@@ -1,4 +1,5 @@
 import abc
+import re
 
 import optools
 
@@ -38,10 +39,6 @@ class Operation(object):
         # Set default category to be 'MISC'
         self.categories = ['MISC']
 
-    def print_locals(self):
-        # debug: print local namespace.
-        print self.locals()
-
     @abc.abstractmethod
     def run(self):
         """
@@ -51,6 +48,56 @@ class Operation(object):
         set for all items in inputs before calling run().
         """
         pass
+
+    def description(self):
+        """
+        self.description() returns a string 
+        documenting the input and output structure 
+        and usage instructions for the Operation
+        """
+        return str(
+        "Operation description: "
+        + self.doc_as_string()
+        + "\n\n--- Inputs ---"
+        + self.inputs_description() 
+        + "\n\n--- Outputs ---"
+        + self.outputs_description())
+
+    def doc_as_string(self):
+        if self.__doc__:
+            return re.sub("\s\s+"," ",self.__doc__.replace('\n','')) 
+        else:
+            return "no documentation found"
+
+    def inputs_description(self):
+        a = ""
+        inp_indx = 0
+        for name,val in self.inputs.items(): 
+            a = a + str("\n\nInput {}:\n".format(inp_indx) 
+            + optools.parameter_doc(name,val,self.input_doc[name]))
+            inp_indx += 1
+        return a
+
+    def outputs_description(self):
+        a = ""
+        out_indx = 0
+        for name,val in self.outputs.items(): 
+            a = a + str("\n\nOutput {}:\n".format(out_indx) 
+            + optools.parameter_doc(name,val,self.output_doc[name]))
+            out_indx += 1
+        return a
+                
+    def set_outputs_to_none(self):
+        for name,val in self.outputs.items(): 
+            self.outputs[name] = None
+
+#    @abc.abstractmethod
+#    def tag(self):
+#        """
+#        self.tag() should return a string 
+#        containing a human-readable name for this operation.
+#        """
+#        pass
 
 #    @abc.abstractmethod
 #    def inputs(self):
@@ -71,38 +118,8 @@ class Operation(object):
 #        """
 #        return self.outputs 
 
-    def description(self):
-        """
-        self.description() returns a string 
-        documenting the input and output structure 
-        and usage instructions for the Operation
-        """
-        return str(
-        "Operation description: \n"
-        + self.__doc__ 
-        + "\n\nInputs: \n"
-        + self.inputs_description()
-        + "\nOutputs: \n"
-        + self.outputs_description())
-
-    def inputs_description(self):
-        a = ""
-        for name,val in self.inputs.items(): 
-            a = a + optools.parameter_doc(name,val,self.input_doc[name]) + "\n"
-        return a
-
-    def outputs_description(self):
-        a = ""
-        for name,val in self.outputs.items(): 
-            a = a + optools.parameter_doc(name,val,self.output_doc[name]) + "\n"
-        return a
-
-#    @abc.abstractmethod
-#    def tag(self):
-#        """
-#        self.tag() should return a string 
-#        containing a human-readable name for this operation.
-#        """
-#        pass
+#    def print_locals(self):
+#        # debug: print local namespace.
+#        print self.locals()
 
 

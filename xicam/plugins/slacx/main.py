@@ -5,7 +5,6 @@ from PySide import QtGui, QtCore
 import qdarkstyle
 
 from slacx.slacxui import slacxuiman
-from slacx.slacxcore import slacximgman
 from slacx.slacxcore.operations import slacxopman
 from slacx.slacxcore.workflow import slacxwfman
 
@@ -26,19 +25,18 @@ def main():
     try:
         app = QtGui.QApplication(sys.argv)
     except RuntimeError:
-        app = QtGui.QApplication.instance()
- 
+        app = QtCore.QCoreApplication.instance()
+
     # If running with gui, load dark style:
     app.setStyleSheet(qdarkstyle.load_stylesheet() + app.styleSheet())
 
     # TODO: give kwargs to these init routines to rebuild saved jobs?
     # Start an ImgManager to manage input images.
     # TODO: deprecate image manager, do everything in ops and workflows.
-    imgman = slacximgman.ImgManager()
     # Start an OpManager to manage operations.
     opman = slacxopman.OpManager()
     # Start a WfManager to manage workflows.
-    wfman = slacxwfman.WfManager(imgman=imgman)
+    wfman = slacxwfman.WfManager()
 
     # Start a UiManager to create and manage a QMainWindow.
     # Takes the rootdir of the top-level package to find the UI files.
@@ -49,7 +47,6 @@ def main():
     # UiManager needs to store references to the QAbstractItemModel objects
     # that interact with the features of the gui
     # TODO: make this part of the UiManager constructor?
-    uiman.imgman = imgman
     uiman.opman = opman
     uiman.wfman = wfman
 

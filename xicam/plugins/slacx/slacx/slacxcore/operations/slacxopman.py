@@ -10,7 +10,7 @@ class OpManager(TreeModel):
     Class for managing operations.
     Should be able to add operations to the tree 
     and remove selected operations from the tree.
-    Operations will be displayed in operation builder ui.
+    Tree is displayed in operation builder ui.
     """
 
     def __init__(self,**kwargs):
@@ -126,10 +126,50 @@ class OpManager(TreeModel):
         treeitem = self.get_item(indx)
         return treeitem.data[0]
  
-    # Overloaded headerData for OpManager 
+    # Overloaded headerData() for OpManager 
     def headerData(self,section,orientation,data_role):
         if (data_role == QtCore.Qt.DisplayRole and section == 0):
             return "{} operation(s) loaded".format(len(self._op_list))
         else:
             return None
+
+    # Overloaded data() for OpManager
+    def data(self,item_indx,data_role):
+        if (not item_indx.isValid()):
+            return None
+        item = item_indx.internalPointer()
+        if item_indx.column() == 1:
+            if len(item.data) > 0:
+                if item.data[0] in ops.cat_list:
+                    # Should be a category
+                    return ' ' 
+                else:
+                    # Should be an operation
+                    if item.data[0].__doc__:
+                        # Note: commas are used as delimiters when loading strings to Qt views,
+                        # so they should be removed to avoid warning messages.
+                        # This will munge the description a bit.
+                        # TODO: A more elegant solution would be welcome.
+                        return item.data[0].__doc__.replace(',',' ')
+                    else:
+                        return 'no description'
+            else:
+                return ' '
+        else:
+            if data_role == QtCore.Qt.DisplayRole:
+                return item.tag()
+            elif (data_role == QtCore.Qt.ToolTipRole 
+                or data_role == QtCore.Qt.StatusTipRole
+                or data_role == QtCore.Qt.WhatsThisRole):
+                if item.data[0] in ops.cat_list:
+                    # Should be a category
+                    return 'Operation category {}'.format(item.data[0])
+                else:
+                    # Should be an operation
+                    return item.long_tag 
+            else:
+                return None
+    
+
+
 

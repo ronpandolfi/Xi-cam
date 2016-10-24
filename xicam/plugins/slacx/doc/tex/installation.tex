@@ -1,10 +1,27 @@
 \chapter{installation}
 \label{ch:installation}
+
+Instructions will go here for installing \verb|slacx| using 
+the Python pacakage installer \verb|pip|,
+as soon as the \verb|slacx| package is prepared for that.
+Currently, installation from \verb|pip| is not implemented.
+Users looking to install \verb|slacx| from source
+should build a virtual environment (optional),
+install the dependencies listed in section~\ref{subsec:dependencies},
+and invoke the \verb|main.py| module in the \verb|slacx| top-level directory.
+Soon, this will be better.
+
+
+\chapter{system setup}
+\label{ch:system_setup}
 \lstset{language=Bash}
 
 Successful building of \verb|slacx| depends on a few trusty, stable packages.
 Developers should take care to favor a stable and cross-platform utility
 over a fancier option, in order to keep installation of \verb|slacx| fast and easy.
+This section walks through some of the finer points 
+of setting up a computer to develop code for \verb|slacx| 
+or run \verb|slacx| from source.
 
 
 \section{system dependencies}
@@ -295,8 +312,8 @@ sudo yum install cmake-2.8.12.2-4.el6.x86_64
 At this point, it is assumed the user has working installations of
 \verb|pip|, \verb|wheel|, and \verb|setuptools|.
 This will be the default case for many systems.
-
 Users familiar with \verb|virtualenv| may choose to skip this section.
+
 Building software in a virtual environment is suggested 
 as a way of sandboxing libraries that are used by other system components.
 After setting up \verb|pip|, \verb|setuptools|, and \verb|wheel| (above),
@@ -326,6 +343,7 @@ once the virtual environment is turned off by calling \verb|deactivate|.
 
 
 \subsection{installing python dependencies}
+\label{subsec:dependencies}
 
 After installing the system packages and starting a virtual environment (above),
 the installation of the necessary Python packages should be easy.

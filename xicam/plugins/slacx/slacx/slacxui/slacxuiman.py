@@ -6,16 +6,10 @@ from functools import partial
 from PySide import QtGui, QtCore, QtUiTools
 import numpy as np
 
-from ..slacxcore import slacximg 
 from . import uitools
 from .opuiman import OpUiManager
-from .imgloaduiman import ImgLoadUiManager
-
-if uitools.have_qt47:
-    from . import plotmaker_pqg as plotmaker
-else:
-    from . import plotmaker_mpl as plotmaker
-    
+from ..slacxcore.operations.slacxop import Operation
+from . import data_viewer
 
 class UiManager(object):
     """
@@ -38,7 +32,6 @@ class UiManager(object):
         ui_file.close()
         # Set up the self.ui widget to delete itself when closed
         self.ui.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.imgman = None    
         self.opman = None    
         self.wfman = None
         #self.op_uimans = [] 
@@ -57,9 +50,13 @@ class UiManager(object):
         and then setting the finish/load button
         to perform an update rather than appendage.
         """
-        selected_indxs = self.ui.workflow_tree.selectedIndexes()
-        if len(selected_indxs) > 0:
-            uiman = self.start_op_ui_manager()
+        #selected_indxs = self.ui.workflow_tree.selectedIndexes()
+        item_indx = self.ui.workflow_tree.currentIndex()
+        x = self.wfman.get_item(item_indx).data[0]
+        if not type(x).__name__ == 'str':  
+            if issubclass(x,Operation):
+                uiman = self.start_op_ui_manager(x())
+                uiman.ui.show()
             # set OpUiManager's operation to the one selected in self.ui.workflow_tree
             uiman.set_op( self.wfman.get_item(selected_indxs[0]).data[0] )
             uiman.ui.op_selector.setEnabled(False)
@@ -83,80 +80,37 @@ class UiManager(object):
         #for indx in selected_indxs:
         self.wfman.remove_op(selected_indxs[0])
 
-    def add_op(self):
+    def add_op(self,item_indx=None):
         """
         interact with user to build an operation into the workflow
         """
-        uiman = self.start_op_ui_manager()
-        uiman.ui.show()
+        if not item_indx:
+            item_indx = self.ui.op_tree.currentIndex()
+        x = self.opman.get_item(item_indx).data[0]
+        if not type(x).__name__ == 'str':  
+            if issubclass(x,Operation):
+                uiman = self.start_op_ui_manager(x())
+                uiman.ui.op_selector.setCurrentIndex(item_indx)
+                uiman.ui.show()
 
-    def start_imgload_ui_manager(self,imgfile):
-        """
-        Create a QFrame window from ui/tag_request.ui, then return it
-        """
-        ui_file = QtCore.QFile(self.rootdir+"/slacxui/tag_request.ui")
-        uiman = ImgLoadUiManager(ui_file,self.imgman,imgfile)
-        uiman.ui.setParent(self.ui,QtCore.Qt.Window)#|QtCore.Qt.WindowStaysOnTopHint)
-        #uiman.ui.setWindowModality(QtCore.Qt.WindowModal)
-        #uiman.ui.setParent(self.ui,QtCore.Qt.Popup)
-        uiman.ui.activateWindow()
-        #self.ui.lower()
-        uiman.ui.raise_()
-        self.ui.stackUnder(uiman.ui)
-        #uiman.ui.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        uiman.ui.show()
-        #return uiman
-
-    def start_op_ui_manager(self):
+    def start_op_ui_manager(self,current_op=None):
         """
         Create a QFrame window from ui/op_builder.ui, then return it
         """
-        uiman = OpUiManager(self.rootdir,self.wfman,self.imgman,self.opman)
+        uiman = OpUiManager(self.rootdir,self.wfman,self.opman)
+        if current_op:
+            uiman.set_op(current_op)
         uiman.ui.setParent(self.ui,QtCore.Qt.Window)
         return uiman
 
-    def close_image(self):
-        """Remove selected items from the image tree"""
-        # TODO: implement multiple selection  
-        # TODO: take out the garbage
-        selected_indxs = self.ui.image_tree.selectedIndexes()
-        #for indx in selected_indxs:
-        self.imgman.remove_image(selected_indxs[0])
-
-    def open_image(self):
-        """Open an image, add it to image tree"""
-        # TODO: implement loading multiple images in one call? 
-        # getOpenFileName(parent(Widget), caption, dir, extension(s) regexp)
-        imgfile, ext = QtGui.QFileDialog.getOpenFileName(
-        self.ui, 'Open file', self.rootdir, self.imgman.loader_extensions())
-        if imgfile:
-            # Start up a UI for tagging and loading the image
-            self.start_imgload_ui_manager(imgfile)
-            #self.get_img_tag(imgfile)
-
-    def display_item(self,src='Images'):
+    def display_item(self,indx):
         """
-        Display selected item from the image or workflow tree 
-        in a new tab in image_viewer
+        Display selected item from the workflow tree in image_viewer 
         """
-        if src == 'Images':
-            indxs = self.ui.image_tree.selectedIndexes()
-            trmod = self.imgman
-        elif src == 'Workflow':
-            indxs = self.ui.workflow_tree.selectedIndexes()
-            trmod = self.wfman
-        else:
-            msg = 'unrecognized image source {}'.format(src)
-            raise ValueError(msg)
-        #print indxs
-        #for indx in indxs:
-        #    print indx 
-        #    print trmod.get_item(indx).data
-        if len(indxs) > 0:
-            indx = indxs[0]
-            to_display = trmod.get_item(indx).data[0]
-            uri = trmod.build_uri(indx)
-            plotmaker.display_item(to_display,uri,self.ui.image_viewer,self.msg_board_log)
+        if indx:
+            to_display = self.wfman.get_item(indx).data[0]
+            uri = self.wfman.build_uri(indx)
+            data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
         else:
             # TODO: dialog box: tell user to select an item first
             pass
@@ -171,12 +125,12 @@ class UiManager(object):
         # Tell the message board that we are ready.
         self.msg_board_log('slacx is ready') 
         # Clear any default tabs out of image_viewer
-        self.ui.image_viewer.clear()
+        #self.ui.image_viewer.clear()
         # Set image viewer tabs to be closeable
-        self.ui.image_viewer.setTabsClosable(True)
+        #self.ui.image_viewer.setTabsClosable(True)
         # Set the image viewer to be kinda fat
-        self.ui.image_viewer.setMinimumHeight(400)
-        self.ui.image_viewer.setMinimumWidth(400)
+        self.ui.center_frame.setMinimumHeight(400)
+        self.ui.center_frame.setMinimumWidth(400)
         # Leave the textual parts kinda skinny?
         #self.ui.left_panel.setMaximumWidth(400)
         self.ui.right_frame.setMinimumWidth(300)
@@ -185,34 +139,19 @@ class UiManager(object):
         self.ui.workflow_tree.resizeColumnToContents(1)
         self.ui.left_frame.setMinimumWidth(300)
         self.ui.left_frame.setMaximumWidth(400)
-        self.ui.image_tree.setMinimumHeight(200)
         self.ui.title_box.setMinimumHeight(200)
         self.ui.message_board.setMinimumHeight(200)
-        self.ui.image_tree.resizeColumnToContents(0)
-        self.ui.image_tree.resizeColumnToContents(1)
         #self.ui.workflow_tree.setColumnWidth(0,200)
         #self.ui.workflow_tree.setColumnWidth(1,150)
-        self.ui.image_tree.setColumnWidth(0,180)
 
     def connect_actions(self):
         """Set up the works for buttons and menu items"""
-        # Connect self.ui.actionOpen (File menu):
-        self.ui.actionOpen.triggered.connect(self.open_image)
-        # Connect self.ui.open_images_button: 
-        self.ui.open_images_button.setText("&Open images...")
-        self.ui.open_images_button.clicked.connect(self.open_image)
-        # Connect self.ui.close_images_button: 
-        self.ui.close_images_button.setText("&Close images")
-        self.ui.close_images_button.clicked.connect(self.close_image)
-        # Connect self.ui.display_item_button:
-        self.ui.display_item_button.setText("&Display selected item")
-        self.ui.display_item_button.clicked.connect( partial(self.display_item,src='Images') )
-        self.ui.display_workflowitem_button.setText("Display selected item")
-        self.ui.display_workflowitem_button.clicked.connect( partial(self.display_item,src='Workflow') )
+        #self.ui.workflow_tree.activated.connect(self.display_item)
+        self.ui.workflow_tree.clicked.connect(self.display_item)
         # Connect self.ui.image_viewer tabCloseRequested to local close_tab slot
-        self.ui.image_viewer.tabCloseRequested.connect(self.close_tab)
+        #self.ui.image_viewer.tabCloseRequested.connect(self.close_tab)
         # Make self.ui.image_viewer tabs elide (arg is a Qt.TextElideMode)
-        self.ui.image_viewer.setElideMode(QtCore.Qt.ElideRight)
+        #self.ui.image_viewer.setElideMode(QtCore.Qt.ElideRight)
         # Connect self.ui.add_op_button:
         self.ui.add_op_button.setText("Add Operation")
         self.ui.add_op_button.clicked.connect(self.add_op)
@@ -225,12 +164,12 @@ class UiManager(object):
         # Connect self.ui.apply_workflow_button:
         self.ui.apply_workflow_button.setText("Apply Workflow")
         self.ui.apply_workflow_button.clicked.connect(self.apply_workflow)
-        # Connect self.ui.image_tree (QListView) 
-        # to self.imgman (ImgManager(QAbstractListModel))
-        self.ui.image_tree.setModel(self.imgman)
-        # Connect self.ui.workflow_tree (QTreeView) 
-        # to self.wfman (WfManager(TreeModel))
+        # Connect self.ui.workflow_tree (QTreeView) to self.wfman (WfManager(TreeModel))
         self.ui.workflow_tree.setModel(self.wfman)
+        # Connect self.ui.op_tree (QTreeView) to self.opman (OpManager(TreeModel))
+        self.ui.op_tree.setModel(self.opman)
+        self.ui.op_tree.hideColumn(1)
+        self.ui.op_tree.doubleClicked.connect(self.add_op)
 
     def make_title(self):
         """Display the slacx logo in the title box"""
@@ -251,9 +190,9 @@ class UiManager(object):
         self.ui.setWindowIcon(slacx_pixmap)
  
     # A QtCore.Slot for closing tabs from image_viewer
-    @QtCore.Slot(int)
-    def close_tab(self,indx):
-        self.ui.image_viewer.removeTab(indx)
+    #@QtCore.Slot(int)
+    #def close_tab(self,indx):
+    #    self.ui.image_viewer.removeTab(indx)
 
     # Various simple utilities
     @staticmethod 
@@ -276,5 +215,4 @@ class UiManager(object):
     def edit_image(self):
         """open an image editor for the current tab"""
         pass
-
 

@@ -10,9 +10,8 @@ from . import uitools
 
 def display_item(item,uri,viewer,logmethod=None):
     # Don't proceed unless the item has something interesting to show.
-    if logmethod:
-        msg = '[{}] plotting {} item'.format(__name__,type(item).__name__)
-        logmethod(msg)
+    if logmethod: 
+        logmethod('Log messages for image viewer not yet implemented')
     if type(item).__name__ == 'ndarray':
         dims = np.shape(item)
         if len(dims) == 2 and dims[0] > 2 and dims[1] > 2:
@@ -24,9 +23,14 @@ def display_item(item,uri,viewer,logmethod=None):
     else:
         plot_widget = None
     if plot_widget:
-        # add a new tab to image_viewer labeled with uri of tree item 
-        tab_indx = viewer.addTab(plot_widget,uri)
-        viewer.setCurrentIndex(tab_indx)
+        n_val_widgets = qlayout.count()
+        # Loop through them, last to first, clear the frame
+        for i in range(n_val_widgets-1,-1,-1):
+            # QLayout.takeAt returns a LayoutItem
+            widg = qlayout.takeAt(i)
+            # get the QWidget of that LayoutItem and set it to deleteLater()
+            widg.widget().deleteLater()
+        qlayout.addWidget(plot_widget,0,0,1,1) 
     else:
         # TODO: dialog box: tell user the selected item is uninteresting.
         print '[{}]: selected item ({}) has no display method'.format(__name__,type(item).__name__)
