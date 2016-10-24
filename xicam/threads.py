@@ -10,6 +10,8 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
+# TODO: Add parent object to threads
+
 import sys
 import types
 import traceback

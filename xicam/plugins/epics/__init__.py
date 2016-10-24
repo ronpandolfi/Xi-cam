@@ -69,8 +69,8 @@ class EpicsPlugin(base.plugin):
 
 
 
-        #PVMotorItem('Motor1', 'rp:m1')
-        #PVMotorItem('Motor2', 'rp:m2')
+        PVMotorItem('Motor1', 'rp:m1')
+        PVMotorItem('Motor2', 'rp:m2')
         PilatusItem('Pilatus', '531PIL1:cam1')
 
         for name, motor in py4syn.mtrDB.iteritems():
