@@ -120,6 +120,10 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.preview3DViewer)
 
+        self.MBIRParams = MBIRViewer(self.data.header, parent=self)
+        self.viewstack.addWidget(self.MBIRParams)
+
+
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         v.addWidget(self.viewstack)
@@ -320,6 +324,10 @@ class TomoViewer(QtGui.QWidget):
         else:
             self.projectionViewer.hideCenterDetection()
 
+    def onMBIR(self):
+
+        self.viewstack.setCurrentWidget(self.MBIRParams)
+
     def onROIselection(self):
         """
         Shows a rectangular roi to select portion of data to reconstruct. (Not implemented yet)
@@ -332,6 +340,81 @@ class TomoViewer(QtGui.QWidget):
         """
         self.viewstack.setCurrentWidget(self.projectionViewer)
         self.projectionViewer.addROIselection()
+
+class MBIRViewer(QtGui.QWidget):
+    def __init__(self, mdata, path, *args, **kwargs):
+        super(MBIRViewer, self).__init__(*args, **kwargs)
+
+        self.runButton = QtGui.QPushButton(parent=self)
+        self.runButton.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed))
+        self.runButton.setStyleSheet("margin:0 0 0 0;")
+        self.runButton.setText("")
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap("gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.runButton.setIcon(icon1)
+        self.runButton.setFlat(True)
+        self.runButton.clicked.connect(self.delete)
+
+        mbirParams = pg.parametertree.ParameterTree()
+        self.mbirParams.setMinimumHeight(230)
+        params = [{'name': 'Dataset path', 'type': 'str'},
+                  {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'Z num elts', 'type': 'int', 'value': int(mdata['dzelements']) ,
+                   'default': int(mdata['dzelements'])},
+                  {'name': 'Smoothness', 'type': 'float', 'value': 0.15, 'default': 0.15},
+                  {'name': 'Zinger thresh', 'type': 'float', 'value': 5, 'default': 5},
+                  {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2}]
+
+        self.mbir_params = pg.parametertree.Parameter.create(name='MBIR Parameters', type='group', children=params)
+        mbirParams.setParameters(self.mbir_params,showTop=False)
+
+        l = QtGui.QHBoxLayout()
+        l.setContentsMargins(0, 0, 0, 0)
+        l.addWidget(mbirParams)
+        h = QtGui.QVBoxLayout()
+        h.setContentsMargins(0,0,0,0)
+
+        w = QtGui.QWidget(self)
+        w.setLayout(l)
+
+        self.mdata = mdata
+        self.path = path
+        self.center = 0
+
+    def write_slurm(self):
+        """
+        A 'slurm' file is a job to run on nersc
+        """
+        views = int(self.mdata['nangles']) - 1
+        file_name = self.path.split("/")[-1].split(".")[0]
+        nodes = np.ceil(self.mbir_params.child('Z num elts').value()/ float(24))
+
+        slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
+        slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
+        slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
+        slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
+        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
+        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
+        slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
+        slurm += '--group_hdf5 /{}'.format(file_name)
+        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
+        slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
+        slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
+        slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
+        slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
+        slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
+        slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
+                                                             self.mbir_params.child('Zinger thresh').value())
+        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
+        slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
+
+
+
+
+        write = '/home/hparks/Desktop/{}.slurm'.format(data_name)
+        with open(write, 'w') as job:
+            job.write(slurm)
+
 
 
 class ProjectionViewer(QtGui.QWidget):

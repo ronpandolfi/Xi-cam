@@ -262,6 +262,12 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_FullRecon.setIcon(icon)
         self.actionRun_FullRecon.setToolTip('Full reconstruction')
 
+        self.actionMBIR = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_06.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionMBIR.setIcon(icon)
+        self.actionMBIR.setToolTip('MBIR reconstruction')
+
         self.actionCenter = QtGui.QWidgetAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
@@ -319,12 +325,13 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionRun_FullRecon)
         self.addAction(self.actionRun_SlicePreview)
         self.addAction(self.actionRun_3DPreview)
+        self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
         # self.addAction(self.actionROI)
         # self.addAction(toolbuttonMaskingAction)
 
 
-    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
+    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection, mbir):
         """
         Connect toolbar action signals to give slots
 
@@ -344,4 +351,5 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
         self.actionCenter.toggled.connect(center)
+        self.actionMBIR.triggered.connect(mbir)
         self.actionROI.triggered.connect(roiselection)

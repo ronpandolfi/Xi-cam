@@ -102,7 +102,7 @@ class plugin(base.plugin):
 
         # Connect toolbar signals and ui button signals
         self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.loadFullReconstruction,
-                                     self.manualCenter, self.roiSelection)
+                                     self.manualCenter,  self.roiSelection, self.mbir)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
@@ -276,6 +276,7 @@ class plugin(base.plugin):
         widget =  self.centerwidget.widget(self.currentWidget())
         if widget is not None:
             self.ui.property_table.setData(widget.data.header.items())
+            # self.ui.setMBIR(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
             self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
@@ -355,6 +356,15 @@ class plugin(base.plugin):
 
         self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
 
+
+    def mbir(self):
+
+        self.centerwidget.widget(self.currentWidget()).onMBIR()
+
+        # if self.checkPipeline():
+        #     msg.showMessage('Computing MBIR preview...', timeout=0)
+
+
     def checkPipeline(self):
         """
         Checks the current workflow pipeline to ensure a reconstruction function is included. More checks should
@@ -420,6 +430,8 @@ class plugin(base.plugin):
             slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
             self.manager.cor_scale = lambda x: x // 8
             self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+
+
 
     def run3DPreview(self, partial_stack, stack_dict, data_dict):
         """
