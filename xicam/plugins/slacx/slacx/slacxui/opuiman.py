@@ -143,7 +143,6 @@ class OpUiManager(object):
             msg_ui.ok_button.setFocus()
             msg_ui.show()
 
-
     def update_op(self,indx):
         """Update the operation at indx in self.wfman with self.op"""
         self.wfman.update_op(indx,self.op)
@@ -351,9 +350,6 @@ class OpUiManager(object):
     def vert_hdr_widget(self,text):
         # TODO: Fix this, some day.
         widg = optools.VertQLineEdit(text)
-        #widg.setReadOnly(True)
-        #widg.setAlignment(QtCore.Qt.AlignHCenter)
-        #widg.setStyleSheet( "QLineEdit { background-color: transparent }" + widg.styleSheet() )
         return widg 
 
     def hdr_widget(self,text):

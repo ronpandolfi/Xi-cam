@@ -42,33 +42,23 @@ class UiManager(object):
         """
         self.wfman.run_wf_serial()
 
-    def edit_op(self):
+    def edit_op(self,item_indx=None):
         """
-        Edit the selected operation in the workflow list.
-        Do this by opening an OpUiManager,
-        loading it with the selected operation,
-        and then setting the finish/load button
-        to perform an update rather than appendage.
+        interact with user to edit operations in the workflow
         """
-        #selected_indxs = self.ui.workflow_tree.selectedIndexes()
-        item_indx = self.ui.workflow_tree.currentIndex()
-        x = self.wfman.get_item(item_indx).data[0]
-        if not type(x).__name__ == 'str':  
-            if issubclass(x,Operation):
-                uiman = self.start_op_ui_manager(x())
+        if not item_indx:
+            item_indx = self.ui.workflow_tree.currentIndex()
+        if item_indx:
+            x = self.opman.get_item(item_indx).data[0]
+            if issubclass(type(x),Operation):
+                uiman = self.start_op_ui_manager(x,self.wfman,self.wfman)
+                uiman.ui.op_selector.setCurrentIndex(item_indx)
+                # TODO: add ways to 'save' edited ops, or do it automatically
                 uiman.ui.show()
-            # set OpUiManager's operation to the one selected in self.ui.workflow_tree
-            uiman.set_op( self.wfman.get_item(selected_indxs[0]).data[0] )
-            uiman.ui.op_selector.setEnabled(False)
-            uiman.ui.tag_entry.setText(self.wfman.get_item(selected_indxs[0]).tag())
-            uiman.ui.tag_entry.setReadOnly(True)
-            # connect uiman.ui.finish_button to an operation updater method
+
             uiman.ui.finish_button.clicked.disconnect()
             uiman.ui.finish_button.clicked.connect( partial(uiman.update_op,selected_indxs[0]) )
             uiman.ui.show()
-        else:
-            # TODO: Inform user to select operation first
-            pass
 
     def rm_op(self):
         """
@@ -86,18 +76,23 @@ class UiManager(object):
         """
         if not item_indx:
             item_indx = self.ui.op_tree.currentIndex()
-        x = self.opman.get_item(item_indx).data[0]
-        if not type(x).__name__ == 'str':  
-            if issubclass(x,Operation):
-                uiman = self.start_op_ui_manager(x())
-                uiman.ui.op_selector.setCurrentIndex(item_indx)
-                uiman.ui.show()
+        if item_indx.isValid(): 
+            if self.opman.get_item(item_indx).n_data() > 0:
+                x = self.opman.get_item(item_indx).data[0]
+                if issubclass(x,Operation):
+                    uiman = self.start_op_ui_manager(x(),self.wfman,self.opman)
+                    uiman.ui.op_selector.setCurrentIndex(item_indx)
+                    uiman.ui.show()
+        else:
+                    uiman = self.start_op_ui_manager(None,self.wfman,self.opman)
+                    uiman.ui.show()
+            
 
-    def start_op_ui_manager(self,current_op=None):
+    def start_op_ui_manager(self,current_op,wfm,opm):
         """
         Create a QFrame window from ui/op_builder.ui, then return it
         """
-        uiman = OpUiManager(self.rootdir,self.wfman,self.opman)
+        uiman = OpUiManager(self.rootdir,wfm,opm)
         if current_op:
             uiman.set_op(current_op)
         uiman.ui.setParent(self.ui,QtCore.Qt.Window)
@@ -107,13 +102,11 @@ class UiManager(object):
         """
         Display selected item from the workflow tree in image_viewer 
         """
-        if indx:
-            to_display = self.wfman.get_item(indx).data[0]
-            uri = self.wfman.build_uri(indx)
-            data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
-        else:
-            # TODO: dialog box: tell user to select an item first
-            pass
+        if indx: 
+            if self.wfman.get_item(indx).n_data() > 0:
+                to_display = self.wfman.get_item(indx).data[0]
+                uri = self.wfman.build_uri(indx)
+                data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
 
     def final_setup(self):
         # Let the message board be read-only
@@ -129,18 +122,18 @@ class UiManager(object):
         # Set image viewer tabs to be closeable
         #self.ui.image_viewer.setTabsClosable(True)
         # Set the image viewer to be kinda fat
-        self.ui.center_frame.setMinimumHeight(400)
-        self.ui.center_frame.setMinimumWidth(400)
+        #self.ui.center_frame.setMinimumHeight(400)
+        #self.ui.center_frame.setMinimumWidth(400)
         # Leave the textual parts kinda skinny?
         #self.ui.left_panel.setMaximumWidth(400)
-        self.ui.right_frame.setMinimumWidth(300)
-        self.ui.right_frame.setMaximumWidth(400)
+        #self.ui.right_frame.setMinimumWidth(300)
+        #self.ui.right_frame.setMaximumWidth(400)
         self.ui.workflow_tree.resizeColumnToContents(0)
         self.ui.workflow_tree.resizeColumnToContents(1)
-        self.ui.left_frame.setMinimumWidth(300)
-        self.ui.left_frame.setMaximumWidth(400)
-        self.ui.title_box.setMinimumHeight(200)
-        self.ui.message_board.setMinimumHeight(200)
+        #self.ui.left_frame.setMinimumWidth(300)
+        #self.ui.left_frame.setMaximumWidth(400)
+        #self.ui.title_box.setMinimumHeight(200)
+        #self.ui.message_board.setMinimumHeight(200)
         #self.ui.workflow_tree.setColumnWidth(0,200)
         #self.ui.workflow_tree.setColumnWidth(1,150)
 
@@ -153,16 +146,16 @@ class UiManager(object):
         # Make self.ui.image_viewer tabs elide (arg is a Qt.TextElideMode)
         #self.ui.image_viewer.setElideMode(QtCore.Qt.ElideRight)
         # Connect self.ui.add_op_button:
-        self.ui.add_op_button.setText("Add Operation")
+        self.ui.add_op_button.setText("&Add")
         self.ui.add_op_button.clicked.connect(self.add_op)
         # Connect self.ui.rm_op_button:
-        self.ui.rm_op_button.setText("Remove Operation")
+        self.ui.rm_op_button.setText("&Delete")
         self.ui.rm_op_button.clicked.connect(self.rm_op)
         # Connect self.ui.edit_op_button:
-        self.ui.edit_op_button.setText("Edit Operation")
+        self.ui.edit_op_button.setText("&Edit")
         self.ui.edit_op_button.clicked.connect(self.edit_op)
         # Connect self.ui.apply_workflow_button:
-        self.ui.apply_workflow_button.setText("Apply Workflow")
+        self.ui.apply_workflow_button.setText("&Run")
         self.ui.apply_workflow_button.clicked.connect(self.apply_workflow)
         # Connect self.ui.workflow_tree (QTreeView) to self.wfman (WfManager(TreeModel))
         self.ui.workflow_tree.setModel(self.wfman)

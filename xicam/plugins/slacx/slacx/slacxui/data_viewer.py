@@ -52,7 +52,8 @@ def display_item(item,uri,qlayout,logmethod=None):
         # TODO: Anything else for displaying text, other than plopping it down in the center?
         qlayout.addWidget(text_widget,0,0,1,1) 
     else:
-        msg = '[{}]: selected item ({}) has no display method'.format(__name__,type(item).__name__)
+        msg = str('[{}]: selected item ({}) has no display method'.format(__name__,type(item).__name__)
+            + '<br><br>Printout of item: <br>{}'.format(item))
         msg_widget = QtGui.QTextEdit(msg)
         qlayout.addWidget(msg_widget,0,0,1,1) 
         pass

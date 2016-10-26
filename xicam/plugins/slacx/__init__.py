@@ -22,7 +22,7 @@ class SlacxPlugin(base.plugin):
         rootdir = os.path.split( root_qdir.absolutePath() )[0]+'/slacx'
         uiman = slacxuiman.UiManager(rootdir)
 
-        # set up ui-core refs    
+        # set up ui-core refs: operations manager and workflow manager (both tree models)  
         uiman.opman = opman
         uiman.wfman = wfman
 
@@ -39,6 +39,15 @@ class SlacxPlugin(base.plugin):
         self.centerwidget = uiman.ui.center_frame
         self.leftwidget = uiman.ui.left_frame
         self.rightwidget = uiman.ui.right_frame
+        #self.bottomwidget = uiman.ui.message_board
+        #self.leftwidget = QtGui.QTabWidget()
+        #self.leftwidget.clear()
+        #self.leftwidget.addTab(uiman.ui.right_frame,'workflow')
+        #self.rightwidget = uiman.ui.op_tree
+
+        import pdb
+        pdb.set_trace()
+
 
         super(SlacxPlugin, self).__init__(*args, **kwargs)
 
