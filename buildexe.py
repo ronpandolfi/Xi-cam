@@ -86,7 +86,7 @@ buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub','distributed','cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto'],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['tiff.dll','hipgisaxs.exe','xicam/gui/', 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
+                'include_files': ['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
@@ -99,7 +99,7 @@ bdistmsiOptions = {"data": msi_data}
 base = 'Win32GUI' if sys.platform == 'win32' else None
 
 executables = [
-    Executable('main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="Xi-cam",
+    Executable('xicamlauncher/main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="Xi-cam",
                shortcutDir="StartMenuFolder", )
 ]
 
