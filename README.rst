@@ -25,7 +25,7 @@ You can then install Xi-cam with:
 
 .. code-block:: bash
 
- pip install xi-cam
+ pip install xicam
 
 Windows
 +++++++
