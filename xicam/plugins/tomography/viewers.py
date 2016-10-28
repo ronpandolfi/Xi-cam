@@ -6,6 +6,7 @@ from collections import OrderedDict
 from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
+from xicam.plugins.tomography import functionwidgets, reconpkg, config
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer
@@ -120,7 +121,7 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.MBIRParams = MBIRViewer(self.data.header, parent=self)
+        self.MBIRParams = MBIRViewer(self.data.header, self.path, parent=self)
         self.viewstack.addWidget(self.MBIRParams)
 
 
@@ -342,76 +343,223 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.addROIselection()
 
 class MBIRViewer(QtGui.QWidget):
+
+
     def __init__(self, mdata, path, *args, **kwargs):
         super(MBIRViewer, self).__init__(*args, **kwargs)
 
+        self.mdata = mdata
+        self.path = path
+        self.center = 0
+        self.cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+
         self.runButton = QtGui.QPushButton(parent=self)
-        self.runButton.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed))
-        self.runButton.setStyleSheet("margin:0 0 0 0;")
-        self.runButton.setText("")
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("gui/icons_46.gif"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.runButton.setIcon(icon1)
-        self.runButton.setFlat(True)
-        self.runButton.clicked.connect(self.delete)
+        self.runButton.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed))
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.runButton.setIcon(icon)
+        self.runButton.setToolTip("Submit MBIR job to NERSC")
+
+        self.cor_widget = QtGui.QWidget() #parent widget for center of rotation input
+
+        # set up widget for user choice of manual or auto COR detection
+        self.cor_Holder = QtGui.QGroupBox('Center of Rotation', parent = self.cor_widget)
+        manual_cor = QtGui.QRadioButton('Manually input center of rotation')
+        manual_cor.clicked.connect(self.manualCOR)
+        auto_cor = QtGui.QRadioButton('Auto-detect center of rotation')
+        auto_cor.clicked.connect(self.autoCOR)
+        manual_cor.setChecked(True)
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(manual_cor)
+        vbox.addWidget(auto_cor)
+        self.cor_Holder.setLayout(vbox)
+
+        # series of widgets for manual COR input
+        self.cor_Value = QtGui.QStackedWidget(parent = self.cor_widget)
+
+        self.manual_tab = QtGui.QWidget()
+        text_box = QtGui.QLineEdit(parent = self.manual_tab)
+        text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
+        text_layout = QtGui.QHBoxLayout()
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(text_box)
+        self.manual_tab.setLayout(text_layout)
+
+        self.auto_tab = QtGui.QWidget()
+        self.auto_tab_layout = QtGui.QVBoxLayout()
+
+        self.cor_method_box = QtGui.QComboBox()
+        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+        for item in self.cor_detection_funcs:
+            self.cor_method_box.addItem(item)
+        cor_method_label = QtGui.QLabel('COR detection function: ')
+        cor_method_layout = QtGui.QHBoxLayout()
+        cor_method_layout.addWidget(cor_method_label)
+        cor_method_layout.addWidget(self.cor_method_box)
+
+        self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname="Phase Correlation",
+                                package=reconpkg.packages[config.names["Phase Correlation"][1]])
+        self.cor_params = pg.parametertree.Parameter.create(name=self.cor_function.name,
+                                             children=config.parameters[self.cor_function.subfunc_name], type='group')
+        self.cor_param_tree = pg.parametertree.ParameterTree()
+        self.cor_param_tree.setMinimumHeight(200)
+        self.cor_param_tree.setMinimumWidth(200)
+        self.cor_param_tree.setParameters(self.cor_params,showTop = False)
+        for key, val in self.cor_function.param_dict.iteritems():
+            if key in [p.name() for p in self.cor_params.children()]:
+                self.cor_params.child(key).setValue(val)
+                self.cor_params.child(key).setDefault(val)
+
+        # import inspect
+        # for item in self.cor_detection_funcs:
+        #     func = functionwidgets.FunctionWidget(name="Center Detection", subname=item,
+        #                         package=reconpkg.packages[config.names[item][1]])
+        #     print item
+        #     print func.param_dict
+        #     print func.exposed_param_dict
+        #     print inspect.getargspec(func._function)[0]
+        #     print "======================="
+
+        # for param in self.params.children():
+            # param.sigValueChanged.connect(self.paramChanged)
+
+        self.auto_tab_layout.addLayout(cor_method_layout)
+        self.auto_tab_layout.addWidget(self.cor_param_tree)
+        self.auto_tab.setLayout(self.auto_tab_layout)
+
+        # set up COR stackwidget
+        self.cor_Value.addWidget(self.manual_tab)
+        self.cor_Value.addWidget(self.auto_tab)
+
+        # set up COR widget
+        v = QtGui.QVBoxLayout()
+        v.addWidget(self.cor_Holder)
+        v.addWidget(self.cor_Value)
+        self.cor_widget.setLayout(v)
+
+
+        self.runButton.clicked.connect(self.write_slurm)
 
         mbirParams = pg.parametertree.ParameterTree()
-        self.mbirParams.setMinimumHeight(230)
-        params = [{'name': 'Dataset path', 'type': 'str'},
+        mbirParams.setMinimumHeight(280)
+        mbirParams.setMinimumWidth(300)
+        params = [{'name': 'Dataset path', 'type': 'str', 'value': '{}'.format(self.path), 'default':'{}'.format(self.path)},
                   {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Z num elts', 'type': 'int', 'value': int(mdata['dzelements']) ,
                    'default': int(mdata['dzelements'])},
                   {'name': 'Smoothness', 'type': 'float', 'value': 0.15, 'default': 0.15},
                   {'name': 'Zinger thresh', 'type': 'float', 'value': 5, 'default': 5},
-                  {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2}]
+                  {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2},
+                  {'name': 'Output folder', 'type':'str', 'value':'Results', 'default': 'Results'}]
 
         self.mbir_params = pg.parametertree.Parameter.create(name='MBIR Parameters', type='group', children=params)
         mbirParams.setParameters(self.mbir_params,showTop=False)
 
-        l = QtGui.QHBoxLayout()
-        l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(mbirParams)
-        h = QtGui.QVBoxLayout()
-        h.setContentsMargins(0,0,0,0)
 
-        w = QtGui.QWidget(self)
-        w.setLayout(l)
+        right_menu = QtGui.QSplitter(self)
+        right_menu.setOrientation(QtCore.Qt.Vertical)
+        button_holder = QtGui.QStackedWidget()
+        button_holder.addWidget(self.runButton)
+        right_menu.addWidget(button_holder)
+        right_menu.addWidget(self.cor_widget)
 
-        self.mdata = mdata
-        self.path = path
-        self.center = 0
+        container = QtGui.QWidget()
+        container_layout = QtGui.QVBoxLayout()
+        container_layout.addWidget(right_menu)
+        container.setLayout(container_layout)
+
+        left_menu = QtGui.QSplitter(self)
+        left_menu.addWidget(mbirParams)
+        left_menu.addWidget(container)
+
+
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(left_menu)
+
+
+        self.setLayout(h)
+
+    def changeCORfunction(self, index):
+
+        subname = self.cor_method_box.itemText(index)
+        if
+        self.auto_tab_layout.removeWidget(self.cor_param_tree)
+
+        self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.cor_params = pg.parametertree.Parameter.create(name=self.cor_function.name,
+                                             children=config.parameters[self.cor_function.subfunc_name], type='group')
+        self.cor_param_tree = pg.parametertree.ParameterTree()
+        self.cor_param_tree.setMinimumHeight(200)
+        self.cor_param_tree.setMinimumWidth(200)
+        self.cor_param_tree.setParameters(self.cor_params,showTop = False)
+        for key, val in self.cor_function.param_dict.iteritems():
+            if key in [p.name() for p in self.cor_params.children()]:
+                self.cor_params.child(key).setValue(val)
+                self.cor_params.child(key).setDefault(val)
+
+        self.auto_tab_layout.addWidget(self.cor_param_tree)
+        self.auto_tab.setLayout(self.auto_tab_layout)
+
+
+
+
+
+
+    def manualCOR(self):
+        self.cor_Value.setCurrentWidget(self.manual_tab)
+
+    def autoCOR(self):
+        self.cor_Value.setCurrentWidget(self.auto_tab)
+
+    def loadCOR(self):
+
+        # if on manual COR, just grab value
+        # if on automatic, do calculation
+        # try: center = float(center)
+        # except: ValueError: msg.showMessage('Center of rotation must be a float')
+
+        return 1000
 
     def write_slurm(self):
         """
         A 'slurm' file is a job to run on nersc
         """
+
+        import os.path
+
+        self.center = self.loadCOR()
+
         views = int(self.mdata['nangles']) - 1
         file_name = self.path.split("/")[-1].split(".")[0]
-        nodes = np.ceil(self.mbir_params.child('Z num elts').value()/ float(24))
+        nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
+        output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
 
         slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
         slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
         slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
         slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
-        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
-        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
-        slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
-        slurm += '--group_hdf5 /{}'.format(file_name)
-        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
-        slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
-        slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
-        slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
-        slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
-        slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
-        slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
+        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n'
+        slurm += 'mkdir $SCRATCH{}\n\n'.format(output)
+        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison '
+        slurm += '--input_hdf5 {} '.format(self.mbir_params.child('Dataset path').value())
+        slurm += '--group_hdf5 /{} '.format(file_name)
+        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/ '
+        slurm += '--output_hdf5 $SCRATCH{} --x_width {} '.format(output, self.mdata['dxelements'])
+        slurm += '--recon_x_width {} --num_dark {} '.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
+        slurm += '--num_bright {} --z_numElts {} '.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
+        slurm += '--z_start {} --num_views {} '.format(self.mbir_params.child('Z start').value(), views)
+        slurm += '--pix_size {} --rot_center {} '.format(float(self.mdata['pzdist'])*1000, self.center)
+        slurm += '--smoothness {} --zinger_thresh {} '.format(self.mbir_params.child('Smoothness').value(),
                                                              self.mbir_params.child('Zinger thresh').value())
-        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
+        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {} '.format(nodes)
         slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
 
 
 
 
-        write = '/home/hparks/Desktop/{}.slurm'.format(data_name)
+        write = '/home/hparks/Desktop/{}.slurm'.format(file_name)
         with open(write, 'w') as job:
             job.write(slurm)
 
