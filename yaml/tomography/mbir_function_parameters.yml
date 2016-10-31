@@ -1,0 +1,9 @@
+Fast Gridrec:
+- name: test
+  type: int
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark

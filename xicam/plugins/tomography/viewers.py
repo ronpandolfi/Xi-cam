@@ -483,7 +483,7 @@ class MBIRViewer(QtGui.QWidget):
     def changeCORfunction(self, index):
 
         subname = self.cor_method_box.itemText(index)
-        if
+        # if
         self.auto_tab_layout.removeWidget(self.cor_param_tree)
 
         self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname=subname,

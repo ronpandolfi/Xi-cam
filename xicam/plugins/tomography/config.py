@@ -26,8 +26,8 @@ with open('yaml/tomography/functions.yml','r') as stream:
 parameter_files = ('tomopy_function_parameters.yml',
                    'aux_function_parameters.yml',
                    'dataexchange_function_parameters.yml',
-                   'astra_function_parameters.yml')
-                   #'mbir_function_parameters.yml')
+                   'astra_function_parameters.yml',
+                   'mbir_function_parameters.yml')
 parameters = {}
 
 for file in parameter_files:
@@ -44,6 +44,9 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 
 for algorithm in funcs['Functions']['Reconstruction']['Astra']:
     names[algorithm] = ['recon', 'astra']
+
+for algorithm in funcs['Functions']['Reconstruction']['MBIR']:
+    names[algorithm] = ['recon','mbir']
 
 # Load dictionary with function parameters to be retrieved from metadatas
 with open('yaml/tomography/als832_function_defaults.yml','r') as stream:

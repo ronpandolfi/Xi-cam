@@ -17,5 +17,6 @@ for name in PACKAGE_LIST:
         msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning
 
 # Add the extra functions
-import pipelinefunctions
+import pipelinefunctions, mbir
 packages['pipelinefunctions'] = pipelinefunctions
+packages['mbir'] = mbir
