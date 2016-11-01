@@ -24,7 +24,12 @@ class OpManager(TreeModel):
         for cat in cat_list:
             parent = QtCore.QModelIndex()
             for subcat in cat.split('.'):
+                #if parent.isValid():
+                #    print 'adding {} to parent {}'.format(subcat,parent)
+                #else:
+                #    print 'adding {} to invalid parent'.format(subcat)
                 parent = self.add_cat(subcat,parent)
+                #print 'added at index {}'.format(parent)
                 #parent = self.idx_of_cat(subcat,parent)
 
     def add_cat(self,new_cat,parent):
@@ -49,13 +54,13 @@ class OpManager(TreeModel):
         else:
             return cat_idx
 
-    def idx_of_cat(self,new_cat,parent):
+    def idx_of_cat(self,catname,parent):
         """If cat exists under parent, return its index, else return an invalid QModelIndex"""
         ncats = self.rowCount(parent)
         for j in range(ncats):
             idx = self.index(j,0,parent)
             cat = self.get_item(idx).data[0]
-            if cat == new_cat:
+            if cat == catname:
                 return idx
         return QtCore.QModelIndex() 
 
@@ -83,8 +88,11 @@ class OpManager(TreeModel):
         for op in op_list:
             cats = op[0]
             for cat in cats:
-                # get index of cat
-                idx = self.idx_of_cat(cat,QtCore.QModelIndex())
+                parent = QtCore.QModelIndex()
+                for subcat in cat.split('.'):
+                    # get index of subcat
+                    idx = self.idx_of_cat(subcat,parent)
+                    parent = idx
                 self.add_op(op[1],idx)
 
     def add_op(self,op,parent):
@@ -129,7 +137,7 @@ class OpManager(TreeModel):
     # Overloaded headerData() for OpManager 
     def headerData(self,section,orientation,data_role):
         if (data_role == QtCore.Qt.DisplayRole and section == 0):
-            return "{} operation(s) loaded".format(len(self._op_list))
+            return "{} operation(s) available".format(len(self._op_list))
         else:
             return None
 

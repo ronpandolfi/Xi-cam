@@ -9,6 +9,7 @@ import numpy as np
 from . import uitools
 from .opuiman import OpUiManager
 from ..slacxcore.operations.slacxop import Operation
+from ..slacxcore import slacxtools
 from . import data_viewer
 
 class UiManager(object):
@@ -21,11 +22,10 @@ class UiManager(object):
     # it will call QWidget.resizeEvent().
     # Try to use this to resize the images in the QImageView.
 
-    def __init__(self,rootdir):
+    def __init__(self):
         """Make a UI from ui_file, save a reference to it"""
-        self.rootdir = rootdir
         # Pick a UI definition, load it up
-        ui_file = QtCore.QFile(self.rootdir+"/slacxui/basic.ui")
+        ui_file = QtCore.QFile(slacxtools.rootdir+"/slacxui/basic.ui")
         ui_file.open(QtCore.QFile.ReadOnly)
         # load() produces a QMainWindow(QWidget).
         self.ui = QtUiTools.QUiLoader().load(ui_file)
@@ -36,11 +36,18 @@ class UiManager(object):
         self.wfman = None
         #self.op_uimans = [] 
 
-    def apply_workflow(self):
+    def apply_workflow(self,logmethod=None):
         """
         run the workflow
         """
-        self.wfman.run_wf_serial()
+        self.msg_board_log('Starting workflow executor...')
+        # Check for a batch executor...
+        if 'EXECUTION.BATCH' in [item.data[0].categories for item in self.wfman.root_items]:
+            self.msg_board_log('Beginning BATCH execution')
+            self.wfman.run_wf_batch()
+        else:
+            self.msg_board_log('Beginning serial execution')
+            self.wfman.run_wf_serial()
 
     def edit_op(self,item_indx=None):
         """
@@ -55,7 +62,6 @@ class UiManager(object):
                 uiman.ui.op_selector.setCurrentIndex(item_indx)
                 # TODO: add ways to 'save' edited ops, or do it automatically
                 uiman.ui.show()
-
             uiman.ui.finish_button.clicked.disconnect()
             uiman.ui.finish_button.clicked.connect( partial(uiman.update_op,selected_indxs[0]) )
             uiman.ui.show()
@@ -79,7 +85,9 @@ class UiManager(object):
         if item_indx.isValid(): 
             if self.opman.get_item(item_indx).n_data() > 0:
                 x = self.opman.get_item(item_indx).data[0]
-                if issubclass(x,Operation):
+                if isinstance(x,str):
+                    pass
+                elif issubclass(x,Operation):
                     uiman = self.start_op_ui_manager(x(),self.wfman,self.opman)
                     uiman.ui.op_selector.setCurrentIndex(item_indx)
                     uiman.ui.show()
@@ -92,7 +100,7 @@ class UiManager(object):
         """
         Create a QFrame window from ui/op_builder.ui, then return it
         """
-        uiman = OpUiManager(self.rootdir,wfm,opm)
+        uiman = OpUiManager(wfm,opm)
         if current_op:
             uiman.set_op(current_op)
         uiman.ui.setParent(self.ui,QtCore.Qt.Window)
@@ -116,26 +124,14 @@ class UiManager(object):
         # Tell the status bar that we are ready.
         self.show_status('Ready')
         # Tell the message board that we are ready.
+        self.ui.message_board.insertPlainText('--- MESSAGE BOARD ---\n') 
         self.msg_board_log('slacx is ready') 
         # Clear any default tabs out of image_viewer
-        #self.ui.image_viewer.clear()
-        # Set image viewer tabs to be closeable
-        #self.ui.image_viewer.setTabsClosable(True)
-        # Set the image viewer to be kinda fat
-        #self.ui.center_frame.setMinimumHeight(400)
-        #self.ui.center_frame.setMinimumWidth(400)
-        # Leave the textual parts kinda skinny?
-        #self.ui.left_panel.setMaximumWidth(400)
-        #self.ui.right_frame.setMinimumWidth(300)
-        #self.ui.right_frame.setMaximumWidth(400)
+        #self.ui.center_frame.setMinimumWidth(200)
+        self.ui.op_tree.resizeColumnToContents(0)
         self.ui.workflow_tree.resizeColumnToContents(0)
         self.ui.workflow_tree.resizeColumnToContents(1)
-        #self.ui.left_frame.setMinimumWidth(300)
-        #self.ui.left_frame.setMaximumWidth(400)
-        #self.ui.title_box.setMinimumHeight(200)
-        #self.ui.message_board.setMinimumHeight(200)
-        #self.ui.workflow_tree.setColumnWidth(0,200)
-        #self.ui.workflow_tree.setColumnWidth(1,150)
+        self.ui.splitter.setStretchFactor(1,24)    
 
     def connect_actions(self):
         """Set up the works for buttons and menu items"""
@@ -143,8 +139,6 @@ class UiManager(object):
         self.ui.workflow_tree.clicked.connect(self.display_item)
         # Connect self.ui.image_viewer tabCloseRequested to local close_tab slot
         #self.ui.image_viewer.tabCloseRequested.connect(self.close_tab)
-        # Make self.ui.image_viewer tabs elide (arg is a Qt.TextElideMode)
-        #self.ui.image_viewer.setElideMode(QtCore.Qt.ElideRight)
         # Connect self.ui.add_op_button:
         self.ui.add_op_button.setText("&Add")
         self.ui.add_op_button.clicked.connect(self.add_op)
@@ -165,10 +159,9 @@ class UiManager(object):
         self.ui.op_tree.doubleClicked.connect(self.add_op)
 
     def make_title(self):
-        """Display the slacx logo in the title box"""
+        """Display the slacx logo in the image viewer"""
         # Load the slacx graphic  
-        #slacx_img_file = os.path.join(self.rootdir, "ui/slacx_icon.png")
-        slacx_img_file = os.path.join(self.rootdir, "slacxui/slacx_icon_white.png")
+        slacx_img_file = os.path.join(slacxtools.rootdir, "slacxui/slacx_icon_white.png")
         # Make a QtGui.QPixmap from this file
         slacx_pixmap = QtGui.QPixmap(slacx_img_file)
         # Make a QtGui.QGraphicsPixmapItem from this QPixmap
@@ -176,28 +169,37 @@ class UiManager(object):
         # Add this QtGui.QGraphicsPixmapItem to a QtGui.QGraphicsScene 
         slacx_scene = QtGui.QGraphicsScene()
         slacx_scene.addItem(slacx_pixmap_item)
-        # Add the QGraphicsScene to the QGraphicsView
-        self.ui.title_box.setScene(slacx_scene)
+        qwhite = QtGui.QColor(255,255,255,255)
+        textitem = slacx_scene.addText("v{}".format(slacxtools.version))
+        textitem.setPos(100,35)
+        textitem.setDefaultTextColor(qwhite)
+        # Add the QGraphicsScene to self.ui.image_viewer layout 
+        logo_view = QtGui.QGraphicsView()
+        logo_view.setScene(slacx_scene)
+        #logo_view.setStyleSheet( "QTextEdit { color: white  }" + self.ui.styleSheet() )
+        #logo_view.setStyleSheet( "QGraphicsTextItem { color: white  }" + self.ui.styleSheet() )
+        #logo_view.setStyleSheet( "QGraphicsView { color: white  }" + self.ui.styleSheet() )
+        #textitem.setStyleSheet( "QGraphicsTextItem { color: white  }" + self.ui.styleSheet() )
+        self.ui.image_viewer.addWidget(logo_view,0,0,1,1)
+        #self.ui.title_box.setScene(slacx_scene)
         # Set the main window title and icon
-        self.ui.setWindowTitle("slacx")
+        self.ui.setWindowTitle("slacx v{}".format(slacxtools.version))
         self.ui.setWindowIcon(slacx_pixmap)
  
-    # A QtCore.Slot for closing tabs from image_viewer
-    #@QtCore.Slot(int)
-    #def close_tab(self,indx):
-    #    self.ui.image_viewer.removeTab(indx)
 
     # Various simple utilities
     @staticmethod 
     def dtstr():
         """Return date and time as a string"""
-        return dt.strftime(dt.now(),'%Y %m %d, %H:%M:%S')
+        #return dt.strftime(dt.now(),'%Y %m %d, %H:%M:%S')
+        return dt.strftime(dt.now(),'%m %d, %H:%M:%S')
 
     def msg_board_log(self,msg):
         """Print timestamped message with space to msg board"""
         self.ui.message_board.insertPlainText(
-        self.dtstr() + '\n' + msg + '\n\n') 
-
+        '- ' + self.dtstr() + ': ' + msg + '\n') 
+        self.ui.message_board.verticalScrollBar().setValue(99)
+      
     def show_status(self,msg):
         self.ui.statusbar.showMessage(msg)
 
@@ -208,4 +210,9 @@ class UiManager(object):
     def edit_image(self):
         """open an image editor for the current tab"""
         pass
+
+    # A QtCore.Slot for closing tabs from image_viewer
+    #@QtCore.Slot(int)
+    #def close_tab(self,indx):
+    #    self.ui.image_viewer.removeTab(indx)
 

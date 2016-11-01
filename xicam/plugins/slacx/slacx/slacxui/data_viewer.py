@@ -26,7 +26,7 @@ def display_item(item,uri,qlayout,logmethod=None):
         dims = np.shape(item)
         if len(dims) == 2 and dims[0] > 2 and dims[1] > 2:
             plot_widget = plotmaker.array_plot_2d(item)
-        elif len(dims) == 1:
+        elif len(dims) == 1 or (len(dims) == 2 and (dims[0]==2 or dims[1]==2)):
             plot_widget = plotmaker.array_plot_1d(item)
     elif type(item).__name__ == 'Figure':
         plot_widget = plotmaker.plot_mpl_fig(item)

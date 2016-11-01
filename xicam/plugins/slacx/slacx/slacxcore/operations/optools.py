@@ -8,14 +8,22 @@ text_input = 3
 valid_sources = [fs_input,op_input,text_input]
 
 ##### VALID TYPES FOR TEXT BASED OPERATION INPUTS 
-input_types = ['(select type)','string','int','float','bool']
-string_type = 1
+input_types = ['(select type)','string','integer','float','boolean']
+str_type = 1
 int_type = 2
 float_type = 3
 bool_type = 4
-valid_types = [string_type,int_type,float_type,bool_type]
+valid_types = [str_type,int_type,float_type,bool_type]
 # TODO: implement some kind of builder/loader for data structs, like arrays or dicts
 #array_type = 5
+        
+##### COLUMN DEFINITIONS FOR I/O WIDGET ARRANGEMENT IN OP_BUILDER UI
+name_col = 1
+eq_col = 2
+src_col = 3
+type_col = 4
+val_col = 5
+btn_col = 6
 
 ##### IMAGE LOADER EXTENSIONS    
 def loader_extensions():

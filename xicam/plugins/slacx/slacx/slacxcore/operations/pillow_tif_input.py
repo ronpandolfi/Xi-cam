@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 
 from slacxop import Operation
+import optools
 
 class LoadTif(Operation):
     """
@@ -16,6 +17,8 @@ class LoadTif(Operation):
         input_names = ['path']
         output_names = ['image_data','image_metadata']
         super(LoadTif,self).__init__(input_names,output_names) 
+        # default behavior: load from filesystem
+        self.input_src['path'] = optools.fs_input
         self.input_doc['path'] = 'string representing the path to a .tif image'
         self.output_doc['image_data'] = '2D array representing pixel values taken from the input file'
         self.output_doc['image_metadata'] = 'Dictionary containing all image metadata loaded from the input file'

@@ -21,6 +21,10 @@ class WfManager(TreeModel):
         #        self.load_from_file(f)
         self._wf_dict = {}       # this will be a dict for a dask.threaded graph 
         super(WfManager,self).__init__()
+        if 'logmethod' in kwargs:
+            self.logmethod = kwargs['logmethod']
+        else:
+            self.logmethod = None
 
     def add_op(self,new_op,tag):
         """Add an Operation to the tree as a new top-level TreeItem."""
@@ -138,16 +142,66 @@ class WfManager(TreeModel):
         """
         pass
 
+    def run_wf_batch(self,logmethod=None):
+        """
+        Executes the workflow for each of the inputs provided by an EXECUTION.BATCH Operation
+        """
+        # Find the batch input maker
+        # TODO: Deal with multiple batch inputs
+        # FORNOW: Just take the first EXECUTION.BATCH and run with it
+        batch_maker = None
+        for item in self.root_items:
+            if issubclass(item,Operation):
+                if 'EXECUTION.BATCH' in item.data[0].categories and not batch_maker:
+                    batch_maker = item.data[0] 
+                    batch_tag = item.tag()
+        if not batch_maker:
+            msg = '[{}] Attempted batch execution, could not find batch input'.format(__name__)
+            raise ValueError(msg)
+        # Build the batch. Produces an iterator as batch_maker.outputs['batch_iterator']
+        batch_maker.run()
+        # TODO: Find where the batch input is intended to be used...
+        batch_input_uri = self.get_entry_point_from_uri(batch_tag+'.outputs.batch_iterator')
+        done = False
+        while not done:
+            try:
+                next_input = batch_maker.outputs['batch_iterator'].next()
+                # Plug in next_input
+                batch_entry_op = self.get_from_uri(batch_tag+'')
+                # Run the workflow in serial mode
+                self.run_wf_serial()
+                # Harvest all outputs
+                wf_outs = self.outputs_dict()
+                # Save the outputs in the batch_maker
+                batch_maker.outputs['batch_outputs'][next_input] = wf_outs
+            except StopIteration as ex:
+                if logmethod:
+                    logmethod('Finished batch.')
+            except:
+                if logmethod:
+                    logmethod('Batch seems to have failed.')
+                raise
+
+    def get_entry_point_from_uri(self,uri):
+        # TODO: self explanatory
+        pass 
+
+    def outputs_dict(self):
+        # TODO: produce a dict of all Operation outputs keyed by output uri's
+        pass
+
     def run_wf_serial(self):
         """
         Run the workflow by looping over Operations in self.root_items, 
         finding which ones are ready, and running them. 
         Repeat until no further Operations are ready.
         """
+        # TODO: Execute workflow in its own thread.
         ops_done = []
         to_run = self.ops_ready(ops_done)
         while len(to_run) > 0:
-            print 'ops to run: {}'.format(to_run)
+            if self.logmethod:
+                self.logmethod('Executing operations: {}'.format(to_run))
             for j in to_run:
                 item = self.root_items[j]
                 # Get QModelIndex of this item for later use in updating tree view
@@ -159,6 +213,8 @@ class WfManager(TreeModel):
                 ops_done.append(j)
                 self.update_op(indx,op)
             to_run = self.ops_ready(ops_done)
+            if len(to_run) == 0 and self.logmethod:
+                self.logmethod('All operations complete.')
 
     def run_wf_graph(self):
         """
@@ -255,17 +311,7 @@ class WfManager(TreeModel):
                     # val will be handled during operation loading- return it directly
                     return val 
                 elif src == optools.op_input: 
-                    # follow val as uri in workflow tree
-                    path = val.split('.')
-                    parent_indx = QtCore.QModelIndex()
-                    for itemtag in path:
-                        # get QModelIndex of item from itemtag
-                        row = self.list_tags(parent_indx).index(itemtag)
-                        qindx = self.index(row,0,parent_indx)
-                        # get TreeItem from QModelIndex
-                        item = self.get_item(qindx)
-                        # set new parent in case the path continues...
-                        parent_indx = qindx
+                    item = self.get_from_uri(val)
                     # item.data[0] should now be the desired piece of data
                     return item.data[0]
             else: 
@@ -276,4 +322,19 @@ class WfManager(TreeModel):
             # if this method gets called on an input that is not an InputLocator,
             # do nothing.
             return inplocator
+
+    def get_from_uri(self, uri):
+        # follow uri in workflow tree
+        path = uri.split('.')
+        parent_indx = QtCore.QModelIndex()
+        for itemtag in path:
+            # get QModelIndex of item from itemtag
+            row = self.list_tags(parent_indx).index(itemtag)
+            qindx = self.index(row,0,parent_indx)
+            # get TreeItem from QModelIndex
+            item = self.get_item(qindx)
+            # set new parent in case the path continues...
+            parent_indx = qindx
+
+                    
 

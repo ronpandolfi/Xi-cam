@@ -2,6 +2,8 @@ import os
 
 from PySide import QtCore, QtUiTools
 
+import slacxtools
+
 @staticmethod
 def throw_specific_error(msg):
     msg = 'something specific happened: ' + msg
@@ -11,8 +13,8 @@ class LazyCodeError(Exception):
     def __init__(self,msg):
         super(LazyCodeError,self).__init__(self,msg)
 
-def start_message_ui(rootdir):
-    ui_file = QtCore.QFile(rootdir+"/slacxui/message.ui")
+def start_message_ui():
+    ui_file = QtCore.QFile(slacxtools.rootdir+"/slacxui/message.ui")
     ui_file.open(QtCore.QFile.ReadOnly)
     msg_ui = QtUiTools.QUiLoader().load(ui_file)
     ui_file.close()

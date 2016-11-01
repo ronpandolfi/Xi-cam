@@ -26,12 +26,16 @@ class Operation(object):
         self.categories = ['CAT1','CAT2.SUBCAT','CAT3']
         """
         self.inputs = {}
+        self.input_src = {}
+        self.input_type = {}
         self.input_doc = {}
         self.outputs = {}
         self.output_doc = {}
         # For each of the var names, assign to None 
         for name in input_names: 
             self.inputs[name] = None
+            self.input_src[name] = None
+            self.input_type[name] = None
             self.input_doc[name] = None
         for name in output_names: 
             self.outputs[name] = None
@@ -42,10 +46,8 @@ class Operation(object):
     @abc.abstractmethod
     def run(self):
         """
-        Operation.run() should use all of the Operation.inputs
-        and set values for all of the Operation.outputs.
-        It is expected that the Operation will have values
-        set for all items in inputs before calling run().
+        Operation.run() should use all of the items in Operation.inputs
+        and set values for all of the items in Operation.outputs.
         """
         pass
 
@@ -58,10 +60,10 @@ class Operation(object):
         return str(
         "Operation description: "
         + self.doc_as_string()
-        + "\n\n--- Inputs ---"
-        + self.inputs_description() 
-        + "\n\n--- Outputs ---"
-        + self.outputs_description())
+        + "\n\n--- Input ---"
+        + self.input_description() 
+        + "\n\n--- Output ---"
+        + self.output_description())
 
     def doc_as_string(self):
         if self.__doc__:
@@ -69,7 +71,7 @@ class Operation(object):
         else:
             return "no documentation found"
 
-    def inputs_description(self):
+    def input_description(self):
         a = ""
         inp_indx = 0
         for name,val in self.inputs.items(): 
@@ -78,7 +80,7 @@ class Operation(object):
             inp_indx += 1
         return a
 
-    def outputs_description(self):
+    def output_description(self):
         a = ""
         out_indx = 0
         for name,val in self.outputs.items(): 
@@ -90,36 +92,4 @@ class Operation(object):
     def set_outputs_to_none(self):
         for name,val in self.outputs.items(): 
             self.outputs[name] = None
-
-#    @abc.abstractmethod
-#    def tag(self):
-#        """
-#        self.tag() should return a string 
-#        containing a human-readable name for this operation.
-#        """
-#        pass
-
-#    @abc.abstractmethod
-#    def inputs(self):
-#        """
-#        Operation.inputs() should return a dict 
-#        containing the operation's inputs.  
-#        """
-#        return self.inputs
-
-#    def set_input(self,inputname,source,value):
-#        self.inputs[inputname] = (source, value)
-
-#    @abc.abstractmethod
-#    def outputs(self):
-#        """
-#        Operation.outputs() should return a dict 
-#        containing the operation's outputs.  
-#        """
-#        return self.outputs 
-
-#    def print_locals(self):
-#        # debug: print local namespace.
-#        print self.locals()
-
 
