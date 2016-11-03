@@ -1370,7 +1370,7 @@ class remeshqintegrationwidget(integrationsubwidget):
         super(remeshqintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self,q,dimg=None):
+    def movPosLine(self,q,qx,qz,dimg=None):
         self.posLine.setPos(q)
         self.posLine.show()
 
