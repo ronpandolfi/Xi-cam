@@ -973,14 +973,6 @@ class FunctionManager(fw.FeatureManager):
             self.resetCenterCorrection()
             if 'TomoCam' in name:
                 function = self.load_tomocam_params(function)
-        print name
-        for key, val in function.keywords.iteritems():
-            try:
-                print key, ":", val
-            except AttributeError:
-                print key
-
-        print "-----------"
         return function, write
 
     def load_tomocam_params(self, function):
