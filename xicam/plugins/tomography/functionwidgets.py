@@ -310,7 +310,9 @@ class TomoPyReconFunctionWidget(FunctionWidget):
 
         self.packagename = package.__name__
         self.input_functions = {'theta': FunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
-                                                  package=reconpkg.packages['tomopy'], checkable=False)}
+                                                  package=reconpkg.packages['tomopy'], checkable=False),
+                                'center': FunctionWidget('Center Detection', 'Phase Correlation', closeable=True,
+                                                  package=reconpkg.packages['tomopy'])}
         super(TomoPyReconFunctionWidget, self).__init__(name, subname, package, input_functions=self.input_functions,
                                                         checkable=False)
         # Fill in the appropriate 'algorithm' keyword
@@ -322,6 +324,9 @@ class TomoPyReconFunctionWidget(FunctionWidget):
         ui.build_function_menu(self.submenu, config.funcs['Input Functions'][name], config.names,
                                self.addCenterDetectFunction)
         self.menu.addMenu(self.submenu)
+
+
+
 
     @property
     def partial(self):
@@ -367,6 +372,13 @@ class TomoPyReconFunctionWidget(FunctionWidget):
         self.menu.exec_(self.previewButton.mapToGlobal(pos))
 
 
+class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
+    """
+    Subclass of tomopy FunctionWidget used for TomoCam recon functions
+    """
+
+
+
 class AstraReconFuncWidget(TomoPyReconFunctionWidget):
     """
     Subclass of FunctionWidget used for Astra recon functions using Tomopy's astra wrapper
@@ -387,6 +399,7 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         Return the base FunctionWidget partial property
         """
         return FunctionWidget.partial(self)
+
 
 
 class WriteFunctionWidget(FunctionWidget):
@@ -662,6 +675,8 @@ class FunctionManager(fw.FeatureManager):
         if function == 'Reconstruction':
             if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
                 func_widget = AstraReconFuncWidget(function, subfunction, package)
+            elif 'mbir' in reconpkg.packages and package == reconpkg.packages['mbir']:
+                func_widget = TomoCamReconFuncWidget(function, subfunction, package)
             else:
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
@@ -956,9 +971,32 @@ class FunctionManager(fw.FeatureManager):
         if 'Reconstruction' in name:
             function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
             self.resetCenterCorrection()
+            if 'TomoCam' in name:
+                function = self.load_tomocam_params(function)
+        print name
+        for key, val in function.keywords.iteritems():
+            try:
+                print key, ":", val
+            except AttributeError:
+                print key
 
+        print "-----------"
         return function, write
 
+    def load_tomocam_params(self, function):
+        input_params={}
+        input_params['gpu_device'] = 0
+        input_params['oversamp_factor'] = function.keywords['oversamp_factor']
+        function.keywords.pop('oversamp_factor')
+
+        if 'gridrec' in function.keywords['algorithm']:
+            input_params['fbp_filter_param'] = function.keywords['cutoff']
+            function.keywords.pop('cutoff')
+        else:
+            input_params['num_iter'] = function.keywords['num_iter']
+            function.keywords.pop('num_iter')
+        function.keywords['input_params'] = input_params
+        return function
 
     def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
         """
@@ -1192,7 +1230,6 @@ class FunctionManager(fw.FeatureManager):
         for tuple in partial_stack:
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
-
 
         return data_dict['tomo']
 

@@ -9,7 +9,7 @@ Functions:
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
                  Astra: [BP, FBP_astra, SIRT, SART, ART, CGLS, BP_CUDA, FBP_CUDA, SIRT_CUDA, SART_CUDA,
                          CGLS_CUDA],
-                  MBIR: [Fast Gridrec]}
+                  TomoCam: [Gridrec TomoCam, SIRT TomoCam]}
   Outlier Removal: [Remove Outliers, Remove NAN]
   Ring Removal: [Polar Mean Filter]
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]

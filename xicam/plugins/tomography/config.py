@@ -45,7 +45,7 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 for algorithm in funcs['Functions']['Reconstruction']['Astra']:
     names[algorithm] = ['recon', 'astra']
 
-for algorithm in funcs['Functions']['Reconstruction']['MBIR']:
+for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
     names[algorithm] = ['recon','mbir']
 
 # Load dictionary with function parameters to be retrieved from metadatas
