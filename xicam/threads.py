@@ -306,7 +306,7 @@ class Worker(QtCore.QThread):
         super(Worker, self).__init__(parent)
         self.queue = queue
         self.pool = QtCore.QThreadPool.globalInstance()
-        
+
 
     # def __del__(self):
     #     self.queue.join()
