@@ -976,6 +976,22 @@ class FunctionManager(fw.FeatureManager):
         return function, write
 
     def load_tomocam_params(self, function):
+        """
+        A separate load function for TomoCam reconstruction functions to deal with their function input syntax
+
+        Parameters
+        ----------
+
+        function: functools.partial
+            the reconstruction function partial to be used
+
+        Return
+        ------
+
+        function: functools.partial
+            reconstruction function partial with adjusted keywords
+        """
+
         input_params={}
         input_params['gpu_device'] = 0
         input_params['oversamp_factor'] = function.keywords['oversamp_factor']
