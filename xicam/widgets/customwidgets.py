@@ -120,16 +120,28 @@ class ImageView(pg.ImageView):
 
 class sliceDialog(QtGui.QDialog):
 
+    """
+    Subclass of QDialog to allow for more diverse returns from input dialog popups, specifically
+    relating to tomography slice previews
+
+    Attributes
+    ----------
+    field1: int
+        integer representing lowest slice number to reconstruct
+    field2: int
+        integer representing highest slice number to reconstruct
+    """
+
     def __init__(self, parent=None, val1=0, val2=0, maximum=1000):
 
         super(sliceDialog, self).__init__(parent)
 
-        self.text = QtGui.QLabel("Which slice(s) would you like to reconstruct?")
-        self.layout = QtGui.QVBoxLayout()
-        self.layout.addWidget(self.text)
+        text = QtGui.QLabel("Which slice(s) would you like to reconstruct?")
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(text)
 
-        self.label1 = QtGui.QLabel("Start slice: ")
-        self.label2 = QtGui.QLabel("End slice: ")
+        label1 = QtGui.QLabel("Start slice: ")
+        label2 = QtGui.QLabel("End slice: ")
         self.field1 = QtGui.QSpinBox()
         self.field1.setRange(0,maximum)
         self.field1.setValue(val1)
@@ -139,13 +151,14 @@ class sliceDialog(QtGui.QDialog):
 
 
         h1 = QtGui.QHBoxLayout()
-        h1.addWidget(self.label1)
+        h1.addWidget(label1)
         h1.addWidget(self.field1)
         h2 = QtGui.QHBoxLayout()
-        h2.addWidget(self.label2)
+        h2.addWidget(label2)
         h2.addWidget(self.field2)
 
         valueButton = QtGui.QPushButton("Ok")
+        valueButton.setDefault(True)
         cancelButton = QtGui.QPushButton("Cancel")
         valueButton.clicked.connect(self.return_vals)
         cancelButton.clicked.connect(self.cancel)
@@ -153,10 +166,10 @@ class sliceDialog(QtGui.QDialog):
         h3.addWidget(cancelButton)
         h3.addWidget(valueButton)
 
-        self.layout.addLayout(h1)
-        self.layout.addLayout(h2)
-        self.layout.addLayout(h3)
-        self.setLayout(self.layout)
+        layout.addLayout(h1)
+        layout.addLayout(h2)
+        layout.addLayout(h3)
+        self.setLayout(layout)
         self.setWindowTitle("Slice Preview")
         self.exec_()
 

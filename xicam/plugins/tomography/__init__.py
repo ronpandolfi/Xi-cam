@@ -408,7 +408,6 @@ class plugin(base.plugin):
             else:
                 if self.checkPipeline():
                     msg.showMessage(message, timeout=0)
-                    # self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
                     if value[0] == value[1]:
                         self.preview_slices = value[0]
                         self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
