@@ -284,7 +284,11 @@ class TomoViewer(QtGui.QWidget):
 
         if slice_no is None:
             slice_no = self.sinogramViewer.view_spinBox.value()
-        self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
+        elif type(slice_no) is list:
+            for item in range(slice_no[1]- slice_no[0]+1):
+                self.previewViewer.addPreview(np.rot90(recon[item], 1), params, item+slice_no[0])
+        else:
+            self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
         msg.clearMessage()
 
@@ -885,7 +889,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
-        self.maxpreviews = maxpreviews if maxpreviews is not None else 10
+        self.maxpreviews = maxpreviews if maxpreviews is not None else 40
 
         self.dim = dim
 

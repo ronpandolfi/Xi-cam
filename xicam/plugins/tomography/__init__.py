@@ -24,6 +24,7 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from modpkgs import yamlmod
 from xicam.plugins import base
+from xicam.widgets.customwidgets import sliceDialog
 from pipeline import msg
 from xicam import threads
 from viewers import TomoViewer
@@ -394,9 +395,30 @@ class plugin(base.plugin):
             See FunctionManager.testParameterRange for more details
         """
 
-        if self.checkPipeline():
-            msg.showMessage(message, timeout=0)
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), fixed_func=fixed_func)
+        slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
+        maximum = self.centerwidget.widget(self.currentWidget()).sinogramViewer.data.shape[0]-1
+        dialog = sliceDialog(parent=None, val1=slice_no, val2=slice_no,maximum=maximum)
+        try:
+            value = dialog.value
+
+            if value is None:
+                pass
+            elif type(value) == str:
+                msg.showMessage(value,timeout=0)
+            else:
+                if self.checkPipeline():
+                    msg.showMessage(message, timeout=0)
+                    # self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+                    if value[0] == value[1]:
+                        self.preview_slices = value[0]
+                        self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
+                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+                    else:
+                        self.preview_slices = [value[0],value[1]]
+                        slc = (slice(None,None,None), slice(value[0],value[1]+1,1), slice(None,None,None))
+                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), slc=slc, fixed_func=fixed_func)
+        except AttributeError:
+            pass
 
     def runSlicePreview(self, partial_stack, stack_dict, data_dict):
         """
@@ -413,8 +435,9 @@ class plugin(base.plugin):
         """
 
         initializer = self.centerwidget.widget(self.currentWidget()).getsino()
-        slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
-        callback = partial(self.centerwidget.widget(self.currentWidget()).addSlicePreview, stack_dict, slice_no=slice_no)
+        # slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
+        callback = partial(self.centerwidget.widget(self.currentWidget()).addSlicePreview, stack_dict,
+                           slice_no=self.preview_slices)
         message = 'Unable to compute slice preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, data_dict, callback, message)
 
@@ -625,6 +648,8 @@ class plugin(base.plugin):
 
         self.recon_running = False
         self.runReconstruction()
+
+
 
 
 
