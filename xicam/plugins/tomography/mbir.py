@@ -1,3 +1,5 @@
+# this is supposed to prevent tomocam import if it's not installed
+# doesn't work: will exclude tomocam even with correct installations
 import imp
 try:
     imp.find_module("libcudart.so.7.5")
