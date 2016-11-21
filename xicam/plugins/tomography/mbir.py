@@ -7,7 +7,6 @@ except ImportError:
 
 if found:
     from tomocam import tomoCam
->>>>>>> 3e2aa18e431a5e8c1fd5d75edb262e8426090ffd
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
