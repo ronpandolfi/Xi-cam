@@ -1,7 +1,4 @@
-try:
-    from tomocam import tomoCam
-except ImportError:
-    pass
+#from tomocam import tomoCam
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
