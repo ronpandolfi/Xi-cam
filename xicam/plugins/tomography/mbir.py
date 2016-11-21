@@ -1,7 +1,12 @@
+import imp
 try:
-    from tomocam import tomoCam
+    imp.find_module("libcudart.so.7.5")
+    found = True
 except ImportError:
-    pass
+    found = False
+
+if found:
+    from tomocam import tomoCam
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
