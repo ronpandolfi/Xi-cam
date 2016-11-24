@@ -35,18 +35,10 @@ def main():
     #rootdir = os.path.split( root_qdir.absolutePath() )[0]+'/slacx'
 
     # TODO: give kwargs to these init routines to rebuild saved jobs?
-    # Start a UiManager to create and manage a QMainWindow.
-    uiman = slacxuiman.UiManager()
-    # Start an OpManager to manage operations.
     opman = slacxopman.OpManager()
-    # Start a WfManager to manage workflows.
-    wfman = slacxwfman.WfManager(logmethod=uiman.msg_board_log)
-
-    # UiManager needs to store references to the QAbstractItemModel objects
-    # that interact with the features of the gui
-    # TODO: make this part of the UiManager constructor?
-    uiman.opman = opman
-    uiman.wfman = wfman
+    wfman = slacxwfman.WfManager(app=app)
+    uiman = slacxuiman.UiManager(opman,wfman)
+    wfman.logmethod = uiman.msg_board_log
 
     # Make the slacx title box
     uiman.make_title()    

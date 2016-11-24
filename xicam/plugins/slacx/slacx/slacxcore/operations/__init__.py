@@ -2,6 +2,7 @@ import pkgutil
 import importlib
 
 from slacxop import Operation
+from slacxop import Batch
 
 #__path__ = pkgutil.extend_path(__path__, __name__)
 
@@ -20,15 +21,16 @@ for modloader, modname, ispkg in mods:
             # is it a class?
             if isinstance(item,type):
                 # is it a non-abstract subclass of Operation?
-                if issubclass(item,Operation) and name is not 'Operation':
+                if issubclass(item,Operation) and name not in ['Operation','Batch','Realtime']:
                     op = getattr(mod,name)
                     cats = op().categories
                     op_list.append( (cats,op) )
                     for cat in cats:
                         if not cat in cat_list:
                             cat_list.append(cat)
-        except ImportError:
-            print '[{}] had trouble dealing with module attribute {}: {}'.format(__name__,name,item)
+        except ImportError as ex:
+            print '[{}] had trouble dealing with {}: {}'.format(__name__,name,item)
+            print 'Error text: {}'.format(ex.message)
             pass 
             #raise
 

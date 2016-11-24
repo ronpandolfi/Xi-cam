@@ -1,81 +1,118 @@
-from PySide import QtGui
+from PySide import QtCore
 
-##### DEFINITIONS OF SOURCES FOR OPERATION INPUTS
-input_sources = ['(select source)','Filesystem','Operations','Text'] 
-fs_input = 1
-op_input = 2
-text_input = 3
-valid_sources = [fs_input,op_input,text_input]
+import slacxop
 
-##### VALID TYPES FOR TEXT BASED OPERATION INPUTS 
-input_types = ['(select type)','string','integer','float','boolean']
-str_type = 1
-int_type = 2
-float_type = 3
-bool_type = 4
-valid_types = [str_type,int_type,float_type,bool_type]
-# TODO: implement some kind of builder/loader for data structs, like arrays or dicts
-#array_type = 5
-        
-##### COLUMN DEFINITIONS FOR I/O WIDGET ARRANGEMENT IN OP_BUILDER UI
-name_col = 1
-eq_col = 2
-src_col = 3
-type_col = 4
-val_col = 5
-btn_col = 6
+##### DEFINITIONS OF SOURCES FOR OPERATION INPUTS- HARD-CODED ORDER
+##### TODO: THIS, MORE ELEGANTLY
+input_sources = ['None','User Input','Filesystem','Workflow','Batch'] 
+no_input = 0
+user_input = 1
+fs_input = 2
+wf_input = 3
+batch_input = 4 
+valid_sources = [no_input,user_input,fs_input,wf_input,batch_input]
 
-##### IMAGE LOADER EXTENSIONS    
-def loader_extensions():
-    return str(
-    "ALL (*.*);;"
-    + "TIFF (*.tif *.tiff);;"
-    + "RAW (*.raw);;"
-    + "MAR (*.mar*)"
-    )
+##### VALID TYPES FOR OPERATION INPUTS- HARD-CODED ORDER
+##### TODO: THIS, MORE ELEGANTLY
+input_types = ['none','auto','string','integer','float','boolean','list']
+none_type = 0
+auto_type = 1
+str_type = 2
+int_type = 3
+float_type = 4
+bool_type = 5
+list_type = 6
+valid_types = [none_type,auto_type,str_type,int_type,float_type,bool_type,list_type]
 
-##### CONVENIENCE METHOD FOR PRINTING DOCUMENTATION
+def cast_type_val(tp,val):
+    if tp == none_type:
+        val = None 
+    elif tp == int_type:
+        val = int(val)
+    elif tp == float_type:
+        val = float(val)
+    elif tp == str_type:
+        val = str(val)
+    elif tp == bool_type:
+        val = bool(val)
+    elif tp == list_type:
+        # val will be a list of things, already typecast by the list builder 
+        val = list(val)
+    else:
+        msg = 'type selection {}, should be one of {}'.format(src,valid_types)
+        raise ValueError(msg)
+    return val
+
+def parse_wf_input(wfman,uri,op):
+    uri_parts = uri.split('.')
+    if len(uri_parts) == 1:
+        downstreamflag = False
+        if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
+            downstreamflag = uri in op.downstream_ops()
+        if downstreamflag:
+            # a uri used to locate downstream Operations.
+            # the entire item containing the operation should be returned.
+            # this will facilitate extracting the op, running it, and updating it.
+            item,idx = wfman.get_from_uri(uri)
+            return item
+        else:
+            # uri points to an Operation- might as well return it
+            item,idx = wfman.get_from_uri(uri)
+            return item.data
+    elif len(uri_parts) == 2:
+        item,idx = wfman.get_from_uri(uri)
+        return item.data
+    else:
+        # Seeking a specific input or output.
+        io_type = uri_parts[1]
+        if io_type == 'Outputs':
+            # uri points to an op output. 
+            # Return item from the uri.
+            item, indx = wfman.get_from_uri(uri)
+            return item.data
+        elif io_type == 'Inputs':
+            inprouteflag = False
+            if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
+                inprouteflag = uri in op.input_routes()
+            if inprouteflag:
+                # a uri used to direct a batch executor in setting data.
+                # It should be returned directly- the batch will use it as is.
+                return uri 
+            else:
+                # an input uri... trusting that this input has already been loaded,
+                # grab the data from the InputLocator at that uri and return it.
+                # TODO: give insurance by adding to wfman.upstream_list() 
+                item, indx = wfman.get_from_uri(uri)
+                il = item.data 
+                return il.data
+
+class InputLocator(object):
+    """
+    Objects of this class are used as containers for inputs to an Operation,
+    and should by design contain the information needed to find the relevant input data.
+    After the data is loaded, it should be stored in InputLocator.data.
+    """
+    def __init__(self,src=no_input,tp=none_type,val=None):
+        #if src not in valid_sources: 
+        #    msg = 'found input source {}, should be one of {}'.format(src, valid_sources)
+        self.src = src
+        self.tp = tp
+        self.val = val 
+        self.data = None 
+
 def parameter_doc(name,value,doc):
-    if type(value).__name__ == 'InputLocator':
+    #if type(value).__name__ == 'InputLocator':
+    if isinstance(value, InputLocator):
         val_str = str(value.val)
     else:
         val_str = str(value)
     return "- name: {} \n- value: {} \n- doc: {}".format(name,val_str,doc) 
-
-##### CONVENIENCE CLASS FOR STORING OR LOCATING OPERATION INPUTS
-class InputLocator(object):
-    """
-    The presence of an object of this type as input to an Operation 
-    indicates that this input has not yet been loaded or computed.
-    Objects of this class contain the information needed to find the relevant input data.
-    If raw textual input is provided, it is stored in self.val after typecasting.
-    """
-    def __init__(self,src,val):
-        if src < 0 or src > len(input_sources):
-            msg = 'found input source {}, should be between 0 and {}'.format(
-            src, len(input_sources))
-            raise ValueError(msg)
-        self.src = src
-        self.val = val 
-
-##### MINIMAL CLASS FOR VERTICAL HEADERS
-#class VertQLineEdit(QtGui.QLineEdit):
-class VertQLineEdit(QtGui.QWidget):
-    """QLineEdit, but vertical"""
-    def __init__(self,text):
-        super(VertQLineEdit,self).__init__()
-        self.text = text
-        #wid = self.geometry().width()
-        #ht = self.geometry().height()
-        #rt = self.geometry().right()
-        #t = self.geometry().top()
-        # QWidget.setGeometry(left,top,width,height)
-        #self.setGeometry(t, rt, ht, wid)
-
-    def paintEvent(self,event):
-        qp = QtGui.QPainter()
-        qp.begin(self)
-        qp.rotate(90)
-        qp.drawText(0,0,self.text)
-        qp.end()
+        
+#def loader_extensions():
+#    return str(
+#    "ALL (*.*);;"
+#    + "TIFF (*.tif *.tiff);;"
+#    + "RAW (*.raw);;"
+#    + "MAR (*.mar*)"
+#    )
 

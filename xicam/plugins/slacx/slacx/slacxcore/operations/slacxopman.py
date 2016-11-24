@@ -41,7 +41,7 @@ class OpManager(TreeModel):
         if not cat_idx.isValid():
             ins_row = self.rowCount(parent)
             new_treeitem = TreeItem(ins_row,0,parent)
-            new_treeitem.data.append(new_cat)
+            new_treeitem.data = new_cat
             new_treeitem.set_tag( new_cat )
             new_treeitem.long_tag = new_cat 
             self.beginInsertRows(parent,ins_row,ins_row)
@@ -59,14 +59,14 @@ class OpManager(TreeModel):
         ncats = self.rowCount(parent)
         for j in range(ncats):
             idx = self.index(j,0,parent)
-            cat = self.get_item(idx).data[0]
+            cat = self.get_item(idx).data
             if cat == catname:
                 return idx
         return QtCore.QModelIndex() 
 
     #def list_items(self,parent):
     #    for idx in self.iter_indexes(parent):
-    #        print self.get_item(idx).data[0]
+    #        print self.get_item(idx).data
 
     #def find_cat(self,cat):
     #    """return the QModelIndex of the given category"""
@@ -99,7 +99,7 @@ class OpManager(TreeModel):
         """add op to the tree under QModelIndex parent"""
         ins_row = self.rowCount(parent)
         op_treeitem = TreeItem(ins_row,0,parent)
-        op_treeitem.data.append(op)
+        op_treeitem.data = op
         op_treeitem.set_tag( op.__name__ )
         op_treeitem.long_tag = op.__doc__
         self.beginInsertRows(parent,ins_row,ins_row)
@@ -132,7 +132,7 @@ class OpManager(TreeModel):
     # get an Operation from the list by its TreeItem's QModelIndex
     def get_op(self,indx):
         treeitem = self.get_item(indx)
-        return treeitem.data[0]
+        return treeitem.data
  
     # Overloaded headerData() for OpManager 
     def headerData(self,section,orientation,data_role):
@@ -147,18 +147,18 @@ class OpManager(TreeModel):
             return None
         item = item_indx.internalPointer()
         if item_indx.column() == 1:
-            if len(item.data) > 0:
-                if item.data[0] in ops.cat_list:
+            if item.data:
+                if item.data in ops.cat_list:
                     # Should be a category
                     return ' ' 
                 else:
                     # Should be an operation
-                    if item.data[0].__doc__:
+                    if item.data.__doc__:
                         # Note: commas are used as delimiters when loading strings to Qt views,
                         # so they should be removed to avoid warning messages.
                         # This will munge the description a bit.
                         # TODO: A more elegant solution would be welcome.
-                        return item.data[0].__doc__.replace(',',' ')
+                        return item.data.__doc__.replace(',',' ')
                     else:
                         return 'no description'
             else:
@@ -169,9 +169,9 @@ class OpManager(TreeModel):
             elif (data_role == QtCore.Qt.ToolTipRole 
                 or data_role == QtCore.Qt.StatusTipRole
                 or data_role == QtCore.Qt.WhatsThisRole):
-                if item.data[0] in ops.cat_list:
+                if item.data in ops.cat_list:
                     # Should be a category
-                    return 'Operation category {}'.format(item.data[0])
+                    return 'Operation category {}'.format(item.data)
                 else:
                     # Should be an operation
                     return item.long_tag 

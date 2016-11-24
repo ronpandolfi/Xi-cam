@@ -9,3 +9,4 @@ pip-selfcheck.json
 *.pyc
 *.swp
 *.swo
+*.wfl

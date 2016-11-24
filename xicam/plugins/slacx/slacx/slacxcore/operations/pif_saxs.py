@@ -20,8 +20,8 @@ class SaxsToPifProperty(Operation):
         self.input_doc['saxs_metadata'] = str('dict containing data about the saxs spectrum')
         self.output_doc['pif_property'] = str('A PIF.Property object that will be built around the SAXS spectrum')
         self.categories = ['PACKAGING.PIF']
-        self.input_src['saxs_spectrum'] = optools.op_input
-        self.input_src['saxs_metadata'] = optools.op_input 
+        self.input_src['saxs_spectrum'] = optools.wf_input
+        self.input_src['saxs_metadata'] = optools.wf_input 
         
     # Write a run() function for this Operation.
     def run(self):

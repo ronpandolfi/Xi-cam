@@ -1,5 +1,4 @@
 import os
-from datetime import datetime as dt
 import time
 from functools import partial
 
@@ -7,10 +6,14 @@ from PySide import QtGui, QtCore, QtUiTools
 import numpy as np
 
 from . import uitools
-from .opuiman import OpUiManager
+from .wfuiman import WfUiManager
 from ..slacxcore.operations.slacxop import Operation
 from ..slacxcore import slacxtools
 from . import data_viewer
+
+# TODO: Make a metaclass that generates Operation subclasses.
+# TODO: Use the above to make an Op development interface. 
+# TODO: Consider whether this should inherit from QtCore.QObject instaed of object?
 
 class UiManager(object):
     """
@@ -22,8 +25,9 @@ class UiManager(object):
     # it will call QWidget.resizeEvent().
     # Try to use this to resize the images in the QImageView.
 
-    def __init__(self):
+    def __init__(self,opman,wfman):
         """Make a UI from ui_file, save a reference to it"""
+        super(UiManager,self).__init__()
         # Pick a UI definition, load it up
         ui_file = QtCore.QFile(slacxtools.rootdir+"/slacxui/basic.ui")
         ui_file.open(QtCore.QFile.ReadOnly)
@@ -32,77 +36,79 @@ class UiManager(object):
         ui_file.close()
         # Set up the self.ui widget to delete itself when closed
         self.ui.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.opman = None    
-        self.wfman = None
-        #self.op_uimans = [] 
+        self.opman = opman 
+        self.wfman = wfman 
 
-    def apply_workflow(self,logmethod=None):
+#    def run_wf(self):
+#        self.wfman.run_wf()
+
+    def edit_wf(self,trmod,item_indx=QtCore.QModelIndex()):
         """
-        run the workflow
+        Interact with user to edit the workflow.
+        Pass in a TreeModel and index to open the editor 
+        with the item at that index loaded.
         """
-        self.msg_board_log('Starting workflow executor...')
-        # Check for a batch executor...
-        if 'EXECUTION.BATCH' in [item.data[0].categories for item in self.wfman.root_items]:
-            self.msg_board_log('Beginning BATCH execution')
-            self.wfman.run_wf_batch()
+        if item_indx.isValid():
+            idx = item_indx
+            if trmod == self.wfman:
+                while idx.parent().isValid():
+                    idx = idx.parent()
+            x = trmod.get_item(idx).data
         else:
-            self.msg_board_log('Beginning serial execution')
-            self.wfman.run_wf_serial()
-
-    def edit_op(self,item_indx=None):
-        """
-        interact with user to edit operations in the workflow
-        """
-        if not item_indx:
-            item_indx = self.ui.workflow_tree.currentIndex()
-        if item_indx:
-            x = self.opman.get_item(item_indx).data[0]
-            if issubclass(type(x),Operation):
-                uiman = self.start_op_ui_manager(x,self.wfman,self.wfman)
-                uiman.ui.op_selector.setCurrentIndex(item_indx)
-                # TODO: add ways to 'save' edited ops, or do it automatically
-                uiman.ui.show()
-            uiman.ui.finish_button.clicked.disconnect()
-            uiman.ui.finish_button.clicked.connect( partial(uiman.update_op,selected_indxs[0]) )
+            x = None
+            idx = self.ui.wf_tree.currentIndex()
+            if idx.isValid():
+                while idx.parent().isValid():
+                    idx = idx.parent()
+                x = self.wfman.get_item(idx).data
+            else:
+                idx = self.ui.op_tree.currentIndex()
+                if idx.isValid():# and self.opman.get_item(idx).data is not None:
+                    x = self.opman.get_item(idx).data
+        existing_op_flag = isinstance(x,Operation)
+        try:
+            new_op_flag = issubclass(x,Operation)
+        except:
+            new_op_flag = False
+        #print 'existing op: {}'.format(existing_op_flag)
+        #print 'new op: {}'.format(new_op_flag)
+        if new_op_flag: 
+            #print 'new op'
+            uiman = self.start_wf_editor(self.opman,idx)
+            uiman.ui.op_selector.setCurrentIndex(idx)
+            uiman.ui.show()
+            return
+        elif existing_op_flag: 
+            #print 'existing op'
+            uiman = self.start_wf_editor(self.wfman,idx)
+            uiman.ui.wf_selector.setCurrentIndex(idx)
+            uiman.ui.show()
+            return
+        else:
+            # if we are here, there was either an invalid index selected,
+            # or the selection did not point to a valid Operation
+            uiman = self.start_wf_editor()
             uiman.ui.show()
 
-    def rm_op(self):
+    def edit_ops(self,item_indx=None):
         """
-        remove the selected operation in the workflow list from the workflow
+        interact with user to edit and develop new Operations 
         """
-        # TODO: implement multiple selection 
-        # TODO: take out the garbage
-        selected_indxs = self.ui.workflow_tree.selectedIndexes()
-        #for indx in selected_indxs:
-        self.wfman.remove_op(selected_indxs[0])
+        print 'Operation editing is not yet implemented'
 
-    def add_op(self,item_indx=None):
+    def add_ops(self,item_indx=None):
         """
-        interact with user to build an operation into the workflow
+        interact with user to add existing Operations to the tree of available Operations 
         """
-        if not item_indx:
-            item_indx = self.ui.op_tree.currentIndex()
-        if item_indx.isValid(): 
-            if self.opman.get_item(item_indx).n_data() > 0:
-                x = self.opman.get_item(item_indx).data[0]
-                if isinstance(x,str):
-                    pass
-                elif issubclass(x,Operation):
-                    uiman = self.start_op_ui_manager(x(),self.wfman,self.opman)
-                    uiman.ui.op_selector.setCurrentIndex(item_indx)
-                    uiman.ui.show()
-        else:
-                    uiman = self.start_op_ui_manager(None,self.wfman,self.opman)
-                    uiman.ui.show()
-            
+        print 'All Operations are enabled- this will change in a near future version'    
 
-    def start_op_ui_manager(self,current_op,wfm,opm):
+    def start_wf_editor(self,trmod=None,indx=QtCore.QModelIndex()):
         """
-        Create a QFrame window from ui/op_builder.ui, then return it
+        Create a QFrame window from ui/wf_editor.ui, then return it
         """
-        uiman = OpUiManager(wfm,opm)
-        if current_op:
-            uiman.set_op(current_op)
+        uiman = WfUiManager(self.wfman,self.opman)
+        if trmod and indx.isValid():
+            uiman.get_op(trmod,indx)
         uiman.ui.setParent(self.ui,QtCore.Qt.Window)
         return uiman
 
@@ -111,8 +117,8 @@ class UiManager(object):
         Display selected item from the workflow tree in image_viewer 
         """
         if indx: 
-            if self.wfman.get_item(indx).n_data() > 0:
-                to_display = self.wfman.get_item(indx).data[0]
+            if self.wfman.get_item(indx).data is not None:
+                to_display = self.wfman.get_item(indx).data
                 uri = self.wfman.build_uri(indx)
                 data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
 
@@ -120,43 +126,67 @@ class UiManager(object):
         # Let the message board be read-only
         self.ui.message_board.setReadOnly(True)
         # Let the message board ignore line wrapping
-        self.ui.message_board.setLineWrapMode(self.ui.message_board.NoWrap)
+        #self.ui.message_board.setLineWrapMode(self.ui.message_board.NoWrap)
         # Tell the status bar that we are ready.
         self.show_status('Ready')
         # Tell the message board that we are ready.
         self.ui.message_board.insertPlainText('--- MESSAGE BOARD ---\n') 
-        self.msg_board_log('slacx is ready') 
+        self.msg_board_log('slacx is ready',timestamp=slacxtools.dtstr) 
         # Clear any default tabs out of image_viewer
         #self.ui.center_frame.setMinimumWidth(200)
         self.ui.op_tree.resizeColumnToContents(0)
-        self.ui.workflow_tree.resizeColumnToContents(0)
-        self.ui.workflow_tree.resizeColumnToContents(1)
-        self.ui.splitter.setStretchFactor(1,24)    
+        self.ui.wf_tree.resizeColumnToContents(0)
+        #self.ui.wf_tree.resizeColumnToContents(1)
+        #self.ui.wf_tree.setColumnWidth(0,300)
+        self.ui.wf_tree.hideColumn(1)
+        self.ui.hsplitter.setStretchFactor(1,2)    
+        #self.ui.hsplitter.setStretchFactor(2,2)    
+        self.ui.vsplitter.setStretchFactor(0,1)    
+
+    # TODO: Make this functionality work, but with signals and slots
+    def run_wf(self):
+    #    self.ui.run_wf_button.setText("S&top")
+        self.wfman.run_wf()
+    #    self.ui.run_wf_button.clicked.disconnect(self.run_wf)
+    #    self.ui.run_wf_button.clicked.connect(self.wfman.stop_wf)
+    #    self.ui.run_wf_button.clicked.connect(self.reset_wf_button)
+
+    #def reset_wf_button(self):
+    #    self.ui.run_wf_button.setText("&Run")
+    #    self.ui.run_wf_button.clicked.disconnect(self.wfman.stop_wf)
+    #    self.ui.run_wf_button.clicked.disconnect(self.reset_wf_button)
+    #    self.ui.run_wf_button.clicked.connect(self.run_wf)
 
     def connect_actions(self):
         """Set up the works for buttons and menu items"""
-        #self.ui.workflow_tree.activated.connect(self.display_item)
-        self.ui.workflow_tree.clicked.connect(self.display_item)
-        # Connect self.ui.image_viewer tabCloseRequested to local close_tab slot
-        #self.ui.image_viewer.tabCloseRequested.connect(self.close_tab)
-        # Connect self.ui.add_op_button:
-        self.ui.add_op_button.setText("&Add")
-        self.ui.add_op_button.clicked.connect(self.add_op)
-        # Connect self.ui.rm_op_button:
-        self.ui.rm_op_button.setText("&Delete")
-        self.ui.rm_op_button.clicked.connect(self.rm_op)
-        # Connect self.ui.edit_op_button:
-        self.ui.edit_op_button.setText("&Edit")
-        self.ui.edit_op_button.clicked.connect(self.edit_op)
-        # Connect self.ui.apply_workflow_button:
-        self.ui.apply_workflow_button.setText("&Run")
-        self.ui.apply_workflow_button.clicked.connect(self.apply_workflow)
-        # Connect self.ui.workflow_tree (QTreeView) to self.wfman (WfManager(TreeModel))
-        self.ui.workflow_tree.setModel(self.wfman)
-        # Connect self.ui.op_tree (QTreeView) to self.opman (OpManager(TreeModel))
+        self.ui.add_op_button.setText("Add to Workflow")
+        #self.ui.add_op_button.clicked.connect(self.add_ops)
+        self.ui.add_op_button.clicked.connect( partial(self.edit_wf,self.opman) )
+        self.ui.edit_op_button.setText("Edit Operations")
+        self.ui.edit_op_button.clicked.connect(self.edit_ops)
+        self.ui.load_wf_button.setText("&Load")
+        self.ui.load_wf_button.clicked.connect(partial(uitools.start_load_ui,self))
+        self.ui.edit_wf_button.setText("&Edit")
+        self.ui.edit_wf_button.clicked.connect( partial(self.edit_wf,self.wfman) )
+        self.ui.run_wf_button.setText("&Run")
+        self.ui.run_wf_button.clicked.connect(self.run_wf)
+        #self.reset_wf_button()
+        #self.ui.run_wf_button.clicked.connect(self.reset_wf_button)
+        #self.wfman.wfdone.connect(self.reset_wf_button)
+        self.ui.save_wf_button.setText("&Save")
+        self.ui.save_wf_button.clicked.connect(partial(uitools.start_save_ui,self))
+        self.ui.wf_tree.setModel(self.wfman)
         self.ui.op_tree.setModel(self.opman)
         self.ui.op_tree.hideColumn(1)
-        self.ui.op_tree.doubleClicked.connect(self.add_op)
+        self.ui.op_tree.clicked.connect( partial(uitools.toggle_expand,self.ui.op_tree) ) 
+        self.ui.wf_tree.clicked.connect( partial(uitools.toggle_expand,self.ui.wf_tree) )
+        self.ui.wf_tree.clicked.connect( self.display_item )
+        self.ui.op_tree.doubleClicked.connect( partial(self.edit_wf,self.opman) )
+        self.ui.wf_tree.doubleClicked.connect( partial(self.edit_wf,self.wfman) )
+        # TODO: Figure out how to get the display to follow
+        # when I scroll through the tree with my arrow keys.
+        #self.ui.wf_tree.activated.connect(self.display_item)
+        #self.ui.wf_tree.selectionModel().selectionChanged.connect( self.ui.wf_tree.selectionChanged )
 
     def make_title(self):
         """Display the slacx logo in the image viewer"""
@@ -176,43 +206,16 @@ class UiManager(object):
         # Add the QGraphicsScene to self.ui.image_viewer layout 
         logo_view = QtGui.QGraphicsView()
         logo_view.setScene(slacx_scene)
-        #logo_view.setStyleSheet( "QTextEdit { color: white  }" + self.ui.styleSheet() )
-        #logo_view.setStyleSheet( "QGraphicsTextItem { color: white  }" + self.ui.styleSheet() )
-        #logo_view.setStyleSheet( "QGraphicsView { color: white  }" + self.ui.styleSheet() )
-        #textitem.setStyleSheet( "QGraphicsTextItem { color: white  }" + self.ui.styleSheet() )
         self.ui.image_viewer.addWidget(logo_view,0,0,1,1)
-        #self.ui.title_box.setScene(slacx_scene)
-        # Set the main window title and icon
         self.ui.setWindowTitle("slacx v{}".format(slacxtools.version))
         self.ui.setWindowIcon(slacx_pixmap)
- 
 
-    # Various simple utilities
-    @staticmethod 
-    def dtstr():
-        """Return date and time as a string"""
-        #return dt.strftime(dt.now(),'%Y %m %d, %H:%M:%S')
-        return dt.strftime(dt.now(),'%m %d, %H:%M:%S')
-
-    def msg_board_log(self,msg):
-        """Print timestamped message with space to msg board"""
+    def msg_board_log(self,msg,timestamp=slacxtools.timestr):
+        """Print timestamped message to msg board"""
         self.ui.message_board.insertPlainText(
-        '- ' + self.dtstr() + ': ' + msg + '\n') 
-        self.ui.message_board.verticalScrollBar().setValue(99)
+        '- ' + timestamp() + ': ' + msg + '\n') 
+        self.ui.message_board.verticalScrollBar().setValue(self.ui.message_board.verticalScrollBar().maximum())
       
     def show_status(self,msg):
         self.ui.statusbar.showMessage(msg)
-
-    def export_image(self):
-        """export the image in the currently selected tab"""
-        pass
-
-    def edit_image(self):
-        """open an image editor for the current tab"""
-        pass
-
-    # A QtCore.Slot for closing tabs from image_viewer
-    #@QtCore.Slot(int)
-    #def close_tab(self,indx):
-    #    self.ui.image_viewer.removeTab(indx)
 

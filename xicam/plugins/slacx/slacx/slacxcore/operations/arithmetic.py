@@ -1,6 +1,7 @@
 import numpy as np
 
 from slacxop import Operation
+import optools
 
 
 class Add(Operation):
@@ -13,6 +14,11 @@ class Add(Operation):
         self.input_doc['augend'] = 'array or number'
         self.input_doc['addend'] = 'array or number for which addition with augend is defined'
         self.output_doc['sum'] = 'augend plus addend'
+        # source & type
+        self.input_src['augend'] = optools.wf_input
+        self.input_src['addend'] = optools.wf_input
+        self.input_type['augend'] = optools.float_type
+        self.input_type['addend'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
@@ -29,12 +35,14 @@ class Multiply(Operation):
         self.input_doc['multiplicand'] = 'array or number'
         self.input_doc['multiplier'] = 'array or number for which multiplication with multiplicand is defined'
         self.output_doc['product'] = 'multiplicand times multiplier'
+        # source & type
+        self.input_src['multiplicand'] = optools.wf_input
+        self.input_src['multiplier'] = optools.wf_input
+        self.input_type['multiplicand'] = optools.float_type
+        self.input_type['multiplier'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
-        print self.inputs
-        print self.inputs['multiplicand']
-        print self.inputs['multiplier']
         self.outputs['product'] = self.inputs['multiplicand'] * self.inputs['multiplier']
 
 
@@ -48,6 +56,11 @@ class Subtract(Operation):
         self.input_doc['minuend'] = 'array or number'
         self.input_doc['subtrahend'] = 'array or number for which subtraction from minuend is defined'
         self.output_doc['difference'] = 'minuend minus subtrahend'
+        # source & type
+        self.input_src['minuend'] = optools.wf_input
+        self.input_src['subtrahend'] = optools.wf_input
+        self.input_type['minuend'] = optools.float_type
+        self.input_type['subtrahend'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
@@ -64,6 +77,11 @@ class Divide(Operation):
         self.input_doc['dividend'] = 'array or number'
         self.input_doc['divisor'] = 'array or number for which dividing dividend is defined'
         self.output_doc['quotient'] = 'dividend divided by divisor'
+        # source & type
+        self.input_src['dividend'] = optools.wf_input
+        self.input_src['divisor'] = optools.wf_input
+        self.input_type['dividend'] = optools.float_type
+        self.input_type['divisor'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
@@ -80,6 +98,11 @@ class Exponentiate(Operation):
         self.input_doc['base'] = 'array or number'
         self.input_doc['exponent'] = 'array or number for which exponentiating base is defined'
         self.output_doc['power'] = 'base raised by exponent'
+        # source & type
+        self.input_src['base'] = optools.wf_input
+        self.input_src['exponent'] = optools.wf_input
+        self.input_type['base'] = optools.float_type
+        self.input_type['exponent'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
@@ -98,6 +121,11 @@ class Logarithm(Operation):
         self.input_doc['power'] = 'array or number whose logarithm will be taken'
         self.input_doc['base'] = 'array or number'
         self.output_doc['exponent'] = 'array or number'
+        # source & type
+        self.input_src['power'] = optools.wf_input
+        self.input_src['base'] = optools.wf_input
+        self.input_type['power'] = optools.float_type
+        self.input_type['base'] = optools.float_type
         self.categories = ['ARITHMETIC']
 
     def run(self):
