@@ -989,7 +989,8 @@ class PreviewViewer(QtGui.QSplitter):
         self.slice_numbers.appendleft(slice_number)
         self.view_number.setValue(slice_number)
         self.functionform.addWidget(functree)
-        self.imageview.setImage(self.previews)
+        levels = False if len(self.data) > 1 else True
+        self.imageview.setImage(self.previews, autoRange=False, autoLevels=levels, autoHistogramRange=False)
         self.functionform.setCurrentWidget(functree)
 
     def removePreview(self):
