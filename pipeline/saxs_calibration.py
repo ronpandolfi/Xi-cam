@@ -66,16 +66,26 @@ def _error_function(parameter, arguments):
     '''
     geometry, d_spacings, maxima, selected_parameter = arguments
     mask = [sel in selected_parameter for sel in FIT_PARAMETER]
-    param = numpy.array(geometry.get_fit2d())
+    param = numpy.array(get_fit2d(geometry))
+    print 'update:',param
     param[numpy.array(mask)] = parameter
-    geometry.set_fit2d(*param)
+    set_fit2d(geometry,*param)
     return peak_distance(geometry, d_spacings, maxima)
+
+def get_fit2d(geometry):
+    gdict = geometry.getFit2D()
+    return [geometry.get_wavelength()*1e-10,gdict['directDist'],gdict['centerX'],gdict['centerY'],gdict['tilt'],gdict['tiltPlanRotation']]
+
+def set_fit2d(geometry, wavelength, distance, center_x, center_y, tilt, rotation):
+    geometry.set_wavelength(wavelength * 1e-10)
+    geometry.setFit2D(distance, center_x, center_y, tilt, rotation)
+    return geometry
 
 
 def fit_geometry(geometry, maxima, d_spacings, selected_parameter):
     args = [geometry, d_spacings, maxima, selected_parameter]
     mask = numpy.array([sel in selected_parameter for sel in FIT_PARAMETER])
-    start_parameter = numpy.array(geometry.get_fit2d())[mask]
+    start_parameter = numpy.array(get_fit2d(geometry))[mask]
 
     if len(start_parameter) >= len(maxima[0]):
         raise Exception('More variables then fit points.')
@@ -84,7 +94,7 @@ def fit_geometry(geometry, maxima, d_spacings, selected_parameter):
                                                   start_parameter,
                                                   args,
                                                   full_output=True)
-    fit_parameter = numpy.array(geometry.get_fit2d())[mask]
+    fit_parameter = start_parameter
 
     dof = len(maxima[0]) - len(start_parameter)
     chisq = (info['fvec'] ** 2).sum()

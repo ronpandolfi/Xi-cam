@@ -134,6 +134,51 @@ def rickerWavelets(dimg, calibrantkey):
     yield 100
 
 
+import saxs_calibration as sc
+@calibrationAlgorithm
+def dpdakRefine(dimg,calibrantkey):
 
-    # self.replot()
-    # self.drawcenter()
+    if dimg.transformdata is None:
+        return
+
+    # Refine calibration
+    # d-spacing for Silver Behenate
+    d_spacings = np.array(sorted(calibrant.ALL_CALIBRANTS[calibrantkey].dSpacing,key=float,reverse=True))
+
+    geometry = config.activeExperiment.getAI()
+
+    data = dimg.rawdata
+
+    print 'Start parameter:'
+    print geometry.getFit2D()
+
+    fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
+    # calculate maxima for every d_spacing
+    center = (geometry.getFit2D()['centerX'],
+              geometry.getFit2D()['centerY'])
+    radial_pos = sc.radial_array(center, data.shape)
+    x_data, y_data, = [], []
+
+    # calculate maxima for every d_spacing
+    for i in range(len(d_spacings)):
+        yield 100/len(d_spacings)*i
+        maxima_x, maxima_y, radial_pos = sc.ring_maxima(geometry,
+                                                     d_spacings[i],
+                                                     data,
+                                                     radial_pos,
+                                                     10) # TODO: parameterize this
+        x_data.extend(maxima_x)
+        y_data.extend(maxima_y)
+
+
+
+    # start fit
+    sc.fit_geometry(geometry,
+                        (np.array(x_data), np.array(y_data)),
+                        d_spacings,
+                        fit_param)
+
+
+    print 'Final parameter:'
+    print geometry.getFit2D()
+    yield 100
