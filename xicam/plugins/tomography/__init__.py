@@ -102,8 +102,9 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
 
         # Connect toolbar signals and ui button signals
-        self.toolbar.connectTriggers(self.slicePreviewAction, self.preview3DAction, self.loadFullReconstruction,
-                                     self.manualCenter,  self.roiSelection, self.mbir)
+        self.toolbar.connectTriggers(self.slicePreviewAction, self.multiSlicePreviewAction, self.preview3DAction,
+                                            self.loadFullReconstruction, self.manualCenter,  self.roiSelection,
+                                            self.mbir)
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
@@ -395,9 +396,16 @@ class plugin(base.plugin):
             See FunctionManager.testParameterRange for more details
         """
 
+        if self.checkPipeline():
+            msg.showMessage(message, timeout=0)
+            self.preview_slices = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+
+    def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
+
         slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
         maximum = self.centerwidget.widget(self.currentWidget()).sinogramViewer.data.shape[0]-1
-        dialog = sliceDialog(parent=None, val1=slice_no, val2=slice_no,maximum=maximum)
+        dialog = sliceDialog(parent=None, val1=slice_no, val2=slice_no+20,maximum=maximum)
         try:
             value = dialog.value
 
@@ -409,8 +417,7 @@ class plugin(base.plugin):
                 if self.checkPipeline():
                     msg.showMessage(message, timeout=0)
                     if value[0] == value[1]:
-                        self.preview_slices = value[0]
-                        self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
+                        self.preview_slices = value[1]
                         self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
                     else:
                         self.preview_slices = [value[0],value[1]]
@@ -418,6 +425,7 @@ class plugin(base.plugin):
                         self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), slc=slc, fixed_func=fixed_func)
         except AttributeError:
             pass
+
 
     def runSlicePreview(self, partial_stack, stack_dict, data_dict):
         """

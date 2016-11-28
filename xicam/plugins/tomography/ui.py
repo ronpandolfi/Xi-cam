@@ -250,6 +250,12 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_SlicePreview.setIcon(icon)
         self.actionRun_SlicePreview.setToolTip('Slice preview')
 
+        self.actionRun_MultiSlicePreview = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_63.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionRun_MultiSlicePreview.setIcon(icon)
+        self.actionRun_MultiSlicePreview.setToolTip('Multi-slice preview')
+
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
@@ -324,6 +330,7 @@ class Toolbar(QtGui.QToolBar):
 
         self.addAction(self.actionRun_FullRecon)
         self.addAction(self.actionRun_SlicePreview)
+        self.addAction(self.actionRun_MultiSlicePreview)
         self.addAction(self.actionRun_3DPreview)
         self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
@@ -331,7 +338,7 @@ class Toolbar(QtGui.QToolBar):
         # self.addAction(toolbuttonMaskingAction)
 
 
-    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection, mbir):
+    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir):
         """
         Connect toolbar action signals to give slots
 
@@ -348,6 +355,7 @@ class Toolbar(QtGui.QToolBar):
         """
 
         self.actionRun_SlicePreview.triggered.connect(slicepreview)
+        self.actionRun_MultiSlicePreview.triggered.connect(multislicepreview)
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
         self.actionCenter.toggled.connect(center)

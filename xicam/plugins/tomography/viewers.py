@@ -283,7 +283,8 @@ class TomoViewer(QtGui.QWidget):
         """
 
         if slice_no is None:
-            slice_no = self.sinogramViewer.view_spinBox.value()
+            slice_num = self.sinogramViewer.view_spinBox.value()
+            self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_num)
         elif type(slice_no) is list:
             for item in range(slice_no[1]- slice_no[0]+1):
                 self.previewViewer.addPreview(np.rot90(recon[item], 1), params, item+slice_no[0])
