@@ -1,10 +1,12 @@
 # avg dphi correlation (mask normalized) for each q
 
-import base
-from PySide import QtGui
+from .. import base
+from PySide.QtGui import *
 import os
-
-import widgets
+from .. import widgets
+from fxsmainwidget import fxsmainwidget
+from toolbar import fxstoolbar
+from fxsplot import fxsplot
 
 
 class FXSPlugin(base.plugin):
@@ -12,11 +14,14 @@ class FXSPlugin(base.plugin):
 
     def __init__(self, *args, **kwargs):
 
-        self.centerwidget = QtGui.QTabWidget()
+        self.centerwidget = QTabWidget()
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+        self.rightwidget = None
+        self.bottomwidget = fxsplot()
+        self.toolbar = fxstoolbar()
 
         super(FXSPlugin, self).__init__(*args, **kwargs)
 
@@ -32,6 +37,7 @@ class FXSPlugin(base.plugin):
         return self.centerwidget.currentWidget().widget
 
     def currentChanged(self, index):
+        self.bottomwidget.clear()
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
@@ -43,8 +49,8 @@ class FXSPlugin(base.plugin):
         if type(paths) is not list:
             paths = [paths]
 
-        widget = widgets.OOMTabItem(itemclass=widgets.fxsviewer, paths=paths, operation=operation,
-                                    operationname=operationname)
+        widget = widgets.OOMTabItem(itemclass=fxsmainwidget, src=paths, operation=operation,
+                                    operationname=operationname, toolbar=self.toolbar, plotwidget=self.bottomwidget)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
 
