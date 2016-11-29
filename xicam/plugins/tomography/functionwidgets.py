@@ -1050,12 +1050,14 @@ class FunctionManager(fw.FeatureManager):
         # load data dictionary
         data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
 
+        count = 1
         for func in self.features:
             name = func.name
+            func_name = str(count) + ". " + func.func_name
             if not func.enabled:
                 continue
             elif func.func_name in skip_names:
-                stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+                stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
                 func = fixed_func
@@ -1064,7 +1066,9 @@ class FunctionManager(fw.FeatureManager):
                         data_dict[key] = val
                     elif key in params_dict[name].iterkeys() and key not in 'center':
                         params_dict[name][key] = val
-            stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+
+            count += 1
 
             # load partial_stack
             fpartial = func.partial
@@ -1082,14 +1086,14 @@ class FunctionManager(fw.FeatureManager):
 
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
-                    if 'Input Functions' not in stack_dict[func.func_name][func.subfunc_name]:
-                        stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
+                    if 'Input Functions' not in stack_dict[func_name][func.subfunc_name]:
+                        stack_dict[func_name][func.subfunc_name]['Input Functions'] = {}
                     ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+                    stack_dict[func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
 
                     # update input function keywords in slice preview table
-                    if param in stack_dict[func.func_name][func.subfunc_name]:
-                        stack_dict[func.func_name][func.subfunc_name][param] = data_dict[param]
+                    if param in stack_dict[func_name][func.subfunc_name]:
+                        stack_dict[func_name][func.subfunc_name][param] = data_dict[param]
 
         self.lockParams(False)
         return partial_stack, stack_dict, data_dict
@@ -1234,7 +1238,6 @@ class FunctionManager(fw.FeatureManager):
         -------
         Returns the 'tomo' data in the data_dict, which has been acted on by all functions in the partial_stack
         """
-
         for tuple in partial_stack:
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
@@ -1460,6 +1463,10 @@ class FunctionManager(fw.FeatureManager):
         self.removeAllFeatures()
         # Way too many for loops, oops... may want to restructure the yaml files
         for func, subfuncs in pipeline.iteritems():
+            try:
+                func = func.split(". ")[1]
+            except IndexError:
+                func = func
             for subfunc in subfuncs:
                 funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
                 if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
@@ -1565,6 +1572,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
         signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
 
+        signature += "\t# MAIN LOOP FOR RECONSTRUCTION\n"
         signature += "\tfor i in range(nchunk):\n"
         signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
         signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
@@ -1577,6 +1585,10 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\t# the function pipeline: keywords used in each function are located in the\n"
         signature += "\t\t# 'params' assignment for each function\n\n"
         for func, param_dict in func_dict.iteritems():
+            try:
+                func = func.split(". ")[1]
+            except IndexError:
+                pass
             signature += "\t\t# function: {}\n".format(func)
             signature += "\t\tts = time.time()\n"
             signature += "\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format("

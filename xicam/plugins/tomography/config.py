@@ -142,28 +142,31 @@ def extract_pipeline_dict(funwidget_list):
     ex_lst = ['file name', 'fname', 'folder name', 'parent folder']
 
     d = OrderedDict()
+    count = 1
     for f in funwidget_list:
         # a bunch of special cases for the write function
+        func_name = str(count) + ". " + f.func_name
         if "Write" in f.func_name:
             write_dict = OrderedDict()
-            d[f.func_name] = OrderedDict({f.subfunc_name: write_dict})
+            d[func_name] = OrderedDict({f.subfunc_name: write_dict})
             for child in f.params.children():
                 if child.name() in ex_lst:
-                    d[f.func_name][f.subfunc_name][child.name()] = str(child.value())
+                    d[func_name][f.subfunc_name][child.name()] = str(child.value())
                 elif child.name() == "Browse":
                     pass
                 else:
-                    d[f.func_name][f.subfunc_name][child.name()] = child.value()
+                    d[func_name][f.subfunc_name][child.name()] = child.value()
         else:
-            d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
-        d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
+            d[func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
+        d[func_name][f.subfunc_name]['Enabled'] = f.enabled
         if f.func_name == 'Reconstruction':
-            d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
+            d[func_name][f.subfunc_name].update({'Package': f.packagename})
         for param, ipf in f.input_functions.iteritems():
-            if 'Input Functions' not in d[f.func_name][f.subfunc_name]:
-                d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            if 'Input Functions' not in d[func_name][f.subfunc_name]:
+                d[func_name][f.subfunc_name]['Input Functions'] = {}
             id = {ipf.func_name: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
-            d[f.func_name][f.subfunc_name]['Input Functions'][param] = id
+            d[func_name][f.subfunc_name]['Input Functions'][param] = id
+        count += 1
     return d
 
 def extract_runnable_dict(funwidget_list):
@@ -183,6 +186,7 @@ def extract_runnable_dict(funwidget_list):
 
     d = OrderedDict()
     func_dict = OrderedDict(); subfuncs = OrderedDict()
+    count = 1
     for f in funwidget_list:
         keywords = {}
         if not f.enabled:
@@ -223,7 +227,8 @@ def extract_runnable_dict(funwidget_list):
                     subfunc += ")"
                     subfuncs[param] = subfunc
 
-        func_dict[func] = keywords
+        func_dict[str(count) + ". " + func] = keywords
+        count += 1
 
     d['func'] = func_dict
     d['subfunc'] = subfuncs
