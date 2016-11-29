@@ -194,6 +194,7 @@ class plugin(base.plugin):
         """
         Reconnect TomoViewers when the pipeline is reset
         """
+        # TODO: change order of functions in manager.features (see functionmanager)
         for idx in range(self.centerwidget.count()):
             self.centerwidget.widget(idx).wireupCenterSelection(self.manager.recon_function)
             self.centerwidget.widget(idx).sigSetDefaults.connect(self.manager.setPipelineFromDict)

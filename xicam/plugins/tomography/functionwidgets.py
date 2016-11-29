@@ -649,6 +649,7 @@ class FunctionManager(fw.FeatureManager):
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
                                               blank_form=blank_form)
+        #TODO: add attribute to keep track of function's order in pipeline
         self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
