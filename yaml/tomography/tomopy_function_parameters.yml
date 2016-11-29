@@ -4,6 +4,12 @@ Median Filter:
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Polar Mean Filter:
 - name: thresh
   type: float
@@ -48,12 +54,24 @@ Downsample:
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Gaussian Filter:
 - name: sigma
   type: float
 - name: order
   type: int
   limits: [0, 3]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Background Intensity:
 - name: air
   type: int
@@ -76,9 +94,16 @@ Fourier-Wavelet:
   - tomo
   - flats
   - dark
+Padding:
 Remove NAN:
 - name: val
   type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Padding:
 - name: axis
   type: int
@@ -126,20 +151,44 @@ Sobel Filter:
 - name: axis
   limits: [0, 2]
   type: int
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Titarenko:
 - name: nblock
   type: int
 - name: alpha
   type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Upsample:
 - name: level
   type: int
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Smoothing Filter:
 - name: size
   type: int
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Regular:
 - name: cutoff
   type: float
@@ -197,9 +246,9 @@ Remove Outliers:
 - name: arr
   type: list
   values:
-  - tomo
-  - flats
-  - dark
+    - tomo
+    - flats
+    - dark
 Projection Angles:
 - name: nang
   type: int
@@ -215,6 +264,12 @@ ART:
     suffix: px
   - name: num_iter
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 BART:
   - name: center
     type: float
@@ -223,6 +278,12 @@ BART:
     type: int
   - name: num_block
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 FBP:
   - name: center
     type: float
@@ -242,6 +303,12 @@ FBP:
     type: float
   - name: order
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 Gridrec:
   - name: center
     type: float
@@ -273,6 +340,12 @@ MLEM:
     suffix: px
   - name: num_iter
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 OSEM:
   - name: center
     type: float
@@ -281,6 +354,12 @@ OSEM:
     type: int
   - name: num_block
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 OSMPL Hybrid:
   - name: center
     type: float
@@ -289,6 +368,12 @@ OSMPL Hybrid:
     type: int
   - name: num_block
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 OSMPL Quad:
   - name: center
     type: float
@@ -297,6 +382,12 @@ OSMPL Quad:
     type: int
   - name: num_block
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 PML Hybrid:
   - name: center
     type: float
@@ -305,6 +396,12 @@ PML Hybrid:
     type: int
   - name: reg_par
     type: float
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 PML Quad:
   - name: center
     type: float
@@ -313,9 +410,21 @@ PML Quad:
     type: int
   - name: reg_par
     type: float
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
 SIRT:
   - name: center
     type: float
     suffix: px
   - name: num_iter
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
