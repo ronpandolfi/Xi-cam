@@ -55,7 +55,7 @@ def fourierAutocorrelation(dimg, calibrantkey):
     peaks = peaks[peaks[:, 1].argsort()[::-1]]
 
     for peak in peaks:
-        if peak[0] > 25 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
+        if peak[0] > 15 and not np.isinf(peak[1]):  ####This thresholds the minimum sdd which is acceptable
             bestpeak = peak[0]
             # print peak
             break
