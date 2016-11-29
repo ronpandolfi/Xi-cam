@@ -1,5 +1,6 @@
 from collections import deque
 import numpy as np
+import scipy as sp
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
@@ -718,6 +719,10 @@ class ProjectionViewer(QtGui.QWidget):
         self.imgoverlay_roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
         self.hideCenterDetection()
 
+        self.bounds = None
+        # self.normalize(True)
+
+
     def changeOverlayProj(self, idx):
         """
         Changes the image in the overlay. This is connected to the slider in the cor_widget
@@ -756,6 +761,7 @@ class ProjectionViewer(QtGui.QWidget):
         """
         Shows the center detection widget and corresponding histogram
         """
+        # self.normalize(True)
         self.cor_widget.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
@@ -816,8 +822,6 @@ class ProjectionViewer(QtGui.QWidget):
         val : bool
             Boolean specifying to normalize image
         """
-
-
         if val and not self.normalized:
             self.flat = np.median(self.data.flats, axis=0).transpose()
             self.dark = np.median(self.data.darks, axis=0).transpose()
@@ -830,10 +834,21 @@ class ProjectionViewer(QtGui.QWidget):
             if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
             self.imgoverlay_roi.currentImage = overlay
+
+            # TODO: change roi default levels during normalization to prevent washed out color
+            # if not self.bounds:
+            #     hist = self.imgoverlay_roi.imageItem.getHistogram()
+            #     arr1, arr2 = self.imgoverlay_roi.remove_outlier(hist[1], hist[0], sp.integrate.trapz(hist[1],hist[0]),
+            #                                                     thresh=0.4)
+            #     print len(arr1), ", ", len(arr2)
+            #     self.bounds = [arr2[0],arr2[-1]]
+            #     print self.bounds
+
             self.imgoverlay_roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
+            self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
             self.stackViewer.resetImage()
             self.imgoverlay_roi.resetImage()
