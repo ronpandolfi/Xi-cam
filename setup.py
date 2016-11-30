@@ -81,7 +81,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=['xicam','xicamlauncher','pipeline','client','modpkgs'],
+    packages=['xicam','xicamlauncher','pipeline','client','modpkgs','xicam.plugins','xicam.widgets'],
 
     package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline'},
 
