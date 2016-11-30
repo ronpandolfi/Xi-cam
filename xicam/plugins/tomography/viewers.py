@@ -541,7 +541,23 @@ class MBIRViewer(QtGui.QWidget):
             print self.val_box.value()
             return self.val_box.value()
         else:
-            kwargs = self.load_COR_kwargs(self.cor_function.subfunc_name)
+            if self.parentWidget():
+                return = self.load_COR_kwargs(self.cor_function.subfunc_name)
+            else:
+                return -1
+
+    def load_COR_kwargs(self, cor_function):
+        if not cor_function in self.cor_detection_funcs:
+            return -1
+        else:
+            if cor_function == 'Phase Correlation':
+                print self.cor_params.child('tol').value()
+            elif cor_function == 'Vo':
+                pass
+            elif cor_function == 'Nelder-Mead':
+                pass
+            else:
+                return -1
 
 
 
@@ -555,37 +571,42 @@ class MBIRViewer(QtGui.QWidget):
 
         self.center = self.loadCOR()
 
-        views = int(self.mdata['nangles']) - 1
-        file_name = self.path.split("/")[-1].split(".")[0]
-        nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
-        output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
+        if not self.center > 0 or self.center > self.mdata['dxelements']:
+            msg.showMessage('Invalid center of rotation')
+            pass
+        else:
 
-        slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
-        slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
-        slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
-        slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
-        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
-        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
-        slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
-        slurm += '--group_hdf5 /{}'.format(file_name)
-        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
-        slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
-        slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
-        slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
-        slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
-        slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
-        slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
-                                                             self.mbir_params.child('Zinger thresh').value())
-        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
-        slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
+            views = int(self.mdata['nangles']) - 1
+            file_name = self.path.split("/")[-1].split(".")[0]
+            nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
+            output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
+
+            slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
+            slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
+            slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
+            slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
+            slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
+            slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
+            slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
+            slurm += '--group_hdf5 /{}'.format(file_name)
+            slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
+            slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
+            slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
+            slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
+            slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
+            slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
+            slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
+                                                                 self.mbir_params.child('Zinger thresh').value())
+            slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
+            slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
 
 
 
-        parent_folder = self.path.split(self.path.split('/')[-1])[0]
-        write = os.join(parent_folder, '{}.slurm'.format(file_name))
+            parent_folder = self.path.split(self.path.split('/')[-1])[0]
+            write = os.join(parent_folder, '{}.slurm'.format(file_name))
 
-        with open(write, 'w') as job:
-            job.write(slurm)
+            with open(write, 'w') as job:
+                job.write(slurm)
 
 
 
