@@ -105,6 +105,7 @@ class plugin(base.plugin):
         self.toolbar.connectTriggers(self.slicePreviewAction, self.multiSlicePreviewAction, self.preview3DAction,
                                             self.loadFullReconstruction, self.manualCenter,  self.roiSelection,
                                             self.mbir)
+
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),

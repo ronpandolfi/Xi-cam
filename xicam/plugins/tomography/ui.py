@@ -100,6 +100,11 @@ class UIform(object):
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
+        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
+
+
         rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
 
         configtree = pt.ParameterTree()
@@ -339,6 +344,7 @@ class Toolbar(QtGui.QToolBar):
 
 
     def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir):
+
         """
         Connect toolbar action signals to give slots
 

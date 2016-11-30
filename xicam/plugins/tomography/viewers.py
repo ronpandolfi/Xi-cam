@@ -364,7 +364,8 @@ class MBIRViewer(QtGui.QWidget):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.runButton.setIcon(icon)
-        self.runButton.setToolTip("Submit MBIR job to NERSC")
+        # self.runButton.setToolTip("Submit MBIR job to NERSC")
+        self.runButton.setToolTip("Generate slurm file")
 
         self.cor_widget = QtGui.QWidget() #parent widget for center of rotation input
 
@@ -384,11 +385,13 @@ class MBIRViewer(QtGui.QWidget):
         self.cor_Value = QtGui.QStackedWidget(parent = self.cor_widget)
 
         self.manual_tab = QtGui.QWidget()
-        text_box = QtGui.QLineEdit(parent = self.manual_tab)
+        self.val_box = QtGui.QDoubleSpinBox(parent = self.manual_tab)
+        self.val_box.setRange(0,10000)
+        self.val_box.setValue(int(self.mdata['dxelements'])/2)
         text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
         text_layout = QtGui.QHBoxLayout()
         text_layout.addWidget(text_label)
-        text_layout.addWidget(text_box)
+        text_layout.addWidget(self.val_box)
         self.manual_tab.setLayout(text_layout)
 
         self.auto_tab = QtGui.QWidget()
@@ -446,10 +449,9 @@ class MBIRViewer(QtGui.QWidget):
 
         self.runButton.clicked.connect(self.write_slurm)
 
-        mbirParams = pg.parametertree.ParameterTree()
-        mbirParams.setMinimumHeight(280)
-        mbirParams.setMinimumWidth(300)
-        params = [{'name': 'Dataset path', 'type': 'str', 'value': '{}'.format(self.path), 'default':'{}'.format(self.path)},
+        self.mbirParams = pg.parametertree.ParameterTree()
+        self.mbirParams.setMinimumHeight(230)
+        params = [{'name': 'Dataset path', 'type': 'str'},
                   {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
                   {'name': 'Z num elts', 'type': 'int', 'value': int(mdata['dzelements']) ,
                    'default': int(mdata['dzelements'])},
@@ -459,7 +461,7 @@ class MBIRViewer(QtGui.QWidget):
                   {'name': 'Output folder', 'type':'str', 'value':'Results', 'default': 'Results'}]
 
         self.mbir_params = pg.parametertree.Parameter.create(name='MBIR Parameters', type='group', children=params)
-        mbirParams.setParameters(self.mbir_params,showTop=False)
+        self.mbirParams.setParameters(self.mbir_params,showTop=False)
 
 
         right_menu = QtGui.QSplitter(self)
@@ -475,7 +477,7 @@ class MBIRViewer(QtGui.QWidget):
         container.setLayout(container_layout)
 
         left_menu = QtGui.QSplitter(self)
-        left_menu.addWidget(mbirParams)
+        left_menu.addWidget(self.mbirParams)
         left_menu.addWidget(container)
 
 
@@ -486,10 +488,13 @@ class MBIRViewer(QtGui.QWidget):
 
         self.setLayout(h)
 
+        self.mdata = mdata
+        self.path = path
+        self.center = 0
+
     def changeCORfunction(self, index):
 
         subname = self.cor_method_box.itemText(index)
-        # if
         self.auto_tab_layout.removeWidget(self.cor_param_tree)
 
         self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname=subname,
@@ -510,9 +515,6 @@ class MBIRViewer(QtGui.QWidget):
 
 
 
-
-
-
     def manualCOR(self):
         self.cor_Value.setCurrentWidget(self.manual_tab)
 
@@ -526,7 +528,22 @@ class MBIRViewer(QtGui.QWidget):
         # try: center = float(center)
         # except: ValueError: msg.showMessage('Center of rotation must be a float')
 
-        return 1000
+        # l = QtGui.QHBoxLayout()
+        # l.setContentsMargins(0, 0, 0, 0)
+        # l.addWidget(self.mbirParams)
+        # h = QtGui.QVBoxLayout()
+        # h.setContentsMargins(0,0,0,0)
+        #
+        # w = QtGui.QWidget(self)
+        # w.setLayout(l)
+
+        widget = self.cor_Value.currentWidget()
+        if widget is self.manual_tab:
+            return self.val_box.value()
+        else:
+            pass
+
+
 
     def write_slurm(self):
         """
@@ -546,26 +563,26 @@ class MBIRViewer(QtGui.QWidget):
         slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
         slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
         slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
-        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n'
-        slurm += 'mkdir $SCRATCH{}\n\n'.format(output)
-        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison '
-        slurm += '--input_hdf5 {} '.format(self.mbir_params.child('Dataset path').value())
-        slurm += '--group_hdf5 /{} '.format(file_name)
-        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/ '
-        slurm += '--output_hdf5 $SCRATCH{} --x_width {} '.format(output, self.mdata['dxelements'])
-        slurm += '--recon_x_width {} --num_dark {} '.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
-        slurm += '--num_bright {} --z_numElts {} '.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
-        slurm += '--z_start {} --num_views {} '.format(self.mbir_params.child('Z start').value(), views)
-        slurm += '--pix_size {} --rot_center {} '.format(float(self.mdata['pzdist'])*1000, self.center)
-        slurm += '--smoothness {} --zinger_thresh {} '.format(self.mbir_params.child('Smoothness').value(),
+        slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
+        slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
+        slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
+        slurm += '--group_hdf5 /{}'.format(file_name)
+        slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
+        slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
+        slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
+        slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
+        slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
+        slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
+        slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
                                                              self.mbir_params.child('Zinger thresh').value())
-        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {} '.format(nodes)
+        slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
         slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
 
 
 
+        parent_folder = self.path.split(self.path.split('/')[-1])[0]
+        write = os.join(parent_folder, '{}.slurm'.format(file_name))
 
-        write = '/home/hparks/Desktop/{}.slurm'.format(file_name)
         with open(write, 'w') as job:
             job.write(slurm)
 
