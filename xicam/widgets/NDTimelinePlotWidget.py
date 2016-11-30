@@ -14,7 +14,8 @@ class timelineLinePlot(pg.PlotWidget):
         if not colorhash in self.variationcurve:
             self.variationcurve[colorhash] = self.plot()
 
-        self.variationcurve[colorhash].setData(x=t, y=y)
+        l=min(len(t),len(y))
+        self.variationcurve[colorhash].setData(x=t[:l], y=y[:l])
         self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
 
@@ -119,7 +120,7 @@ class TimelinePlot(QtGui.QTabWidget):
         # append data to currentData
         if is1D:
             colorhash = ','.join([str(c) for c in color])
-            self._data['t'].append(t)
+            if colorhash=='255,255,255': self._data['t'].append(t)
             if colorhash not in self._data:
                 self._data[colorhash] = []
                 self._data['colors'].append(colorhash)

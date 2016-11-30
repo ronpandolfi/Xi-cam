@@ -306,17 +306,19 @@ class Worker(QtCore.QThread):
         super(Worker, self).__init__(parent)
         self.queue = queue
         self.pool = QtCore.QThreadPool.globalInstance()
-        self.pool.setMaxThreadCount(mp.cpu_count())
 
-    def __del__(self):
-        self.queue.join()
+
+    # def __del__(self):
+    #     self.queue.join()
 
     def stop(self):
         """
         Puts a None in the queue to signal the run loop to exit
         """
+
         self.queue.put(None)
-        self.wait()
+        self.quit()
+        print 'threads:',self.pool.activeThreadCount()
 
     def run(self):
         """

@@ -52,7 +52,7 @@ class BatchPlugin(base.plugin):
         for path in paths:
 
             xglobals.statusbar.showMessage('Processing item ' + str(paths.index(path)+1) + ' of ' + str(len(paths))+ '...')
-            xglobals.app.processEvents()
+            QtGui.QApplication.instance().processEvents()
 
             dimg = loader.diffimage(path)
 

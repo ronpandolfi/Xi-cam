@@ -156,9 +156,9 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()
-        p1 = AI.get_poni1()
-        p2 = AI.get_poni2()
-        msg.logMessage(('poni:', p1, p2),msg.DEBUG)
+        # p1 = AI.get_poni1()
+        # p2 = AI.get_poni2()
+        # msg.logMessage(('poni:', p1, p2),msg.DEBUG)
     else:
         AI = pyFAI.AzimuthalIntegrator()
         AI.setPyFAI(**AIdict)
@@ -350,19 +350,19 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
 
-    from matplotlib import pylab as plt
-
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
 
     alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
     msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
 
-    qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))  # TODO: get incoming angle from header
+    #qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))
     qsquared=qpar**2 + qvrt**2
 
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
+
+    print 'center?:',remeshcenter
 
     f2d=AI.getFit2D()
     f2d['centerX']=remeshcenter[0]
@@ -376,7 +376,7 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 
 
 
-    q = np.arange(len(qprofile))*np.sqrt(np.max(qsquared))/len(qprofile)/10.
+    #q = np.linspace(np.sqrt(qsquared.min()),np.sqrt(qsquared.max()),len(qprofile))/10. #WRONG!
 
     return q, qprofile, color, requestkey
 

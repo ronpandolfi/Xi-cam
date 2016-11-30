@@ -18,7 +18,7 @@ class FXSPlugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(FXSPlugin, self).__init__(*args, **kwargs)
 
         # self.sigUpdateExperiment.connect()
 

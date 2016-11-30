@@ -27,7 +27,7 @@ class XASPlugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(XASPlugin, self).__init__(*args, **kwargs)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)

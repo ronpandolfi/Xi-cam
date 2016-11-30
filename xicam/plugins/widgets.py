@@ -307,8 +307,9 @@ class dimgViewer(QtGui.QWidget):
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
                     if self.plotwidget is not None: #for timeline
-                        self.plotwidget.movPosLine(self.getq(mousePoint.x(), mousePoint.y(),mode='parallel'),
-                                                   self.getq(mousePoint.x(), mousePoint.y(), mode='z'))
+                        self.plotwidget.movPosLine(self.getq(x, y),
+                                                   self.getq(x, y, mode='parallel'),
+                                                   self.getq(x, y, mode='z'))
 
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
@@ -1010,8 +1011,8 @@ class timelineViewer(dimgViewer):
         self.timeline.getViewBox().setMouseEnabled(x=False, y=True)
 
     def processtimeline(self):
-        self.rescan()
         self.toolbar.actionProcess.setChecked(False)
+        self.rescan()
 
     def aborttimeline(self):
         pass
@@ -1257,7 +1258,7 @@ class integrationsubwidget(pg.PlotWidget):
                 data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
                                                   callback_slot=self.replotcallback)
                 threads.add_to_queue(runnable)
-    def movPosLine(self, qx,qz,dimg=None):
+    def movPosLine(self, q,qx,qz,dimg=None):
         pass #raise NotImplementedError
 
     def plotresult(self, result):
@@ -1286,8 +1287,8 @@ class qintegrationwidget(integrationsubwidget):
         super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self,qx,qz,dimg=None):
-        self.posLine.setPos(np.linalg.norm([qx,qz]))
+    def movPosLine(self,q,qx,qz,dimg=None):
+        self.posLine.setPos(q)
         self.posLine.show()
 
 
@@ -1300,7 +1301,7 @@ class chiintegrationwidget(integrationsubwidget):
         super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
+    def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qz,qx)))
         self.posLine.show()
 
@@ -1313,7 +1314,7 @@ class xintegrationwidget(integrationsubwidget):
         super(xintegrationwidget, self).__init__(axislabel=u'q<sub>x</sub> (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
+    def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(qx)
         self.posLine.show()
 
@@ -1326,7 +1327,7 @@ class zintegrationwidget(integrationsubwidget):
         super(zintegrationwidget, self).__init__(axislabel=u'q<sub>z</sub> (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
+    def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(qz)
         self.posLine.show()
 
@@ -1340,7 +1341,7 @@ class cakexintegrationwidget(integrationsubwidget):
         super(cakexintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
+    def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qx,qz)))
         self.posLine.show()
 
@@ -1354,8 +1355,8 @@ class cakezintegrationwidget(integrationsubwidget):
         super(cakezintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
-        self.posLine.setPos(np.sqrt(qx**2+qz**2))
+    def movPosLine(self,q, qx, qz, dimg=None):
+        self.posLine.setPos(q)
         self.posLine.show()
 
 class remeshqintegrationwidget(integrationsubwidget):
@@ -1368,8 +1369,8 @@ class remeshqintegrationwidget(integrationsubwidget):
         super(remeshqintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self,qx,qz,dimg=None):
-        self.posLine.setPos(np.sqrt(qx**2+qz**2))
+    def movPosLine(self,q,qx,qz,dimg=None):
+        self.posLine.setPos(q)
         self.posLine.show()
 
 class remeshchiintegrationwidget(integrationsubwidget):
@@ -1382,7 +1383,7 @@ class remeshchiintegrationwidget(integrationsubwidget):
         super(remeshchiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx, qz, dimg=None):
+    def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qz, qx)))
         self.posLine.show()
 
@@ -1396,7 +1397,7 @@ class remeshxintegrationwidget(integrationsubwidget):
         super(remeshxintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx,qz,dimg=None):
+    def movPosLine(self,q, qx,qz,dimg=None):
         self.posLine.setPos(qx)
         self.posLine.show()
 
@@ -1410,7 +1411,7 @@ class remeshzintegrationwidget(integrationsubwidget):
         super(remeshzintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
         self.sigPlotResult.connect(self.plotresult)
 
-    def movPosLine(self, qx,qz,dimg=None):
+    def movPosLine(self,q, qx,qz,dimg=None):
         self.posLine.setPos(qz)
         self.posLine.show()
 

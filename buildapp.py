@@ -73,7 +73,7 @@ import numpy as np
 #os.environ["CC"] = "gcc"
 #os.environ["CXX"] = "g++"
 
-APP = ['main.py']
+APP = ['xicamlauncher/main.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': False,
            'qt_plugins': 'imageformats',
