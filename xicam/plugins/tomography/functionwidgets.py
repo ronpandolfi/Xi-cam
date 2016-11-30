@@ -139,7 +139,7 @@ class FunctionWidget(fw.FeatureWidget):
         # change on/off icons
         icon = QtGui.QIcon()
         if checkable:
-            icon.addPixmap(QtGui.QPixmap("gui/icons_00.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             icon.addPixmap(QtGui.QPixmap("gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
             self.previewButton.setCheckable(True)
         else:
