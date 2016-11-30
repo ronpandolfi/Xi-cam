@@ -1,12 +1,13 @@
 import os
 import glob
+import traceback
 from collections import Iterator
 from datetime import datetime as dt
 
 from PySide import QtCore, QtUiTools
 from PySide import QtCore
 
-version='0.0.3'
+version='0.1.0'
 
 qdir = QtCore.QDir(__file__)
 qdir.cdUp()
@@ -37,18 +38,27 @@ class WfWorker(QtCore.QObject):
     
     finished = QtCore.Signal()
 
-    def __init__(self,wfman,to_run=None,parent=None):
+    def __init__(self,to_run=None,parent=None):
         super(WfWorker,self).__init__(parent)
-        self.wfman = wfman
         self.to_run = to_run
 
     def work(self):
         try:
             for item in self.to_run:
-                self.wfman.run_and_update(item)
+
+                # run and update the Operation in this TreeItem
+                op = item.data
+                op.run_and_update()
+                #self.wfman.run_and_update(item)
+
             self.thread().quit()
         except Exception as ex:
             # TODO: Handle this exception from wfman's pov
+            tb = traceback.format_exc()
+            msg = str('Error encountered during execution. \n'
+                + 'Error message: {} \n'.format(ex.message) 
+                + 'Stack trace: {}'.format(tb)) 
+            print msg
             self.thread().quit()
             raise ex
 

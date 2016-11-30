@@ -86,9 +86,6 @@ class WfUiManager(object):
         """
         il = self.load_input(name,src_ui,item_indx)
         self.op.input_locator[name] = il
-        #set op.input_src and op.input_type to assist in using il.val
-        self.op.input_src[name] = il.src
-        self.op.input_type[name] = il.tp
 
     def load_input(self,name,ui=None,item_indx=None):
         src = self.src_widgets[name].currentIndex()
@@ -170,8 +167,6 @@ class WfUiManager(object):
         result = self.wfman.is_good_tag(uri)
         if result[0]:
             self.wfman.add_op(uri,self.op) 
-            #self.ui.close()
-            #self.ui.deleteLater()
         elif result[1] == 'Tag not unique':
             self.wfman.update_op(uri,self.op)
         else:
@@ -194,12 +189,12 @@ class WfUiManager(object):
         for i in range(n_inp_widgets-1,-1,-1):
             item = self.ui.input_layout.takeAt(i)
             item.widget().close()
-            item.widget().deleteLater()
+            #item.widget().deleteLater()
         n_out_widgets = self.ui.output_layout.count()
         for i in range(n_out_widgets-1,-1,-1):
             item = self.ui.output_layout.takeAt(i)
             item.widget().close()
-            item.widget().deleteLater()
+            #item.widget().deleteLater()
 
     def srcwindow_safe_close(self,widg):
         try:
@@ -317,7 +312,6 @@ class WfUiManager(object):
         src = self.src_widgets[name].currentIndex()
         if not tp:
             tp = self.type_widgets[name].currentIndex()
-        #print 'render val/btn widgets for src {}, tp {}'.format(src,tp)
         btn_widget = QtGui.QPushButton()
         val_widget = QtGui.QLineEdit()
         if src == optools.no_input: 

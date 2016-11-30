@@ -133,13 +133,16 @@ class TreeModel(QtCore.QAbstractItemModel):
         #    else:
         #        return ' '
         #else:
-        if data_role == QtCore.Qt.DisplayRole:
+        if (data_role == QtCore.Qt.DisplayRole
+        or data_role == QtCore.Qt.ToolTipRole 
+        or data_role == QtCore.Qt.StatusTipRole
+        or data_role == QtCore.Qt.WhatsThisRole):
             return item.tag()
-        elif (data_role == QtCore.Qt.ToolTipRole): 
-            return item.long_tag() #+ '\n\n' + item.data_str()
-        elif (data_role == QtCore.Qt.StatusTipRole
-            or data_role == QtCore.Qt.WhatsThisRole):
-            return item.long_tag()
+        #elif (data_role == QtCore.Qt.ToolTipRole): 
+        #    return item.long_tag() #+ '\n\n' + item.data_str()
+        #elif (data_role == QtCore.Qt.StatusTipRole
+        #    or data_role == QtCore.Qt.WhatsThisRole):
+        #    return item.long_tag()
         else:
             return None
 

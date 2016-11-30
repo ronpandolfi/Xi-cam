@@ -112,14 +112,14 @@ class UiManager(object):
         uiman.ui.setParent(self.ui,QtCore.Qt.Window)
         return uiman
 
-    def display_item(self,indx):
+    def display_item(self,idx):
         """
         Display selected item from the workflow tree in image_viewer 
         """
-        if indx: 
-            if self.wfman.get_item(indx).data is not None:
-                to_display = self.wfman.get_item(indx).data
-                uri = self.wfman.build_uri(indx)
+        if idx.isValid(): 
+            if self.wfman.get_item(idx).data is not None:
+                to_display = self.wfman.get_item(idx).data
+                uri = self.wfman.build_uri(idx)
                 data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
 
     def final_setup(self):

@@ -15,37 +15,35 @@ class Operation(object):
         The input_names and output_names (lists of strings)
         are used to specify names for the parameters 
         that will be used to perform the operation.
-        When loading the operation into the workspace,
-        each name in input_names becomes a variable 
-        which must be assigned some value.
-        Meanwhile, the output_names specification is used to build
-        workflow connections with results that are not yet computed.
-        The categories attribute is a list that indicates
+        These lists are used as keys to build dicts
+        Operation.inputs and Operation.outputs.
+        The Operation.categories attribute is a list that indicates
         where the operation can be found in the OpManager tree.
-        The Operation will be listed under each category in the list.
+        The Operation will appear one time for each category in the list.
         Subcategories are indicated by a ".", for example:
-        self.categories = ['CAT1','CAT2.SUBCAT','CAT3']
+        self.categories = ['CAT1','CAT2.SUBCAT','CAT3'].
         """
         self.inputs = OrderedDict()
+        self.input_locator = {}
+        self.input_doc = {}
         self.input_src = {}
         self.input_type = {}
-        self.input_doc = {}
-        self.input_locator = {}
         self.outputs = OrderedDict() 
+        self.output_container = {}
         self.output_doc = {}
         # For each of the var names, assign to None 
         for name in input_names: 
             self.input_src[name] = optools.no_input
             self.input_type[name] = optools.none_type
+            self.input_locator[name] = None 
             self.inputs[name] = None
             self.input_doc[name] = None
-            self.input_locator[name] = None
         for name in output_names: 
+            self.output_container[name] = optools.OutputContainer() 
             self.outputs[name] = None
             self.output_doc[name] = None
         # Set default category to be 'MISC'
         self.categories = ['MISC']
-
 
     @abc.abstractmethod
     def run(self):
@@ -97,13 +95,21 @@ class Operation(object):
             out_indx += 1
         return a
                 
-    def set_outputs_to_none(self):
-        for name,val in self.outputs.items(): 
-            self.outputs[name] = None
+    #def set_outputs_to_none(self):
+    #    for name,val in self.outputs.items(): 
+    #        self.outputs[name] = None
 
+    def run_and_update(self):
+        """
+        Run the Operation and save its outputs in its output_locator 
+        """
+        self.run()
+        self.save_outputs()
 
-#class Workflow(Operation):
-
+    def save_outputs(self):
+        """Loads the data from outputs[names] into output_container[names].data"""
+        for name,d in self.outputs.items():
+            self.output_container[name].data = d
 
 class Realtime(Operation):
     __metaclass__ = abc.ABCMeta
@@ -120,6 +126,7 @@ class Realtime(Operation):
         Each OrderedDict should be populated with [input_uri:input_value] pairs.
         """
         pass
+
     @abc.abstractmethod
     def input_iter(self):
         """
@@ -128,6 +135,7 @@ class Realtime(Operation):
         When there is no new set of inputs to run, should return None.
         """
         pass
+
     @abc.abstractmethod
     def input_routes(self):
         """
@@ -155,8 +163,6 @@ class Realtime(Operation):
         return []
 
 
-
-
 class Batch(Operation):
     __metaclass__ = abc.ABCMeta
     """
@@ -165,6 +171,7 @@ class Batch(Operation):
     def __init__(self,input_names,output_names):
         super(Batch,self).__init__(input_names,output_names)
 
+
     @abc.abstractmethod
     def output_list(self):
         """
@@ -172,6 +179,7 @@ class Batch(Operation):
         Each OrderedDict should be populated with [input_uri:input_value] pairs.
         """
         pass
+
     @abc.abstractmethod
     def input_list(self):
         """
@@ -179,6 +187,7 @@ class Batch(Operation):
         Each OrderedDict should be populated with [input_uri:input_value] pairs.
         """
         pass
+
     @abc.abstractmethod
     def input_routes(self):
         """
@@ -241,7 +250,5 @@ class Workflow(Operation):
         msg = ""
         # TODO: Loop through the Operations tree
         return msg 
-
-
 
 

@@ -2,8 +2,8 @@ from PySide import QtCore
 
 import slacxop
 
-##### DEFINITIONS OF SOURCES FOR OPERATION INPUTS- HARD-CODED ORDER
 ##### TODO: THIS, MORE ELEGANTLY
+# definitions for operation input sources 
 input_sources = ['None','User Input','Filesystem','Workflow','Batch'] 
 no_input = 0
 user_input = 1
@@ -12,8 +12,7 @@ wf_input = 3
 batch_input = 4 
 valid_sources = [no_input,user_input,fs_input,wf_input,batch_input]
 
-##### VALID TYPES FOR OPERATION INPUTS- HARD-CODED ORDER
-##### TODO: THIS, MORE ELEGANTLY
+# supported types for operation inputs
 input_types = ['none','auto','string','integer','float','boolean','list']
 none_type = 0
 auto_type = 1
@@ -23,6 +22,12 @@ float_type = 4
 bool_type = 5
 list_type = 6
 valid_types = [none_type,auto_type,str_type,int_type,float_type,bool_type,list_type]
+
+# tags and indices for inputs and outputs trees
+inputs_tag = 'inputs'
+outputs_tag = 'outputs'
+inputs_idx = 0
+outputs_idx = 1
 
 def cast_type_val(tp,val):
     if tp == none_type:
@@ -51,26 +56,27 @@ def parse_wf_input(wfman,uri,op):
             downstreamflag = uri in op.downstream_ops()
         if downstreamflag:
             # a uri used to locate downstream Operations.
-            # the entire item containing the operation should be returned.
-            # this will facilitate extracting the op, running it, and updating it.
-            item,idx = wfman.get_from_uri(uri)
-            return item
+            # the entire TreeItem containing the operation should be returned.
+            itm,idx = wfman.get_from_uri(uri)
+            return itm
         else:
-            # uri points to an Operation- might as well return it
-            item,idx = wfman.get_from_uri(uri)
-            return item.data
+            itm,idx = wfman.get_from_uri(uri)
+            return itm.data
     elif len(uri_parts) == 2:
-        item,idx = wfman.get_from_uri(uri)
-        return item.data
+        # An entire inputs or outputs dict is requested.
+        itm,idx = wfman.get_from_uri(uri)
+        return itm.data
     else:
-        # Seeking a specific input or output.
+        # A specific input or output is requested.
         io_type = uri_parts[1]
-        if io_type == 'Outputs':
+        if io_type == outputs_tag:
             # uri points to an op output. 
-            # Return item from the uri.
-            item, indx = wfman.get_from_uri(uri)
-            return item.data
-        elif io_type == 'Inputs':
+            # Get the item from the uri.
+            itm, indx = wfman.get_from_uri(uri)
+            # Unpackage the OutputContainer
+            oc = itm.data
+            return oc.data
+        elif io_type == inputs_tag:
             inprouteflag = False
             if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
                 inprouteflag = uri in op.input_routes()
@@ -85,6 +91,15 @@ def parse_wf_input(wfman,uri,op):
                 item, indx = wfman.get_from_uri(uri)
                 il = item.data 
                 return il.data
+
+class OutputContainer(object):
+    """
+    Objects of this class are used as containers for outputs of an Operation.
+    OutputContainer.data should be None at least until the Operation runs,
+    at which point the WfManager should replace it with the actual output.
+    """
+    def __init__(self,data=None):
+        self.data = data 
 
 class InputLocator(object):
     """
@@ -103,10 +118,13 @@ class InputLocator(object):
 def parameter_doc(name,value,doc):
     #if type(value).__name__ == 'InputLocator':
     if isinstance(value, InputLocator):
-        val_str = str(value.val)
+        src_str = input_sources[value.src]
+        tp_str = input_types[value.tp]
+        return "- name: {} \n- source: {} \n- type: {} \n- doc: {}".format(name,src_str,tp_str,doc) 
     else:
         val_str = str(value)
-    return "- name: {} \n- value: {} \n- doc: {}".format(name,val_str,doc) 
+        tp_str = type(value).__name__
+        return "- name: {} \n- type: {} \n- value: {} \n- doc: {}".format(name,tp_str,val_str,doc) 
         
 #def loader_extensions():
 #    return str(
