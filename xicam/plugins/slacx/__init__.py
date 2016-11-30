@@ -1,4 +1,5 @@
 import os
+import sys
 
 from xicam.plugins import base
 from PySide import QtGui, QtCore, QtUiTools
@@ -13,9 +14,15 @@ class SlacxPlugin(base.plugin):
 
     def __init__(self, *args, **kwargs):
 
+        # Get a reference to an Application
+        try:
+            app = QtGui.QApplication(sys.argv)
+        except RuntimeError:
+            app = QtCore.QCoreApplication.instance()
+
         # start slacx core objects    
         opman = slacxopman.OpManager()
-        wfman = slacxwfman.WfManager()
+        wfman = slacxwfman.WfManager(app=app)
         # start slacx ui objects
         uiman = slacxuiman.UiManager(opman,wfman)
         wfman.logmethod = uiman.msg_board_log

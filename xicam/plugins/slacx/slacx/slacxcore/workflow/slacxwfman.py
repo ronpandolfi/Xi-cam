@@ -129,7 +129,6 @@ class WfManager(TreeModel):
                 il = optools.InputLocator(src,tp,val)
                 op.input_locator[name] = il
             self.add_op(uri,op)
-        #print dct
         
     def save_to_file(self,filename):
         """
@@ -208,8 +207,6 @@ class WfManager(TreeModel):
         Then, inform any attached QTreeView(s) that the Operation has been changed.
         It is expected that new_op is a reference to the Operation stored at uri. 
         """
-        #print '--- update op at '+uri
-        #print 'new op outputs: {}'.format(new_op.outputs)
         item, idx = self.get_from_uri(uri)
         # Take care of any IO dependencies: 
         self.update_io_deps(uri,new_op)
@@ -230,8 +227,6 @@ class WfManager(TreeModel):
         Check the children of the item at idx and compare them against the item's data.
         If new children are found in the data, render them as new children.
         """
-        #print 'UPDATE CHILDREN for {}'.format(idx.internalPointer().data)
-        #print 'n_children: {}'.format(idx.internalPointer().n_children())
         itm = idx.internalPointer()
         x = itm.data
         # If it is an OutputContainer, unpack it
@@ -239,16 +234,12 @@ class WfManager(TreeModel):
             x = x.data
         if isinstance(x,Operation):
             # Operations should never gain children- they only have inputs and outputs
-            #print 'Operation - never changes its children'
             pass
         elif isinstance(x,dict):
             self.update_dict(x,idx)
-            #print 'NEW n_children: {}'.format(idx.internalPointer().n_children())
         elif isinstance(x,list):
             self.update_list(x,idx)
-            #print 'NEW n_children: {}'.format(idx.internalPointer().n_children())
         else:
-            #print 'no new children'
             pass
 
     def update_dict(self,d,idx):
@@ -532,11 +523,8 @@ class WfManager(TreeModel):
                 th_idx = self.next_available_thread()
             # We should be _exec_ready - load the inputs
             for itm in to_run:
-                #print 'load inputs for '+itm.tag()
-                #print 'before: {}'.format(itm.data.inputs)
                 op = itm.data
                 self.load_inputs(op)
-                #print 'after: {}'.format(itm.data.inputs)
             # Make a new Worker, give None parent so that it can be thread-mobile
             wf_wkr = slacxtools.WfWorker(to_run,None)
             wf_thread = QtCore.QThread(self)
@@ -694,26 +682,21 @@ class WfManager(TreeModel):
         next_items = []
         # Build the first layer of the stack... screen for batch and workflow inputs
         for itm in self.root_items:
-            print 'stack item: {}'.format(itm.tag())
             op_rdy = True
             op = itm.data
             inp_srcs = [il.src for name,il in op.input_locator.items()] 
             if optools.batch_input in inp_srcs: 
                 # This Op is not ready until its Batch controller has run.
                 op_rdy = False
-                print 'HAS BATCH INPUTS.'
             elif optools.wf_input in inp_srcs:
                 # If the Operation is not a Batch or Realtime, it must not be ready
                 if not isinstance(op,Batch) and not isinstance(op,Realtime):
                     op_rdy = False
-                    print 'HAS WF INPUTS AND IS NOT BATCH OR REALTIME.'
                 else:
                     # If it is Batch or Realtime, check if this is one of the input_routes() 
                     if not il.val in op.input_routes():
-                        print 'HAS WF INPUTS THAT ARE NOT INPUT ROUTES.'
                         op_rdy = False
             if op_rdy:
-                print 'OP IS READY.'
                 next_items.append(itm)
         #next_items = self.items_ready(ordered_items)
         while next_items:
@@ -770,9 +753,6 @@ class WfManager(TreeModel):
         Get the portion of serial_execution_stack() that is level with or downstream of a given item
         """
         stk = self.serial_execution_stack()
-        print 'full stack:'
-        for itms in stk:
-            print [itm.tag() for itm in itms]
         substk = []
         for lst in stk:
             if root_item in lst:
@@ -783,9 +763,6 @@ class WfManager(TreeModel):
                     substk = []
             else:
                 substk.append(lst)
-        print 'substack:'
-        for itms in substk:
-            print [itm.tag() for itm in itms]
         return substk
         #ds_items = []
         #op = op_item.data
@@ -818,8 +795,6 @@ class WfManager(TreeModel):
         Give a list of Operation items whose inputs are satisfied, given items_done
         """
         rdy = []
-        print 'checking for ops ready given:'
-        print [itm.tag() for itm in items_done]
         for itm in self.root_items:
             op = itm.data
             op_rdy = True
