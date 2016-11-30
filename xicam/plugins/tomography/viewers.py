@@ -122,9 +122,6 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.preview3DViewer)
 
-        self.MBIRParams = MBIRViewer(self.data.header, self.path, parent=self)
-        self.viewstack.addWidget(self.MBIRParams)
-
 
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -331,9 +328,13 @@ class TomoViewer(QtGui.QWidget):
         else:
             self.projectionViewer.hideCenterDetection()
 
-    def onMBIR(self):
+    def onMBIR(self, active):
 
-        self.viewstack.setCurrentWidget(self.MBIRParams)
+        if active:
+            self.projectionViewer.showMBIR()
+            self.viewstack.setCurrentWidget(self.projectionViewer)
+        else:
+            self.projectionViewer.hideMBIR()
 
     def onROIselection(self):
         """
@@ -351,11 +352,13 @@ class TomoViewer(QtGui.QWidget):
 class MBIRViewer(QtGui.QWidget):
 
 
-    def __init__(self, mdata, path, *args, **kwargs):
+    def __init__(self, data, path, *args, **kwargs):
         super(MBIRViewer, self).__init__(*args, **kwargs)
-
-        self.mdata = mdata
+        self.mdata = data.header
+        if path is list:
+            path = path[0]
         self.path = path
+        self.datawidget =data
         self.center = 0
         self.cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
 
@@ -453,8 +456,8 @@ class MBIRViewer(QtGui.QWidget):
         self.mbirParams.setMinimumHeight(230)
         params = [{'name': 'Dataset path', 'type': 'str'},
                   {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'Z num elts', 'type': 'int', 'value': int(mdata['dzelements']) ,
-                   'default': int(mdata['dzelements'])},
+                  {'name': 'Z num elts', 'type': 'int', 'value': int(self.mdata['dzelements']) ,
+                   'default': int(self.mdata['dzelements'])},
                   {'name': 'Smoothness', 'type': 'float', 'value': 0.15, 'default': 0.15},
                   {'name': 'Zinger thresh', 'type': 'float', 'value': 5, 'default': 5},
                   {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2},
@@ -487,10 +490,6 @@ class MBIRViewer(QtGui.QWidget):
 
 
         self.setLayout(h)
-
-        self.mdata = mdata
-        self.path = path
-        self.center = 0
 
     def changeCORfunction(self, index):
 
@@ -539,9 +538,11 @@ class MBIRViewer(QtGui.QWidget):
 
         widget = self.cor_Value.currentWidget()
         if widget is self.manual_tab:
+            print self.val_box.value()
             return self.val_box.value()
         else:
-            pass
+            kwargs = self.load_COR_kwargs(self.cor_function.subfunc_name)
+
 
 
 
@@ -632,7 +633,7 @@ class ProjectionViewer(QtGui.QWidget):
 
     sigCenterChanged = QtCore.Signal(float)
 
-    def __init__(self, data, view_label=None, center=None, *args, **kwargs):
+    def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
 
@@ -647,6 +648,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+        self.mbir_viewer = MBIRViewer(self.data, paths, parent=self)
 
 
         # roi to select region of interest
@@ -677,10 +679,6 @@ class ProjectionViewer(QtGui.QWidget):
         h1.addWidget(self.setCenterButton)
         h1.addWidget(olabel)
         h1.addWidget(originBox)
-
-
-
-
 
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
@@ -721,6 +719,8 @@ class ProjectionViewer(QtGui.QWidget):
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
+        l.addWidget(self.mbir_viewer)
+        self.mbir_viewer.hide()
 
         slider.valueChanged.connect(spinBox.setValue)
         slider.valueChanged.connect(self.stackViewer.resetImage)
@@ -782,6 +782,16 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_widget.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
+
+    def showMBIR(self):
+        self.mbir_viewer.show()
+        self.hideCenterDetection()
+        self.stackViewer.hide()
+
+    def hideMBIR(self):
+        self.mbir_viewer.hide()
+        self.stackViewer.show()
+
 
     def updateROIFromCenter(self, center):
         """

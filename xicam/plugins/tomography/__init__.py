@@ -361,9 +361,9 @@ class plugin(base.plugin):
         self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
 
 
-    def mbir(self):
+    def mbir(self, value):
 
-        self.centerwidget.widget(self.currentWidget()).onMBIR()
+        self.centerwidget.widget(self.currentWidget()).onMBIR(value)
 
         # if self.checkPipeline():
         #     msg.showMessage('Computing MBIR preview...', timeout=0)
