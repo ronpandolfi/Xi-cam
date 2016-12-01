@@ -1,0 +1,10 @@
+.DS_Store
+*.edf
+*.nxs
+.idea/
+*.pyc
+*.csv
+*.tif
+build/
+dist/
+xicam.egg_info/
