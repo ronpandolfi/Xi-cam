@@ -1,0 +1,602 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Plugin Development Tutorial &#8212; Xi-cam 1.2.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/graphite.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="Xi-cam 1.2.2 documentation" href="index.html" />
+    <link rel="next" title="Workflow API Development Tutorial" href="workflowAPI.html" />
+    <link rel="prev" title="Introduction" href="introduction.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="workflowAPI.html" title="Workflow API Development Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="plugin-development-tutorial">
+<h1>Plugin Development Tutorial<a class="headerlink" href="#plugin-development-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>Plugins allow you to add your own custom analysis and visualization technique in the Xi-cam platform. This requires some
+knowledge of Python and Qt. In this tutorial we demonstrate implementing a plugin for an external binary, HipRMC.</p>
+<p>The HipRMC binary accepts a single argument: an input parameter file. HipRMC outputs by writing images to disk.
+This plugin mediates these exchanges and displays the results.</p>
+<p>Xi-cam assumes that any module/package in the xicam/plugins directory is a <cite>plugin</cite>. All Xi-cam plugins must define a
+<cite>plugin</cite> class which inherits <cite>xicam.plugins.base.plugin</cite> and has attributes defining the locations of its widgets.
+The following attributes are optionally inserted into the Xi-cam interface layout:</p>
+<ul class="simple">
+<li><cite>plugin.centerwidget</cite></li>
+<li><cite>plugin.leftwidget</cite></li>
+<li><cite>plugin.rightwidget</cite></li>
+<li><cite>plugin.bottomwidget</cite></li>
+<li><cite>plugin.toolbar</cite></li>
+</ul>
+<p>When not set, default widgets are used. When set to <cite>None</cite>, the corresponding layout element is not shown.</p>
+<p>We first start with a short tutorial in which we some basic plugin functionality, before moving on to the full
+HipRMC example.</p>
+<div class="section" id="plugin-creation">
+<h2>Plugin creation<a class="headerlink" href="#plugin-creation" title="Permalink to this headline">¶</a></h2>
+<p>Our first step is to create the plugin subclass which defines necessary plugin attributes:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first line imports the plugin base class. The rest of the code names the plugin subclass (&#8220;ViewerRMC&#8221;) and
+instantiates it when Xi-Cam is run. The plugin, at this point, has nothing except the widgets it inherits from the base
+class. We would like to display images in this plugin, so we add a <code class="docutils literal"><span class="pre">QTabWidget</span></code>, from <code class="docutils literal"><span class="pre">Pyside.QtGui</span></code>, to hold these
+images.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">PySide</span> <span class="kn">import</span> <span class="n">QtGui</span>
+
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTabWidget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setDocumentMode</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setTabsClosable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rightwidget</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first line added overrides the base plugin&#8217;s <code class="docutils literal"><span class="pre">centerwidget</span></code> by adding a <code class="docutils literal"><span class="pre">QTabWidget</span></code>. The second line formats
+the widget so that most of its frame is not shown. The final line sets the <code class="docutils literal"><span class="pre">rightwidget</span></code> to <code class="docutils literal"><span class="pre">None</span></code>. As a result,
+this plugin will not show a <code class="docutils literal"><span class="pre">rightwidget</span></code>. The third allows tabs to be closed by the user. We must add this
+functionality manually with a method that takes and deletes tabs.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTabWidget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setDocumentMode</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setTabsClosable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">tabCloseRequested</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tabClose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rightwidget</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">tabClose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">widget</span><span class="p">(</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In the <code class="docutils literal"><span class="pre">__init__</span></code> method, we added a line that connects a tab close request to the method <code class="docutils literal"><span class="pre">tabClose</span></code> when the
+user requests a tab. <code class="docutils literal"><span class="pre">tabClose</span></code> takes and deletes the tab as requested by the user.</p>
+</div>
+<div class="section" id="opening-and-displaying-images">
+<h2>Opening and Displaying Images<a class="headerlink" href="#opening-and-displaying-images" title="Permalink to this headline">¶</a></h2>
+<p>To display an image, we&#8217;ll write a method that takes a path and opens the image.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">PySide</span> <span class="kn">import</span> <span class="n">QtGui</span>
+<span class="kn">from</span> <span class="nn">pipeline</span> <span class="kn">import</span> <span class="n">loader</span>
+<span class="kn">import</span> <span class="nn">pyqtgraph</span> <span class="kn">as</span> <span class="nn">pg</span>
+
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+
+<span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">openfiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activate</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">paths</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">loadimage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">ImageView</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">setImage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Displaying an image requires <code class="docutils literal"><span class="pre">pyqtgraph</span></code> and the <code class="docutils literal"><span class="pre">loader</span></code> function from <code class="docutils literal"><span class="pre">pipeline</span></code>, a Xi-Cam module. First we
+activate the plugin using the <code class="docutils literal"><span class="pre">activate</span></code> method inherited from the base class. The image is loaded using the
+<code class="docutils literal"><span class="pre">loader</span></code> function, but displaying it requires an <code class="docutils literal"><span class="pre">ImageView</span></code> object from <code class="docutils literal"><span class="pre">pyqtgraph</span></code>. The image is loaded into an
+<code class="docutils literal"><span class="pre">ImageView</span></code> object, which itself is then loaded into the <code class="docutils literal"><span class="pre">centerwidget</span></code> of the plugin.</p>
+</div>
+<div class="section" id="adding-and-displaying-parameters">
+<h2>Adding and Displaying Parameters<a class="headerlink" href="#adding-and-displaying-parameters" title="Permalink to this headline">¶</a></h2>
+<p>In this example we use a <code class="docutils literal"><span class="pre">ParameterTree</span></code> from <code class="docutils literal"><span class="pre">pyqtgraph</span></code> to display parameters of interest:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">PySide</span> <span class="kn">import</span> <span class="n">QtGui</span>
+<span class="kn">from</span> <span class="nn">pipeline</span> <span class="kn">import</span> <span class="n">loader</span>
+<span class="kn">import</span> <span class="nn">pyqtgraph</span> <span class="kn">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pyqtgraph</span> <span class="kn">import</span> <span class="n">parametertree</span> <span class="k">as</span> <span class="n">pt</span>
+
+<span class="o">...</span>
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+         <span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">ParameterTree</span><span class="p">()</span>
+         <span class="n">params</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Num tiles&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Loading factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Scale factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Numsteps factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Model start size&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">start_size</span><span class="p">},</span>
+                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Save Name&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;processed&#39;</span><span class="p">}]</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">configparams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Configuration&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="o">.</span><span class="n">setParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">configparams</span><span class="p">,</span> <span class="n">showTop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The parameters shown here are specific to running HipRMC, but this format can be used equally well on any set of
+parameters. This code sets the parameters as a list and loads them into a <code class="docutils literal"><span class="pre">ParameterTree</span></code>. To add another parameter
+called, say, &#8220;time,&#8221; we must add the parameter name, type, and starting and default values (both optional) to the
+<code class="docutils literal"><span class="pre">params</span></code> list:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">ParameterTree</span><span class="p">()</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Num tiles&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Loading factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Scale factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">},</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Numsteps factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Model start size&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">start_size</span><span class="p">},</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Save Name&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;processed&#39;</span><span class="p">}</span><span class="o">.</span>
+          <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}]</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">configparams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Configuration&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="o">.</span><span class="n">setParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">configparams</span><span class="p">,</span> <span class="n">showTop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This new line adds a &#8220;time&#8221; parameter of default value 1 to the parameters list. To access the values, we use a
+<code class="docutils literal"><span class="pre">pyqtgraph</span></code> method <code class="docutils literal"><span class="pre">child()</span></code>. For example, <code class="docutils literal"><span class="pre">self.configparams.child('time').value()</span></code> returns <code class="docutils literal"><span class="pre">1</span></code>.</p>
+</div>
+<div class="section" id="creating-and-wiring-a-button">
+<h2>Creating and Wiring a Button<a class="headerlink" href="#creating-and-wiring-a-button" title="Permalink to this headline">¶</a></h2>
+<p>Creating and wiring a button to a method is very straightforward:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="o">...</span>
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="o">...</span>
+
+        <span class="n">funcButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;Run function&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">funcButton</span><span class="p">)</span>
+        <span class="n">funcButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first two lines create the button and add it to the plugin. The third connects it to a method called <code class="docutils literal"><span class="pre">function</span></code>,
+which must be written by the user:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="o">...</span>
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="o">...</span>
+
+        <span class="n">funcButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;Run function&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">funcButton</span><span class="p">)</span>
+        <span class="n">funcButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">function</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s2">&quot;hello&quot;</span>
+</pre></div>
+</div>
+<p>Now once the button is pressed by the user, the terminal will print &#8220;hello.&#8221;</p>
+</div>
+<div class="section" id="viewerrmc-full-example">
+<h2>ViewerRMC Full Example<a class="headerlink" href="#viewerrmc-full-example" title="Permalink to this headline">¶</a></h2>
+<p>For the viewer which will display HipRMC output, we need more functionality. Specifically, HipRMC only works on square
+images, and accepts as an input a parameter file. We would like to see its output on the GUI as well. This full example
+uses code written above, but much of it is rearranged.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">PySide</span> <span class="kn">import</span> <span class="n">QtGui</span>
+<span class="kn">from</span> <span class="nn">xicam.plugins</span> <span class="kn">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">xicam</span> <span class="kn">import</span> <span class="n">config</span>
+<span class="kn">import</span> <span class="nn">pyqtgraph</span> <span class="kn">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pyqtgraph</span> <span class="kn">import</span> <span class="n">parametertree</span> <span class="k">as</span> <span class="n">pt</span>
+<span class="kn">from</span> <span class="nn">fabio</span> <span class="kn">import</span> <span class="n">tifimage</span>
+<span class="kn">from</span> <span class="nn">pipeline</span> <span class="kn">import</span> <span class="n">loader</span><span class="p">,</span> <span class="n">hig</span><span class="p">,</span> <span class="n">msg</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">xicam.RmcView</span> <span class="kn">as</span> <span class="nn">rmc</span>
+
+
+<span class="k">class</span> <span class="nc">plugin</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">plugin</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;ViewerRMC&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTabWidget</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setDocumentMode</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setTabsClosable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">tabCloseRequested</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tabCloseRequested</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rightwidget</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">openfiles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">paths</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activate</span><span class="p">()</span>
+        <span class="n">view_widget</span> <span class="o">=</span> <span class="n">inOutViewer</span><span class="p">(</span><span class="n">paths</span> <span class="o">=</span> <span class="n">paths</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">view_widget</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">setCurrentWidget</span><span class="p">(</span><span class="n">view_widget</span><span class="p">)</span>
+        <span class="n">view_widget</span><span class="o">.</span><span class="n">drawCameraLocation</span><span class="p">(</span><span class="n">view_widget</span><span class="o">.</span><span class="n">view_stack</span><span class="p">,</span><span class="n">view_widget</span><span class="o">.</span><span class="n">cameraLocation</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">tabCloseRequested</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centerwidget</span><span class="o">.</span><span class="n">widget</span><span class="p">(</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Must of the plugin methods remain the same, with the exception of the <code class="docutils literal"><span class="pre">openfiles</span></code> method. Here we create an object
+called an <code class="docutils literal"><span class="pre">inOutViewer</span></code> which will hold the image, the image after the camera location has been centered, and the
+output of HipRMC. The <code class="docutils literal"><span class="pre">inOutViewer</span></code> class is defined below. The <code class="docutils literal"><span class="pre">drawCameraLocation</span></code> is a method of <code class="docutils literal"><span class="pre">inOutViewer</span></code>.
+It draws the camera location of the image as a dot.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">inOutViewer</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QWidget</span><span class="p">,</span> <span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">inOutViewer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">)</span>
+
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cameraLocation</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">activeExperiment</span><span class="o">.</span><span class="n">center</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span><span class="o">=</span> <span class="bp">None</span>    <span class="c1">#this will hold the output of hiprmc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span> <span class="o">=</span> <span class="bp">None</span>    <span class="c1">#this will hold the centered image</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">inOutViewer</span></code> class inherits from the QWidget class in PySide. <code class="docutils literal"><span class="pre">layout</span></code> is the layout of the widget (which we
+choose to be horizontal), and the camera location, <code class="docutils literal"><span class="pre">self.cameraLocation</span></code>, is accessed through the <code class="docutils literal"><span class="pre">config</span></code>
+Xi-Cam module. Note that the camera location must be set manually using Xi-Cam&#8217;s <a href="#id1"><span class="problematic" id="id2">``</span></a>Viewer&#8217;&#8217; plugin.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># load and display image</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">ImageView</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">paths</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">loadimage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">()</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">setImage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">autoRange</span><span class="p">()</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This block . The <code class="docutils literal"><span class="pre">ImageView</span></code> object itself is loaded into <code class="docutils literal"><span class="pre">image_holder</span></code>, a <code class="docutils literal"><span class="pre">QStackedWidget</span></code> that allows
+windows to be stacked on top of each other. The <code class="docutils literal"><span class="pre">image_holder</span></code> will hold the original and edited images, as well as
+the HipRMC output, in different tabs.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># configuring the right widget</span>
+<span class="n">sideWidgetFormat</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QVBoxLayout</span><span class="p">()</span>
+<span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+ <span class="k">try</span><span class="p">:</span>
+    <span class="n">start_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stack_image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+ <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s2">&quot;Image must be 2-D&quot;</span>
+
+ <span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">ParameterTree</span><span class="p">()</span>
+ <span class="n">params</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Num tiles&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+           <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Loading factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
+           <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Scale factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">32</span><span class="p">},</span>
+           <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Numsteps factor&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span>
+           <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Model start size&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">start_size</span><span class="p">},</span>
+           <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Save Name&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;processed&#39;</span><span class="p">}]</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">configparams</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Configuration&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="o">.</span><span class="n">setParameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">configparams</span><span class="p">,</span> <span class="n">showTop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+ <span class="n">scatteringHolder</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">()</span>
+ <span class="n">scatteringHolder</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scatteringParams</span><span class="p">)</span>
+ <span class="n">scatteringHolder</span><span class="o">.</span><span class="n">setFixedHeight</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span>
+ <span class="n">scatteringHolder</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
+
+ <span class="n">centerButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;Center camera location&quot;</span><span class="p">)</span>
+ <span class="n">runButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s2">&quot;Run RMC processing&quot;</span><span class="p">)</span>
+ <span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">scatteringHolder</span><span class="p">)</span>
+ <span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">addSpacing</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+ <span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">centerButton</span><span class="p">)</span>
+ <span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">addSpacing</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+ <span class="n">sideWidgetFormat</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">runButton</span><span class="p">)</span>
+
+
+ <span class="n">centerButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span>
+ <span class="n">runButton</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runRMC</span><span class="p">)</span>
+
+ <span class="bp">self</span><span class="o">.</span><span class="n">headings</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTabBar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="s1">&#39;Original Image&#39;</span><span class="p">)</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="s1">&#39;Recentered Image&#39;</span><span class="p">)</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="s1">&#39;RMC Timeline&#39;</span><span class="p">)</span>
+ <span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">setShape</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QTabBar</span><span class="o">.</span><span class="n">TriangularSouth</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">__init__</span></code> method sets and fills the layout of most of the plugin. In the code block above, we create the right
+side of the center widget, which holds the parameters for running HipRMC, as well as buttons for processing our
+original image. The parameters are set set and held in a <code class="docutils literal"><span class="pre">ParameterTree</span></code>. The bottom two blocks show, respectively,
+the connection of buttons to processing methods belonging to the <code class="docutils literal"><span class="pre">inOutViewer</span></code> class, and the creation of a
+<code class="docutils literal"><span class="pre">QTabBar</span></code> that allows users to toggle between the original image, the centered image, and the HipRMC output.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">drawROI</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">orig_view</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span><span class="o">.</span><span class="n">getViewBox</span><span class="p">())</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">ImageView</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span><span class="p">)</span>
+
+
+<span class="n">sidelayout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QVBoxLayout</span><span class="p">()</span>
+<span class="n">sidelayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="p">)</span>
+<span class="n">sidelayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="p">)</span>
+
+<span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">sidelayout</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">sideWidgetFormat</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">currentChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currentChanged</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">currentChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headings</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This final few blocks does a few things. It draws an ROI (region of interest) around the image using a method defined
+below in case it is hard to see on the background of the viewer. It also creates a place to place the centered image,
+which does not exist until the <code class="docutils literal"><span class="pre">centerButton</span></code> is pressed by the user. It then lays out the entire center widget.
+The final two lines allow the user to change tabs in the <code class="docutils literal"><span class="pre">image_holder</span></code>, and call on a short method reproduced
+below:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">currentChanged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The other methods are as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="c1"># if there is already an edited image, discard to make space for a new one</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">ImageView</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span><span class="p">)</span>
+
+    <span class="c1">#resize image so that it&#39;s in center</span>
+    <span class="c1">#displays output on stackwidget</span>
+
+    <span class="n">xdim</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">ydim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">newx</span> <span class="o">=</span> <span class="n">xdim</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cameraLocation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">xdim</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">newy</span> <span class="o">=</span> <span class="n">ydim</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cameraLocation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">ydim</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">newx</span><span class="p">,</span><span class="n">newy</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="p">),</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+    <span class="n">new_center</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">lowleft_corner_x</span> <span class="o">=</span> <span class="n">new_center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">cameraLocation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">lowleft_corner_y</span> <span class="o">=</span> <span class="n">new_center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">cameraLocation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span><span class="p">[</span><span class="n">lowleft_corner_x</span><span class="p">:</span><span class="n">lowleft_corner_x</span><span class="o">+</span><span class="n">xdim</span><span class="p">,</span><span class="n">lowleft_corner_y</span><span class="p">:</span> <span class="n">lowleft_corner_y</span><span class="o">+</span><span class="n">ydim</span><span class="p">]</span> \
+        <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">orig_image</span>
+
+    <span class="c1"># save image</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">write_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.tif&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_path</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;centered.tif&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_path</span> <span class="o">+=</span> <span class="s1">&#39;_centered.tif&#39;</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">tifimage</span><span class="o">.</span><span class="n">tifimage</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rot90</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">/</span>
+                                      <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">*</span><span class="mi">2</span><span class="o">**</span><span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)))</span>
+    <span class="n">img</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">write_path</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span><span class="o">.</span><span class="n">setImage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span><span class="p">)</span>
+
+    <span class="n">box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">drawCameraLocation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edited_view</span><span class="p">,</span><span class="n">new_center</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">drawROI</span><span class="p">(</span><span class="n">lowleft_corner_x</span><span class="p">,</span><span class="n">lowleft_corner_y</span><span class="p">,</span><span class="n">xdim</span><span class="p">,</span><span class="n">ydim</span><span class="p">,</span> <span class="n">box</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">drawROI</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="p">,</span><span class="n">box</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">drawCameraLocation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">imageView_item</span><span class="p">,</span><span class="n">location</span><span class="p">):</span>
+
+    <span class="n">cameraBox</span> <span class="o">=</span> <span class="n">imageView_item</span><span class="o">.</span><span class="n">getImageItem</span><span class="p">()</span><span class="o">.</span><span class="n">getViewBox</span><span class="p">()</span>
+    <span class="n">cameraPlot</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">ScatterPlotItem</span><span class="p">()</span>
+    <span class="n">cameraBox</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="n">cameraPlot</span><span class="p">)</span>
+    <span class="n">cameraPlot</span><span class="o">.</span><span class="n">setData</span><span class="p">([</span><span class="n">location</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="n">location</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">pen</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                            <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;o&#39;</span> <span class="p">,</span> <span class="n">brush</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">mkBrush</span><span class="p">(</span><span class="s1">&#39;#FFA500&#39;</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">cameraBox</span>
+
+
+<span class="k">def</span> <span class="nf">drawROI</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xpos</span><span class="p">,</span> <span class="n">ypos</span><span class="p">,</span> <span class="n">xdim</span><span class="p">,</span><span class="n">ydim</span><span class="p">,</span> <span class="n">view_box</span><span class="p">):</span>
+
+    <span class="n">roi</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">RectROI</span><span class="p">((</span><span class="n">xpos</span><span class="p">,</span><span class="n">ypos</span><span class="p">),(</span><span class="n">xdim</span><span class="p">,</span><span class="n">ydim</span><span class="p">),</span><span class="n">movable</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span><span class="n">removable</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">view_box</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="n">roi</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>These three methods relate to centering the input image. The first is connected to the <code class="docutils literal"><span class="pre">centerButton</span></code> wired in the
+creation of the <code class="docutils literal"><span class="pre">inOutViewer</span></code> class. It creates a new image so that the camera location of the input image is in the
+center of the new image. It also writes the new image in the working directory. The second method draws the camera
+location as a dot in the center of the new image. The third method draws an ROI in a specified location. The first
+method calls the second once to draw the camera location, and the third method twice to draw ROIs around the old and new
+images.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">runRMC</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s1">&#39;Running RMC for centered version of {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># if there is already a viewer present, remove it to make room for another</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">removeWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edited_image</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s1">&#39;Error: no image loaded&#39;</span><span class="p">,</span><span class="n">timeout</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">clearMessage</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configparams</span>
+    <span class="n">hig_info</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;hipRMCInput&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;instrumentation&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;inputimage&#39;</span><span class="p">:</span> <span class="s2">&quot;{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">write_path</span><span class="p">),</span>
+                                         <span class="s1">&#39;imagesize&#39;</span><span class="p">:</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_dim</span> <span class="p">],</span>
+                                         <span class="s1">&#39;numtiles&#39;</span><span class="p">:</span> <span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Num tiles&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">(),</span>
+                                         <span class="s1">&#39;loadingfactors&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Loading factor&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()]},</span>
+                     <span class="s1">&#39;computation&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;runname&#39;</span><span class="p">:</span> <span class="s2">&quot;{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Save Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()),</span>
+                                     <span class="s1">&#39;modelstartsize&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Model start size&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">(),</span>
+                                                        <span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Model start size&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()],</span>
+                                     <span class="s1">&#39;numstepsfactor&#39;</span><span class="p">:</span> <span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Numsteps factor&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">(),</span>
+                                     <span class="s1">&#39;scalefactor&#39;</span><span class="p">:</span> <span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Scale factor&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()}}}</span>
+
+    <span class="n">h</span> <span class="o">=</span> <span class="n">hig</span><span class="o">.</span><span class="n">hig</span><span class="p">(</span><span class="o">**</span><span class="n">hig_info</span><span class="p">)</span>
+    <span class="n">hig_name</span> <span class="o">=</span> <span class="s1">&#39;./&#39;</span> <span class="o">+</span> <span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Save Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">hig_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.hig&#39;</span><span class="p">):</span>
+        <span class="n">hig_name</span> <span class="o">+=</span> <span class="s1">&#39;.hig&#39;</span>
+
+    <span class="n">h</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">hig_name</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="s1">&#39;./hiprmc/bin/hiprmc&#39;</span><span class="p">,</span> <span class="n">hig_name</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>
+    <span class="n">output</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+
+    <span class="n">msg</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s1">&#39;Done&#39;</span><span class="p">)</span>
+
+    <span class="c1"># complicated way of finding and writing into folder name written by hiprmc</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Save Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+    <span class="n">rmc_folder</span> <span class="o">=</span> <span class="s1">&#39;./{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="n">ind</span><span class="p">:]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">hig_name</span><span class="p">,</span> <span class="s1">&#39;{}/{}.hig&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">rmc_folder</span><span class="p">,</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Save Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()))</span>
+
+    <span class="c1"># write output of RMC to file in hiprmc output folder</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="n">rmc_folder</span> <span class="o">+</span> <span class="s2">&quot;/{}_rmc_output.txt&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;Save Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">txt</span><span class="p">:</span>
+        <span class="n">txt</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+    <span class="c1"># add rmcView to tabwidget</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span> <span class="o">=</span> <span class="n">rmc</span><span class="o">.</span><span class="n">rmcView</span><span class="p">(</span><span class="n">rmc_folder</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span><span class="o">.</span><span class="n">findChild</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QTabBar</span><span class="p">)</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rmc_view</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">image_holder</span><span class="o">.</span><span class="n">setCurrentIndex</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This final method is connected to the <code class="docutils literal"><span class="pre">runButton</span></code> in the <code class="docutils literal"><span class="pre">inOutViewer</span></code>. It takes the params held in the
+<code class="docutils literal"><span class="pre">inOutViewer</span></code> and writes them into a <code class="docutils literal"><span class="pre">hig</span></code> file, the necessary input for the <code class="docutils literal"><span class="pre">hiprmc</span></code> code. The method calls
+<code class="docutils literal"><span class="pre">hiprmc</span></code> as a subprocess. <code class="docutils literal"><span class="pre">hiprmc</span></code> writes a folder of images, so the method writes its feedback as a <code class="docutils literal"><span class="pre">txt</span></code>, and
+transfer this and the <code class="docutils literal"><span class="pre">hig</span></code> file to this folder. Finally, it creates an <code class="docutils literal"><span class="pre">rmcView</span></code> class, a Xi-Cam module, to
+display the output images.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Plugin Development Tutorial</a><ul>
+<li><a class="reference internal" href="#plugin-creation">Plugin creation</a></li>
+<li><a class="reference internal" href="#opening-and-displaying-images">Opening and Displaying Images</a></li>
+<li><a class="reference internal" href="#adding-and-displaying-parameters">Adding and Displaying Parameters</a></li>
+<li><a class="reference internal" href="#creating-and-wiring-a-button">Creating and Wiring a Button</a></li>
+<li><a class="reference internal" href="#viewerrmc-full-example">ViewerRMC Full Example</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="introduction.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="workflowAPI.html"
+                        title="next chapter">Workflow API Development Tutorial</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pluginTutorial.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="workflowAPI.html" title="Workflow API Development Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>
