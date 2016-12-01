@@ -225,6 +225,8 @@ dummy:
 	@echo "Build finished. Dummy builder generates no files."
 
 
+GH_PAGES_SOURCES = source Makefile
+
 gh-pages:
 	git checkout gh-pages
 	rm -rf build _sources _static
