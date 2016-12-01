@@ -1,6 +1,6 @@
 from collections import deque
 import numpy as np
-import scipy as sp
+import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
@@ -322,6 +322,9 @@ class TomoViewer(QtGui.QWidget):
             Boolean specifying to activate or not. True activate, False deactivate
 
         """
+
+        self.onMBIR(not active)
+
         if active:
             self.projectionViewer.showCenterDetection()
             self.viewstack.setCurrentWidget(self.projectionViewer)
@@ -329,6 +332,7 @@ class TomoViewer(QtGui.QWidget):
             self.projectionViewer.hideCenterDetection()
 
     def onMBIR(self, active):
+
 
         if active:
             self.projectionViewer.showMBIR()
@@ -356,9 +360,11 @@ class MBIRViewer(QtGui.QWidget):
         super(MBIRViewer, self).__init__(*args, **kwargs)
         self.mdata = data.header
         if path is list:
-            path = path[0]
-        self.path = path
-        self.datawidget =data
+            paths = path[0]
+        else:
+            paths = path
+        self.path = paths
+        self.data = data
         self.center = 0
         self.cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
 
@@ -390,6 +396,7 @@ class MBIRViewer(QtGui.QWidget):
         self.manual_tab = QtGui.QWidget()
         self.val_box = QtGui.QDoubleSpinBox(parent = self.manual_tab)
         self.val_box.setRange(0,10000)
+        self.val_box.setDecimals(1)
         self.val_box.setValue(int(self.mdata['dxelements'])/2)
         text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
         text_layout = QtGui.QHBoxLayout()
@@ -522,43 +529,37 @@ class MBIRViewer(QtGui.QWidget):
 
     def loadCOR(self):
 
-        # if on manual COR, just grab value
-        # if on automatic, do calculation
-        # try: center = float(center)
-        # except: ValueError: msg.showMessage('Center of rotation must be a float')
-
-        # l = QtGui.QHBoxLayout()
-        # l.setContentsMargins(0, 0, 0, 0)
-        # l.addWidget(self.mbirParams)
-        # h = QtGui.QVBoxLayout()
-        # h.setContentsMargins(0,0,0,0)
-        #
-        # w = QtGui.QWidget(self)
-        # w.setLayout(l)
 
         widget = self.cor_Value.currentWidget()
         if widget is self.manual_tab:
-            print self.val_box.value()
             return self.val_box.value()
         else:
             if self.parentWidget():
-                return = self.load_COR_kwargs(self.cor_function.subfunc_name)
+                return self.find_COR(self.cor_function.subfunc_name)
             else:
                 return -1
 
-    def load_COR_kwargs(self, cor_function):
+    def find_COR(self, cor_function):
+        msg.showMessage("Generating slurm file...", timeout=0)
         if not cor_function in self.cor_detection_funcs:
             return -1
         else:
             if cor_function == 'Phase Correlation':
-                print self.cor_params.child('tol').value()
+                proj1, proj2 = map(self.data.fabimage.__getitem__, (0,-1))
+                kwargs = {'proj1' : proj1, 'proj2' : proj2}
             elif cor_function == 'Vo':
-                pass
+                kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :])}
             elif cor_function == 'Nelder-Mead':
-                pass
+                kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :]),
+                          'theta' : tomopy.angles(self.mdata['dxelements'],ang1=90,ang2=270)}
             else:
                 return -1
 
+            for child in self.cor_params.children():
+                kwargs[child.name()] = child.value()
+
+            val = self.cor_function._function(**kwargs)
+            return val[0] if val is list else val
 
 
 
@@ -603,7 +604,7 @@ class MBIRViewer(QtGui.QWidget):
 
 
             parent_folder = self.path.split(self.path.split('/')[-1])[0]
-            write = os.join(parent_folder, '{}.slurm'.format(file_name))
+            write = os.path.join(parent_folder, '{}.slurm'.format(file_name))
 
             with open(write, 'w') as job:
                 job.write(slurm)
@@ -669,7 +670,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
-        self.mbir_viewer = MBIRViewer(self.data, paths, parent=self)
+        self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
         # roi to select region of interest
