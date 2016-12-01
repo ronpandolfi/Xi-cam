@@ -1,9 +1,6 @@
 # Makefile for Sphinx documentation
 #
 
-# GH auto doc generation
-GH_PAGES_SOURCES = source Makefile
-
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build2
@@ -228,6 +225,8 @@ dummy:
 	@echo "Build finished. Dummy builder generates no files."
 
 
+GH_PAGES_SOURCES = source Makefile
+
 gh-pages:
 	git checkout gh-pages
 	rm -rf build _sources _static
@@ -236,5 +235,5 @@ gh-pages:
 	make html
 	mv -fv build/html/* ./
 	rm -rf $(GH_PAGES_SOURCES) build
-	git add .
+	git add -A
 	git ci -m "Generated gh-pages for `git log master -1 --pretty=short --abbrev-commit`" && git push origin gh-pages ; git checkout master
