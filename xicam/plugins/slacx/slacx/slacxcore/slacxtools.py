@@ -17,18 +17,6 @@ class LazyCodeError(Exception):
     def __init__(self,msg):
         super(LazyCodeError,self).__init__(self,msg)
 
-class OpExecThread(QtCore.QThread):
-    """Thread subclass for executing an Operation"""
-
-    def __init__(self,op,parent=None):
-        super(OpExecThread,self).__init__(parent)
-        self.op = op 
-
-    def run(self):
-        """Calling QThread.start() is expected to cause this run() method to run"""
-        self.op.run()
-        # Start event handler:
-        self.exec_()
 
 class WfWorker(QtCore.QObject):
     """
@@ -45,12 +33,11 @@ class WfWorker(QtCore.QObject):
     def work(self):
         try:
             for item in self.to_run:
-
                 # run and update the Operation in this TreeItem
                 op = item.data
-                op.run_and_update()
+                #op.run_and_update()
+                op.run()
                 #self.wfman.run_and_update(item)
-
             self.thread().quit()
         except Exception as ex:
             # TODO: Handle this exception from wfman's pov
@@ -116,6 +103,16 @@ def timestr():
     """Return time as a string"""
     return dt.strftime(dt.now(),'%H:%M:%S')
 
-
-
+#class OpExecThread(QtCore.QThread):
+#    """Thread subclass for executing an Operation"""
+#
+#    def __init__(self,op,parent=None):
+#        super(OpExecThread,self).__init__(parent)
+#        self.op = op 
+#
+#    def run(self):
+#        """Calling QThread.start() is expected to cause this run() method to run"""
+#        self.op.run()
+#        # Start event handler:
+#        self.exec_()
 

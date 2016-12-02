@@ -83,8 +83,7 @@ class OpWidget(QtGui.QWidget):
         n_out = len(self.op.outputs)
         ispc = 2*rectvert/(2*n_out)
         vcrd = -1*rectvert+ispc
-        for name in self.op.outputs.keys():
-            val = self.op.output_container[name].data
+        for name,val in self.op.outputs.items():
             rec = QtCore.QRectF(QtCore.QPoint(0,vcrd-5),QtCore.QPoint(recthorz-10,vcrd+5))
             p.drawText(rec,QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter,name)
             p.drawLine(QtCore.QPoint(recthorz-5,vcrd),QtCore.QPoint(recthorz+10,vcrd))
@@ -139,8 +138,8 @@ def display_item(itm,uri,qlayout,logmethod=None):
         widg.widget().deleteLater()
 
     # If the item is an OutputContainer, unpack it.
-    if isinstance(itm,optools.OutputContainer):
-        itm = itm.data
+    #if isinstance(itm,optools.OutputContainer):
+    #    itm = itm.data
 
     if isinstance(itm,Operation):
         op_widget = OpWidget(itm)

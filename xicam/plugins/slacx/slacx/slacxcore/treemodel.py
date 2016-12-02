@@ -86,17 +86,17 @@ class TreeModel(QtCore.QAbstractItemModel):
                 return QtCore.QModelIndex()
                 
     # Subclass of QAbstractItemModel must implement parent()
-    def parent(self,index):
+    def parent(self,idx):
         """
         Returns QModelIndex of parent of item at QModelIndex index
         """
         # Grab this TreeItem from its QModelIndex
-        item = index.internalPointer()
-        if not item.parent.isValid():
+        itm = idx.internalPointer()
+        if not itm.parent.isValid():
             # We have no parent, therefore a top level item
             return QtCore.QModelIndex()
         else:
-            return item.parent
+            return itm.parent
         
     # Subclass of QAbstractItemModel must implement rowCount()
     def rowCount(self,parent):

@@ -146,10 +146,12 @@ class WfUiManager(object):
         """
         remove the selected operation from the workflow
         """
-        current_indx = self.ui.wf_selector.currentIndex()
-        if current_indx.isValid(): 
-            self.wfman.remove_op(current_indx)
- 
+        idx = self.ui.wf_selector.currentIndex()
+        if idx.isValid(): 
+            while idx.internalPointer().parent.isValid():
+                idx = idx.internalPointer().parent
+            self.wfman.remove_op(idx)
+
     def load_op(self):
         """
         Package the finished self.op(Operation), ship to self.wfman

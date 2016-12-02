@@ -141,7 +141,6 @@
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCalibrate">
    <property name="text">
     <string>HDF5 Builder</string>

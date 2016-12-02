@@ -48,58 +48,85 @@ def cast_type_val(tp,val):
         raise ValueError(msg)
     return val
 
-def parse_wf_input(wfman,uri,op):
-    uri_parts = uri.split('.')
-    if len(uri_parts) == 1:
-        downstreamflag = False
-        if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
-            downstreamflag = uri in op.downstream_ops()
-        if downstreamflag:
-            # a uri used to locate downstream Operations.
-            # the entire TreeItem containing the operation should be returned.
-            itm,idx = wfman.get_from_uri(uri)
-            return itm
-        else:
-            itm,idx = wfman.get_from_uri(uri)
-            return itm.data
-    elif len(uri_parts) == 2:
-        # An entire inputs or outputs dict is requested.
-        itm,idx = wfman.get_from_uri(uri)
-        return itm.data
+def get_child_dict(x):
+    """Get a dict to be used in building TreeItem children from structured data object x"""
+    if isinstance(x,slacxop.Operation):
+        d = {} 
+        d[inputs_tag] = x.input_locator 
+        #d[str(outputs_idx)] = x.output_container
+        d[outputs_tag] = x.outputs
+    elif isinstance(x,dict):
+        d = x 
+    elif isinstance(x,list):
+        d = {str(i):x[i] for i in range(len(x))} 
     else:
+        d = {} 
+    return d
+
+def val_list(il):
+    if il.tp == list_type:
+        return il.val
+    else:
+        return [il.val]
+
+def parse_wf_input(wfman,il,op):
+    uris = val_list(il)
+    for uri in uris:
+        uri_parts = uri.split('.')
+        if not len(uri_parts) < 3:
+            io_type = uri_parts[1]
+            if io_type == inputs_tag:
+                inprouteflag = False
+                if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
+                    inprouteflag = uri in op.input_routes()
+                if inprouteflag:
+                    # a uri used to direct a batch executor in setting data.
+                    # It should be returned directly- the batch will use it as is.
+                    return uri 
+                else:
+                    # an input uri... trusting that this input has already been loaded,
+                    # grab the data from the InputLocator at that uri and return it.
+                    # TODO: make sure this is coherent with wfman.upstream_stack() 
+                    item, indx = wfman.get_from_uri(uri)
+                    il = item.data 
+                    return il.data
+        itm, indx = wfman.get_from_uri(uri)
+        return itm.data
+
+        #downstreamflag = False
+        #if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
+        #    downstreamflag = uri in op.downstream_ops()
+        #if downstreamflag:
+        #    # a uri used to locate downstream Operations.
+        #    # the entire TreeItem containing the operation should be returned.
+        #    itm,idx = wfman.get_from_uri(uri)
+        #    return itm
+        #else:
+        #itm,idx = wfman.get_from_uri(uri)
+        #return itm.data
+    #elif len(uri_parts) == 2:
+    #    # An entire inputs or outputs dict is requested.
+    #    itm,idx = wfman.get_from_uri(uri)
+    #    return itm.data
+    #else:
         # A specific input or output is requested.
-        io_type = uri_parts[1]
-        if io_type == outputs_tag:
+        #if io_type == outputs_tag:
             # uri points to an op output. 
             # Get the item from the uri.
-            itm, indx = wfman.get_from_uri(uri)
+            #itm, indx = wfman.get_from_uri(uri)
+            #return itm.data
             # Unpackage the OutputContainer
-            oc = itm.data
-            return oc.data
-        elif io_type == inputs_tag:
-            inprouteflag = False
-            if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
-                inprouteflag = uri in op.input_routes()
-            if inprouteflag:
-                # a uri used to direct a batch executor in setting data.
-                # It should be returned directly- the batch will use it as is.
-                return uri 
-            else:
-                # an input uri... trusting that this input has already been loaded,
-                # grab the data from the InputLocator at that uri and return it.
-                # TODO: give insurance by adding to wfman.upstream_list() 
-                item, indx = wfman.get_from_uri(uri)
-                il = item.data 
-                return il.data
+            #oc = itm.data
+            #return oc.data
 
-class OutputContainer(object):
-    """
-    Objects of this class are used as containers for outputs of an Operation.
-    OutputContainer.data should be None at least until the Operation runs,
-    at which point the WfManager should replace it with the actual output.
-    """
-    def __init__(self,data=None):
-        self.data = data 
+#class OutputContainer(object):
+#    """
+#    Objects of this class are used as containers for outputs of an Operation.
+#    OutputContainer.data should be None at least until the Operation runs,
+#    at which point the WfManager should replace it with the actual output.
+#    """
+#    def __init__(self,data=None):
+#        self.data = data 
 
 class InputLocator(object):
     """
@@ -120,7 +147,8 @@ def parameter_doc(name,value,doc):
     if isinstance(value, InputLocator):
         src_str = input_sources[value.src]
         tp_str = input_types[value.tp]
-        return "- name: {} \n- source: {} \n- type: {} \n- doc: {}".format(name,src_str,tp_str,doc) 
+        d = value.data
+        return "- name: {} \n- source: {} \n- type: {} \n- value: {} \n- doc: {}".format(name,src_str,tp_str,d,doc) 
     else:
         val_str = str(value)
         tp_str = type(value).__name__

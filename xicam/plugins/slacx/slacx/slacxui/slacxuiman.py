@@ -39,9 +39,6 @@ class UiManager(object):
         self.opman = opman 
         self.wfman = wfman 
 
-#    def run_wf(self):
-#        self.wfman.run_wf()
-
     def edit_wf(self,trmod,item_indx=QtCore.QModelIndex()):
         """
         Interact with user to edit the workflow.
@@ -128,7 +125,7 @@ class UiManager(object):
         # Let the message board ignore line wrapping
         #self.ui.message_board.setLineWrapMode(self.ui.message_board.NoWrap)
         # Tell the status bar that we are ready.
-        self.show_status('Ready')
+        #self.show_status('Ready')
         # Tell the message board that we are ready.
         self.ui.message_board.insertPlainText('--- MESSAGE BOARD ---\n') 
         self.msg_board_log('slacx is ready',timestamp=slacxtools.dtstr) 
@@ -143,19 +140,13 @@ class UiManager(object):
         #self.ui.hsplitter.setStretchFactor(2,2)    
         self.ui.vsplitter.setStretchFactor(0,1)    
 
-    # TODO: Make this functionality work, but with signals and slots
-    def run_wf(self):
-    #    self.ui.run_wf_button.setText("S&top")
-        self.wfman.run_wf()
-    #    self.ui.run_wf_button.clicked.disconnect(self.run_wf)
-    #    self.ui.run_wf_button.clicked.connect(self.wfman.stop_wf)
-    #    self.ui.run_wf_button.clicked.connect(self.reset_wf_button)
-
-    #def reset_wf_button(self):
-    #    self.ui.run_wf_button.setText("&Run")
-    #    self.ui.run_wf_button.clicked.disconnect(self.wfman.stop_wf)
-    #    self.ui.run_wf_button.clicked.disconnect(self.reset_wf_button)
-    #    self.ui.run_wf_button.clicked.connect(self.run_wf)
+    def toggle_run_wf(self):
+        if self.wfman.is_running():
+            self.wfman.stop_wf()
+            self.ui.run_wf_button.setText("&Run")
+        else:
+            self.ui.run_wf_button.setText("S&top")
+            self.wfman.run_wf()
 
     def connect_actions(self):
         """Set up the works for buttons and menu items"""
@@ -169,10 +160,8 @@ class UiManager(object):
         self.ui.edit_wf_button.setText("&Edit")
         self.ui.edit_wf_button.clicked.connect( partial(self.edit_wf,self.wfman) )
         self.ui.run_wf_button.setText("&Run")
-        self.ui.run_wf_button.clicked.connect(self.run_wf)
-        #self.reset_wf_button()
-        #self.ui.run_wf_button.clicked.connect(self.reset_wf_button)
-        #self.wfman.wfdone.connect(self.reset_wf_button)
+        self.ui.run_wf_button.clicked.connect(self.toggle_run_wf)
+        self.wfman.wfdone.connect(self.toggle_run_wf)
         self.ui.save_wf_button.setText("&Save")
         self.ui.save_wf_button.clicked.connect(partial(uitools.start_save_ui,self))
         self.ui.wf_tree.setModel(self.wfman)
@@ -216,6 +205,6 @@ class UiManager(object):
         '- ' + timestamp() + ': ' + msg + '\n') 
         self.ui.message_board.verticalScrollBar().setValue(self.ui.message_board.verticalScrollBar().maximum())
       
-    def show_status(self,msg):
-        self.ui.statusbar.showMessage(msg)
+    #def show_status(self,msg):
+    #    self.ui.statusbar.showMessage(msg)
 

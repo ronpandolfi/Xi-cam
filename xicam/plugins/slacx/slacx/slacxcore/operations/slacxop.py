@@ -24,12 +24,12 @@ class Operation(object):
         self.categories = ['CAT1','CAT2.SUBCAT','CAT3'].
         """
         self.inputs = OrderedDict()
-        self.input_locator = {}
+        self.input_locator = OrderedDict() 
+        self.outputs = OrderedDict() 
         self.input_doc = {}
         self.input_src = {}
         self.input_type = {}
-        self.outputs = OrderedDict() 
-        self.output_container = {}
+        #self.output_container = {}
         self.output_doc = {}
         # For each of the var names, assign to None 
         for name in input_names: 
@@ -39,7 +39,7 @@ class Operation(object):
             self.inputs[name] = None
             self.input_doc[name] = None
         for name in output_names: 
-            self.output_container[name] = optools.OutputContainer() 
+            #self.output_container[name] = optools.OutputContainer() 
             self.outputs[name] = None
             self.output_doc[name] = None
         # Set default category to be 'MISC'
@@ -95,21 +95,17 @@ class Operation(object):
             out_indx += 1
         return a
                 
-    #def set_outputs_to_none(self):
-    #    for name,val in self.outputs.items(): 
-    #        self.outputs[name] = None
+    #def run_and_update(self):
+    #    """
+    #    Run the Operation and save its outputs in its output_locator 
+    #    """
+    #    self.run()
+    #    self.save_outputs()
 
-    def run_and_update(self):
-        """
-        Run the Operation and save its outputs in its output_locator 
-        """
-        self.run()
-        self.save_outputs()
-
-    def save_outputs(self):
-        """Loads the data from outputs[names] into output_container[names].data"""
-        for name,d in self.outputs.items():
-            self.output_container[name].data = d
+    #def save_outputs(self):
+    #    """Loads the data from outputs[names] into output_container[names].data"""
+    #    for name,d in self.outputs.items():
+    #        self.output_container[name].data = d
 
 class Realtime(Operation):
     __metaclass__ = abc.ABCMeta
@@ -152,16 +148,6 @@ class Realtime(Operation):
         """
         return 1000
 
-    def downstream_ops(self):
-        """
-        Provide a list of Operation uri's to be executed in each run.
-        This is best done by using the list builder applet 
-        to load it as an Operation input during Operation setup.
-        The default implementation returns an empty list,
-        and the default behavior will be to collect all downstream operations.
-        """
-        return []
-
 
 class Batch(Operation):
     __metaclass__ = abc.ABCMeta
@@ -197,58 +183,48 @@ class Batch(Operation):
         """
         pass
 
-    def downstream_ops(self):
-        """
-        Provide a list of Operations to be executed in each run of the batch.
-        This is best done by using the list builder applet 
-        to select a list of operation uri's during Operation setup.
-        The default implementation returns an empty list,
-        and the default behavior will be to collect all downstream operations.
-        """
-        return []
 
-
-class Workflow(Operation):
-    """
-    A Workflow has the same interface as an Operation
-    but is in fact a tree (describing a graph) of Operations,
-    as implemented in the slacx workflow manager (slacxwfman.WfManager).
-    The Inputs to a Workflow are the set of all inputs
-    to the Operations in the graph that are in the "INPUT" category.
-    The run() method of an Workflow calls on the WfManager
-    to execute the Operations by whatever means.
-    """
-
-    def __init__(self,wfman,wfname,desc):
-        # TODO: Find input and output names from the wfman
-        super(Workflow,self).__init__(input_names,output_names)
-        self.categories = ['WORKFLOW']
-        self.wfname = wfname 
-        self.quick_desc = desc
-        self.wfman = wfman
-
-    def description(self):
-        """
-        self.description() returns a string 
-        documenting the input and output structure 
-        and usage instructions for the Workflow.
-        """
-        msg = "Workflow: "+self.quick_desc+"\n"
-        # TODO: Loop through the Operations tree
-        # Would be cool to just print this tree eventually. 
-        return msg
-
-    def run(self):
-        self.wfman.run_wf_serial()
-
-    def inputs_description(self):
-        msg = ""
-        # TODO: Loop through the Operations tree
-        return msg 
-
-    def outputs_description(self):
-        msg = ""
-        # TODO: Loop through the Operations tree
-        return msg 
+#class Workflow(Operation):
+#    """
+#    A Workflow has the same interface as an Operation
+#    but is in fact a tree (describing a graph) of Operations,
+#    as implemented in the slacx workflow manager (slacxwfman.WfManager).
+#    The Inputs to a Workflow are the set of all inputs
+#    to the Operations in the graph that are in the "INPUT" category.
+#    The run() method of an Workflow calls on the WfManager
+#    to execute the Operations by whatever means.
+#    """
+#
+#    def __init__(self,wfman,wfname,desc):
+#        # TODO: Find input and output names from the wfman
+#        super(Workflow,self).__init__(input_names,output_names)
+#        self.categories = ['WORKFLOW']
+#        self.wfname = wfname 
+#        self.quick_desc = desc
+#        self.wfman = wfman
+#
+#    def description(self):
+#        """
+#        self.description() returns a string 
+#        documenting the input and output structure 
+#        and usage instructions for the Workflow.
+#        """
+#        msg = "Workflow: "+self.quick_desc+"\n"
+#        # TODO: Loop through the Operations tree
+#        # Would be cool to just print this tree eventually. 
+#        return msg
+#
+#    def run(self):
+#        self.wfman.run_wf_serial()
+#
+#    def inputs_description(self):
+#        msg = ""
+#        # TODO: Loop through the Operations tree
+#        return msg 
+#
+#    def outputs_description(self):
+#        msg = ""
+#        # TODO: Loop through the Operations tree
+#        return msg 
 
 
