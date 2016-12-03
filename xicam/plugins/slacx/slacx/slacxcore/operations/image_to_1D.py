@@ -109,18 +109,18 @@ class image_to_1D_simple(Operation):
         self.input_src['pixel_size'] = optools.user_input
         self.input_type['PP'] = optools.float_type
         self.input_type['pixel_size'] = optools.float_type
+        self.inputs['PP'] = 0.95
+        self.inputs['pixel_size'] = 79
         self.categories = ['2D DATA PROCESSING']
 
     def run(self):
         """
         transform self.inputs['image_data'] and save as self.outputs['image_data']
         """
-        print "image_to_1D_simple running"
         imArray = self.inputs['image_data']
 
         from parsing_calib import parse_calib_dictionary
         parameters = parse_calib_dictionary(self.inputs['calib_file'])
-        print "parameters parsed"
 
         # initialization parameters, change into Fit2D format
         Rot = (2*np.pi-parameters['rotation_rad'])/(2*np.pi)*360
@@ -131,22 +131,18 @@ class image_to_1D_simple(Operation):
         PP = self.inputs['PP']
         pixelsize = self.inputs['pixel_size']
         d = parameters['d_pixel'] * pixelsize * 0.001
-        print "values set up"
 
         s = int(imArray.shape[0])
         # define detector mask, alternatively, can be another input
         # 1 for masked pixels, and 0 for valid pixels
         detector_mask = np.ones((s,s))*(imArray <= 0)
-        print "mask chosen"
 
         p = pyFAI.AzimuthalIntegrator(wavelength=lamda)
         p.setFit2D(d,x0,y0,tilt,Rot,pixelsize,pixelsize)
-        print "fit constructed"
 
         Qlist, IntAve = p.integrate1d(imArray, 1000, mask=detector_mask, polarization_factor=PP)
         Qlist = Qlist * 10e8
-        print "foreground q, I made"
-        print "q.shape, I.shape, q.dtype, I.dtype", Qlist.shape, IntAve.shape, Qlist.dtype, IntAve.dtype
+#        print "q.shape, I.shape, q.dtype, I.dtype", Qlist.shape, IntAve.shape, Qlist.dtype, IntAve.dtype
 
         # save results to self.outputs
         self.outputs['Intensity'] = IntAve

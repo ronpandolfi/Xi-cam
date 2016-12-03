@@ -50,13 +50,22 @@ class SubtractMaximumBackgroundWithErrors(Operation):
                                                     self.inputs['foreground_error'], self.inputs['background_error'])
 
 def subtract_maximum_background_no_errors(foreground, background):
-    print "NaNs in foreground, background?", np.any(np.isnan(foreground)), np.any(np.isnan(background))
+    bad_data = (foreground < 0) | (background < 0) | np.isnan(foreground) | np.isnan(background)
+    if np.any(bad_data):
+        print "There were %i invalid data points in this background subtraction attempt." % np.sum(bad_data)
     factor = np.min(foreground / background)
+    if (factor > 1) or (factor < 0.8):
+        print "The background multiplication factor was %f, an unusual value." % factor
     subtracted = foreground - (factor * background)
     return subtracted, factor
 
 def subtract_maximum_background_with_errors(foreground, background, foreground_error, background_error):
+    bad_data = (foreground < 0) | (background < 0) | np.isnan(foreground) | np.isnan(background)
+    if np.any(bad_data):
+        print "There were %i invalid data points in this background subtraction attempt." % np.sum(bad_data)
     factor = np.min(foreground / background)
+    if (factor > 1) or (factor < 0.8):
+        print "The background multiplication factor was %f, an unusual value." % factor
     subtracted = foreground - (factor * background)
     subtracted_error = (foreground_error**2 + (factor * background_error)**2)**0.5
     return subtracted, subtracted_error, factor

@@ -148,6 +148,12 @@ class Realtime(Operation):
         """
         return 1000
 
+    def saved_ops(self):
+        """
+        Return a list of ops to be saved after each execution.
+        Default returns empty list, saves all ops.
+        """
+        return []
 
 class Batch(Operation):
     __metaclass__ = abc.ABCMeta
@@ -182,6 +188,13 @@ class Batch(Operation):
         provided by Batch.input_list()
         """
         pass
+
+    def saved_ops(self):
+        """
+        Return a list of ops to be saved after each execution.
+        Default returns empty list, saves all ops.
+        """
+        return []
 
 
 #class Workflow(Operation):

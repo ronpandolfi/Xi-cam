@@ -71,11 +71,14 @@ def val_list(il):
 
 def parse_wf_input(wfman,il,op):
     uris = val_list(il)
+    #print uris
     for uri in uris:
+        #print uri
         uri_parts = uri.split('.')
         if not len(uri_parts) < 3:
             io_type = uri_parts[1]
             if io_type == inputs_tag:
+                #print 'seeking input {}'.format(uri)
                 inprouteflag = False
                 if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):
                     inprouteflag = uri in op.input_routes()
@@ -87,11 +90,19 @@ def parse_wf_input(wfman,il,op):
                     # an input uri... trusting that this input has already been loaded,
                     # grab the data from the InputLocator at that uri and return it.
                     # TODO: make sure this is coherent with wfman.upstream_stack() 
-                    item, indx = wfman.get_from_uri(uri)
-                    il = item.data 
+                    itm, idx = wfman.get_from_uri(uri)
+                    il = itm.data 
                     return il.data
-        itm, indx = wfman.get_from_uri(uri)
-        return itm.data
+            else:
+                #print 'seeking output {}'.format(uri)
+                itm, idx = wfman.get_from_uri(uri)
+                #print 'found {}'.format(itm.data)
+                return itm.data
+        else:
+            #print 'return tree item at {}'.format(uri)
+            # return the whole tree item?
+            itm, indx = wfman.get_from_uri(uri)
+            return itm
 
         #downstreamflag = False
         #if isinstance(op,slacxop.Batch) or isinstance(op,slacxop.Realtime):

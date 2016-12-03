@@ -14,12 +14,13 @@ class RealtimeFromFiles(Realtime):
     """
 
     def __init__(self):
-        input_names = ['dir_path','regex','input_route']
+        input_names = ['dir_path','regex','input_route','saved_ops']
         output_names = ['batch_inputs','batch_outputs']
         super(RealtimeFromFiles,self).__init__(input_names,output_names)
         self.input_doc['dir_path'] = 'path to directory containing batch of files to be used as input'
         self.input_doc['regex'] = 'string with * wildcards that will be substituted to indicate input files'
         self.input_doc['input_route'] = 'inputs constructed by the batch executor are directed to this uri'
+        self.input_doc['saved_ops'] = 'list of ops to be saved in the batch_outputs: default all ops'
         self.output_doc['batch_inputs'] = 'iterator over dicts of [input_route:input_value] generated in real time from the local filesystem'
         self.output_doc['batch_outputs'] = 'list of dicts of [output_route:output_value]'
         self.categories = ['EXECUTION.REALTIME']
@@ -28,6 +29,9 @@ class RealtimeFromFiles(Realtime):
         self.input_type['regex'] = optools.str_type
         self.inputs['regex'] = '*.tif' 
         self.input_src['input_route'] = optools.wf_input 
+        self.input_src['saved_ops'] = optools.wf_input 
+        self.input_type['saved_ops'] = optools.list_type 
+        self.inputs['saved_ops'] = []
         
     def run(self):
         """
@@ -50,6 +54,10 @@ class RealtimeFromFiles(Realtime):
     def input_routes(self):
         """Use the Realtime.input_locators to list uri's of all input routes"""
         return [ self.input_locator['input_route'].val ]
+
+    def saved_ops(self):
+        """Use the Realtime.input_locator to list uri's of ops to be saved/stored after execution"""
+        return list(self.input_locator['saved_ops'].val)
 
     @staticmethod
     def delay():

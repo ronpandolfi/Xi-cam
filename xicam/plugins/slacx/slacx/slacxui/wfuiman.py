@@ -93,7 +93,7 @@ class WfUiManager(object):
         if src == optools.no_input:
             il = optools.InputLocator() 
         elif src == optools.batch_input:
-            val = None
+            val = 'auto' 
             il = optools.InputLocator(src,tp,val) 
         elif src == optools.user_input:
             if tp == optools.list_type:
@@ -102,9 +102,20 @@ class WfUiManager(object):
                 val = self.val_widgets[name].text()
             il = optools.InputLocator(src,tp,val)
         elif (src == optools.wf_input or src == optools.fs_input):
-            if tp == optools.list_type:
+            if not ui:
+                if self.op.input_locator[name] is not None:
+                    il = self.op.input_locator[name]
+                else:
+                    # If this is being called without a data loading ui, load some default.
+                    val = self.op.inputs[name]
+                    if not val: 
+                        if tp == optools.list_type:
+                            val = []
+                        else:
+                            val = None
+                    il = optools.InputLocator(src,tp,val)
+            elif tp == optools.list_type:
                 val = ui.list_view.model().list_data() 
-                #import pdb; pdb.set_trace()
                 il = optools.InputLocator(src,tp,val)
             else:
                 il = self.load_from_tree(ui,src,item_indx)
@@ -158,13 +169,7 @@ class WfUiManager(object):
         """ 
         # Make sure all inputs are loaded
         for name in self.op.inputs.keys():
-            # By design, load_op should only be called 
-            # when (modal) input source tree browser windows are closed,
-            # so skip this if src is fs or wf.
-            src = self.src_widgets[name].currentIndex()
-            if not src == optools.wf_input and not src == optools.fs_input:
-                self.set_input(name)
-            #self.op.input_locator[name] = self.load_input(name) 
+            self.set_input(name)
         uri = self.ui.uri_entry.text()
         result = self.wfman.is_good_tag(uri)
         if result[0]:
@@ -338,10 +343,10 @@ class WfUiManager(object):
             else:
                 btn_widget.setText('browse...')
                 btn_widget.clicked.connect( partial(self.fetch_data,name) )
-            if self.op.input_locator[name]:
-                val_widget.setText(str(self.op.input_locator[name].val))
-            elif self.op.inputs[name]:
+            if self.op.inputs[name] is not None:
                 val_widget.setText(str(self.op.inputs[name]))
+            elif self.op.input_locator[name]:
+                val_widget.setText(str(self.op.input_locator[name].val))
             val_widget.setReadOnly(True)
         elif (src == optools.user_input):
             if tp == optools.none_type:
@@ -379,7 +384,7 @@ class WfUiManager(object):
         lm = ListModel([],list_ui)
         list_ui.list_view.setModel(lm)
         list_ui.browse_button.setText('browse...')
-        list_ui.browse_button.clicked.connect( partial(self.load_from_src,src,list_ui) )
+        list_ui.browse_button.clicked.connect( partial(self.load_from_src,name,src,list_ui) )
         list_ui.type_selector = uitools.type_mv_widget(src,list_ui.type_selector)
         if src == optools.user_input:
             list_ui.browse_button.setEnabled(False)
@@ -427,8 +432,8 @@ class WfUiManager(object):
             row = idx.row()
             list_ui.list_view.model().remove_item(row)
 
-    def load_from_src(self,src,list_ui):
-        src_ui = self.data_fetch_ui(src,list_ui)
+    def load_from_src(self,name,src,list_ui):
+        src_ui = self.data_fetch_ui(name,src,list_ui)
         src_ui.load_button.clicked.connect(partial(self.load_path_to_list,src,src_ui,list_ui))
         src_ui.tree.doubleClicked.connect(partial(self.load_path_to_list,src,src_ui,list_ui))
         src_ui.tree.clicked.connect( partial(uitools.toggle_expand,src_ui.tree) )
@@ -438,7 +443,7 @@ class WfUiManager(object):
             src_ui.tree.setColumnWidth(0,400)
         src_ui.show()
 
-    def data_fetch_ui(self,src,parent=None):
+    def data_fetch_ui(self,name,src,parent=None):
         ui_file = QtCore.QFile(slacxtools.rootdir+"/slacxui/load_browser.ui")
         ui_file.open(QtCore.QFile.ReadOnly)
         src_ui = QtUiTools.QUiLoader().load(ui_file)
@@ -458,13 +463,13 @@ class WfUiManager(object):
             src_ui.tree.expandAll()
         src_ui.tree.resizeColumnToContents(0)
         src_ui.load_button.setText('Load selected data')
-        src_ui.tree_box.setTitle(optools.input_sources[src])
+        src_ui.tree_box.setTitle(name+' - from '+optools.input_sources[src])
         return src_ui
 
     def fetch_data(self,name):
         """Use a popup to select the input data"""
         src = self.src_widgets[name].currentIndex()
-        src_ui = self.data_fetch_ui(src,self.ui)
+        src_ui = self.data_fetch_ui(name,src,self.ui)
         src_ui.load_button.clicked.connect(partial(self.set_input,name,src_ui))
         src_ui.tree.clicked.connect( partial(uitools.toggle_expand,src_ui.tree) )
         src_ui.tree.doubleClicked.connect(partial(self.set_input,name,src_ui))

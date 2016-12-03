@@ -16,6 +16,7 @@ reference_loc = join('slacx','slacxcore','operations','dmz','references','polydi
 global references
 references = {}
 
+# gaah
 class GenerateSphericalDiffractionQ(Operation):
     """Generate a SAXS diffraction pattern for spherical nanoparticles.
 
@@ -703,7 +704,7 @@ def guess_nearest_point_on_nonmonotonic_trace_normalized(loclist, tracelist, coo
     Elements of *loclist* are floats; elements of *tracelist* are arrays of the same shape as *coordinate*.
     *coordinate* is the independent variable along which *tracelist* is varying.
 
-    *tracelist* must have good sampling to start with or the algorithm will likely fail.'''
+    *tracelist* must have decent sampling to start with or the algorithm will likely fail.'''
     tracesize = coordinate.size
     spacesize = len(loclist)
     distances = np.zeros(tracesize, dtype=float)
