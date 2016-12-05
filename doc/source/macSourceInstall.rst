@@ -18,26 +18,29 @@ Preparing OSX
 General source install
 ----------------------
 
-1.  Clone the Xi-cam repository and enter it:
-.. code-block:: bash
+1.  Clone the Xi-cam repository and enter it::
+
     git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam
-2.  Install the virtualenv python package and activate it:
-.. code-block:: bash
+
+2.  Install the virtualenv python package and activate it::
+
     pip install virtualenv && source venv/bin/activate
-3.  Create a virtual environment:
-.. code-block:: bash
+
+3.  Create a virtual environment::
+
     virtualenv venv --system-site-packages
-4.  Upgrade pip:
-.. code-block:: bash
+
+4.  Upgrade pip::
+
     pip install --upgrade pip
-5.  Install numpy:
-.. code-block:: bash
+
+5.  Install numpy::
+
     pip install --ignore-installed numpy
-6.  Install Xi-cam
-.. code-block:: bash
+
+6.  Install Xi-cam::
+
     pip install .
-
-
 
 NOTES
 -----
