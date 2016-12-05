@@ -26,7 +26,9 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="top" title="Xi-cam 1.2.2 documentation" href="index.html" /> 
+    <link rel="top" title="Xi-cam 1.2.2 documentation" href="index.html" />
+    <link rel="next" title="Plugin Development Tutorial" href="pluginTutorial.html" />
+    <link rel="prev" title="Introduction" href="introduction.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -35,6 +37,12 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="pluginTutorial.html" title="Plugin Development Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
       </ul>
     </div>  
@@ -48,33 +56,43 @@
 <h1>OSX Source Install<a class="headerlink" href="#osx-source-install" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="preparing-osx">
 <h2>Preparing OSX<a class="headerlink" href="#preparing-osx" title="Permalink to this headline">¶</a></h2>
-<ol class="arabic simple">
-<li>Install the Homebrew package manager:
-<code class="docutils literal"><span class="pre">/usr/bin/ruby</span> <span class="pre">-e</span> <span class="pre">&quot;$(curl</span> <span class="pre">-fsSL</span> <span class="pre">https://raw.githubusercontent.com/Homebrew/install/master/install)&quot;</span></code></li>
-<li>Install libraries with brew
-<code class="docutils literal"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">python</span> <span class="pre">openssl</span> <span class="pre">cmake</span> <span class="pre">homebrew/science/hdf5</span> <span class="pre">libjpeg</span> <span class="pre">pkg-config</span> <span class="pre">libfreetype</span> <span class="pre">libpng</span> <span class="pre">cartr/qt4/qt</span></code></li>
+<ol class="arabic">
+<li><p class="first">Install the Homebrew package manager:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>/usr/bin/ruby -e <span class="s2">&quot;</span><span class="k">$(</span>curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install<span class="k">)</span><span class="s2"></span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Install libraries with brew:</p>
+<p>brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt</p>
+</li>
 </ol>
 </div>
 <div class="section" id="general-source-install">
 <h2>General source install<a class="headerlink" href="#general-source-install" title="Permalink to this headline">¶</a></h2>
-<ol class="arabic simple">
-<li>Clone the Xi-cam repository and enter it:
-<code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/ronpandolfi/Xi-cam.git</span> <span class="pre">&amp;&amp;</span> <span class="pre">cd</span> <span class="pre">Xi-cam</span></code></li>
-</ol>
-<ol class="arabic simple">
-<li>Install the virtualenv python package and activate it:
-<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">virtualenv</span> <span class="pre">&amp;&amp;</span> <span class="pre">source</span> <span class="pre">venv/bin/activate</span></code></li>
-<li>Create a virtual environment:
-<code class="docutils literal"><span class="pre">virtualenv</span> <span class="pre">venv</span> <span class="pre">--system-site-packages</span></code></li>
-<li>Upgrade pip:
-<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--upgrade</span> <span class="pre">pip</span></code></li>
-</ol>
-<ol class="arabic simple" start="3">
-<li>Install numpy:
-<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--ignore-installed</span> <span class="pre">numpy</span></code></li>
-<li>Install Xi-cam
-<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code></li>
-</ol>
+<p>1.  Clone the Xi-cam repository and enter it:
+.. code-block:: bash</p>
+<blockquote>
+<div>git clone <a class="reference external" href="https://github.com/ronpandolfi/Xi-cam.git">https://github.com/ronpandolfi/Xi-cam.git</a> &amp;&amp; cd Xi-cam</div></blockquote>
+<p>2.  Install the virtualenv python package and activate it:
+.. code-block:: bash</p>
+<blockquote>
+<div>pip install virtualenv &amp;&amp; source venv/bin/activate</div></blockquote>
+<p>3.  Create a virtual environment:
+.. code-block:: bash</p>
+<blockquote>
+<div>virtualenv venv &#8211;system-site-packages</div></blockquote>
+<p>4.  Upgrade pip:
+.. code-block:: bash</p>
+<blockquote>
+<div>pip install &#8211;upgrade pip</div></blockquote>
+<p>5.  Install numpy:
+.. code-block:: bash</p>
+<blockquote>
+<div>pip install &#8211;ignore-installed numpy</div></blockquote>
+<p>6.  Install Xi-cam
+.. code-block:: bash</p>
+<blockquote>
+<div>pip install .</div></blockquote>
 </div>
 <div class="section" id="notes">
 <h2>NOTES<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
@@ -101,6 +119,12 @@
 </li>
 </ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="introduction.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pluginTutorial.html"
+                        title="next chapter">Plugin Development Tutorial</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -128,6 +152,12 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="pluginTutorial.html" title="Plugin Development Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
       </ul>
     </div>
