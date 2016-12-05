@@ -9,11 +9,13 @@ Welcome to the documentation for Xi-cam
 Contents:
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
 
     introduction
+    macSourceInstall
     pluginTutorial
     workflowAPI
+
 
 
 Indices and tables

@@ -7,27 +7,35 @@ OSX Source Install
 Preparing OSX
 -------------
 
-1.  Install the Homebrew package manager:
-    ``/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"``
-2.  Install libraries with brew
-    ``brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt``
+1. Install the Homebrew package manager::
 
+    /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)
+
+2.  Install libraries with brew::
+
+    brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt
 
 General source install
------------------------
+----------------------
 
 1.  Clone the Xi-cam repository and enter it:
-    ``git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam``
-1.  Install the virtualenv python package and activate it:
-    ``pip install virtualenv && source venv/bin/activate``
-2.  Create a virtual environment:
-    ``virtualenv venv --system-site-packages``
-3.  Upgrade pip:
-    ``pip install --upgrade pip``
-3.  Install numpy:
-    ``pip install --ignore-installed numpy``
-4.  Install Xi-cam
-    ``pip install .``
+.. code-block:: bash
+    git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam
+2.  Install the virtualenv python package and activate it:
+.. code-block:: bash
+    pip install virtualenv && source venv/bin/activate
+3.  Create a virtual environment:
+.. code-block:: bash
+    virtualenv venv --system-site-packages
+4.  Upgrade pip:
+.. code-block:: bash
+    pip install --upgrade pip
+5.  Install numpy:
+.. code-block:: bash
+    pip install --ignore-installed numpy
+6.  Install Xi-cam
+.. code-block:: bash
+    pip install .
 
 
 
