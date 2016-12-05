@@ -22,8 +22,6 @@ import glob
 from numpy.distutils.core import Extension
 
 
-print find_packages(exclude=['contrib', 'docs', 'tests'])
-
 here = path.abspath(path.dirname(__file__))
 
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:  # rst?
@@ -81,7 +79,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=['xicam','xicamlauncher','pipeline','client','modpkgs','xicam.plugins','xicam.widgets'],
+    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline'},
 
