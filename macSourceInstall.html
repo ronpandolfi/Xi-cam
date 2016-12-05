@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>OSX Source Install &#8212; Xi-cam 1.2.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/graphite.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="Xi-cam 1.2.2 documentation" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="osx-source-install">
+<h1>OSX Source Install<a class="headerlink" href="#osx-source-install" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="preparing-osx">
+<h2>Preparing OSX<a class="headerlink" href="#preparing-osx" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Install the Homebrew package manager:
+<code class="docutils literal"><span class="pre">/usr/bin/ruby</span> <span class="pre">-e</span> <span class="pre">&quot;$(curl</span> <span class="pre">-fsSL</span> <span class="pre">https://raw.githubusercontent.com/Homebrew/install/master/install)&quot;</span></code></li>
+<li>Install libraries with brew
+<code class="docutils literal"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">python</span> <span class="pre">openssl</span> <span class="pre">cmake</span> <span class="pre">homebrew/science/hdf5</span> <span class="pre">libjpeg</span> <span class="pre">pkg-config</span> <span class="pre">libfreetype</span> <span class="pre">libpng</span> <span class="pre">cartr/qt4/qt</span></code></li>
+</ol>
+</div>
+<div class="section" id="general-source-install">
+<h2>General source install<a class="headerlink" href="#general-source-install" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Clone the Xi-cam repository and enter it:
+<code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/ronpandolfi/Xi-cam.git</span> <span class="pre">&amp;&amp;</span> <span class="pre">cd</span> <span class="pre">Xi-cam</span></code></li>
+</ol>
+<ol class="arabic simple">
+<li>Install the virtualenv python package and activate it:
+<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">virtualenv</span> <span class="pre">&amp;&amp;</span> <span class="pre">source</span> <span class="pre">venv/bin/activate</span></code></li>
+<li>Create a virtual environment:
+<code class="docutils literal"><span class="pre">virtualenv</span> <span class="pre">venv</span> <span class="pre">--system-site-packages</span></code></li>
+<li>Upgrade pip:
+<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--upgrade</span> <span class="pre">pip</span></code></li>
+</ol>
+<ol class="arabic simple" start="3">
+<li>Install numpy:
+<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--ignore-installed</span> <span class="pre">numpy</span></code></li>
+<li>Install Xi-cam
+<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code></li>
+</ol>
+</div>
+<div class="section" id="notes">
+<h2>NOTES<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Do not create the virtual environment using PyCharm; this will use an internal python resulting in broken links to the global site-packages.</li>
+<li>Do not use the Pycharm terminal console; this console runs a unique shell which is missing path variables, resulting in failed installations of PySide etc.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">OSX Source Install</a><ul>
+<li><a class="reference internal" href="#preparing-osx">Preparing OSX</a></li>
+<li><a class="reference internal" href="#general-source-install">General source install</a></li>
+<li><a class="reference internal" href="#notes">NOTES</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/macSourceInstall.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="index.html">Xi-cam 1.2.2 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.8.
+    </div>
+  </body>
+</html>
