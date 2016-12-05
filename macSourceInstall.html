@@ -56,39 +56,57 @@
 <h1>OSX Source Install<a class="headerlink" href="#osx-source-install" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="preparing-osx">
 <h2>Preparing OSX<a class="headerlink" href="#preparing-osx" title="Permalink to this headline">¶</a></h2>
-<ol class="arabic">
-<li><p class="first">Install the Homebrew package manager:</p>
+<ol class="arabic simple">
+<li>Install the Homebrew package manager:</li>
+</ol>
 <div class="highlight-bash"><div class="highlight"><pre><span></span>/usr/bin/ruby -e <span class="s2">&quot;</span><span class="k">$(</span>curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install<span class="k">)</span><span class="s2"></span>
 </pre></div>
 </div>
-</li>
-<li><p class="first">Install libraries with brew:</p>
-<p>brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt</p>
-</li>
+<ol class="arabic simple" start="2">
+<li>Install libraries with brew:</li>
 </ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt
+</pre></div>
+</div>
 </div>
 <div class="section" id="general-source-install">
 <h2>General source install<a class="headerlink" href="#general-source-install" title="Permalink to this headline">¶</a></h2>
-<ol class="arabic">
-<li><p class="first">Clone the Xi-cam repository and enter it:</p>
-<p>git clone <a class="reference external" href="https://github.com/ronpandolfi/Xi-cam.git">https://github.com/ronpandolfi/Xi-cam.git</a> &amp;&amp; cd Xi-cam</p>
-</li>
-<li><p class="first">Install the virtualenv python package and activate it:</p>
-<p>pip install virtualenv &amp;&amp; source venv/bin/activate</p>
-</li>
-<li><p class="first">Create a virtual environment:</p>
-<p>virtualenv venv &#8211;system-site-packages</p>
-</li>
-<li><p class="first">Upgrade pip:</p>
-<p>pip install &#8211;upgrade pip</p>
-</li>
-<li><p class="first">Install numpy:</p>
-<p>pip install &#8211;ignore-installed numpy</p>
-</li>
-<li><p class="first">Install Xi-cam:</p>
-<p>pip install .</p>
-</li>
+<ol class="arabic simple">
+<li>Clone the Xi-cam repository and enter it:</li>
 </ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>git clone https://github.com/ronpandolfi/Xi-cam.git <span class="o">&amp;&amp;</span> <span class="nb">cd</span> Xi-cam
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Install the virtualenv python package and activate it:</li>
+</ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install virtualenv <span class="o">&amp;&amp;</span> <span class="nb">source</span> venv/bin/activate
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li>Create a virtual environment:</li>
+</ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>virtualenv venv --system-site-packages
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li>Upgrade pip:</li>
+</ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install --upgrade pip
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li>Install numpy:</li>
+</ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install --ignore-installed numpy
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li>Install Xi-cam:</li>
+</ol>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install .
+</pre></div>
+</div>
 </div>
 <div class="section" id="notes">
 <h2>NOTES<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
