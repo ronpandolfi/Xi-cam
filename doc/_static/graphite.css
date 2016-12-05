@@ -161,7 +161,7 @@ div.section ol {
   list-style: none;
   margin-left: 0;
   padding-left: 2.6em;
-  text-indent: -1.6em;
+  /*text-indent: -1.6em;*/
 }
   
 
