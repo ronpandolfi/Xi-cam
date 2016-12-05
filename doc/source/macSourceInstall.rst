@@ -13,15 +13,17 @@ Preparing OSX
     ``brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt``
 
 
-Standard source install
+General source install
 -----------------------
 
 1.  Clone the Xi-cam repository and enter it:
     ``git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam``
-1.  Install the virtualenv python package:
-    ``pip install virtualenv``
+1.  Install the virtualenv python package and activate it:
+    ``pip install virtualenv && source venv/bin/activate``
 2.  Create a virtual environment:
     ``virtualenv venv --system-site-packages``
+3.  Upgrade pip:
+    ``pip install --upgrade pip``
 3.  Install numpy:
     ``pip install --ignore-installed numpy``
 4.  Install Xi-cam
