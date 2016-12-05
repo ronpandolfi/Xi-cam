@@ -7,38 +7,54 @@ OSX Source Install
 Preparing OSX
 -------------
 
-1. Install the Homebrew package manager::
+1. Install the Homebrew package manager:
+
+.. code-block:: bash
 
     /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)
 
-2.  Install libraries with brew::
+2.  Install libraries with brew:
+
+.. code-block:: bash
 
     brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt
 
 General source install
 ----------------------
 
-1.  Clone the Xi-cam repository and enter it::
+1.  Clone the Xi-cam repository and enter it:
+
+.. code-block:: bash
 
     git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam
 
-2.  Install the virtualenv python package and activate it::
+2.  Install the virtualenv python package and activate it:
+
+.. code-block:: bash
 
     pip install virtualenv && source venv/bin/activate
 
-3.  Create a virtual environment::
+3.  Create a virtual environment:
+
+.. code-block:: bash
 
     virtualenv venv --system-site-packages
 
-4.  Upgrade pip::
+4.  Upgrade pip:
+
+.. code-block:: bash
 
     pip install --upgrade pip
 
-5.  Install numpy::
+5.  Install numpy:
+
+.. code-block:: bash
 
     pip install --ignore-installed numpy
 
-6.  Install Xi-cam::
+6.  Install Xi-cam:
+
+.. code-block:: bash
 
     pip install .
 
