@@ -235,5 +235,5 @@ gh-pages:
 	make html
 	cp -r build/html/* ../
 	rm -rf $(GH_PAGES_SOURCES) build
-	git add $(find .. -maxdepth 1 -type f)
+	find .. -maxdepth 1 -type f | xargs git add
 	git commit -m "Generated gh-pages for `git log master -1 --pretty=short --abbrev-commit`" && git push origin gh-pages ; git checkout master
