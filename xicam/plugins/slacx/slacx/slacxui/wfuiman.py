@@ -103,10 +103,10 @@ class WfUiManager(object):
             il = optools.InputLocator(src,tp,val)
         elif (src == optools.wf_input or src == optools.fs_input):
             if not ui:
+                # If this is being called without a data loading ui, load some default.
                 if self.op.input_locator[name] is not None:
                     il = self.op.input_locator[name]
                 else:
-                    # If this is being called without a data loading ui, load some default.
                     val = self.op.inputs[name]
                     if not val: 
                         if tp == optools.list_type:
@@ -381,7 +381,11 @@ class WfUiManager(object):
         list_ui.setParent(self.ui,QtCore.Qt.Window)
         list_ui.setWindowModality(QtCore.Qt.WindowModal)
         list_ui.setWindowTitle("build list from {}".format(optools.input_sources[src]))
-        lm = ListModel([],list_ui)
+        if self.op.input_locator[name]:
+            if self.op.input_locator[name].src == src and self.op.input_locator[name].tp == optools.list_type:
+                lm = ListModel(self.op.input_locator[name].val,list_ui)
+        else:
+            lm = ListModel([],list_ui)
         list_ui.list_view.setModel(lm)
         list_ui.browse_button.setText('browse...')
         list_ui.browse_button.clicked.connect( partial(self.load_from_src,name,src,list_ui) )
@@ -409,15 +413,17 @@ class WfUiManager(object):
         list_ui.type_header.setStyleSheet( "QLineEdit { background-color: transparent }" + list_ui.type_header.styleSheet() )
         list_ui.show()
 
-    @staticmethod
-    def load_path_to_list(src,src_ui,list_ui,idx=None):
+    def load_path_to_list(self,src,src_ui,list_ui,idx=None):
         if not idx:
             idx = src_ui.tree.currentIndex()
         if idx.isValid():
-            list_ui.value_entry.setText( str(src_ui.tree.model().data(idx,QtCore.Qt.DisplayRole)) )
+            if src == optools.wf_input:
+                list_ui.value_entry.setText( self.wfman.build_uri(idx) )
+            elif src == optools.fs_input:
+                list_ui.value_entry.setText( src_ui.tree.model().filePath(idx) )
         src_ui.close()
         src_ui.deleteLater()
-        list_ui.list_view.model().append_item( str(list_ui.value_entry.text()) )
+        list_ui.list_view.model().append_item( self.wfman.build_uri(idx) )
 
     @staticmethod
     def load_value_to_list(src,list_ui):
@@ -457,10 +463,10 @@ class WfUiManager(object):
             trmod = QtGui.QFileSystemModel()
             trmod.setRootPath('.')
         src_ui.tree.setModel(trmod)
-        if src == optools.wf_input:
-            src_ui.tree.expandToDepth(2)
-        elif src == optools.fs_input:
-            src_ui.tree.expandAll()
+        #if src == optools.wf_input:
+        #    src_ui.tree.expandToDepth(2)
+        #elif src == optools.fs_input:
+        #    src_ui.tree.expandAll()
         src_ui.tree.resizeColumnToContents(0)
         src_ui.load_button.setText('Load selected data')
         src_ui.tree_box.setTitle(name+' - from '+optools.input_sources[src])

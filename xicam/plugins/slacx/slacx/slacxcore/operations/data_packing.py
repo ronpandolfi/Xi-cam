@@ -3,7 +3,7 @@ import numpy as np
 from slacxop import Operation
 import optools
 
-class Window_q_I(Operation):
+class WindowZip_q_I(Operation):
     """
     From input iterables of q and I, 
     produce an n-by-2 vector 
@@ -12,13 +12,13 @@ class Window_q_I(Operation):
 
     def __init__(self):
         input_names = ['q_list','I_list']
-        output_names = ['q_I_array']
-        super(Window_q_I,self).__init__(input_names,output_names)        
+        output_names = ['q_I_window']
+        super(WindowZip_q_I,self).__init__(input_names,output_names)        
         self.input_src['q_list'] = optools.wf_input
         self.input_src['I_list'] = optools.wf_input
         self.input_doc['q_list'] = '1d iterable listing q values'
         self.input_doc['I_list'] = '1d iterable listing intensity values'
-        self.output_doc['q_I_array'] = 'n-by-2 array with q, I pairs for q>0.02 and <0.6'
+        self.output_doc['q_I_window'] = 'n-by-2 array with q, I pairs for q>0.02 and <0.6'
         self.categories = ['PACKAGING']
 
     def run(self):
@@ -27,12 +27,10 @@ class Window_q_I(Operation):
         q_min = 0.02
         q_max = 0.6
         good_qvals = ((qvals > q_min) & (qvals < q_max))
-        q_I_array = np.zeros((good_qvals.sum(),2))
-        q_I_array[:,0] = qvals[good_qvals]
-        q_I_array[:,1] = ivals[good_qvals]
-        self.outputs['q_I_array'] = q_I_array
-
-
+        q_I_window = np.zeros((good_qvals.sum(),2))
+        q_I_window[:,0] = qvals[good_qvals]
+        q_I_window[:,1] = ivals[good_qvals]
+        self.outputs['q_I_window'] = q_I_window
 
 class Window_q_I_2(Operation):
     """

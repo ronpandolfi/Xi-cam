@@ -148,9 +148,9 @@ class Realtime(Operation):
         """
         return 1000
 
-    def saved_ops(self):
+    def saved_items(self):
         """
-        Return a list of ops to be saved after each execution.
+        Return a list of item uris to be saved after each execution.
         Default returns empty list, saves all ops.
         """
         return []
@@ -189,10 +189,10 @@ class Batch(Operation):
         """
         pass
 
-    def saved_ops(self):
+    def saved_items(self):
         """
-        Return a list of ops to be saved after each execution.
-        Default returns empty list, saves all ops.
+        Return a list of items to be saved after each execution.
+        Default returns empty list, saves all Operations.
         """
         return []
 

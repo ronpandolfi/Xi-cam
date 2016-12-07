@@ -16,7 +16,6 @@ reference_loc = join('slacx','slacxcore','operations','dmz','references','polydi
 global references
 references = {}
 
-# gaah
 class GenerateSphericalDiffractionQ(Operation):
     """Generate a SAXS diffraction pattern for spherical nanoparticles.
 

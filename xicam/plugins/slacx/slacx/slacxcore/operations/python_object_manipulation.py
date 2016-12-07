@@ -135,7 +135,7 @@ class PrintMessageAndTime(Operation):
 
     def __init__(self):
         input_names = ['message']
-        output_names = []
+        output_names = ['message']
         super(PrintMessageAndTime, self).__init__(input_names, output_names)
         # docstrings
         self.input_doc['message'] = 'an object with a print method that will be printed to the console'
@@ -145,6 +145,7 @@ class PrintMessageAndTime(Operation):
 
     def run(self):
         print time.asctime(), self.inputs['message']
+        self.outputs['message'] = self.inputs['message']
 
 
 class DummySequences(Operation):

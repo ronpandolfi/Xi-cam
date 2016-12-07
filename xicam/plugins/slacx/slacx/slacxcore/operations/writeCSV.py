@@ -4,6 +4,7 @@ import numpy as np
 
 from slacxop import Operation
 import optools
+#from SSRL_1_5_readers import read_header
 
 
 class WriteTemperatureIndex(Operation):
@@ -103,6 +104,71 @@ class SelectClosestTemperatureBackgroundFromTemperature(Operation):
         self.outputs['background_q'] = q
         self.outputs['background_I'] = I
 
+
+
+class SelectClosestTemperatureBackgroundFromHeader2(Operation):
+    """Read temperature index file written by WriteTemperatureIndex."""
+
+    def __init__(self):
+        input_names = ['temperatures','filenames','header']
+        output_names = ['background_tiffile']
+        super(SelectClosestTemperatureBackgroundFromHeader2, self).__init__(input_names, output_names)
+        # docstrings
+        self.input_doc['temperatures'] = "list or array of temperatures"
+        self.input_doc['filenames'] = "names of tif files"
+        self.input_doc['this_temperature'] = "temperature we want to find a background for"
+        self.output_doc['background_tiffile'] = 'appropriate background tif file image'
+        # source & type
+        self.input_src['temperatures'] = optools.wf_input
+        self.input_src['filenames'] = optools.wf_input
+        self.input_src['header'] = optools.wf_input
+        self.categories = ['1D DATA PROCESSING.BACKGROUND SUBTRACTION']
+
+    def run(self):
+        this_temperature = self.inputs['header']['temp_celsius']
+        temperatures = np.array(self.inputs['temperatures'])
+        filenames = self.inputs['filenames']
+        diff = np.fabs(temperatures - this_temperature)
+        index_of_best_temp = np.where(diff == diff.min())[0][0]
+        file_of_best_temp = filenames[index_of_best_temp]
+        self.outputs['background_tiffile'] = file_of_best_temp
+
+
+class ConstructTemperatureIndex(Operation):
+    """Find .csv diffractograms; match with temperatures from headers; record.
+
+    If a temperature index already exists for some reason, it will be overwritten."""
+
+    def __init__(self):
+        input_names = ['background_directory']
+        output_names = ['temperatures', 'filenames']
+        super(ConstructTemperatureIndex, self).__init__(input_names, output_names)
+        # docstrings
+        self.input_doc['background_directory'] = "path to directory with .tif's and .txt headers in it"
+        self.output_doc['temperatures'] = 'temperatures from headers'
+        self.output_doc['filenames'] = 'names of csvs'
+        #self.output_doc['temperature_index_file'] = 'csv-formatted file containing temperature indexed csv file names'
+        # source & type
+        self.input_src['directory'] = optools.fs_input
+        self.categories = ['INPUT.MISC']
+
+    def run(self):
+        directory = self.inputs['background_directory']
+        tifnames, temperatures = find_background_temperatures(directory)
+        self.outputs['filenames'] = tifnames
+        self.outputs['temperatures'] = temperatures
+
+
+
+def find_background_temperatures(directory):
+    tifnames = find_by_extension(directory, '.tif')
+    txtnames = find_by_extension(directory, '.txt')
+    temperatures = []
+    for ii in range(len(txtnames)):
+        headerii = read_header(txtnames[ii])
+        temp = headerii['temp_celsius']
+        temperatures.append(temp)
+    return tifnames, temperatures
 
 class SelectClosestTemperatureBackgroundFromHeader(Operation):
     """Read temperature index file written by WriteTemperatureIndex."""

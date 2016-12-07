@@ -6,6 +6,7 @@ from datetime import datetime as dt
 
 from PySide import QtCore, QtUiTools
 from PySide import QtCore
+from operations.slacxop import Operation
 
 version='0.1.0'
 
@@ -25,6 +26,7 @@ class WfWorker(QtCore.QObject):
     """
     
     finished = QtCore.Signal()
+    opDone = QtCore.Signal(str,Operation)
 
     def __init__(self,to_run=None,parent=None):
         super(WfWorker,self).__init__(parent)
@@ -32,11 +34,12 @@ class WfWorker(QtCore.QObject):
 
     def work(self):
         try:
-            for item in self.to_run:
+            for itm in self.to_run:
                 # run and update the Operation in this TreeItem
-                op = item.data
+                op = itm.data
                 #op.run_and_update()
                 op.run()
+                self.opDone.emit(itm.tag(),op)
                 #self.wfman.run_and_update(item)
             self.thread().quit()
         except Exception as ex:

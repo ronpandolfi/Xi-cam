@@ -203,6 +203,7 @@ class UiManager(object):
         """Print timestamped message to msg board"""
         self.ui.message_board.insertPlainText(
         '- ' + timestamp() + ': ' + msg + '\n') 
+        #if not self.ui.message_board.isActive():
         self.ui.message_board.verticalScrollBar().setValue(self.ui.message_board.verticalScrollBar().maximum())
       
     #def show_status(self,msg):

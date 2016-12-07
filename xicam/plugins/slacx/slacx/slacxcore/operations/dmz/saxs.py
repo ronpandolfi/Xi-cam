@@ -486,6 +486,7 @@ def gauss(x, x0, sigma):
 
 def generateRhoFactor(factor):
     '''
+    Generate a guassian distribution of number densities (rho).
 
     :param factor: float
     :return:
@@ -548,9 +549,15 @@ def choose_dips_and_shoulders(q, I, dI=np.zeros(1)):
     if not dI.any():
         dI = np.ones(I.shape, dtype=float)
     scaled_I = I * q ** 4 / dI
-    dips = local_minima_detector(scaled_I)
-    shoulders = local_maxima_detector(scaled_I)
+    scaled_curv = noiseless_curvature(q, scaled_I)
+    dips = local_minima_detector(scaled_curv)
+    shoulders = local_maxima_detector(scaled_curv)
+    # Clean out wildly offensve entries (rapid oscillations, end points)
     dips, shoulders = clean_extrema(dips, shoulders)
+    # Clean out unlikely points of interest by comparing to typical point-to-point variation
+    scaled_I_variation = point_to_point_variation(scaled_I)
+    expected_curv_from_noise
+    # TODO: Need to clean out low-probability ones
     return dips, shoulders
 
 def clean_extrema(dips, shoulders):
@@ -681,6 +688,56 @@ def local_minima_detector(y):
     '''
     minima = local_maxima_detector(-y)
     return minima
+
+def noiseless_curvature(x, y):
+    '''
+    Finds the curvature of y locally.  Does not account for noise.
+
+    :param x: numpy float array, independent variable
+    :param y: numpy float array, dependent variable
+    :return curvature: numpy float array
+
+    Compares subsequent pixels to find a local slope.
+    Compares subsequent slopes to find a local curvature.
+    The curvature is defined at a location 0.5*(x3 + x1) = 0.5*(x[2:] + x[:-2]).
+    For evenly spaced data, the curvature is defined at x2 = x[1:-1].
+    The curvature is not defined (np.nan) for the endpoints.
+    '''
+    curvature = np.zeros(x.size, dtype=float)
+    y1 = y[:-2]
+    y2 = y[1:-1]
+    y3 = y[2:]
+    x1 = x[:-2]
+    x2 = x[1:-1]
+    x3 = x[2:]
+    # First derivatives
+    yprime_one = (y2 - y1) / (x2 - x1)  # Defined at location 0.5*(x1 + x2)
+    yprime_two = (y3 - y2) / (x3 - x2)  # Defined at location 0.5*(x2 + x3)
+    # Second derivative
+    # Defined at location 0.5*(x3 + x1).  For evenly spaced data, defined at x2.
+    curvature[1:-1] = (yprime_two - yprime_one) / (0.5 * (x3 - x1))
+    # Undefined at endpoints
+    curvature[0] = np.nan
+    curvature[-1] = np.nan
+    return curvature
+
+def point_to_point_variation(y):
+    '''
+    Calculate typical point-to-point variation as a weak metric of noisiness.
+
+    :param y: A 1d ndarray of data values
+    :return:
+    '''
+    length = y.size()
+    y_low = y[:-1]
+    y_high = y[1:]
+    diff = y_high - y_low
+    diff2mean = (diff**2).mean()
+    variation = diff2mean**0.5
+    return variation
+    
+
+
 
 '''
 def guess_nearest_point_on_single_monotonic_trace(x0, x, y):
