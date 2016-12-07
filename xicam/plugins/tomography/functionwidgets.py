@@ -380,6 +380,29 @@ class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
     # Currently this is idential to a TomoPyReconFunctionWidget
     # additional options may be added in future, depending on TomoCam functions developed
 
+    @property
+    def partial(self):
+        return partial(self._function, **self.reorganized_param_dict)
+
+    @property
+    def reorganized_param_dict(self):
+        param_dict = dict(self.param_dict)
+        input_params = {}
+        input_params['gpu_device'] = 0
+        input_params['oversamp_factor'] = param_dict['oversamp_factor']
+        param_dict.pop('oversamp_factor')
+
+        if 'gridrec'in param_dict['algorithm']:
+            input_params['fbp_filter_param'] = param_dict['cutoff']
+            param_dict.pop('cutoff')
+        else:
+            input_params['num_iter'] = param_dict['num_iter']
+            param_dict.pop('num_iter')
+
+        param_dict['input_params'] = input_params
+        return param_dict
+
+
 
 
 class AstraReconFuncWidget(TomoPyReconFunctionWidget):
@@ -1038,8 +1061,6 @@ class FunctionManager(fw.FeatureManager):
         if 'Reconstruction' in name:
             function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
             self.resetCenterCorrection()
-            if 'TomoCam' in name:
-                function = self.load_tomocam_params(function)
         return function, write
 
     def load_tomocam_params(self, function):

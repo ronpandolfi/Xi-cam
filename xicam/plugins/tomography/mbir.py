@@ -1,14 +1,7 @@
-# this is supposed to prevent tomocam import if it's not installed
-# doesn't work: will exclude tomocam even with correct installations
-import imp
 try:
-    imp.find_module("libcudart.so.7.5")
-    found = True
-except ImportError:
-    found = False
-
-if found:
     from tomocam import tomoCam
+except ImportError:
+    pass
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
