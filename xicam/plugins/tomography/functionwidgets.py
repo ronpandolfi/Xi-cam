@@ -377,6 +377,9 @@ class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
     Subclass of tomopy FunctionWidget used for TomoCam recon functions
     """
 
+    # Currently this is idential to a TomoPyReconFunctionWidget
+    # additional options may be added in future, depending on TomoCam functions developed
+
 
 
 class AstraReconFuncWidget(TomoPyReconFunctionWidget):
@@ -385,7 +388,12 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
     """
     def __init__(self, name, subname, package):
         super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.packages['tomopy'])
-        self.param_dict['algorithm'] = reconpkg.packages['astra']
+        self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
+        self.tomopy_args = ['center', 'algorithm', 'ncore', 'sinogram_order', 'nchunk', 'init_recon', 'Filtertype',
+                            'tomo', 'theta']
+
+
+        self.param_dict['algorithm'] = reconpkg.packages['tomopy'].astra
         self.param_dict['options'] = {}
         self.param_dict['options']['method'] = subname.replace(' ', '_')
         if 'CUDA' in subname:
@@ -393,12 +401,68 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         else:
             self.param_dict['options']['proj_type'] = 'linear'
 
+        if subname in config.astra_defaults:
+            self.defaults = config.astra_defaults[subname]
+            for key in self.defaults.iterkeys():
+                val = self.defaults[key]['default']
+                self.param_dict.update({key: val})
+                if key in [p.name() for p in self.params.children()]:
+                    self.params.child(key).setValue(val)
+                    self.params.child(key).setDefault(val)
+
+    def paramChanged(self, param):
+        """
+        Slot connected to a pg.Parameter.sigChanged signal
+        Overrides functionwidget paramChanged to account for Astra's optional keywords
+        """
+        try:
+            arg_type = self.defaults[param.name()]['type']
+            try:
+                self.allowed_types[arg_type](param.value())
+                self.param_dict.update({param.name(): param.value()})
+            except ValueError:
+                if param.value() == "None":
+                    self.param_dict.update({param.name(): param.value()})
+                else:
+                    param.setValue(self.param_dict[param.name()])
+        except KeyError:
+            self.param_dict.update({param.name(): param.value()})
+
+
+
     @property
     def partial(self):
         """
         Return the base FunctionWidget partial property
         """
-        return FunctionWidget.partial(self)
+
+        return partial(self._function, **self.reorganized_param_dict)
+
+
+
+    @property
+    def reorganized_param_dict(self):
+        """
+        Return the param dict of the FunctionWidget reorganized for proper execution as tomopy function
+        """
+        param_dict = {}
+        param_dict['extra_options'] = {}
+        param_dict['options'] = self.param_dict['options']
+        for key, val in self.param_dict.iteritems():
+            if key == 'options' or (type(val) is str and 'None' in val):
+                pass
+            elif key in self.tomopy_args:
+                param_dict[key] = val
+            elif 'num_iter' in key:
+                param_dict['options']['num_iter'] = self.param_dict['num_iter']
+            else:
+                param_dict['extra_options'][key] = val
+
+        if len(param_dict['extra_options']) < 1:
+            param_dict.pop('extra_options')
+
+        return param_dict
+
 
 
 
@@ -959,7 +1023,9 @@ class FunctionManager(fw.FeatureManager):
             Name of the array function will act on - this allows users to specify which data a function will act on
             in the pipeline
         """
+
         write = 'tomo'
+        print param_dict
 
         for key, val in param_dict.iteritems():
             if val in data_dict.iterkeys():

@@ -1,0 +1,69 @@
+SIRT:
+  num_iter:
+    default: 1800
+  MinConstraint:
+    default: None
+    type: float
+  MaxConstraint:
+    default: None
+    type: float
+SART:
+  num_iter:
+    default: 1800
+  MinConstraint:
+    default: None
+    type: float
+  MaxConstraint:
+    default: None
+    type: float
+ART:
+  num_iter:
+    default: 1800
+  MinConstraint:
+    default: None
+    type: float
+  MaxConstraint:
+    default: None
+    type: float
+BP_CUDA:
+  GPUIndex:
+    default: 1
+  PixelSuperSampling:
+    default: None
+    type: int
+FBP_CUDA:
+  Filtertype:
+    default: None
+  GPUIndex:
+    default: 1
+  PixelSupersampling:
+    default: None
+    type: int
+SIRT_CUDA:
+  num_iter:
+    default: 1800
+  MinConstraint:
+    default: None
+    type: float
+  MaxConstraint:
+    default: None
+    type: float
+  GPUIndex:
+    default: 1
+  PixelSupersampling:
+    default: None
+    type: int
+SART_CUDA:
+  num_iter:
+    default: 1800
+  MinConstraint:
+    default: None
+    type: float
+  MaxConstraint:
+    default: None
+    type: float
+  GPUIndex:
+    default: 1
+  PixelSupersampling:
+    default: None
+    type: int
