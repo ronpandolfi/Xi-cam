@@ -231,6 +231,7 @@ class experiment(Parameter):
                         360. - (2 * np.pi - self.getvalue('Detector Rotation')) / 2. / np.pi * 360.,
                         self.getvalue('Pixel Size Y') * 1.e6,
                         self.getvalue('Pixel Size X') * 1.e6)
+        AI.set_wavelength(self.getvalue('Wavelength'))
         # print AI
         return AI
 

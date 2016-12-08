@@ -1288,7 +1288,6 @@ class qintegrationwidget(integrationsubwidget):
         self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q,qx,qz,dimg=None):
-        msg.logMessage(('q:',q))
         self.posLine.setPos(q)
         self.posLine.show()
 
