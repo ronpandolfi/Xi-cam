@@ -14,6 +14,7 @@ import os
 # Missing ufuncs? Its fine, copy numpy's lib/libifcoremd.dll and libmmd.dll into build directory...
 # pyfits unsupported operand type? Comment those lines!...
 # Missing h5py _errors? edit cx_Freeze hooks.py for h5py...
+# Pyqtgraph plots displaying wrong? PySide 1.2.4 seems broken on windows; install 1.2.2 from .exe
 
 # H5PY FIX:
 # def load_h5py(finder, module):
@@ -84,10 +85,11 @@ def include_OpenGL():
 
 buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email'],
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub','distributed','cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto'],  # ,'scipy.sparse.csgraph._validation'
-                'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
+                'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk','pyFAI'
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
                 'include_files': ['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
-                'zip_includes': include_OpenGL(),}
+                'zip_includes': include_OpenGL(),
+                'include_msvcr':True}
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
 
@@ -112,7 +114,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.12',
+      version='1.2.14',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
