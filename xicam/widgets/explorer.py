@@ -19,7 +19,7 @@ from xicam import threads
 from xicam import clientmanager as cmanager
 from pipeline import pathtools, msg
 from xicam import config
-
+from modpkgs import guiinvoker
 
 class LocalFileView(QtGui.QTreeView):
     """
@@ -344,7 +344,7 @@ class SFTPFileView(QtGui.QTreeWidget):
 
     @threads.method(callback_slot=lambda self: self.pathChanged.emit(self.path))
     def refresh(self, path=None):
-        self.clear()
+        guiinvoker.invoke_in_main_thread(self.clear)
         if path is not None:
             self.path = path
             self.client.cd(path)
