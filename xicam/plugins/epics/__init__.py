@@ -69,9 +69,18 @@ class EpicsPlugin(base.plugin):
 
 
 
-        PVMotorItem('Motor1', 'rp:m1')
-        PVMotorItem('Motor2', 'rp:m2')
+        # PVMotorItem('Motor1', 'rp:m1')
+        # PVMotorItem('Motor2', 'rp:m2')
         PilatusItem('Pilatus', '531PIL1:cam1')
+
+
+        def quickSnap(expTime,name):
+            devices['Pilatus'].setImageName(name)
+            devices['Pilatus'].setCountTime(expTime)
+            devices['Pilatus'].startCount()
+
+
+
 
         for name, motor in py4syn.mtrDB.iteritems():
             self.curves[name] = plot.plot([motor.getValue()])
@@ -82,6 +91,7 @@ class EpicsPlugin(base.plugin):
         devices.update(detectors)
         devices.update(py4syn.mtrDB)
         kernel.shell.push(devices)
+        kernel.shell.push({'quickSnap':quickSnap})
 
         super(EpicsPlugin, self).__init__(*args,**kwargs)
 
