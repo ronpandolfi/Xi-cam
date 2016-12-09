@@ -6,6 +6,8 @@ FBP_astra:
   - name: center
     type: float
     suffix: px
+  - name: ncore
+    type: int
 SIRT:
   - name: center
     type: float
@@ -81,6 +83,8 @@ FBP_CUDA:
     type: int
   - name: PixelSupersampling
     type: str
+  - name: ncore
+    type: int
 # - name: ShortScan
 #   type: bool
 SIRT_CUDA:

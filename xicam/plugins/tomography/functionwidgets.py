@@ -377,9 +377,6 @@ class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
     Subclass of tomopy FunctionWidget used for TomoCam recon functions
     """
 
-    # Currently this is idential to a TomoPyReconFunctionWidget
-    # additional options may be added in future, depending on TomoCam functions developed
-
     @property
     def partial(self):
         return partial(self._function, **self.reorganized_param_dict)
@@ -468,9 +465,11 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         """
         Return the param dict of the FunctionWidget reorganized for proper execution as tomopy function
         """
+
+        # copy optional params to the options/extra_options subdictionaries
         param_dict = {}
-        param_dict['extra_options'] = {}
         param_dict['options'] = self.param_dict['options']
+        param_dict['options']['extra_options']={}
         for key, val in self.param_dict.iteritems():
             if key == 'options' or (type(val) is str and 'None' in val):
                 pass
@@ -479,10 +478,15 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
             elif 'num_iter' in key:
                 param_dict['options']['num_iter'] = self.param_dict['num_iter']
             else:
-                param_dict['extra_options'][key] = val
+                param_dict['options']['extra_options'][key] = val
 
-        if len(param_dict['extra_options']) < 1:
-            param_dict.pop('extra_options')
+        # get rid of extra_options if there are none
+        if len(param_dict['options']['extra_options']) < 1:
+            param_dict['options'].pop('extra_options')
+
+        # if 'astra' in algorithm name, remove it
+        if 'astra' in param_dict['options']['method']:
+            param_dict['options']['method'] = param_dict['options']['method'].split('_astra')[0]
 
         return param_dict
 
@@ -1048,7 +1052,7 @@ class FunctionManager(fw.FeatureManager):
         """
 
         write = 'tomo'
-        print param_dict
+        # print param_dict
 
         for key, val in param_dict.iteritems():
             if val in data_dict.iterkeys():
