@@ -530,8 +530,6 @@ class WriteFunctionWidget(FunctionWidget):
         self.file = self.params.param('file name')
         self.params.child('Browse').sigActivated.connect(self.setBrowse)
 
-
-
         # connect signals to change full file name whenever smaller names are changed
         self.parent.sigValueChanged.connect(self.pathChanged)
         self.folder.sigValueChanged.connect(self.pathChanged)
@@ -566,30 +564,6 @@ class WriteFunctionWidget(FunctionWidget):
         self.params.param('fname').setValue(os.path.join(self.parent.value(), self.folder.value(),
                                                          self.file.value()))
 
-    # def parentChanged(self):
-    #     try:
-    #         parent_name = self.fname.value().split(self.folder.value())[0]
-    #         self.parent.setValue(parent_name)
-    #
-    #     except ValueError:
-    #         pass
-    #
-    #
-    # def folderChanged(self):
-    #     try:
-    #         folder_name = self.fname.value().split(self.parent.value())[0]
-    #         self.folder.setValue(folder_name)
-    #
-    #     except ValueError:
-    #         pass
-    #
-    #
-    # def fileChanged(self):
-    #     try:
-    #         file_name = self.fname.value().split(self.parent.value())[-1]
-    #         self.file.setValue(file_name)
-    #     except ValueError:
-    #         pass
 
 
 

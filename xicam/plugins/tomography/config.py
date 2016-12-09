@@ -118,6 +118,13 @@ def set_als832_defaults(mdata, funcwidget_list, path):
         elif f.func_name == 'Write':
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
+            if 'bl832data-raw' in working_dir:
+                print "-----------------------"
+                print "IT WORKSSFASFAWF"
+                print "-----------------------"
+                user = working_dir.split('/bl832data-raw')[-1].split('/')[0]
+                mount = working_dir.split('bl832data-raw')[0]
+                working_dir = os.path.join(mount, 'bl832data-scratch', user)
             outname = os.path.join(working_dir, *2*('RECON_' + file_name,))
             f.params.child('parent folder').setValue(working_dir)
             f.params.child('folder name').setValue('RECON_' + file_name)
