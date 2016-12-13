@@ -1,0 +1,147 @@
+BP:
+  - name: center
+    type: float
+    suffix: px
+  - name: ncore
+    type: str
+FBP_astra:
+  - name: center
+    type: float
+    suffix: px
+  - name: ncore
+    type: str
+SIRT:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+  - name: MinConstraint
+    type: str
+  - name: MaxConstraint
+    type: str
+  - name: ncore
+    type: str
+SART:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+  - name: MinConstraint
+    type: str
+  - name: MaxConstraint
+    type: str
+  - name: ncore
+    type: str
+# - name: ProjectionOrder
+#    type: str
+ART:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+  - name: MinConstraint
+    type: str
+  - name: MaxConstraint
+    type: str
+  - name: ncore
+    type: str
+#  - name: RayOrder
+#    type: str
+BP_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: GPUIndex
+    type: int
+  - name: PixelSuperSampling
+    type: str
+  - name: ncore
+    type: str
+FBP_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: FilterType
+    type: list
+    values:
+      - None
+      - ram-lak
+      - shepp-logan
+      - cosine
+      - hamming
+      - hann
+      - tukey
+      - lanczos
+      - triangular
+      - gaussian
+      - barlett-hann
+      - blackmann
+      - nuttail
+      - blackman-harris
+      - black-nuttail
+      - flat-top
+      - kaiser
+      - parzen
+      - projection
+      - sinogram
+      - rprojection
+      - rsinogram
+  - name: GPUIndex
+    type: int
+  - name: PixelSupersampling
+    type: str
+  - name: ncore
+    type: str
+# - name: ShortScan
+#   type: bool
+SIRT_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+  - name: MinConstraint
+    type: str
+  - name: MaxConstraint
+    type: str
+  - name: GPUIndex
+    type: int
+  - name: PixelSupersampling
+    type: str
+  - name: ncore
+    type: str
+# - name: ShortScan
+#   type: bool
+SART_CUDA:
+  - name: center
+    type: float
+    suffix: px
+  - name: num_iter
+    type: int
+  - name: MinConstraint
+    type: str
+  - name: MaxConstraint
+    type: str
+#  - name: ProjectionOrder
+#    type: str
+  - name: GPUIndex
+    type: int
+  - name: PixelSupersampling
+    type: str
+  - name: ncore
+    type: str
+# - name: ShortScan
+#   type: bool
+# ART_CUDA:
+#  - name: center
+#    type: float
+#    suffix: px
+#  - name: num_iter
+#    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float

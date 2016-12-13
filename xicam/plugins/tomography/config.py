@@ -53,8 +53,8 @@ with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
 
 # Load dictionary for astra recon functions
-with open('yaml/tomography/astra_function_defaults.yml','r') as stream:
-    astra_defaults=yaml.load(stream)
+with open('yaml/tomography/function_defaults.yml','r') as stream:
+    function_defaults=yaml.load(stream)
 
 
 def load_pipeline(yaml_file):

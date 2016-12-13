@@ -270,6 +270,8 @@ ART:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 BART:
   - name: center
     type: float
@@ -284,6 +286,8 @@ BART:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 FBP:
   - name: center
     type: float
@@ -309,6 +313,8 @@ FBP:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 Gridrec:
   - name: center
     type: float
@@ -334,6 +340,8 @@ Gridrec:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 MLEM:
   - name: center
     type: float
@@ -346,6 +354,8 @@ MLEM:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 OSEM:
   - name: center
     type: float
@@ -360,6 +370,8 @@ OSEM:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 OSMPL Hybrid:
   - name: center
     type: float
@@ -374,6 +386,8 @@ OSMPL Hybrid:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 OSMPL Quad:
   - name: center
     type: float
@@ -388,6 +402,8 @@ OSMPL Quad:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 PML Hybrid:
   - name: center
     type: float
@@ -402,6 +418,8 @@ PML Hybrid:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 PML Quad:
   - name: center
     type: float
@@ -416,6 +434,8 @@ PML Quad:
       - tomo
       - flats
       - dark
+  - name: ncore
+    type: str
 SIRT:
   - name: center
     type: float

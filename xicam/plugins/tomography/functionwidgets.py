@@ -152,6 +152,9 @@ class FunctionWidget(fw.FeatureWidget):
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
+        self.defaults = config.function_defaults['Other']
+        self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
+
     @property
     def enabled(self):
         """
@@ -185,7 +188,30 @@ class FunctionWidget(fw.FeatureWidget):
         """
         Package up all parameters into a functools.partial
         """
-        return partial(self._function, **self.param_dict)
+        return partial(self._function, **self.updated_param_dict)
+
+    @property
+    def updated_param_dict(self):
+        """
+        Return the param dict of the FunctionWidget updated with proper types
+        """
+
+        if self.defaults:
+            param_dict = {}
+            for key, val in self.param_dict.iteritems():
+                if type(val) is str and 'None' in val:
+                    pass
+                elif key in self.defaults.iterkeys():
+                    arg_type = self.defaults[key]['type']
+                    try:
+                        param_dict[key] = arg_type(val)
+                    except ValueError:
+                        param_dict[key] = None
+                else:
+                    param_dict[key] = val
+            return param_dict
+        else:
+            return self.param_dict
 
 
     @property
@@ -248,7 +274,21 @@ class FunctionWidget(fw.FeatureWidget):
         """
         Slot connected to a pg.Parameter.sigChanged signal
         """
-        self.param_dict.update({param.name(): param.value()})
+        if self.defaults:
+            try:
+                arg_type = self.defaults[param.name()]['type']
+                try:
+                    self.allowed_types[arg_type](param.value())
+                    self.param_dict.update({param.name(): param.value()})
+                except ValueError:
+                    if param.value() == "None":
+                        self.param_dict.update({param.name(): param.value()})
+                    else:
+                        param.setValue(self.param_dict[param.name()])
+            except KeyError:
+                self.param_dict.update({param.name(): param.value()})
+        else:
+            self.param_dict.update({param.name(): param.value()})
 
     def allReadOnly(self, boolean):
         """
@@ -325,20 +365,57 @@ class TomoPyReconFunctionWidget(FunctionWidget):
                                self.addCenterDetectFunction)
         self.menu.addMenu(self.submenu)
 
+        defaults = config.function_defaults['Tomopy']
+        if subname in defaults:
+            self.defaults = defaults[subname]
+            for key in self.defaults.iterkeys():
+                val = self.defaults[key]['default']
+                self.param_dict.update({key: val})
+                if key in [p.name() for p in self.params.children()]:
+                    self.params.child(key).setValue(val)
+                    self.params.child(key).setDefault(val)
+
 
 
 
     @property
     def partial(self):
         """
-        Overrides partial property to do some cleanup before creating the partial
+        Package up all parameters into a functools.partial
         """
-        kwargs = deepcopy(self.param_dict)
-        # 'cutoff' and 'order' are not passed into the tomopy recon function as {'filter_par': [cutoff, order]}
-        if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
-            kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
-        self._partial = partial(self._function, **kwargs)
-        return self._partial
+        return partial(self._function, **self.updated_param_dict)
+
+    @property
+    def updated_param_dict(self):
+        """
+        Return the param dict of the FunctionWidget updated with proper types
+        """
+        param_dict = {}
+        for key, val in self.param_dict.iteritems():
+            if key in self.defaults.iterkeys():
+                arg_type = self.defaults[key]['type']
+                try:
+                    param_dict[key] = self.allowed_types[arg_type](val)
+                except ValueError:
+                    param_dict[key] = None
+            else:
+                param_dict[key] = val
+        # 'cutoff' and 'order' are not passed into the recon function in the correct format
+        if 'cutoff' in param_dict.keys() and 'order' in param_dict.keys():
+            param_dict['filter_par'] = list((param_dict.pop('cutoff'), param_dict.pop('order')))
+        return param_dict
+
+    # @property
+    # def partial(self):
+    #     """
+    #     Overrides partial property to do some cleanup before creating the partial
+    #     """
+    #     kwargs = deepcopy(self.param_dict)
+    #     # 'cutoff' and 'order' are not passed into the tomopy recon function as {'filter_par': [cutoff, order]}
+    #     if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
+    #         kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
+    #     self._partial = partial(self._function, **kwargs)
+    #     return self._partial
 
     def addCenterDetectFunction(self, name, subname, package=reconpkg.packages['tomopy']):
         """
@@ -408,9 +485,10 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
     """
     def __init__(self, name, subname, package):
         super(AstraReconFuncWidget, self).__init__(name, subname, reconpkg.packages['tomopy'])
-        self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
-        self.tomopy_args = ['center', 'algorithm', 'ncore', 'sinogram_order', 'nchunk', 'init_recon', 'Filtertype',
-                            'tomo', 'theta']
+        # self.tomopy_args = {'center':'center', 'sinogram_order': False, 'nchunk': None,
+        #                     'init_recon': None, 'tomo': 'tomo', 'theta': 'theta'}
+        self.tomopy_args = ['center', 'sinogram_order', 'nchunk', 'init_recon', 'tomo', 'theta',
+                            'ncore', 'algorithm']
 
 
         self.param_dict['algorithm'] = reconpkg.packages['tomopy'].astra
@@ -421,8 +499,9 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         else:
             self.param_dict['options']['proj_type'] = 'linear'
 
-        if subname in config.astra_defaults:
-            self.defaults = config.astra_defaults[subname]
+        defaults = config.function_defaults['Astra']
+        if subname in defaults:
+            self.defaults = defaults[subname]
             for key in self.defaults.iterkeys():
                 val = self.defaults[key]['default']
                 self.param_dict.update({key: val})
@@ -430,38 +509,21 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
                     self.params.child(key).setValue(val)
                     self.params.child(key).setDefault(val)
 
-    def paramChanged(self, param):
-        """
-        Slot connected to a pg.Parameter.sigChanged signal
-        Overrides functionwidget paramChanged to account for Astra's optional keywords
-        """
-        try:
-            arg_type = self.defaults[param.name()]['type']
-            try:
-                self.allowed_types[arg_type](param.value())
-                self.param_dict.update({param.name(): param.value()})
-            except ValueError:
-                if param.value() == "None":
-                    self.param_dict.update({param.name(): param.value()})
-                else:
-                    param.setValue(self.param_dict[param.name()])
-        except KeyError:
-            self.param_dict.update({param.name(): param.value()})
+
+
+
+    # @property
+    # def partial(self):
+    #     """
+    #     Return the base FunctionWidget partial property
+    #     """
+    #
+    #     return partial(self._function, **self.updated_param_dict)
 
 
 
     @property
-    def partial(self):
-        """
-        Return the base FunctionWidget partial property
-        """
-
-        return partial(self._function, **self.reorganized_param_dict)
-
-
-
-    @property
-    def reorganized_param_dict(self):
+    def updated_param_dict(self):
         """
         Return the param dict of the FunctionWidget reorganized for proper execution as tomopy function
         """
@@ -471,14 +533,22 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         param_dict['options'] = self.param_dict['options']
         param_dict['options']['extra_options']={}
         for key, val in self.param_dict.iteritems():
-            if key == 'options' or (type(val) is str and 'None' in val):
+            if key in self.tomopy_args:
+                if type(val) == str and 'None' in val:
+                    param_dict[key] = None
+                elif key in self.defaults.iterkeys():
+                    arg_type = self.defaults[key]['type']
+                    param_dict[key] = self.allowed_types[arg_type](val)
+                else:
+                    param_dict[key] = val
+            elif key == 'options' or (type(val) is str and 'None' in val):
                 pass
-            elif key in self.tomopy_args:
-                param_dict[key] = val
             elif 'num_iter' in key:
                 param_dict['options']['num_iter'] = self.param_dict['num_iter']
-            else:
+            elif key in config.function_defaults['Astra'][self.subfunc_name].iterkeys():
                 param_dict['options']['extra_options'][key] = val
+            else:
+                pass
 
         # get rid of extra_options if there are none
         if len(param_dict['options']['extra_options']) < 1:
@@ -847,11 +917,11 @@ class FunctionManager(fw.FeatureManager):
             if not function.enabled:
                 continue
             fpartial = function.partial
-
             # set keywords that will be adjusted later by input functions or users
             for arg in inspect.getargspec(function._function)[0]:
                 if arg not in fpartial.keywords.iterkeys() or arg in 'center':
                     fpartial.keywords[arg] = '{}'.format(arg)
+
             # get rid of degenerate keyword arguments
             if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
                 fpartial.keywords['tomo'] = fpartial.keywords['arr']
@@ -1026,7 +1096,6 @@ class FunctionManager(fw.FeatureManager):
         """
 
         write = 'tomo'
-        # print param_dict
 
         for key, val in param_dict.iteritems():
             if val in data_dict.iterkeys():
@@ -1146,8 +1215,8 @@ class FunctionManager(fw.FeatureManager):
                 fpartial.keywords['tomo'] = fpartial.keywords['arr']
                 fpartial.keywords.pop('arr', None)
 
-            if 'ncore' in fpartial.keywords:
-                fpartial.keywords['ncore'] = ncore
+            # if 'ncore' in fpartial.keywords:
+            #     fpartial.keywords['ncore'] = ncore
             partial_stack.append((fpartial, name, params_dict[name]))
 
             for param, ipf in func.input_functions.iteritems():
