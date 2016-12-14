@@ -97,7 +97,7 @@ def set_als832_defaults(mdata, funcwidget_list, path):
         list of FunctionWidgets exposed in the UI workflow pipeline
     """
 
-
+    pad = 531
     for f in funcwidget_list:
         if f is None:
             continue
@@ -115,7 +115,16 @@ def set_als832_defaults(mdata, funcwidget_list, path):
                     except KeyError as e:
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
-        elif f.func_name == 'Write':
+        elif f.func_name == 'Padding': #dataset specific padding/crop value
+            pad = int(float(mdata['dxelements']) * 0.4)
+            f.params.child('npad').setValue(pad)
+            f.params.child('npad').setDefault(pad)
+        elif f.func_name == 'Crop':
+            for item in ['p11', 'p12', 'p21', 'p22']:
+                f.params.child(item).setValue(pad)
+                f.params.child(item).setDefault(pad)
+
+        elif f.func_name == 'Write': #dataset specific write values
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
             if 'bl832data-raw' in working_dir:
@@ -124,9 +133,13 @@ def set_als832_defaults(mdata, funcwidget_list, path):
                 working_dir = os.path.join(mount, 'bl832data-scratch', user)
             outname = os.path.join(working_dir, *2*('RECON_' + file_name,))
             f.params.child('parent folder').setValue(working_dir)
+            f.params.child('parent folder').setDefault(working_dir)
             f.params.child('folder name').setValue('RECON_' + file_name)
+            f.params.child('folder name').setDefault('RECON_' + file_name)
             f.params.child('file name').setValue('RECON_' + file_name)
+            f.params.child('file name').setDefault('RECON_' + file_name)
             f.params.child('fname').setValue(outname)
+            f.params.child('fname').setDefault(outname)
         if f.input_functions:
             set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)
 
