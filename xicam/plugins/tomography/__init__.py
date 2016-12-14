@@ -358,14 +358,23 @@ class plugin(base.plugin):
         widgetpipe
         """
 
-        self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
+        if self.ui.toolbar.actionMBIR.isChecked():
+            self.ui.toolbar.actionMBIR.setChecked(False)
 
+        self.ui.toolbar.actionCenter.setChecked(value)
+        self.centerwidget.widget(self.currentWidget()).onManualCenter(value)
 
     def mbir(self, value):
 
+        if self.ui.toolbar.actionCenter.isChecked():
+            self.ui.toolbar.actionCenter.setChecked(False)
+
+        self.ui.toolbar.actionMBIR.setChecked(value)
         self.centerwidget.widget(self.currentWidget()).onMBIR(value)
 
-        # if self.checkPipeline():
+
+
+            # if self.checkPipeline():
         #     msg.showMessage('Computing MBIR preview...', timeout=0)
 
 

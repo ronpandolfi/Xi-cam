@@ -323,11 +323,10 @@ class TomoViewer(QtGui.QWidget):
 
         """
 
-        self.onMBIR(not active)
-
         if active:
-            self.projectionViewer.showCenterDetection()
             self.viewstack.setCurrentWidget(self.projectionViewer)
+            self.projectionViewer.showCenterDetection()
+            self.projectionViewer.hideMBIR()
         else:
             self.projectionViewer.hideCenterDetection()
 
@@ -335,8 +334,9 @@ class TomoViewer(QtGui.QWidget):
 
 
         if active:
-            self.projectionViewer.showMBIR()
             self.viewstack.setCurrentWidget(self.projectionViewer)
+            self.projectionViewer.showMBIR()
+            self.projectionViewer.hideCenterDetection()
         else:
             self.projectionViewer.hideMBIR()
 
@@ -742,7 +742,8 @@ class ProjectionViewer(QtGui.QWidget):
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
         l.addWidget(self.mbir_viewer)
-        self.mbir_viewer.hide()
+        self.hideMBIR()
+        # self.mbir_viewer.hide()
 
         slider.valueChanged.connect(spinBox.setValue)
         slider.valueChanged.connect(self.stackViewer.resetImage)
@@ -807,7 +808,7 @@ class ProjectionViewer(QtGui.QWidget):
 
     def showMBIR(self):
         self.mbir_viewer.show()
-        self.hideCenterDetection()
+        # self.hideCenterDetection()
         self.stackViewer.hide()
 
     def hideMBIR(self):
