@@ -116,7 +116,6 @@ def set_als832_defaults(mdata, funcwidget_list, path):
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
         elif f.func_name == 'Write':
-            print path
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
             if 'bl832data-raw' in working_dir:
@@ -235,6 +234,8 @@ def extract_runnable_dict(funwidget_list):
                             else '{}=\'{}\','.format(key, val)
                     subfunc += ")"
                     subfuncs[param] = subfunc
+            if 'astra' in keywords['algorithm']:
+                keywords['algorithm'] = 'tomopy.astra'
 
         func_dict[str(count) + ". " + func] = keywords
         count += 1
