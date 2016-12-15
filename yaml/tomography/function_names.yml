@@ -93,3 +93,6 @@ Convert Data Type:
 Array Operation:
 - array_operation
 - pipelinefunctions
+Slice:
+- slicer
+- pipelinefunctions

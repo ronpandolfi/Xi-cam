@@ -16,6 +16,25 @@ Crop:
   - tomo
   - flats
   - dark
+Slice:
+- name: p11
+  type: int
+- name: p12
+  type: int
+- name: p21
+  type: int
+- name: p22
+  type: int
+- name: p31
+  type: int
+- name: p32
+  type: int
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Convert Data Type:
 - name: dtype
   type: list

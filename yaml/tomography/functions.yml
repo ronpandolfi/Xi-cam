@@ -15,6 +15,7 @@ Functions:
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]
   Crop: [Crop]
+  Slice: [Slice]
   Convert Data Type: [Convert Data Type]
   Write: [Tiff Stack, Write HDF5] #, Numpy Array, Data Exchange
   Array Operation: [Array Operation]

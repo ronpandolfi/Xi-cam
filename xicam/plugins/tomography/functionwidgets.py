@@ -1375,7 +1375,10 @@ class FunctionManager(fw.FeatureManager):
         """
         for tuple in partial_stack:
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
+            print function.func.__name__
+            print data_dict['tomo'].shape
             data_dict[write] = function()
+
 
         return data_dict['tomo']
 

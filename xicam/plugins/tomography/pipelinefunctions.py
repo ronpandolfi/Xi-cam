@@ -145,6 +145,41 @@ def array_operation(arr, value, operation='divide'):
     elif operation == 'divide':
         return ne.evaluate('arr / value')
 
+def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
+    """
+    Slices a 3D array according the points given
+
+    Parameters
+    ----------
+    arr : ndarray
+    p11 : int
+        First point along first axis
+    p12 : int
+        Second point along first axis
+    p21 : int
+        First point along second axis
+    p22 : int
+        Second point along second axis
+    p31 : int
+        First point along third axis
+    p32 : int
+        Second point along third axis
+    axis : int
+        Axis to crop along
+
+    Returns
+    -------
+    ndarray:
+        Cropped array
+    """
+
+    slc = []
+    pts = [p11, p12, p21, p22, p31, p32]
+    for n in range(len(arr.shape)):
+        slc.append(slice(pts.pop(0), pts.pop(0)))
+    return arr[slc]
+
+
 
 if __name__ == '__main__':
     import tomopy
