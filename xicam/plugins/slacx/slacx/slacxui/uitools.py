@@ -55,11 +55,6 @@ def type_mv_widget(src,widg=None):
             widg.setCurrentIndex(optools.auto_type)
     return widg 
 
-#def type_selection_widget():
-#    widg = QtGui.QComboBox()
-#    widg.addItems(optools.input_types)
-#    return widg 
-
 def src_selection_widget():
     widg = QtGui.QComboBox()
     widg.addItems(optools.input_sources)
@@ -84,7 +79,7 @@ def smalltext_widget(text):
     widg.setStyleSheet( "QLineEdit { background-color: transparent }" + widg.styleSheet() )
     return widg
 
-def bigtext_widget(text,trunc_limit=70):
+def bigtext_widget(text,trunc_limit=200):
     if len(text) > trunc_limit:
         display_text = text[:trunc_limit]+'...'
     else:
@@ -99,14 +94,6 @@ def name_widget(name):
     name_widget.setReadOnly(True)
     name_widget.setAlignment(QtCore.Qt.AlignRight)
     return name_widget
-    
-#def treesource_typval_widgets():
-#    type_widget = type_mv_widget() 
-#    #type_widget = type_selection_widget()
-#    type_widget.setCurrentIndex(optools.auto_type)
-#    val_widget = QtGui.QLineEdit('-')
-#    val_widget.setReadOnly(True)
-#    return type_widget, val_widget
     
 def toggle_load_button(ui,txt):
     idx = ui.tree.model().index(txt)
@@ -175,12 +162,13 @@ def start_save_ui(uiman):
     #save_ui.tree.selectionModel().selectionChanged.connect( save_ui.tree.selectionChanged )
     #import pdb; pdb.set_trace()
     save_ui.setParent(uiman.ui,QtCore.Qt.Window)
+    save_ui.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
+    save_ui.setWindowModality(QtCore.Qt.ApplicationModal)
     save_ui.save_button.setText('&Save')
     save_ui.save_button.clicked.connect(partial(stop_save_ui,save_ui,uiman))
     #save_ui.filename.returnPressed.connect(partial(stop_save_ui,save_ui,uiman))
     save_ui.filename.textChanged.connect( partial(toggle_save_button,save_ui) )
     save_ui.filename.setText(trmod.rootPath())
-    save_ui.setWindowModality(QtCore.Qt.ApplicationModal)
     save_ui.show()
     save_ui.activateWindow()
 
@@ -203,20 +191,13 @@ def start_load_ui(uiman):
     load_ui.tree.expandAll()
     load_ui.tree.clicked.connect( partial(load_path,load_ui) )
     load_ui.setParent(uiman.ui,QtCore.Qt.Window)
+    load_ui.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
+    load_ui.setWindowModality(QtCore.Qt.ApplicationModal)
     load_ui.load_button.setText('&Load')
     load_ui.load_button.clicked.connect(partial(stop_load_ui,load_ui,uiman))
     #load_ui.setWindowModality(QtCore.Qt.WindowModal)
-    load_ui.setWindowModality(QtCore.Qt.ApplicationModal)
     load_ui.show()
     load_ui.activateWindow()
 
-#class ListBuildManager(object):
-#    
-#    def __init__(self,ui):
-#        self.ui = ui 
-#        super(ListBuildManager,self).__init__()
-#        self.setup_ui()
-#
-#    def setup_ui(self):
-#        self.ui.finish_button.setText('Finish')
+
 

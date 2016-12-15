@@ -180,6 +180,7 @@ class WfUiManager(object):
             # Request a different uri 
             msg_ui = slacxtools.start_message_ui()
             msg_ui.setParent(self.ui,QtCore.Qt.Window)
+            msg_ui.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
             msg_ui.setWindowModality(QtCore.Qt.WindowModal)
             msg_ui.setWindowTitle("Tag Error")
             msg_ui.message_box.setPlainText(
@@ -343,10 +344,10 @@ class WfUiManager(object):
             else:
                 btn_widget.setText('browse...')
                 btn_widget.clicked.connect( partial(self.fetch_data,name) )
-            if self.op.inputs[name] is not None:
-                val_widget.setText(str(self.op.inputs[name]))
-            elif self.op.input_locator[name]:
+            if self.op.input_locator[name]:
                 val_widget.setText(str(self.op.input_locator[name].val))
+            elif self.op.inputs[name] is not None:
+                val_widget.setText(str(self.op.inputs[name]))
             val_widget.setReadOnly(True)
         elif (src == optools.user_input):
             if tp == optools.none_type:
@@ -379,6 +380,7 @@ class WfUiManager(object):
         list_ui = QtUiTools.QUiLoader().load(ui_file)
         ui_file.close()
         list_ui.setParent(self.ui,QtCore.Qt.Window)
+        list_ui.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         list_ui.setWindowModality(QtCore.Qt.WindowModal)
         list_ui.setWindowTitle("build list from {}".format(optools.input_sources[src]))
         if self.op.input_locator[name]:
@@ -455,6 +457,7 @@ class WfUiManager(object):
         src_ui = QtUiTools.QUiLoader().load(ui_file)
         ui_file.close()
         src_ui.setParent(parent,QtCore.Qt.Window)
+        src_ui.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
         src_ui.setWindowModality(QtCore.Qt.WindowModal)
         src_ui.setWindowTitle("data loader")
         if src == optools.wf_input:
@@ -498,7 +501,7 @@ class WfUiManager(object):
         self.ui.op_frame.setSizePolicy(
         QtGui.QSizePolicy.Minimum,self.ui.op_frame.sizePolicy().verticalPolicy())
         self.ui.wf_selector.setModel(self.wfman)
-        #self.ui.wf_selector.hideColumn(1)
+        self.ui.wf_selector.hideColumn(1)
         self.ui.wf_selector.clicked.connect( partial(self.get_op,self.wfman) )
         self.ui.rm_op_button.setText("&Delete")
         self.ui.rm_op_button.clicked.connect(self.rm_op)
@@ -520,7 +523,7 @@ class WfUiManager(object):
         self.ui.test_button.setText("&Test")
         self.ui.test_button.setEnabled(False)
         self.ui.test_button.clicked.connect(self.test_op)
-        self.ui.load_button.setText("&Load")
+        self.ui.load_button.setText("&Finish")
         self.ui.load_button.clicked.connect(self.load_op)
         self.ui.load_button.setDefault(True)
         self.ui.test_button.setMinimumWidth(100)

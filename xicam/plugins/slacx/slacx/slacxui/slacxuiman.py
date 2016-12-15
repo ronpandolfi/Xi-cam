@@ -114,10 +114,9 @@ class UiManager(object):
         Display selected item from the workflow tree in image_viewer 
         """
         if idx.isValid(): 
-            if self.wfman.get_item(idx).data is not None:
-                to_display = self.wfman.get_item(idx).data
-                uri = self.wfman.build_uri(idx)
-                data_viewer.display_item(to_display,uri,self.ui.image_viewer,None)
+            itm_data = self.wfman.get_item(idx).data
+            uri = self.wfman.build_uri(idx)
+            data_viewer.display_item(itm_data,uri,self.ui.image_viewer,None)
 
     def final_setup(self):
         # Let the message board be read-only

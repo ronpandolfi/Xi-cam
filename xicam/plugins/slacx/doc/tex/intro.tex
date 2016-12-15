@@ -1,34 +1,46 @@
 \section{Introduction}
 \label{sec:introduction}
 
-The \verb|slacx| software package provides 
-a fast and lean platform for processing image-like data.
-It is being developed to perform analysis of x-ray diffraction patterns 
+The \verb|slacx| software package aims to provide 
+a fast and lean platform for exploring and processing image-like data.
+It was originally developed to perform analysis of x-ray diffraction patterns 
 for ongoing projects at SLAC/SSRL.
 At the core of \verb|slacx| is a workflow engine
-that allows users to either design and execute a single workflow,
-run a known workflow on a batch of inputs,
-or monitor a filesystem and execute a workflow on arriving files in real time.
-Other features include:
+that uses a library of simple operations
+to perform data analysis, for single inputs, 
+batches of inputs, or inputs generated in real time. 
+
+The library of operations built into \verb|slacx|
+was designed with specific workflows in mind,
+and in some cases an effort was made to provide more general functionality.
+Some operations have been used a lot and are known to be stable,
+while others may introduce bugs if used in ways other than intended.
+In order to limit the required libraries to a few core modules,
+\verb|slacx| defaults to a state where all operations are unavailable to the user.
+The user must choose which operations will be used for their workflow,
+and these will be imported as they are enabled.
+The list of enabled operations is saved in a configuration file
+so that they do not need to be enabled every time \verb|slacx| is run.
+
+\verb|slacx| is currently written in Python,
+making use of the PySide Qt library bindings
+for GUI elements as well as data structures and threading facilities.
+Internally, \verb|slacx| keeps track of data in a Qt-based tree,
+and much of the graphical part of the program involves 
+interacting with these trees,
+as implemented in a Qt model-view framework.
+
+\verb|slacx| also contains a plugin that provides its functionality to \verb|xi-cam|,
+a general-purpose synchrotron diffraction analysis software package
+with lots of fast and easy data analysis tools
+develped by Pandolfi, et al at Lawrence Berkeley National Lab and the Camera Institute.
+NB: Cite and link to xi-cam here.
+
+Some the core goals of \verb|slacx|:
 \begin{itemize}
-\item A plugin module for using slacx and its components 
-    in the \verb|xi-cam| software package
-\item An operation development interface 
-    for users with little or no programming experience 
-    to write their own processing routines 
-\item Networking modules for directing remote (distributed) computations 
-    and communicating with remote filesystems to store and retrieve data
-\end{itemize}
-Some long-term goals of \verb|slacx| are: 
-\begin{itemize}
-\item To eliminate the development of redundant analysis routines,
-    reducing the potential for bugs 
-    and increasing overall refinement and efficiency of the workflow
-\item To streamline analysis and standardize storage 
-    so that processed data is easily accessible for future reference
-\item To interface with experimental equipment
-    to enable model-driven feedback 
-    targeting specific engineering objectives
+\item Eliminate redundant development efforts 
+\item Streamline and standardize routine data analysis
+\item Simplify data storage and provide large-scale analysis 
 \end{itemize}
 
 The \verb|slacx| developers would love to hear from you

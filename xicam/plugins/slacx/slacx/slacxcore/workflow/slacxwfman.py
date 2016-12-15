@@ -66,22 +66,26 @@ class WfManager(TreeModel):
         f.close()
         for uri, opdict in dct.items():
             opname = opdict['type']
-            op = opman.get_op_byname(opname)()
+            op = opman.get_op_byname(opname)
+            if not issubclass(op,Operation):
+                self.write_log('Did not find Operation {} - skipping.'.format(opname))
             # TODO: Eventually remove this and deprecate the hard-coded 'Inputs' key
-            if 'Inputs' in opdict.keys():
-                ilspec = opdict['Inputs']
+            #if 'Inputs' in opdict.keys():
+            #    ilspec = opdict['Inputs']
             else:
+                op = op()
                 ilspec = opdict[optools.inputs_tag]
-            for name, srctypeval in ilspec.items():
-                src = srctypeval['src']
-                tp = srctypeval['type']
-                val = srctypeval['val'] 
-                # TODO: Eventually remove this and deprecate the hard-coded 'Inputs' key
-                if src == optools.wf_input and isinstance(val,str):
-                    val = val.replace('Inputs',optools.inputs_tag)
-                il = optools.InputLocator(src,tp,val)
-                op.input_locator[name] = il
-            self.add_op(uri,op)
+                for name, srctypeval in ilspec.items():
+                    src = srctypeval['src']
+                    tp = srctypeval['type']
+                    val = srctypeval['val'] 
+                    # TODO: Eventually remove this and deprecate the hard-coded 'Inputs' key
+                    #if src == optools.wf_input and isinstance(val,str):
+                    #    val = val.replace('Inputs',optools.inputs_tag)
+                    il = optools.InputLocator(src,tp,val)
+                    op.input_locator[name] = il
+                self.add_op(uri,op)
+        self.update_io_deps()
         
     def save_to_file(self,filename):
         """
@@ -103,13 +107,6 @@ class WfManager(TreeModel):
         #yaml.dump(wf_dict, f, encoding='utf-8')
         yaml.dump(wf_dict, f)
         f.close()
-    def op_items_to_dict(self,op_items=None):
-        od = OrderedDict()
-        if not op_items:
-            op_items = self.root_items
-        for itm in op_items:
-            od[itm.tag()] = copy.deepcopy(itm.data)
-        return od
     def op_dict(self,op_item):
         dct = OrderedDict() 
         op = op_item.data
@@ -303,25 +300,19 @@ class WfManager(TreeModel):
         """
         #itm = idx.internalPointer()
         #update_uri = itm.tag()
-        for itm in self.root_items:
+        for r,itm in zip(range(len(self.root_items)),self.root_items):
             op = itm.data
-            #op_idx = self.index(row,0,QtCore.QModelIndex())
+            op_idx = self.index(r,0,QtCore.QModelIndex())
             for name,il in op.input_locator.items():
                 if il:
-                    self.update_input_locator(il)
-
-    def update_input_locator(self,il):
-        """
-        Clear an input_locator if the uris it points to are obsolete.
-        This helps clean up after an Operation is altered or removed.
-        """
-        # If the source is workflow input (optools.wf_input)...
-        if il.src == optools.wf_input:
-            vals = optools.val_list(il)
-            for v in vals:
-                if not self.is_good_uri(v):
-                    self.write_log('--- NB: clearing InputLocator for {} ---'.format(v))
-                    il = optools.InputLocator()
+                    # If the source is workflow input (optools.wf_input)...
+                    if il.src == optools.wf_input:
+                        vals = optools.val_list(il)
+                        for v in vals:
+                            if not self.is_good_uri(v):
+                                self.write_log('--- NB: clearing InputLocator for {} ---'.format(v))
+                                op.input_locator[name] = optools.InputLocator()
+                                self.tree_dataChanged(op_idx)
 
     def tree_dataChanged(self,idx):
         self.dataChanged.emit(idx,idx)
@@ -528,8 +519,9 @@ class WfManager(TreeModel):
     def wait_for_thread(self,th_idx):
         """Wait for the thread at th_idx to be finished"""
         done = False
-        interval = 10
+        interval = 1
         wait_iter = 0
+        total_wait = 0
         while not done:
             done = True
             if self._wf_threads[th_idx]:
@@ -539,8 +531,11 @@ class WfManager(TreeModel):
                     self.loopwait(interval)
                     self.appref.processEvents()
                     wait_iter += 1
+                    total_wait += interval
+                    if interval > float(total_wait)*0.1 and interval < 100:
+                        interval = interval * 10
         if wait_iter > 0:
-            self.write_log('... waited {}ms for thread {}'.format(wait_iter*interval,th_idx))
+            self.write_log('... waited {} seconds for thread {}'.format(total_wait*0.001,th_idx))
 
     def wait_for_threads(self):
         """Wait for all workflow execution threads to finish"""
@@ -643,7 +638,8 @@ class WfManager(TreeModel):
                 self.run_wf_serial(stk,thd)
                 opdict = {}
                 for lst in stk:
-                    opdict.update(self.op_items_to_dict(lst))
+                    for itm in lst:
+                        opdict.update(self.wf_item_to_dict(itm.tag(),itm))
                 rt.output_list().append(opdict)
                 self.update_op(rt_itm.tag(),rt)
             else:
@@ -677,14 +673,38 @@ class WfManager(TreeModel):
                 if any(b.saved_items()):
                     for uri in b.saved_items():
                         itm,idx = self.get_from_uri(uri)
-                        b.output_list()[i].update({itm.tag():copy.deepcopy(itm.data)})
+                        b.output_list()[i].update(self.wf_item_to_dict(uri,itm))
                 else:
                     for lst in stk:
-                        b.output_list()[i].update(self.op_items_to_dict(lst))
+                        for itm in lst:
+                            b.output_list()[i].update(self.wf_item_to_dict(itm.tag(),itm))
                 self.update_op(b_itm.tag(),b)
             else:
                 self.write_log( 'BATCH EXECUTION TERMINATED' )
+                return
         self.write_log( 'BATCH EXECUTION FINISHED' )
+    
+    def wf_item_to_dict(self,uri,itm):
+        od = OrderedDict()
+        od[uri] = copy.deepcopy(itm.data)
+        if isinstance(itm.data,Operation):
+            inp_uri = uri+'.'+optools.inputs_tag  
+            inp_itm,idx = self.get_from_uri(inp_uri)
+            od.update(self.wf_item_to_dict(inp_uri,inp_itm))
+            out_uri = uri+'.'+optools.outputs_tag  
+            out_itm,idx = self.get_from_uri(out_uri)
+            od.update(self.wf_item_to_dict(out_uri,out_itm))
+        elif isinstance(itm.data,dict):
+            for k,v in itm.data.items():
+                itm_uri = uri+'.'+str(k)
+                itm,idx = self.get_from_uri(itm_uri)
+                od.update(self.wf_item_to_dict(itm_uri,itm))
+        elif isinstance(itm.data,list):
+            for i,itm in zip(range(len(itm.data)),itm.data):
+                itm_uri = uri+'.'+str(i)
+                itm,idx = self.get_from_uri(itm_uri)
+                od.update(self.wf_item_to_dict(itm_uri,itm))
+        return od
 
     def set_op_input_at_uri(self,uri,val):
         """Set an op input, indicated by uri, to provided value."""
