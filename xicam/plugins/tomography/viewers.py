@@ -540,7 +540,6 @@ class MBIRViewer(QtGui.QWidget):
                 return -1
 
     def find_COR(self, cor_function):
-        msg.showMessage("Generating slurm file...", timeout=0)
         if not cor_function in self.cor_detection_funcs:
             return -1
         else:
@@ -569,6 +568,7 @@ class MBIRViewer(QtGui.QWidget):
         """
 
         import os.path
+        msg.showMessage("Generating slurm file...", timeout=0)
 
         self.center = self.loadCOR()
 
@@ -582,23 +582,29 @@ class MBIRViewer(QtGui.QWidget):
             nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
             output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
 
+            group = self.mdata['archdir'].split("\\")[-1]
+            if group != file_name:
+                group_hdf5 = "{}/{}".format(group, file_name)
+            else:
+                group_hdf5 = file_name
+
             slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
             slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
             slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
             slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
             slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
             slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
-            slurm += '--input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
-            slurm += '--group_hdf5 /{}'.format(file_name)
-            slurm += '--code_launch_folder $SCRATCH/LaunchFolder/'
-            slurm += '--output_hdf5 $SCRATCH/Results/{}/ --x_width {}'.format(file_name, self.mdata['dxelements'])
-            slurm += '--recon_x_width {} --num_dark {}'.format(self.mdata['dxelements'], self.mdata['num_dark_fields'])
-            slurm += '--num_bright {} --z_numElts {}'.format(self.mdata['num_bright_field'],self.mbir_params.child('Z num elts').value())
-            slurm += '--z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
-            slurm += '--pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
-            slurm += '--smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
+            slurm += ' --input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
+            slurm += ' --group_hdf5 /{}'.format(group_hdf5)
+            slurm += ' --code_launch_folder $SCRATCH/LaunchFolder/'
+            slurm += ' --output_hdf5 $SCRATCH/Results/{}_mbir/ --x_width {}'.format(file_name, self.mdata['dxelements'])
+            slurm += ' --recon_x_width {} --num_dark {}'.format(str(self.mdata['dxelements']), str(self.mdata['num_dark_fields']))
+            slurm += ' --num_bright {} --z_numElts {}'.format(str(self.mdata['num_bright_field']),self.mbir_params.child('Z num elts').value())
+            slurm += ' --z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
+            slurm += ' --pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
+            slurm += ' --smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
                                                                  self.mbir_params.child('Zinger thresh').value())
-            slurm += '--Variance_Est 1 --num_threads 24 --num_nodes {}'.format(nodes)
+            slurm += ' --Variance_Est 1 --num_threads 24 --num_nodes {} '.format(nodes)
             slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
 
 
@@ -608,6 +614,8 @@ class MBIRViewer(QtGui.QWidget):
 
             with open(write, 'w') as job:
                 job.write(slurm)
+
+            msg.showMessage("Done.", timeout=0)
 
 
 
