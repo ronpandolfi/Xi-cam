@@ -134,7 +134,7 @@ def array_operation(arr, value, operation='divide'):
     Simple wrapper function to expose array element by element operations in workflow pipeline GUI
     """
 
-    if operation not in ('add', 'subtract', 'multiply', 'divide'):
+    if operation not in ('add', 'subtract', 'multiply', 'divide', 'maximum'):
         raise ValueError('Operation {} is not a valid array operation'.format(operation))
     elif operation == 'add':
         return ne.evaluate('arr + value')
@@ -144,6 +144,8 @@ def array_operation(arr, value, operation='divide'):
         return ne.evaluate('arr * value')
     elif operation == 'divide':
         return ne.evaluate('arr / value')
+    elif operation == 'maximum':
+        return np.maximum(arr, value)
 
 def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
     """

@@ -64,6 +64,7 @@ Array Operation:
   - subtract
   - multiply
   - divide
+  - maximum
 - name: arr
   type: list
   values:

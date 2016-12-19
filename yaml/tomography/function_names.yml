@@ -94,5 +94,5 @@ Array Operation:
 - array_operation
 - pipelinefunctions
 Slice:
-- slicer
+- slice
 - pipelinefunctions
