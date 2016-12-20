@@ -54,17 +54,45 @@ Convert Data Type:
   - tomo
   - flats
   - dark
-Array Operation:
+Add:
 - name: value
   type: float
-- name: operation
+- name: arr
   type: list
   values:
-  - add
-  - subtract
-  - multiply
-  - divide
-  - maximum
+  - tomo
+  - flats
+  - dark
+Subtract:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Multiply:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Divide:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Maximum:
+- name: value
+  type: float
 - name: arr
   type: list
   values:

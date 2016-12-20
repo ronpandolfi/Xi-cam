@@ -16,9 +16,8 @@
   Nearest Flats:
     Enabled: True
 4. Array Operation:
-  Array Operation:
+  Maximum:
     Parameters:
-      operation: maximum
       arr: tomo
       value: 0.0000000000000001
     Enabled: True
@@ -73,9 +72,8 @@
       arr: tomo
     Enabled: True
 10. Array Operation:
-  Array Operation:
+  Divide:
     Parameters:
-      operation: divide
       arr: tomo
     Enabled: True
 11. Circular Mask:

@@ -95,11 +95,10 @@ def set_als832_defaults(mdata, funcwidget_list, path):
         dataset metadata
     funcwidget_list : list of FunctionWidgets
         list of FunctionWidgets exposed in the UI workflow pipeline
+    path: str
+        path to dataset
     """
 
-    # TODO: make this function more consistent and not contradictory
-
-    pad = 531
     for f in funcwidget_list:
         if f is None:
             continue
@@ -117,14 +116,7 @@ def set_als832_defaults(mdata, funcwidget_list, path):
                     except KeyError as e:
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
-        elif f.func_name == 'Padding': #dataset specific padding/crop value
-            pad = int(float(mdata['dxelements']) * 0.4)
-            f.params.child('npad').setValue(pad)
-            f.params.child('npad').setDefault(pad)
-        elif f.func_name == 'Crop':
-            for item in ['p11', 'p12', 'p21', 'p22']:
-                f.params.child(item).setValue(pad)
-                f.params.child(item).setDefault(pad)
+
 
         elif f.func_name == 'Write': #dataset specific write values
             file_name = path.split("/")[-1].split(".")[0]
@@ -143,14 +135,7 @@ def set_als832_defaults(mdata, funcwidget_list, path):
             f.params.child('fname').setValue(outname)
             f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)\
-
-        # a *very* quick fix for
-        children = f.params.children()
-        for c in children:
-            if c.name() == 'operation' and c.value() == 'maximum':
-                f.params.child('value').setValue(0.000000000000001)
-                f.params.child('value').setDefault(0.000000000000001)
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)
 
 
 

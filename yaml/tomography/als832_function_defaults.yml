@@ -27,8 +27,30 @@ Polar Mean Filter:
   rwidth:
     name: max_arc_length
     type: int
-Array Operation:
+Divide:
   value:
     name: pxsize
     type: float
     conversion: 0.1
+Padding:
+  npad:
+    name: dxelements
+    type: int
+    conversion: 0.4
+Crop:
+  p11:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p12:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p21:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p22:
+    name: dxelements
+    type: int
+    conversion: 0.4

@@ -128,24 +128,21 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
     return out.astype(np.dtype(dtype), copy=False)
 
 
+# series of wrappers for simple array operations to expose in workflow pipeline GUI
+def array_operation_add(arr, value=0):
+    return ne.evaluate('arr + value')
 
-def array_operation(arr, value, operation='divide'):
-    """
-    Simple wrapper function to expose array element by element operations in workflow pipeline GUI
-    """
+def array_operation_sub(arr, value=0):
+    return ne.evaluate('arr - value', truediv=True)
 
-    if operation not in ('add', 'subtract', 'multiply', 'divide', 'maximum'):
-        raise ValueError('Operation {} is not a valid array operation'.format(operation))
-    elif operation == 'add':
-        return ne.evaluate('arr + value')
-    elif operation == 'subtract':
-        return ne.evaluate('arr - value', truediv=True)
-    elif operation == 'multiply':
-        return ne.evaluate('arr * value')
-    elif operation == 'divide':
-        return ne.evaluate('arr / value')
-    elif operation == 'maximum':
-        return np.maximum(arr, value)
+def array_operation_mult(arr, value=1):
+    return ne.evaluate('arr * value')
+
+def array_operation_div(arr, value=1):
+    return ne.evaluate('arr / value')
+
+def array_operation_max(arr, value=0):
+    return np.maximum(arr, value)
 
 def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
     """

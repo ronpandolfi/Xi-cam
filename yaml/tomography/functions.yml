@@ -18,7 +18,7 @@ Functions:
   Slice: [Slice]
   Convert Data Type: [Convert Data Type]
   Write: [Tiff Stack, Write HDF5] #, Numpy Array, Data Exchange
-  Array Operation: [Array Operation]
+  Array Operation: [Add, Subtract, Multiply, Divide, Maximum]
 Input Functions:
   Reconstruction:
     Center Detection: [Nelder-Mead, Vo, Phase Correlation]
