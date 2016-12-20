@@ -91,6 +91,8 @@ class TomoViewer(QtGui.QWidget):
 
         # keep a timer for reconstruction
         self.recon_start_time = 0
+        self.preview_holder = []
+        self.prange = []
 
 
 
@@ -265,7 +267,7 @@ class TomoViewer(QtGui.QWidget):
         """Return the data's header (metadata)"""
         return self.data.header
 
-    def addSlicePreview(self, params, recon, slice_no=None):
+    def addSlicePreview(self, params, recon, slice_no=None, prange=None):
         """
         Adds a slice reconstruction preview with the corresponding workflow pipeline dictionary to the previewViewer
 
@@ -279,13 +281,42 @@ class TomoViewer(QtGui.QWidget):
             Sinogram/slice number reconstructed
 
         """
-
         if slice_no is None:
             slice_num = self.sinogramViewer.view_spinBox.value()
             self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_num)
         elif type(slice_no) is list:
             for item in range(slice_no[1]- slice_no[0]+1):
                 self.previewViewer.addPreview(np.rot90(recon[item], 1), params, item+slice_no[0])
+        # this block ensures that the previews are added in order if testparamrange is triggered
+        elif prange:
+            dummy_prange = dict(prange)
+            func = dummy_prange.pop('function')
+            param = dummy_prange.keys()[0]
+
+            if len(self.prange) < 1 and recon is not None:
+                self.prange = prange[param]
+
+            # this if loop and try statement ensure no errors due to the recursion below
+            if recon is not None:
+                self.preview_holder.append([recon, params, slice_no])
+            try:
+                top_val = self.prange[0]
+            except IndexError:
+                pass
+
+            # run through each recon in the preview_holder, and add them to the preview viewer if the top param in
+            # prange matches the preview metadata
+            for index, rec in enumerate(self.preview_holder):
+                for key in rec[1].iterkeys():
+                    if func in key:
+                        subfunc = rec[1][key].keys()[0]
+                        param_val = rec[1][key][subfunc][param]
+                if top_val == param_val:
+                    self.previewViewer.addPreview(np.rot90(rec[0][0], 1), rec[1], rec[2])
+                    self.preview_holder.pop(index)
+                    self.prange = np.delete(self.prange, 0)
+                    self.addSlicePreview(params, None, slice_no, prange=prange)
+
         else:
             self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)

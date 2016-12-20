@@ -57,7 +57,7 @@ class FunctionWidget(fw.FeatureWidget):
 
     Signals
     -------
-    sigTestRange(QtGui.QWidget, str, tuple)
+    sigTestRange(QtGui.QWidget, str, tuple, dict)
         Emitted when parameter range test is requested. Emits the sending widget, a string with a message to log, and
         a tuple with the range values for the parameter
 
@@ -771,12 +771,12 @@ class FunctionManager(fw.FeatureManager):
 
     Signals
     -------
-    sigTestRange(str, object)
+    sigTestRange(str, object, dict)
     sigPipelineChanged()
         Emitted when the pipeline changes or the reconstruction function is changed
     """
 
-    sigTestRange = QtCore.Signal(str, object)
+    sigTestRange = QtCore.Signal(str, object, dict)
     sigPipelineChanged = QtCore.Signal()
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
@@ -1141,7 +1141,7 @@ class FunctionManager(fw.FeatureManager):
         function.keywords['input_params'] = input_params
         return function
 
-    def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
+    def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None, prange=None):
         """
         Create the function stack and summary dictionary used for running slice previews and 3D previews
 
@@ -1231,7 +1231,7 @@ class FunctionManager(fw.FeatureManager):
                         stack_dict[func_name][func.subfunc_name][param] = data_dict[param]
 
         self.lockParams(False)
-        return partial_stack, stack_dict, data_dict
+        return partial_stack, stack_dict, data_dict, prange
 
 
 
@@ -1375,8 +1375,6 @@ class FunctionManager(fw.FeatureManager):
         """
         for tuple in partial_stack:
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
-            print function.func.__name__
-            print data_dict['tomo'].shape
             data_dict[write] = function()
 
 
@@ -1567,7 +1565,6 @@ class FunctionManager(fw.FeatureManager):
         prange : tuple/list
             Range of parameters to be evaluated
         """
-
         self.updateParameters()
         for i in prange:
             function.param_dict[parameter] = i
@@ -1580,7 +1577,7 @@ class FunctionManager(fw.FeatureManager):
                                                 'input_functions': function.input_functions,
                                                 '_function': function._function})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
-                                   fixed_func)
+                                   fixed_func, {'function': function.func_name, parameter: prange})
 
 
 

@@ -392,7 +392,7 @@ class plugin(base.plugin):
             return False
         return True
 
-    def slicePreviewAction(self, message='Computing slice preview...', fixed_func=None):
+    def slicePreviewAction(self, message='Computing slice preview...', fixed_func=None, prange=None):
         """
         Called when a reconstruction preview is requested either by the toolbar button or by the test parameter range
         from a parameter.
@@ -406,11 +406,10 @@ class plugin(base.plugin):
             parameter range tests to create the class with the parameter to be run and send it to a background thread.
             See FunctionManager.testParameterRange for more details
         """
-
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
             self.preview_slices = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func, prange=prange)
 
     def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
 
@@ -438,7 +437,7 @@ class plugin(base.plugin):
             pass
 
 
-    def runSlicePreview(self, partial_stack, stack_dict, data_dict):
+    def runSlicePreview(self, partial_stack, stack_dict, data_dict, prange=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.previewViewer
@@ -455,7 +454,7 @@ class plugin(base.plugin):
         initializer = self.centerwidget.widget(self.currentWidget()).getsino()
         # slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
         callback = partial(self.centerwidget.widget(self.currentWidget()).addSlicePreview, stack_dict,
-                           slice_no=self.preview_slices)
+                           slice_no=self.preview_slices, prange=prange)
         message = 'Unable to compute slice preview. Check log for details.'
         self.foldPreviewStack(partial_stack, initializer, data_dict, callback, message)
 
@@ -498,7 +497,7 @@ class plugin(base.plugin):
         # self.foldPreviewStack(partial_stack, initializer, callback, err_message)
         self.foldPreviewStack(partial_stack, initializer, data_dict, callback, err_message)
 
-    def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None):
+    def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None, prange=None):
         """
         Runs the FunctionManager's loadPreviewData on a background thread to create the partial function stack and
         corresponding dictionary for running slice previews and 3D previews.
@@ -521,7 +520,7 @@ class plugin(base.plugin):
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
-                         ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func)
+                         ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func, prange=prange)
 
     def foldPreviewStack(self, partial_stack, initializer, data_dict, callback, error_message):
         """
