@@ -97,6 +97,8 @@ def set_als832_defaults(mdata, funcwidget_list, path):
         list of FunctionWidgets exposed in the UI workflow pipeline
     """
 
+    # TODO: make this function more consistent and not contradictory
+
     pad = 531
     for f in funcwidget_list:
         if f is None:
@@ -141,7 +143,15 @@ def set_als832_defaults(mdata, funcwidget_list, path):
             f.params.child('fname').setValue(outname)
             f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)\
+
+        # a *very* quick fix for
+        children = f.params.children()
+        for c in children:
+            if c.name() == 'operation' and c.value() == 'maximum':
+                f.params.child('value').setValue(0.000000000000001)
+                f.params.child('value').setDefault(0.000000000000001)
+
 
 
 def extract_pipeline_dict(funwidget_list):
