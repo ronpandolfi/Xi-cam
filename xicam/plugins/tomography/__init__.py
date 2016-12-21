@@ -644,15 +644,6 @@ class plugin(base.plugin):
 
             recon_job[0](*args)
 
-            run_state = args[1]
-            proj = args[2]; sino = args[3]
-            sino_p_chunk = args[4]; ncore = args[5]
-            path = args[0].path
-
-
-
-
-
 
     @QtCore.Slot()
     def reconstructionFinished(self):
