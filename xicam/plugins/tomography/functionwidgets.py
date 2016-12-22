@@ -915,7 +915,6 @@ class FunctionManager(fw.FeatureManager):
         lst = []; theta = []
         for function in self.features:
             if not function.enabled or 'Reader' in function.name:
-                print function.name
                 continue
             fpartial = function.partial
             # set keywords that will be adjusted later by input functions or users
@@ -963,7 +962,7 @@ class FunctionManager(fw.FeatureManager):
 
 
         extract = (config.extract_pipeline_dict(self.features), config.extract_runnable_dict(self.features))
-
+        print lst
         return [lst, theta, center, extract]
 
     def loadDataDictionary(self, datawidget, theta, center, slc = None):
