@@ -558,7 +558,19 @@ class ReadFunctionWidget(FunctionWidget):
     def __init__(self, name, subname, package):
         super(ReadFunctionWidget, self).__init__(name, subname, package, checkable=False,)
 
+    @property
+    def sinograms(self):
+        return (self.params.child('start_sinogram').value(), self.params.child('end_sinogram').value(),
+                self.params.child('step_sinogram').value())
 
+    @property
+    def projections(self):
+        return (self.params.child('start_projection').value(), self.params.child('end_projection').value(),
+                self.params.child('step_projection').value())
+
+    @property
+    def chunk(self):
+        return self.params.child('sinograms_per_chunk').value()
 
 
 class WriteFunctionWidget(FunctionWidget):
@@ -962,7 +974,6 @@ class FunctionManager(fw.FeatureManager):
 
 
         extract = (config.extract_pipeline_dict(self.features), config.extract_runnable_dict(self.features))
-        print lst
         return [lst, theta, center, extract]
 
     def loadDataDictionary(self, datawidget, theta, center, slc = None):

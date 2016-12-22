@@ -31,6 +31,7 @@ from viewers import TomoViewer
 import ui
 import config
 from functionwidgets import FunctionManager
+from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
 DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
@@ -618,9 +619,21 @@ class plugin(base.plugin):
         send = self.ui.config_params.child('End Sinogram').value()
         sstep =  self.ui.config_params.child('Step Sinogram').value()
 
-        args = (currentWidget, run_state,
-                (pstart, pend, pstep),(sstart, send, sstep), self.ui.config_params.child('Sinograms/Chunk').value(),
-                self.ui.config_params.child('CPU Cores').value())
+        proj = None
+        sino = None
+        chunk = None
+        for f in self.manager.features:
+            if 'Reader' in f.name:
+                proj = f.projections
+                sino = f.sinograms
+                chunk = f.chunk
+
+        if proj is None and sino is None and chunk is None:
+            sino = (0, currentWidget.data.shape[2], 1)
+            proj = (0, currentWidget.data.shape[0], 1)
+            chunk = cpu_count()*5
+
+        args = (currentWidget, run_state, proj, sino, chunk, self.ui.config_params.child('CPU Cores').value())
 
         self.manager.recon_queue.put([recon_iter, args])
 

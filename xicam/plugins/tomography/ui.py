@@ -104,33 +104,35 @@ class UIform(object):
         icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
         self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
 
-
-        rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
-
-        configtree = pt.ParameterTree()
-        configtree.setMinimumHeight(230)
-
-        params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
-                  {'name': 'End Sinogram', 'type': 'int'},
-                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'End Projection', 'type': 'int'},
-                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
-                  {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
-                   'limits':[1, cpu_count()]}]
-
-        self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
-        configtree.setParameters(self.config_params, showTop=False)
-        rightwidget.addWidget(configtree)
+        #
+        # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
+        #
+        # configtree = pt.ParameterTree()
+        # configtree.setMinimumHeight(230)
+        #
+        # params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
+        #           {'name': 'End Sinogram', 'type': 'int'},
+        #           {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
+        #           {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
+        #           {'name': 'End Projection', 'type': 'int'},
+        #           {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
+        #           {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
+        #           {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
+        #            'limits':[1, cpu_count()]}]
+        #
+        # self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
+        # configtree.setParameters(self.config_params, showTop=False)
+        # rightwidget.addWidget(configtree)
 
         icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
         icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_61.png")) #metadata icon
         icon_params = QtGui.QIcon(QtGui.QPixmap("gui/icons_62.png")) #parameter tree icon
         self.leftmodes = [(leftwidget, icon_functions),
-                          (rightwidget, icon_params),
                           (self.property_table, icon_properties)]
 
+        # self.leftmodes = [(leftwidget, icon_functions),
+        #                   (rightwidget, icon_params),
+        #                   (self.property_table, icon_properties)]
 
 
 
