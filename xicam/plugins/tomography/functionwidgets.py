@@ -1110,37 +1110,6 @@ class FunctionManager(fw.FeatureManager):
             self.resetCenterCorrection()
         return function, write
 
-    def load_tomocam_params(self, function):
-        """
-        A separate load function for TomoCam reconstruction functions to deal with their function input syntax
-
-        Parameters
-        ----------
-
-        function: functools.partial
-            the reconstruction function partial to be used
-
-        Return
-        ------
-
-        function: functools.partial
-            reconstruction function partial with adjusted keywords
-        """
-
-        input_params={}
-        input_params['gpu_device'] = 0
-        input_params['oversamp_factor'] = function.keywords['oversamp_factor']
-        function.keywords.pop('oversamp_factor')
-
-        if 'gridrec' in function.keywords['algorithm']:
-            input_params['fbp_filter_param'] = function.keywords['cutoff']
-            function.keywords.pop('cutoff')
-        else:
-            input_params['num_iter'] = function.keywords['num_iter']
-            function.keywords.pop('num_iter')
-        function.keywords['input_params'] = input_params
-        return function
-
     def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write', 'Reader'],
                         fixed_func=None, prange=None):
         """
