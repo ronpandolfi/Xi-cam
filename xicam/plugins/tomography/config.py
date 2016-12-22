@@ -85,7 +85,7 @@ def save_function_pipeline(pipeline, file_name):
             yamlmod.ordered_dump(pipeline, y)
 
 
-def set_als832_defaults(mdata, funcwidget_list, path):
+def set_als832_defaults(mdata, funcwidget_list, path, shape):
     """
     Set defaults for ALS Beamline 8.3.2 from dataset metadata
 
@@ -97,8 +97,11 @@ def set_als832_defaults(mdata, funcwidget_list, path):
         list of FunctionWidgets exposed in the UI workflow pipeline
     path: str
         path to dataset
+    shape: tuple
+        tuple containing dataset shape
     """
 
+    from psutil import cpu_count
     for f in funcwidget_list:
         if f is None:
             continue
@@ -116,10 +119,22 @@ def set_als832_defaults(mdata, funcwidget_list, path):
                     except KeyError as e:
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
-
+        elif f.func_name == 'Reader': #dataset specific read values
+            f.params.child('start_sinogram').setLimits([0, shape[2]])
+            f.params.child('end_sinogram').setLimits([0, shape[2]])
+            f.params.child('step_sinogram').setLimits([0, shape[2]+1])
+            f.params.child('start_projection').setLimits([0, shape[0]])
+            f.params.child('end_projection').setLimits([0, shape[0]])
+            f.params.child('step_projection').setLimits([0, shape[0]+1])
+            f.params.child('end_sinogram').setValue(shape[2])
+            f.params.child('end_sinogram').setDefault(shape[2])
+            f.params.child('end_projection').setValue(shape[0])
+            f.params.child('end_projection').setDefault(shape[0])
+            f.params.child('sinograms_per_chunk').setValue(cpu_count()*5)
+            f.params.child('sinograms_per_chunk').setDefault(cpu_count()*5)
 
         elif f.func_name == 'Write': #dataset specific write values
-            data_folders = {'bl832data-raw':'bl832data-scratch', 'data-raw': 'data-scratch'}
+            data_folders = {'bl832data-raw':'bl832data-scratch', 'data-raw':'data-scratch'}
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
             for key in data_folders.keys():
@@ -137,7 +152,7 @@ def set_als832_defaults(mdata, funcwidget_list, path):
             f.params.child('fname').setValue(outname)
             f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path)
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
 
 
 

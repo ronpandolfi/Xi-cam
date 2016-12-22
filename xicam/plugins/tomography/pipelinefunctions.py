@@ -144,6 +144,38 @@ def array_operation_div(arr, value=1):
 def array_operation_max(arr, value=0):
     return np.maximum(arr, value)
 
+def reader(start_sinogram=0, end_sinogram=0, step_sinogram=1, start_projection=0, end_projection=0, step_projection=1,
+           sinograms_per_chunk=0):
+
+    """
+    Function to expose input tomography array parameters in function pipeline GUI
+
+    Parameters
+    ----------
+    start_sinogram : int
+        Start for sinogram processing
+    end_sinogram : int
+        End for sinogram processing
+    step_sinogram : int
+        Step for sinogram processing
+    start_projection : int
+        Start for projection processing
+    end_projection : int
+        End for projection processing
+    step_projection : int
+        Step for projection processing
+    sinograms_per_chunk : int
+        Number of sinograms processed at one time. Limited by machine memory size
+
+    Returns
+    -------
+    tuple, tuple, int:
+        Arguments rearranged into tuples to feed into reconstruction
+    """
+
+    return (start_projection, end_projection, step_projection), (start_sinogram, end_sinogram, step_sinogram), \
+           sinograms_per_chunk
+
 def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
     """
     Slices a 3D array according the points given

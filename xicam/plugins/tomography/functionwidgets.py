@@ -512,16 +512,6 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
 
 
 
-    # @property
-    # def partial(self):
-    #     """
-    #     Return the base FunctionWidget partial property
-    #     """
-    #
-    #     return partial(self._function, **self.updated_param_dict)
-
-
-
     @property
     def updated_param_dict(self):
         """
@@ -559,6 +549,14 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
             param_dict['options']['method'] = param_dict['options']['method'].split('_astra')[0]
 
         return param_dict
+
+
+class ReadFunctionWidget(FunctionWidget):
+    """
+    Subclass of FunctionWidget for reader functions. Mostly necessary so that reader can't be removed
+    """
+    def __init__(self, name, subname, package):
+        super(ReadFunctionWidget, self).__init__(name, subname, package, checkable=False, closeable=False)
 
 
 
@@ -817,6 +815,8 @@ class FunctionManager(fw.FeatureManager):
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
             self.sigPipelineChanged.emit()
+        elif function == 'Reader':
+            func_widget = ReadFunctionWidget(function, subfunction, package)
         elif function == 'Write':
             func_widget = WriteFunctionWidget(function, subfunction, package)
         else:
@@ -850,6 +850,16 @@ class FunctionManager(fw.FeatureManager):
         except AttributeError:
             ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
+
+    def swapFeatures(self, f1, f2):
+        """
+        Overrides the swapFeatures method of FeatureManager. Prevents reader function from
+        being moved around in pipeline.
+        """
+        if 'Reader' in f1.name or 'Reader' in f2.name:
+            pass
+        else:
+            fw.FeatureManager.swapFeatures(self, f1, f2)
 
     def updateParameters(self):
         """
@@ -914,7 +924,7 @@ class FunctionManager(fw.FeatureManager):
         # extract function pipeline
         lst = []; theta = []
         for function in self.features:
-            if not function.enabled:
+            if not function.enabled or function.name == 'Reader':
                 continue
             fpartial = function.partial
             # set keywords that will be adjusted later by input functions or users
@@ -1141,7 +1151,8 @@ class FunctionManager(fw.FeatureManager):
         function.keywords['input_params'] = input_params
         return function
 
-    def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None, prange=None):
+    def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write', 'Reader'],
+                        fixed_func=None, prange=None):
         """
         Create the function stack and summary dictionary used for running slice previews and 3D previews
 
@@ -1364,7 +1375,7 @@ class FunctionManager(fw.FeatureManager):
         Parameters
         ----------
          partial_stack : list of 3-tuples
-            Contains: a list of tuples, each of which have as elements: functools.partial of full keywords to fun,
+            Contains: a list of tuples, each of which have as elements: functools.partial of full keywords to run,
             the name of the associated function, and a copy of the params belonging to that function
         data_dict : dict
             Dictionary containing all data needed to run a reconstruction

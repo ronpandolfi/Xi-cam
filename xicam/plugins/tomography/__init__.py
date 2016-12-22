@@ -285,7 +285,7 @@ class plugin(base.plugin):
             self.ui.property_table.show()
             self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
             config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
-                    path = widget.path)
+                    path = widget.path, shape=widget.data.shape)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)

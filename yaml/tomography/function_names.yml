@@ -108,3 +108,6 @@ Maximum:
 Slice:
 - slice
 - pipelinefunctions
+Read Data:
+- reader
+- pipelinefunctions

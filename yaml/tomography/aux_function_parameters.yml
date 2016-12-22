@@ -99,3 +99,18 @@ Maximum:
   - tomo
   - flats
   - dark
+Read Data:
+- name: start_sinogram
+  type: int
+- name: end_sinogram
+  type: int
+- name: step_sinogram
+  type: int
+- name: start_projection
+  type: int
+- name: end_projection
+  type: int
+- name: step_projection
+  type: int
+- name: sinograms_per_chunk
+  type: int
