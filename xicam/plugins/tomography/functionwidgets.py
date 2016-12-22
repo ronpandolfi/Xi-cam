@@ -556,7 +556,7 @@ class ReadFunctionWidget(FunctionWidget):
     Subclass of FunctionWidget for reader functions. Mostly necessary so that reader can't be removed
     """
     def __init__(self, name, subname, package):
-        super(ReadFunctionWidget, self).__init__(name, subname, package, checkable=False, closeable=False)
+        super(ReadFunctionWidget, self).__init__(name, subname, package, checkable=False,)
 
 
 
@@ -851,16 +851,6 @@ class FunctionManager(fw.FeatureManager):
             ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
 
-    def swapFeatures(self, f1, f2):
-        """
-        Overrides the swapFeatures method of FeatureManager. Prevents reader function from
-        being moved around in pipeline.
-        """
-        if 'Reader' in f1.name or 'Reader' in f2.name:
-            pass
-        else:
-            fw.FeatureManager.swapFeatures(self, f1, f2)
-
     def updateParameters(self):
         """
         Updates all parameters for the current function list
@@ -924,7 +914,8 @@ class FunctionManager(fw.FeatureManager):
         # extract function pipeline
         lst = []; theta = []
         for function in self.features:
-            if not function.enabled or function.name == 'Reader':
+            if not function.enabled or 'Reader' in function.name:
+                print function.name
                 continue
             fpartial = function.partial
             # set keywords that will be adjusted later by input functions or users

@@ -178,6 +178,8 @@ def extract_pipeline_dict(funwidget_list):
     count = 1
     for f in funwidget_list:
         # a bunch of special cases for the write function
+        if 'Reader' in f.name:
+            continue
         func_name = str(count) + ". " + f.func_name
         if "Write" in f.func_name:
             write_dict = OrderedDict()
@@ -222,7 +224,7 @@ def extract_runnable_dict(funwidget_list):
     count = 1
     for f in funwidget_list:
         keywords = {}
-        if not f.enabled:
+        if not f.enabled or 'Reader' in f.name:
             continue
 
         func = "{}.{}".format(f.package, f._function.func_name)
