@@ -181,4 +181,7 @@ def dpdakRefine(dimg,calibrantkey):
 
     print 'Final parameter:'
     print geometry.getFit2D()
+
+    config.activeExperiment.setvalue('Detector Distance', geometry.get_dist())
+    config.activeExperiment.center = geometry.getFit2D()['centerX'],geometry.getFit2D()['centerY']
     yield 100

@@ -68,7 +68,7 @@ def _error_function(parameter, arguments):
     mask = [sel in selected_parameter for sel in FIT_PARAMETER]
     param = numpy.array(get_fit2d(geometry))
     print 'update:',param
-    param[numpy.array(mask)] = parameter
+    param[numpy.array(mask)] = parameter[numpy.array(mask)]
     set_fit2d(geometry,*param)
     return peak_distance(geometry, d_spacings, maxima)
 
@@ -77,15 +77,15 @@ def get_fit2d(geometry):
     return [geometry.get_wavelength()*1e-10,gdict['directDist'],gdict['centerX'],gdict['centerY'],gdict['tilt'],gdict['tiltPlanRotation']]
 
 def set_fit2d(geometry, wavelength, distance, center_x, center_y, tilt, rotation):
-    geometry.set_wavelength(wavelength * 1e-10)
+    geometry.set_wavelength(wavelength / 1e-10)
     geometry.setFit2D(distance, center_x, center_y, tilt, rotation)
     return geometry
 
 
 def fit_geometry(geometry, maxima, d_spacings, selected_parameter):
-    args = [geometry, d_spacings, maxima, selected_parameter]
+    args = [geometry, d_spacings, maxima[::-1], selected_parameter]
     mask = numpy.array([sel in selected_parameter for sel in FIT_PARAMETER])
-    start_parameter = numpy.array(get_fit2d(geometry))[mask]
+    start_parameter = numpy.array(get_fit2d(geometry))
 
     if len(start_parameter) >= len(maxima[0]):
         raise Exception('More variables then fit points.')
@@ -137,8 +137,8 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
     radius = (geometry.get_dist() * numpy.tan(tth)) / geometry.get_pixel1()
     center = (geometry.getFit2D()['centerX'], geometry.getFit2D()['centerY'])
     alpha = numpy.arange(0, numpy.pi * 2, step_size / float(radius))
-    circle_x = numpy.round(center[0] + numpy.sin(alpha) * radius)
-    circle_y = numpy.round(center[1] + numpy.cos(alpha) * radius)
+    circle_x = numpy.round(center[1] + numpy.sin(alpha) * radius)
+    circle_y = numpy.round(center[0] + numpy.cos(alpha) * radius)
 
     # calculate roi coordinates    
     half_step = int(numpy.ceil(step_size / 2.))
@@ -159,11 +159,13 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
     maxima_y = []
     for i in range(len(x_0)):
         roi = image[y_0[i]:y_1[i], x_0[i]:x_1[i]]
-        pos = radial_pos[y_0[i]:y_1[i], x_0[i]:x_1[i]]
+        pos = radial_pos[x_0[i]:x_1[i], y_0[i]:y_1[i]]
         if roi.size < half_step ** 2: continue
 
         # calculate roi histogram
-        x_hist, y_hist, _, _ = pyFAI.histogram.histogram(pos, roi, step_size)
+        try:
+            x_hist, y_hist, _, _ = pyFAI.ext.histogram.histogram(pos, roi, step_size)
+        except AssertionError: continue
 
         # fit the radial maximum of the histogram
         maximum = fit_maxima(x_hist, y_hist)
@@ -177,8 +179,8 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
 
         # calculate the pixel position of the maximum
         scale = float(maximum / radius)
-        maxima_x.append(center[0] + (x_0[i] + half_step - center[0]) * scale)
-        maxima_y.append(center[1] + (y_0[i] + half_step - center[1]) * scale)
+        maxima_x.append(center[1] + (x_0[i] + half_step - center[1]) * scale)
+        maxima_y.append(center[0] + (y_0[i] + half_step - center[0]) * scale)
 
         # DEBUG
         #pylab.plot(center[0] + (x_0[i] + half_step - center[0]) * scale, 
