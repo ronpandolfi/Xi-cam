@@ -7,7 +7,7 @@ from functools import partial
 
 from py4syn.epics.MotorClass import Motor
 import simplewidgets
-import guiinvoker
+from modpkgs import guiinvoker
 
 class motorwidget(QWidget):
 
@@ -22,7 +22,7 @@ class motorwidget(QWidget):
 
         '''
         super(motorwidget, self).__init__()
-        pyside_dynamic.loadUi('motor.ui', self)
+        pyside_dynamic.loadUi('gui/motor.ui', self)
         self.motordevice = motordevice
         self.joylayout.addWidget(pg.JoystickButton())
 

@@ -43,5 +43,5 @@ class ipythonconsole(RichJupyterWidget):
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel()
 
-    def push(self,**kwargs):
-        self.kernel.shell.push(kwargs)
+    def push(self,d):
+        self.kernel.shell.push(d)

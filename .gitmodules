@@ -1,0 +1,3 @@
+[submodule "xicam/plugins/epics/py4syn"]
+	path = xicam/plugins/epics/py4syn
+	url = https://github.com/hhslepicka/py4syn.git

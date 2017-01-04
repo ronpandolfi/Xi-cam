@@ -94,7 +94,9 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'Shiboken', 'PySide', 'pyqtgraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
+                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
+                      'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
+                      'pyqode.core','pyqode.python','monotonic','py4syn'],
 
     setup_requires=['numpy', 'cython'],
 

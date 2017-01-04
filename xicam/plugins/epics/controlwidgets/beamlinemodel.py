@@ -13,8 +13,8 @@ class beamlinemodel(pg.GraphicsView):
         self.view.setMouseEnabled(True,True)
 
         self.addItem(beammodel([0,10],[0,0]))
-        self.addItem(motormodel(devicelist.item(0),(4,-1),(1,2)))
-        self.addItem(motormodel(devicelist.item(1), (7, -1), (1, 2)))
+        #self.addItem(motormodel(devicelist.item(0),(4,-1),(1,2)))
+        #self.addItem(motormodel(devicelist.item(1), (7, -1), (1, 2)))
 
     def addItem(self,*args):
         self.view.addItem(*args)

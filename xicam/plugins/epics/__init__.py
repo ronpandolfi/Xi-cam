@@ -1,5 +1,4 @@
 from xicam.plugins import base
-from py4syn.epics.MotorClass import Motor
 from py4syn.utils.motor import createMotor
 from py4syn.epics.PilatusClass import Pilatus
 import py4syn
@@ -7,26 +6,14 @@ from PySide.QtGui import *
 from PySide.QtCore import *
 import pyqtgraph as pg
 import numpy as np
-
-
-# Overload for Py2App
-def new_load_qt(api_options):
-    from PySide import QtCore, QtGui, QtSvg
-
-    return QtCore, QtGui, QtSvg, 'pyside'
-
-
-from qtconsole import qt_loaders
-
-qt_loaders.load_qt = new_load_qt
-
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtconsole.inprocess import QtInProcessKernelManager
-
-import qdarkstyle
+import controlwidgets
+from modpkgs import guiinvoker
+import time
+from functools import partial
 
 PVlist = None
 detectors = dict()
+devices = dict()
 
 class EpicsPlugin(base.plugin):
     name = 'Epics'
@@ -38,69 +25,49 @@ class EpicsPlugin(base.plugin):
 
         self.leftwidget = PVlist = QListWidget()
 
-        style = (qdarkstyle.load_stylesheet())
-
-        kernel_manager = QtInProcessKernelManager()
-        kernel_manager.start_kernel()
-        kernel = kernel_manager.kernel
-        kernel.gui = 'qt4'
-
-        kernel_client = kernel_manager.client()
-        kernel_client.start_channels()
-
-        def stop():
-            kernel_client.stop_channels()
-            kernel_manager.shutdown_kernel()
-
-        control = RichJupyterWidget()
-        control.kernel_manager = kernel_manager
-        control.kernel_client = kernel_client
-        control.exit_requested.connect(stop)
-        control.style_sheet = style
-        control.syntax_style = u'monokai'
-        control.set_default_style(colors='Linux')
-
-        self.centerwidget = control
-
-        plot = pg.PlotWidget()
+        self.centerwidget = advancedPythonWidget = controlwidgets.pythontools.advancedPythonWidget()
+        self.rightwidget = self.itemStack = QStackedWidget()
+        beamlinemodel = controlwidgets.beamlinemodel.beamlinemodel(PVlist, self.itemStack)
+        advancedPythonWidget.addTab(beamlinemodel,'Beamline Model')
+        self.bottomwidget = self.plot = pg.PlotWidget()
         self.curves = dict()
-        self.bottomwidget=plot
         self.timer = pg.QtCore.QTimer()
 
-
-
-        # PVMotorItem('Motor1', 'rp:m1')
-        # PVMotorItem('Motor2', 'rp:m2')
+        # Device Items
+        #PVMotorItem('Motor1', 'rp:m1')
+        #PVMotorItem('Motor2', 'rp:m2')
         PilatusItem('Pilatus', '531PIL1:cam1')
 
 
-        def quickSnap(expTime,name):
-            devices['Pilatus'].setImageName(name)
-            devices['Pilatus'].setCountTime(expTime)
-            devices['Pilatus'].startCount()
-
-
-
-
+        # Init curves
         for name, motor in py4syn.mtrDB.iteritems():
-            self.curves[name] = plot.plot([motor.getValue()])
+            self.curves[name] = self.plot.plot([motor.getValue()])
+            motor.motor.add_callback('RBV', partial(self.update, motor.getMnemonic()))
 
-        self.timer.timeout.connect(self.update)
-        self.timer.start(100)
         devices={}
         devices.update(detectors)
         devices.update(py4syn.mtrDB)
-        kernel.shell.push(devices)
-        kernel.shell.push({'quickSnap':quickSnap})
+        advancedPythonWidget.push(devices)
+        advancedPythonWidget.push({'quickSnap':self.quickSnap})
 
         super(EpicsPlugin, self).__init__(*args,**kwargs)
 
-    def update(self):
-        for name, curve in self.curves.iteritems():
-            x, y = curve.getData()
-            y = y[-99:]
-            y = np.append(y, py4syn.mtrDB[name].getValue())
-            curve.setData(y)
+    @staticmethod
+    def quickSnap(expTime, name):
+        devices['Pilatus'].setImageName(name)
+        devices['Pilatus'].setCountTime(expTime)
+        devices['Pilatus'].startCount()
+
+    def update(self,motorMnemonic,value,**kwargs):
+        curve = self.curves[motorMnemonic]
+        x, y = curve.getData()
+        y = y[-99:]
+        y = np.append(y,value)
+        x = x[-99:]
+        t = time.time()
+        x = np.append(x,t)
+        guiinvoker.invoke_in_main_thread(curve.setData,x,y)
+        guiinvoker.invoke_in_main_thread(self.plot.setXRange,t-10,t)
 
 class PVItem(QListWidgetItem):
     def __init__(self, mne='', pvName=''):
@@ -108,18 +75,34 @@ class PVItem(QListWidgetItem):
         global PVlist
         PVlist.addItem(self)
 
+    def showWidget(self):
+        self.itemStack.addWidget(self.widget)
+        self.itemStack.setCurrentWidget(self.widget)
+
 
 class PVMotorItem(PVItem):
-    def __init__(self, mne='', pvName=''):
-        super(PVMotorItem, self).__init__(mne, pvName)
-        self.device = createMotor(mne, pvName)
+    def __init__(self,pvName='',mne=''):
+        super(PVMotorItem, self).__init__(pvName,mne)
+        createMotor(pvName, mne)
+        self.device = py4syn.mtrDB[pvName]
+        self.widget = controlwidgets.motor.motorwidget(self.device)
+
+        self.device.motor.add_callback('DMOV',partial(guiinvoker.invoke_in_main_thread,self._updatestatus))
+
+    def _updatestatus(self,value,**kwargs):
+        if value == 0:
+            self.setBackground(QColor('orange'))
+            #self.setForeground(QColor('cyan'))
+        elif value == 1:
+            self.setBackground(QListWidgetItem().background())
+            #self.setForeground(QListWidgetItem().foreground())
 
 
 class MotorControl(QWidget):
     pass
 
 class PilatusItem(QListWidgetItem):
-    # TODO: consider releaseing the camera when not in use?
+    # TODO: consider releasing the camera when not in use?
 
     def __init__(self, mne, pvName):
         super(PilatusItem, self).__init__(mne)
@@ -134,3 +117,7 @@ class PilatusItem(QListWidgetItem):
         self.device.startCount()
         self.device.wait()
         self.device.stopCount()
+
+    def _updatestatus(self,value,**kwargs):
+        self.device.add_callback('DMOV', partial(guiinvoker.invoke_in_main_thread, self._updatestatus))
+
