@@ -162,18 +162,18 @@ class UIform(object):
         self.functionwidget.moveDownButton.clicked.connect(moveup)
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
-
-    def setConfigParams(self, proj, sino):
-        self.config_params.child('End Sinogram').setLimits([0, sino])
-        self.config_params.child('Start Sinogram').setLimits([0, sino])
-        self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
-        self.config_params.child('End Sinogram').setValue(sino)
-        self.config_params.child('End Sinogram').setDefault(sino)
-        self.config_params.child('End Projection').setLimits([0, proj])
-        self.config_params.child('Start Projection').setLimits([0, proj])
-        self.config_params.child('Step Projection').setLimits([0, proj + 1])
-        self.config_params.child('End Projection').setValue(proj)
-        self.config_params.child('End Projection').setDefault(proj)
+    #
+    # def setConfigParams(self, proj, sino):
+    #     self.config_params.child('End Sinogram').setLimits([0, sino])
+    #     self.config_params.child('Start Sinogram').setLimits([0, sino])
+    #     self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
+    #     self.config_params.child('End Sinogram').setValue(sino)
+    #     self.config_params.child('End Sinogram').setDefault(sino)
+    #     self.config_params.child('End Projection').setLimits([0, proj])
+    #     self.config_params.child('Start Projection').setLimits([0, proj])
+    #     self.config_params.child('Step Projection').setLimits([0, proj + 1])
+    #     self.config_params.child('End Projection').setValue(proj)
+    #     self.config_params.child('End Projection').setDefault(proj)
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):

@@ -100,7 +100,6 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
     shape: tuple
         tuple containing dataset shape
     """
-
     from psutil import cpu_count
     for f in funcwidget_list:
         if f is None:
@@ -120,6 +119,7 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
         elif f.func_name == 'Reader': #dataset specific read values
+            print "HEREHERHERHERHE"
             f.params.child('start_sinogram').setLimits([0, shape[2]])
             f.params.child('end_sinogram').setLimits([0, shape[2]])
             f.params.child('step_sinogram').setLimits([0, shape[2]+1])

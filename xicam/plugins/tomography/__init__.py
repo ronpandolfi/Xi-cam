@@ -284,7 +284,7 @@ class plugin(base.plugin):
             # self.ui.setMBIR(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
-            self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
+            # self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
             config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
                     path = widget.path, shape=widget.data.shape)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
@@ -341,7 +341,7 @@ class plugin(base.plugin):
             Index of tab that is being closed.
         """
 
-        self.ui.setConfigParams(0, 0)
+        # self.ui.setConfigParams(0, 0)
         self.ui.property_table.clear()
         self.ui.property_table.hide()
         self.centerwidget.widget(index).deleteLater()
@@ -521,7 +521,7 @@ class plugin(base.plugin):
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
-                         ncore=self.ui.config_params.child('CPU Cores').value(), fixed_func=fixed_func, prange=prange)
+                         ncore=cpu_count(), fixed_func=fixed_func, prange=prange)
 
     def foldPreviewStack(self, partial_stack, initializer, data_dict, callback, error_message):
         """
@@ -552,6 +552,7 @@ class plugin(base.plugin):
         Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
         workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
 
+        Made obsolete by loadFullReconstruction and runReconstruction
         """
         if not self.checkPipeline():
             return
@@ -570,17 +571,17 @@ class plugin(base.plugin):
         recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
                                     interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
                                     finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
-
-        pstart = self.ui.config_params.child('Start Projection').value()
-        pend = self.ui.config_params.child('End Projection').value()
-        pstep = self.ui.config_params.child('Step Projection').value()
-        sstart = self.ui.config_params.child('Start Sinogram').value()
-        send = self.ui.config_params.child('End Sinogram').value()
-        sstep =  self.ui.config_params.child('Step Sinogram').value()
-
-        recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
-                   sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
-                   ncore=self.ui.config_params.child('CPU Cores').value())
+        #
+        # pstart = self.ui.config_params.child('Start Projection').value()
+        # pend = self.ui.config_params.child('End Projection').value()
+        # pstep = self.ui.config_params.child('Step Projection').value()
+        # sstart = self.ui.config_params.child('Start Sinogram').value()
+        # send = self.ui.config_params.child('End Sinogram').value()
+        # sstep =  self.ui.config_params.child('Step Sinogram').value()
+        #
+        # recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
+        #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
+        #            ncore=self.ui.config_params.child('CPU Cores').value())
 
 
 
@@ -612,12 +613,12 @@ class plugin(base.plugin):
         recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
                             interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
-        pstart = self.ui.config_params.child('Start Projection').value()
-        pend = self.ui.config_params.child('End Projection').value()
-        pstep = self.ui.config_params.child('Step Projection').value()
-        sstart = self.ui.config_params.child('Start Sinogram').value()
-        send = self.ui.config_params.child('End Sinogram').value()
-        sstep =  self.ui.config_params.child('Step Sinogram').value()
+        # pstart = self.ui.config_params.child('Start Projection').value()
+        # pend = self.ui.config_params.child('End Projection').value()
+        # pstep = self.ui.config_params.child('Step Projection').value()
+        # sstart = self.ui.config_params.child('Start Sinogram').value()
+        # send = self.ui.config_params.child('End Sinogram').value()
+        # sstep =  self.ui.config_params.child('Step Sinogram').value()
 
         proj = None
         sino = None
@@ -628,12 +629,12 @@ class plugin(base.plugin):
                 sino = f.sinograms
                 chunk = f.chunk
 
-        if proj is None and sino is None and chunk is None:
+        if (not proj and not sino and not chunk) or (not proj[1] and not sino[1] and not chunk):
             sino = (0, currentWidget.data.shape[2], 1)
             proj = (0, currentWidget.data.shape[0], 1)
             chunk = cpu_count()*5
 
-        args = (currentWidget, run_state, proj, sino, chunk, self.ui.config_params.child('CPU Cores').value())
+        args = (currentWidget, run_state, proj, sino, chunk, cpu_count())
 
         self.manager.recon_queue.put([recon_iter, args])
 
