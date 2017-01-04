@@ -47,7 +47,7 @@ def showMessage(s,timeout=0):
 
     logMessage(s)
 
-def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None):
+def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None,suppressreprint=False):
 
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
     if loggername is not None:
@@ -76,13 +76,14 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None):
         global logbacklog
         logbacklog.append({'stuple':s,'level':level,'loggername':loggername,'timestamp':timestamp,'image':image})
     try:
-        print m
+        if not suppressreprint: print m
     except UnicodeEncodeError:
         print 'A unicode string could not be written to console. Some logging will not be displayed.'
 
 def flushbacklog():
     global logbacklog
     for l in logbacklog:
+        l['suppressreprint']=True
         logMessage(**l)
     logbacklog=[]
 
