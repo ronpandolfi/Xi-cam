@@ -373,10 +373,9 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 
     q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
+    qsquared*=mask
 
-
-
-    #q = np.linspace(np.sqrt(qsquared.min()),np.sqrt(qsquared.max()),len(qprofile))/10. #WRONG!
+    q = np.linspace(np.sqrt(qsquared.min()),np.sqrt(qsquared.max()),len(qprofile))/10.
 
     return q, qprofile, color, requestkey
 
