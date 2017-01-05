@@ -80,7 +80,7 @@ class fftView(QtGui.QTabWidget):
         super(fftView, self).__init__(*args, **kwargs)
         self.img_list = []
 
-    def add_images(self, image_list, loadingfactors=None):
+    def add_images(self, image_list, do_fft=True, loadingfactors=None):
 
         self.clear()
 
@@ -92,6 +92,8 @@ class fftView(QtGui.QTabWidget):
                 img = np.array(img)
                 len(img)
                 flag = True
+                if do_fft: img = self.do_fft(img)
+
                 for item in self.img_list:
                     if np.array_equal(img, item): flag = False
                 if flag:
@@ -118,6 +120,13 @@ class fftView(QtGui.QTabWidget):
         else:
             self.addTab(view, str(loadingfactors))
         self.tabBar().hide()
+
+    def do_fft(self, img):
+        """
+        Returns absolute value of 2-D FFT of image. Assumes 2-D image
+        """
+
+        return np.log(np.fft.fftshift(np.abs(np.fft.fft2(img)**2)) + 1e-10)
 
 
     def open_from_rmcView(self, image_list):
