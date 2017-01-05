@@ -45,7 +45,7 @@ class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
                                      self.roi, self.arccut, self.polymask, process=self.process)
         super(TimelinePlugin, self).__init__(*args, **kwargs)
 
-        self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
+        # self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
