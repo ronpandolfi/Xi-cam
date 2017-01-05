@@ -74,6 +74,8 @@ def loadimage(path):
                 return data
     except IOError:
         msg.logMessage('IO Error loading: ' + path,msg.ERROR)
+    except TypeError:
+        msg.logMessage('The selected file is not a type understood by fabIO.',msg.ERROR)
 
     return data
 
@@ -293,7 +295,7 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
                       ((padtop1, padbottom1), (padleft1, padright1)),
                       'constant')
 
-    with np.errstate(divide='ignore'):
+    with np.errstate(divide='ignore',invalid='ignore'):
         data = (d1 / I1 + d2 / I2) / (mask2 + mask1) * (I1 + I2) / 2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)

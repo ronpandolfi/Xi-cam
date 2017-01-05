@@ -20,7 +20,7 @@ from PySide import QtCore
 from pipeline import msg
 # Error is raised if this import is removed probably due to some circular with this module and something???
 from client import spot, globus, sftp
-
+from modpkgs import nonesigmod
 
 class Emitter(QtCore.QObject):
     """
@@ -41,9 +41,10 @@ class Emitter(QtCore.QObject):
     sigFinished = QtCore.Signal()
     sigExcept = QtCore.Signal(type, Exception, types.TracebackType)
 
-    def __init__(self):
-        super(Emitter, self).__init__()
 
+
+def EmitterFactory(*sig):
+    return type('Emitter',(Emitter,),{'sigTemp':QtCore.Signal(*sig)})
 
 class RunnableMethod(QtCore.QRunnable):
     """
@@ -98,8 +99,7 @@ class RunnableMethod(QtCore.QRunnable):
         self.lock = lock
 
         # Connect callback and finished slots to corresponding signals
-        if callback_slot is not None:
-            self.emitter.sigRetValue.connect(callback_slot, QtCore.Qt.QueuedConnection)
+        self._callback_slot = callback_slot
         if finished_slot is not None:
             self.emitter.sigFinished.connect(finished_slot, QtCore.Qt.QueuedConnection)
         if except_slot is not None:
@@ -123,7 +123,14 @@ class RunnableMethod(QtCore.QRunnable):
             value = self._method(*self.method_args, **self.method_kwargs)
             if value is None:
                 value = False
-            self.emitter.sigRetValue.emit(value)
+            try:
+                self.emit(self._callback_slot, value)
+            except RuntimeError:
+                msg.logMessage(('Runnable method tried to return value, but signal was already disconnected.'),
+                               msg.WARNING)
+                if self.lock is not None: self.lock.unlock()
+                return
+
         except Exception:
             etype, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(etype, ex, tb)
@@ -132,6 +139,14 @@ class RunnableMethod(QtCore.QRunnable):
         finally:
             if self.lock is not None:
                 self.lock.unlock()
+
+    def emit(self,slot,*value):
+        if slot is None: return
+        # print 'value:',value
+        value = map(nonesigmod.pyside_none_wrap, value)
+        tempemitter = EmitterFactory(*[object]*len(value))()
+        tempemitter.sigTemp.connect(slot,QtCore.Qt.QueuedConnection)
+        tempemitter.sigTemp.emit(*value)
 
 
 class RunnableIterator(RunnableMethod):
@@ -168,16 +183,21 @@ class RunnableIterator(RunnableMethod):
         Flag to use the default exception handle slot. If false it will not be called
     lock : mutex/semaphore
         Simple lock if multiple access needs to be prevented
+    parent : object
+        Parent object reference; keeps the parent from being garbage collected before a callback. If the parent is ready
+        for GC'ing, the iterator will stop, and should free the final reference.
     """
 
     def __init__(self, iterator, iterator_args=(), iterator_kwargs={}, callback_slot=None,
                  finished_slot=None, interrupt_signal=None, except_slot=None, default_exhandle=True,
-                 priority=0, lock=None):
+                 priority=0, lock=None, parent=None):
         super(RunnableIterator, self).__init__(method=iterator, method_args=iterator_args,
                                                method_kwargs=iterator_kwargs, callback_slot=callback_slot,
                                                finished_slot=finished_slot, except_slot=except_slot,
                                                default_exhandle=default_exhandle, priority=priority, lock=lock)
         self._interrupt = False
+        self._callback_slot = callback_slot
+        self._parent = parent
 
         if interrupt_signal is not None:
             interrupt_signal.connect(self.interrupt)
@@ -196,12 +216,18 @@ class RunnableIterator(RunnableMethod):
         if self.lock is not None: self.lock.lock()
         try:
             for status in self._method(*self.method_args, **self.method_kwargs):
+                if type(status) is not tuple: status = (status,)
                 if self._interrupt:
                     raise StopIteration('{0} running in background thread {1} interrupted'.format(
                                             self._method.__name__, QtCore.QThread.currentThreadId()))
-                if status is None:
-                    status = False
-                self.emitter.sigRetValue.emit(status)
+                try:
+                    # print 'status:',status
+                    self.emit(self._callback_slot,*status)
+                    # self.emitter.sigRetValue.emit(status)
+                except RuntimeError:
+                    msg.logMessage(('Runnable iterator tried to return value, but signal was already disconnected.'),msg.WARNING)
+                    if self.lock is not None: self.lock.unlock()
+                    return
         except Exception:
             etype, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(etype, ex, tb)
@@ -248,7 +274,7 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     return wrap_runnable_method
 
 
-def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, except_slot=None, lock=None):
+def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, except_slot=None, lock=None, parent=None):
     """
     Decorator for iterators/generators to run as RunnableIterators on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
@@ -279,7 +305,8 @@ def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, exce
         def _runnable_iterator(*args, **kwargs):
             runnable = RunnableIterator(generator, iterator_args=args, iterator_kwargs=kwargs,
                                         callback_slot=callback_slot, finished_slot=finished_slot,
-                                        interrupt_signal=interrupt_signal, except_slot=except_slot, lock=lock)
+                                        interrupt_signal=interrupt_signal, except_slot=except_slot,
+                                        lock=lock, parent=parent)
             add_to_queue(runnable)
         return _runnable_iterator
     return wrap_runnable_iterator

@@ -1041,8 +1041,9 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=lambda ret: self.sigAddTimelineData.emit(*ret),
-                                        finished_slot=self.processingfinished)(variation.variationiterator)
+        bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
+                                        finished_slot=self.processingfinished,
+                                        parent=self)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
@@ -1444,7 +1445,7 @@ def getHistogram(self, bins='auto', step='auto', targetImageSize=None, targetHis
                 np.ceil(self.image.shape[1] / targetImageSize))
     if np.isscalar(step):
         step = (step, step)
-    stepData = self.image[::step[0], ::step[1]]
+    stepData = self.image[::int(step[0]), ::int(step[1])]
 
     if bins == 'auto':
         if stepData.dtype.kind in "ui":
