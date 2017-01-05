@@ -179,6 +179,7 @@ class inOutViewer(QtGui.QWidget, ):
         self.image_holder.addWidget(self.orig_view)
 
         # configuring right widget
+        sideWidget = QtGui.QWidget()
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
@@ -211,6 +212,8 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(stopButton)
 
+        sideWidget.setLayout(sideWidgetFormat)
+
 
 
         centerButton.clicked.connect(self.center)
@@ -230,14 +233,24 @@ class inOutViewer(QtGui.QWidget, ):
         self.edited_view = LogViewer()
         self.image_holder.addWidget(self.edited_view)
 
-
+        leftWidget = QtGui.QWidget()
         sidelayout = QtGui.QVBoxLayout()
         sidelayout.addWidget(self.image_holder)
         sidelayout.addWidget(self.headings)
+        leftWidget.setLayout(sidelayout)
 
-        layout.addLayout(sidelayout,10)
-        layout.addLayout(sideWidgetFormat,4)
-        self.setLayout(layout)
+        fullPlugin = QtGui.QSplitter()
+        fullPlugin.addWidget(leftWidget)
+        fullPlugin.addWidget(sideWidget)
+
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(fullPlugin)
+        self.setLayout(h)
+
+        # layout.addLayout(sidelayout,10)
+        # layout.addLayout(sideWidgetFormat,4)
+        # self.setLayout(layout)
 
         self.headings.currentChanged.connect(self.currentChanged)
         self.image_holder.currentChanged.connect(self.headings.setCurrentIndex)
