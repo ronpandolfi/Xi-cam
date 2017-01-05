@@ -75,11 +75,68 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
         print 'Image shape' + str(image.shape)
         print 'Scale set to: ' + str(scale)
 
+class fftView(QtGui.QTabWidget):
+    def __init__(self, *args, **kwargs):
+        super(fftView, self).__init__(*args, **kwargs)
+        self.img_list = []
+
+    def add_images(self, image_list, loadingfactors=None):
+
+        self.clear()
+
+        if not image_list:
+            return
+
+        for img in image_list:
+            try:
+                img = np.array(img)
+                len(img)
+                flag = True
+                for item in self.img_list:
+                    if np.array_equal(img, item): flag = False
+                if flag:
+                    self.img_list.append(img)
+            except TypeError:
+                continue
+
+        data = imagetimeline(self.img_list)
+        sizemax = max(map(np.shape, data))[0]
+
+        view = TimelineView(sizemax)
+        view.setImage(data)
+
+        scale = calcscale(view)  # Sets up the scale
+        view.imageItem.resetTransform()
+        view.imageItem.scale(scale, scale)
+        view.autoRange()
+        view.getHistogramWidget().setHidden(False)
+        view.ui.roiBtn.setHidden(True)
+        view.ui.menuBtn.setHidden(True)
+
+        if loadingfactors is None:
+            self.addTab(view, u"Tile " + str(1))
+        else:
+            self.addTab(view, str(loadingfactors))
+        self.tabBar().hide()
+
+
+    def open_from_rmcView(self, image_list):
+        images = []
+        for lst in image_list:
+            path = "/"
+            for item in lst:
+                path = os.path.join(path, item)
+            img = Image.open(path).convert('L')
+            img = np.array(img)
+
+            images.append(img)
+        self.add_images(images)
 
 class rmcView(QtGui.QTabWidget):
     def __init__(self, root, loadingfactors=[None]):
         super(rmcView, self).__init__()
 
+        self.image_list = []
 
         paths = glob.glob(os.path.join(root,
                                        '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
@@ -93,6 +150,7 @@ class rmcView(QtGui.QTabWidget):
                 tiles[int(ind[1])].append(path)
             else:
                 tiles[int(ind[1])] = [path]
+            self.image_list.append(path.split('/'))
 
         for tile, loadingfactor in zip(tiles, loadingfactors):
             images = []
@@ -125,19 +183,74 @@ class rmcView(QtGui.QTabWidget):
             else:
                 self.addTab(view, str(loadingfactor))
 
+    def addNewImages(self, root, loadingfactors=[None]):
+
+        self.clear()
+
+        paths = glob.glob(os.path.join(root,
+                                       '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
+
+        indices = dict(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths]))
+
+        tiles = dict()
+
+
+        for path, ind in indices.iteritems():
+            if int(ind[1]) in tiles:
+                tiles[int(ind[1])].append(path)
+            else:
+                tiles[int(ind[1])] = [path]
+
+            if path.split('/') not in self.image_list:
+                self.image_list.append(path.split('/'))
+
+        for tile, loadingfactor in zip(tiles, loadingfactors):
+            images = []
+            paths = sorted(tiles[tile])
+            for path in paths:
+                img = Image.open(path).convert('L')
+                img = np.array(img)
+
+                print path  # Prints the path
+                print img.shape  # Prints the shape of the array
+
+                images.append(img)
+
+            data = imagetimeline(images)
+            sizemax = max(map(np.shape, data))[0]
+
+            view = TimelineView(sizemax)
+            view.setImage(data)
+
+            scale = calcscale(view)  # Sets up the scale
+            view.imageItem.resetTransform()
+            view.imageItem.scale(scale, scale)
+            view.autoRange()
+            view.getHistogramWidget().setHidden(True)
+            view.ui.roiBtn.setHidden(True)
+            view.ui.menuBtn.setHidden(True)
+            if loadingfactors is None:
+                self.addTab(view, u"Tile " + str(tile + 1))
+            else:
+                self.addTab(view, str(loadingfactor))
+
+
 
 if __name__ == '__main__':  # Start Qt event loop unless running in interactive mode.
     import sys
 
     app = QtGui.QApplication([])  # Launches an app
-    root = '/Users/austinblair/Downloads/test_20150714_144045/'
-    root = '/home/hparks/Desktop/processed_20160822_095903'
+#    root = '/Users/austinblair/Downloads/test_20150714_144045/'
+    root = '/home/hparks/Desktop/processed_20161201_170824'
 
-    win = QtGui.QMainWindow()  # Create window with two ImageView widgets
-    win.resize(800, 800)
+#    win = QtGui.QMainWindow()  # Create window with two ImageView widgets
+#    win.resize(800, 800)
+
+    win = QtGui.QStackedWidget()
     win.setWindowTitle('pyqtgraph example: Hiprmc ')
 
-    win.setCentralWidget(rmcView(root))
+#    win.setCentralWidget(rmcView(root))
+    win.addWidget(rmcView(root))
 
     win.show()
 

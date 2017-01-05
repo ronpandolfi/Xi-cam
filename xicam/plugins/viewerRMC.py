@@ -11,6 +11,8 @@ import subprocess
 import xicam.RmcView as rmc
 import time
 from xicam import threads
+from daemon.daemon import daemon
+import multiprocessing
 import Queue
 
 """
@@ -85,8 +87,8 @@ class LogViewer(pg.ImageView):
     def setImage(self,*args,**kwargs):
         super(LogViewer, self).setImage(*args,**kwargs)
 
-        levelmin = np.log(self.levelMin)
-        levelmax = np.log(self.levelMax)
+        levelmin = np.log(self.levelMin)/np.log(1.5)
+        levelmax = np.log(self.levelMax)/np.log(1.5)
         if np.isnan(levelmin): levelmin = 0
         if np.isnan(levelmax): levelmax = 1
         if np.isinf(levelmin): levelmin = 0
@@ -143,6 +145,7 @@ class inOutViewer(QtGui.QWidget, ):
         super(inOutViewer, self).__init__(parent=parent)
 
         self.emitter = threads.Emitter()
+        self.interrupt = False
 
         layout = QtGui.QHBoxLayout()
         self.cameraLocation = config.activeExperiment.center
@@ -164,7 +167,7 @@ class inOutViewer(QtGui.QWidget, ):
 
         self.orig_image = np.transpose(loader.loadimage(self.path))
         try:
-            start_size = max(self.orig_image.shape)
+            start_size = max(self.orig_image.shape)/10
         except ValueError:
             print "Image must be 2-D"
 
@@ -180,13 +183,14 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
 
+        image_name = self.path.split('/')[-1].split('.')[0]
         self.scatteringParams = pt.ParameterTree()
         params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
                   {'name': 'Loading factor', 'type': 'float', 'value': 0.5, 'default': 0.5},
                   {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
                   {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                   {'name': 'Model start size', 'type': 'int', 'value': start_size},
-                  {'name': 'Save name', 'type': 'str', 'value': 'processed'},
+                  {'name': 'Save name', 'type': 'str', 'value': 'hiprmc_' + image_name},
                   {'name': 'Mask image', 'type': 'str'}]
         self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
         self.scatteringParams.setParameters(self.configparams, showTop=False)
@@ -198,21 +202,27 @@ class inOutViewer(QtGui.QWidget, ):
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
+        stopButton = QtGui.QPushButton("Stop RMC")
         sideWidgetFormat.addWidget(scatteringHolder)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(centerButton)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(runButton)
+        sideWidgetFormat.addSpacing(5)
+        sideWidgetFormat.addWidget(stopButton)
+
 
 
         centerButton.clicked.connect(self.center)
         runButton.clicked.connect(self.runRMC)
+        stopButton.clicked.connect(self.stop_threads)
 
-        headings = QtGui.QTabBar(self)
-        headings.addTab('Original Image')
-        headings.addTab('Recentered Image')
-        headings.addTab('RMC Timeline')
-        headings.setShape(QtGui.QTabBar.TriangularSouth)
+        self.headings = QtGui.QTabBar(self)
+        self.headings.addTab('Original Image')
+        self.headings.addTab('Recentered Image')
+        self.headings.addTab('RMC Timeline')
+        self.headings.addTab('FFT RMC Timeline')
+        self.headings.setShape(QtGui.QTabBar.TriangularSouth)
 
         self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1], 'r',
                      self.orig_view.getImageItem().getViewBox())
@@ -223,40 +233,51 @@ class inOutViewer(QtGui.QWidget, ):
 
         sidelayout = QtGui.QVBoxLayout()
         sidelayout.addWidget(self.image_holder)
-        sidelayout.addWidget(headings)
+        sidelayout.addWidget(self.headings)
 
         layout.addLayout(sidelayout,10)
         layout.addLayout(sideWidgetFormat,4)
         self.setLayout(layout)
 
-        headings.currentChanged.connect(self.currentChanged)
-        self.image_holder.currentChanged.connect(headings.setCurrentIndex)
+        self.headings.currentChanged.connect(self.currentChanged)
+        self.image_holder.currentChanged.connect(self.headings.setCurrentIndex)
 
-    def currentChanged(self,index):
+
+    def currentChanged(self, index):
         """
         Slot to recieve centerwidgets currentchanged signal when a new tab is selected
         """
+        if self.image_holder.widget(index):
+            self.image_holder.setCurrentIndex(index)
+        else:
+            self.headings.setCurrentIndex(self.image_holder.currentIndex())
 
-        self.image_holder.setCurrentIndex(index)
 
-
-    def center(self):
+    def center(self, sample=True):
         """
         Slot to receive signal when user requests a centered image. Performs centering and writes new image into
         current working directory
+
+        Parameters
+        ----------
+        sample: boolean, optional
+            flag whether image to be centered is the original sample or the mask image
         """
 
-        if self.edited_image is not None:
-            self.image_holder.removeWidget(self.edited_view)
-            self.edited_view = LogViewer()
-            self.image_holder.addWidget(self.edited_view)
+        if sample:
+            if self.edited_image is not None:
+                self.image_holder.removeWidget(self.edited_view)
+                self.edited_view = LogViewer()
+                self.image_holder.addWidget(self.edited_view)
 
-        #resize image so that it's in center
-        #displays output on stackwidget
+            image = self.orig_image
+        else:
+            image = self.mask
 
+        #resize image so that it's in center and displays output if a sample image
 
-        xdim= self.orig_image.shape[0]
-        ydim = self.orig_image.shape[1]
+        xdim = int(image.shape[0])
+        ydim = int(image.shape[1])
 
         newx = xdim + 2*abs(self.cameraLocation[0]-xdim/2)
         newy = ydim + 2*abs(self.cameraLocation[1]-ydim/2)
@@ -265,32 +286,48 @@ class inOutViewer(QtGui.QWidget, ):
         self.edited_image = np.ones((self.new_dim,self.new_dim),dtype = np.int)
         new_center = (self.new_dim/2,self.new_dim/2)
 
-        lowleft_corner_x = new_center[0]-self.cameraLocation[0]
-        lowleft_corner_y = new_center[1]-self.cameraLocation[1]
+        lowleft_corner_x = int(new_center[0]-self.cameraLocation[0])
+        lowleft_corner_y = int(new_center[1]-self.cameraLocation[1])
 
-        self.edited_image[lowleft_corner_x:lowleft_corner_x+xdim,lowleft_corner_y: lowleft_corner_y+ydim] \
-            = self.orig_image
+        self.edited_image[lowleft_corner_x:lowleft_corner_x+xdim,lowleft_corner_y: lowleft_corner_y+ydim] = image
 
         # save image
-        self.write_path = self.path
-        if self.write_path.endswith('.tif'):
-            self.write_path = self.write_path[:-4]+'centered.tif'
-        else:
-            self.write_path += '_centered.tif'
+        if sample:
+            self.write_path = self.path
 
-        img = tifimage.tifimage(np.rot90((self.edited_image.astype(float)/
-                                          self.edited_image.max()*2**16).astype(np.int16)))
+            if self.write_path.endswith('.tif'):
+                self.write_path = self.write_path[:-4] + '_centered.tif'
+            else:
+                self.write_path += '_centered.tif'
+            self.write_path_sample = self.write_path
+
+            img = tifimage.tifimage(np.rot90((self.edited_image.astype(float) /
+                                              self.edited_image.max() * 2 ** 16).astype(np.int16)))
+        else:
+            self.write_path = self.mask_path
+
+            if self.write_path.endswith('.tif'):
+                self.write_path = self.write_path[:-4] + '_centered.tif'
+            else:
+                self.write_path += '_centered.tif'
+            self.write_path_mask = self.write_path
+
+            img = tifimage.tifimage(np.rot90(self.edited_image.astype(float)))
+
+
+
+
         img.write(self.write_path)
 
+        if sample:
+            self.edited_view.setImage(self.edited_image)
 
-        self.edited_view.setImage(self.edited_image)
+            box = self.drawCameraLocation(self.edited_view,new_center)
+            self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim,'r', box)
+            self.drawROI(0,0,self.new_dim,self.new_dim, 'b', box)
 
-        box = self.drawCameraLocation(self.edited_view,new_center)
-        self.drawROI(lowleft_corner_x,lowleft_corner_y,xdim,ydim,'r', box)
-        self.drawROI(0,0,self.new_dim,self.new_dim, 'b', box)
-
-        # this is a temporary fix for a problem: pushing a button changes tab back to first
-        self.image_holder.setCurrentIndex(1)
+            # this is a temporary fix for a problem: pushing a button changes tab back to first
+            self.image_holder.setCurrentIndex(1)
 
     def drawCameraLocation(self,box,location):
         """
@@ -349,17 +386,15 @@ class inOutViewer(QtGui.QWidget, ):
             self.image_holder.removeWidget(self.rmc_view)
 
         if self.edited_image is None:
-            msg.showMessage('Error: no image loaded',timeout = 0)
+            msg.showMessage('Error: must center image before running HipRMC',timeout = 0)
             msg.clearMessage()
             return
 
 
 
         params = self.configparams
-        mask = params.child('Mask image').value()
 
-        hig_info = {'hipRMCInput': {'instrumentation': {'inputimage': "{}".format(self.write_path),
-                                             'maskimage': "{}".format(mask) if mask else '',
+        hig_info = {'hipRMCInput': {'instrumentation': {'inputimage': "{}".format(self.write_path_sample),
                                              'imagesize': [self.new_dim, self.new_dim ],
                                              'numtiles': params.child('Num tiles').value(),
                                              'loadingfactors': [params.child('Loading factor').value()]},
@@ -369,47 +404,86 @@ class inOutViewer(QtGui.QWidget, ):
                                          'numstepsfactor': params.child('Numsteps factor').value(),
                                          'scalefactor': params.child('Scale factor').value()}}}
 
+        self.mask_path = params.child('Mask image').value()
+        if params.child('Mask image').value():
+            self.mask = np.transpose(loader.loadimage(self.mask_path))
+            self.center(False)
+            hig_info['hipRMCInput']['instrumentation']['maskimage'] = "{}".format(self.write_path_mask)
+
         h = hig.hig(**hig_info)
-        self.hig_name = './' + params.child('Save name').value()
+        self.hig_name = os.path.join(os.path.abspath('.'), params.child('Save name').value())
+
+        # self.hig_name = './' + params.child('Save name').value()
         if not self.hig_name.endswith('.hig'):
             self.hig_name += '.hig'
 
         h.write(self.hig_name)
-        self.save_name = self.configparams.child('Save name').value()
+        self.save_name = params.child('Save name').value()
         self.start_time = time.time()
 
-        process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done)
+        process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done,)
+        self.file_watcher = NewFolderWatcher(path=os.path.abspath("."), experiment=None)
+        self.file_watcher.sigFinished.connect(self.start_watcher)
+        watcher = threads.RunnableMethod(method=self.file_watcher.run,)
+        self.worker.queue.put(watcher)
         self.worker.queue.put(process)
 
         if not self.worker.isRunning():
             self.worker.start()
-
-        # connects finished HipRMC to write/display
-        self.emitter.sigFinished.connect(self.write_and_display)
 
 
     def run_RMCthread(self):
         """
         Slot to receive signal to run HipRMC as subprocess on background thread
         """
-        cwd = os.getcwd() + '/'
-        self.watcher = QtCore.QFileSystemWatcher([cwd])
-        # self.watcher.connect(self.watcher, QtCore.SIGNAL('directoryChanged(QString)'), self.getpath)
-        print self.watcher.directories()
-        self.watcher.directoryChanged.connect(self.getpath)
-        # self.watcher.fileChanged.connect(self.getpath)
 
-        proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print "harhaeg"
+        self.proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.output, self.err = self.proc.communicate()
 
-        self.output, self.err = proc.communicate()
 
-    @QtCore.Slot()
-    def getpath(self, path):
-        print "rgaefaswgfewg"
-        all_subdirs = [d for d in os.listdir(path) if os.path.isdir(d)]
-        print all_subdirs
-        self.watcher.addpath(unicode(max(all_subdirs, key=os.path.getmtime),"utf-8"))
+
+
+    def start_watcher(self, folder):
+
+        self.rmc_folder = folder
+
+        self.rmc_view = rmc.rmcView(self.rmc_folder)
+        self.rmc_view.findChild(QtGui.QTabBar).hide()
+        self.rmc_view.setContentsMargins(0, 0, 0, 0)
+        self.image_holder.addWidget(self.rmc_view)
+
+        self.fft_view = rmc.fftView()
+        self.fft_view.open_from_rmcView(self.rmc_view.image_list)
+        self.fft_view.setContentsMargins(0, 0, 0, 0)
+        self.image_holder.addWidget(self.fft_view)
+
+        # self.image_holder.setCurrentIndex(2)
+
+        self.rmc_watcher = HipRMCWatcher(path=self.rmc_folder,experiment=self.rmc_view)
+        self.emitter.sigFinished.connect(self.rmc_watcher.stop)
+        watchRMC = threads.RunnableMethod(method=self.rmc_watcher.run,)
+        self.worker.queue.put(watchRMC)
+        self.rmc_watcher.sigCallback.connect(self.add_images)
+        # self.rmc_watcher.sigCallback.connect(self.rmc_view.addNewImages)
+        if self.rmc_view.image_list:
+           self.image_holder.setCurrentIndex(2)
+
+        if not self.worker.isRunning():
+            self.worker.start()
+
+    def add_images(self, root):
+        if not self.rmc_view.image_list:
+            self.image_holder.setCurrentIndex(2)
+        self.rmc_view.addNewImages(root=root)
+        self.fft_view.open_from_rmcView(self.rmc_view.image_list)
+
+
+    def stop_threads(self):
+        self.worker.stop()
+        self.file_watcher.stop()
+        self.rmc_watcher.stop()
+        self.interrupt = True
+        self.proc.terminate()
 
     @QtCore.Slot()
     def RMC_done(self):
@@ -417,36 +491,100 @@ class inOutViewer(QtGui.QWidget, ):
         Slot to receive signal when HipRMC calculation is done. Emits signal to main thread to load output
         """
         run_time = time.time() - self.start_time
-        msg.showMessage('HipRMC complete. Run time: {:.2f} s'.format(run_time))
-        self.emitter.sigFinished.emit()
+
+        if not self.interrupt:
+            os.rename(self.hig_name, '{}/{}.hig'.format(self.rmc_folder, self.save_name))
+
+            # write output of RMC to file in hiprmc output folder
+            output_path = self.rmc_folder + "/{}_rmc_output.txt".format(self.save_name)
+            with open(output_path, 'w') as txt:
+                txt.write(self.output)
+
+            msg.showMessage('HipRMC complete. Run time: {:.2f} s'.format(run_time))
+            self.emitter.sigFinished.emit()
+        else:
+            try:
+                os.rename(self.hig_name, '{}/{}.hig'.format(self.rmc_folder, self.save_name))
+            except OSError:
+                pass
+
+            msg.showMessage('HipRMC interrupted by user. Run time: {:.2f} s'.format(run_time))
+
+        self.interrupt = False
 
 
-    @QtCore.Slot()
-    def write_and_display(self):
+class NewFolderWatcher(daemon):
+
+    sigFinished = QtCore.Signal(str)
+
+    def process(self, path, files):
+
+        if files:
+            folder = path + '/' + files[0]
+            self.sigFinished.emit(folder)
+            self.stop()
+
+    def run(self):
+
+        if self.procold:
+            self.process(self.path, self.childfiles)
+
+        try:
+            while not self.exiting:
+                time.sleep(.1)
+                self.checkdirectory()  # Force update; should not have to do this -.-
+        except KeyboardInterrupt:
+            pass
+
+    def stop(self):
+        self.exiting = True
+        print ("thread stop - %s" % self.exiting)
+
+    def __del__(self):
+        self.exiting = True
+        self.wait()
+
+
+    def checkdirectory(self):
         """
-        Slot. Connected to RMC_done slot function. Loads images in rmc_viewer and writes HipRMC text output qfilesystemwatcher
-        as txt file
+        Checks a directory for new files, comparing what files are there now vs. before
         """
-        # complicated way of finding and writing into folder name written by hiprmc
-        ind = self.output.index(self.save_name)
-        rmc_folder = './{}'.format(self.output[ind:].split("\n")[0])
-        os.rename(self.hig_name, '{}/{}.hig'.format(rmc_folder, self.save_name))
+        updatedchildren = set(os.listdir(self.path))
+        newchildren = updatedchildren - self.childfiles
+        self.childfiles = updatedchildren
+        self.process(self.path, list(newchildren))
 
-        # write output of RMC to file in hiprmc output folder
-        output_path = rmc_folder + "/{}_rmc_output.txt".format(self.save_name)
-        with open(output_path, 'w') as txt:
-            txt.write(self.output)
 
-        # add rmcView to tabwidget
-        self.rmc_view = rmc.rmcView(rmc_folder)
-        self.rmc_view.findChild(QtGui.QTabBar).hide()
-        self.rmc_view.setContentsMargins(0, 0, 0, 0)
+class HipRMCWatcher(daemon):
 
-        self.image_holder.addWidget(self.rmc_view)
+    num_cores = multiprocessing.cpu_count()
+    sigCallback = QtCore.Signal(str)
 
-        # this is a temporary fix for a problem: pressing either buttton changes tab back to first
-        self.image_holder.setCurrentIndex(2)
+    def run(self):
 
+        if self.procold:
+            self.process(self.path, self.childfiles)
+
+        try:
+            while not self.exiting:
+                time.sleep(.1)
+                self.checkdirectory()  # Force update; should not have to do this -.-
+        except KeyboardInterrupt:
+            pass
+
+    def checkdirectory(self):
+        """
+        Checks a directory for new files, comparing what files are there now vs. before
+        """
+        updatedchildren = set(os.listdir(self.path))
+        newchildren = updatedchildren - self.childfiles
+        self.childfiles = updatedchildren
+        self.process(self.path, list(newchildren))
+
+
+    def process(self, path, files):
+        if files:
+            self.sigCallback.emit(path)
 
 
 
