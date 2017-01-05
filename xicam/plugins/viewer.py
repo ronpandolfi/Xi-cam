@@ -64,7 +64,7 @@ class ViewerPlugin(base.plugin):
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask,
-                                     capture=self.capture, removecosmics=self.removecosmics,thresholdmask=self.thresholdmask)
+                                     capture=None, removecosmics=self.removecosmics,thresholdmask=self.thresholdmask)
 
 
         self.spacegroupwidget = spacegroupwidget()

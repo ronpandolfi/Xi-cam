@@ -72,7 +72,6 @@ class Login(QtGui.QDialog):
         else:
             self.close()
 
-
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
@@ -93,7 +92,6 @@ class MyMainWindow(QtCore.QObject):
         f.close()
 
         # STYLE
-        # self.app.setStyle('Plastique')
         with open('xicam/gui/style.stylesheet', 'r') as f:
             style = f.read()
         app.setStyleSheet(qdarkstyle.load_stylesheet() + style)

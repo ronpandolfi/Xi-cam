@@ -181,6 +181,7 @@ class difftoolbar(QtGui.QToolBar):
         icon30.addPixmap(QtGui.QPixmap("xicam/gui/icons_36.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCapture.setIcon(icon30)
         self.actionCapture.setObjectName("actionCapture")
+        self.actionCapture.setVisible(False)
 
         # self.actionROI = QtGui.QAction(self)
         #icon25 = QtGui.QIcon()
