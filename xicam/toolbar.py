@@ -21,6 +21,14 @@ class difftoolbar(QtGui.QToolBar):
         self.actionPolyMask.setToolTip('Polygon mask')
         self.actionPolyMask.setText("")
         self.actionPolyMask.setObjectName("actionPolyMask")
+        self.actionThresholdMask = QtGui.QAction(self)
+        icont = QtGui.QIcon()
+        icont.addPixmap(QtGui.QPixmap("xicam/gui/icons_03.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionThresholdMask.setIcon(icont)
+        self.actionThresholdMask.setToolTip('Threshold mask')
+        self.actionThresholdMask.setText("")
+        self.actionThresholdMask.setObjectName("actionThresholdMask")
+        self.actionThresholdMask.setVisible(False)
         self.actionOpen = QtGui.QAction(self)
         self.actionOpen.setObjectName("actionOpen")
         self.actionOpen.setToolTip('Open')
@@ -184,6 +192,7 @@ class difftoolbar(QtGui.QToolBar):
         # menu.addAction(self.actionShow_Mask)
         menu.addAction(self.actionPolyMask)
         menu.addAction(self.actionRemove_Cosmics)
+        menu.addAction(self.actionThresholdMask)
         menu.addAction(self.actionMaskLoad)
         toolbuttonMasking = QtGui.QToolButton()
         toolbuttonMasking.setDefaultAction(self.actionMasking)
@@ -216,7 +225,7 @@ class difftoolbar(QtGui.QToolBar):
 
     def connecttriggers(self, calibrate, centerfind, refine, showmask, cake, remesh, linecut, vertcut, horzcut, logint,
                         radialsym, mirrorsym, roi, arc, polymask, process=None, video=None,
-                        capture=None,removecosmics=None):
+                        capture=None,removecosmics=None,thresholdmask=None):
         self.actionCalibrate_AgB.triggered.connect(calibrate)
         self.actionCenterFind.triggered.connect(centerfind)
         self.actionRefine_Center.triggered.connect(refine)
@@ -255,6 +264,10 @@ class difftoolbar(QtGui.QToolBar):
         if removecosmics is not None:
             self.actionRemove_Cosmics.setVisible(True)
             self.actionRemove_Cosmics.triggered.connect(removecosmics)
+
+        if thresholdmask is not None:
+            self.actionThresholdMask.setVisible(True)
+            self.actionThresholdMask.triggered.connect(thresholdmask)
 
     def caketoggle(self):
         if self.actionCake.isChecked():

@@ -16,6 +16,7 @@ import scipy
 from pipeline import variation
 from xicam import threads
 from pipeline import msg
+from scipy.ndimage import morphology
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -828,6 +829,19 @@ class dimgViewer(QtGui.QWidget):
 
             # Redo the integration
             self.replot()
+
+
+    def thresholdmask(self):
+        threshold, ok = QtGui.QInputDialog.getInt(self, 'Threshold value','Input intensity threshold:',3,0,10000000)
+        print 'threshold:',threshold
+
+        if ok and threshold:
+            mask = self.dimg.rawdata>threshold
+
+            morphology.binary_closing(mask,morphology.generate_binary_structure(2,2),output=mask) # write-back to mask
+
+            config.activeExperiment.addtomask(mask)
+
 
     def maskoverlay(self):
         if self.iscake:
