@@ -21,8 +21,7 @@ addons:
       - python-pyside
       - python-h5py
       - python-matplotlib
-      - python-skimage
-      - python-cryptography
+
 
 virtualenv:
   system_site_packages: true
