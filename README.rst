@@ -1,4 +1,4 @@
-..image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?branch=master
+.. image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?branch=master
 
 Xi-cam
 ======
