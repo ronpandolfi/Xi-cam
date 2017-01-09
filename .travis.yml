@@ -33,9 +33,12 @@ install:
   - pip install .
 
 script:
+  - pip install pylint
   - pylint xicamlauncher xicam pipeline --errors-only
+  - pip install coverage
   - coverage run tests.py
 
 after_success:
   - pip install codecov --upgrade  # add coverage integration service
-  - codecov
+  #- codecov
+  - bash <(curl -s https://codecov.io/bash)
