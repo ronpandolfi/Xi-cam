@@ -18,16 +18,17 @@ addons:
     packages:
       - python-scipy
       - python-numpy
-      - python-pyside
+      - python-pyside #probably not working
       - python-h5py
       - python-matplotlib
+      - libqt4-dev
 
 
 virtualenv:
   system_site_packages: true
 
 install:
-  - sudo apt-get install libqt4-dev
+  -
   - pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
   # Travis CI servers use virtualenvs, so we need to finish the install by the following
   - python ~/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pyside_postinstall.py -install
