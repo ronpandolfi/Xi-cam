@@ -22,6 +22,7 @@ class LocalFileView(QtGui.QTreeView):
 
     pathChanged = QtCore.Signal(str)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
     sigItemPreview = QtCore.Signal(str)
@@ -49,9 +50,11 @@ class LocalFileView(QtGui.QTreeView):
         self.setIconSize(QtCore.QSize(16, 16))
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Delete', self)]
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Open Folder', self),
+                           QtGui.QAction('Delete', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
-        standardActions[1].triggered.connect(self.handleDeleteAction)
+        standardActions[1].triggered.connect(self.handleOpenFolderAction)
+        standardActions[2].triggered.connect(self.handleDeleteAction)
         self.menu.addActions(standardActions)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -108,6 +111,13 @@ class LocalFileView(QtGui.QTreeView):
             self.refresh(path=paths[0])
         else:
             self.sigOpen.emit(paths)
+
+    def handleOpenFolderAction(self):
+        paths = self.getSelectedFilePaths()
+        if os.path.isdir(paths[0]) and len(paths) == 1:
+            self.sigOpenFolder.emit(paths)
+        else:
+            pass
 
     def handleDeleteAction(self):
         paths = self.getSelectedFilePaths()
@@ -710,6 +720,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpen = QtCore.Signal(list)
+    sigFolderOpen = QtCore.Signal(list)
     sigPreview = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -793,6 +804,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.handleOpenActions)
+        explorer.file_view.sigOpenFolder.connect(self.handleOpenFolderActions)
         try:
             explorer.file_view.sigDownload.connect(self.handleDownloadActions)
         except AttributeError:
@@ -881,6 +893,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleOpenActions(self, paths):
         if len(paths) > 0:
             self.sigOpen.emit(paths)
+
+    def handleOpenFolderActions(self, paths):
+        if len(paths) > 0:
+            self.sigFolderOpen.emit(paths)
 
     def handleDeleteActions(self, paths):
         r = QtGui.QMessageBox.warning(self, 'Delete file',
