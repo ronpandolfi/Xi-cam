@@ -109,8 +109,6 @@ class LogViewer(pg.ImageView):
     """
     Class to view images with log intensity
     """
-    def __init__(self):
-        super(LogViewer, self).__init__()
 
     def setImage(self,*args,**kwargs):
         super(LogViewer, self).setImage(*args,**kwargs)
