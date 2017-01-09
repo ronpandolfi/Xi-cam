@@ -130,6 +130,7 @@ class MyMainWindow(QtCore.QObject):
         plugins.plugins['MOTD'].instance.activate()
 
         plugins.base.fileexplorer.sigOpen.connect(self.openfiles)
+        plugins.base.fileexplorer.sigFolderOpen.connect(self.openfolder)
         plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.handleOpenAction)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
@@ -312,6 +313,21 @@ class MyMainWindow(QtCore.QObject):
                     self.openimages(filenames)
                 elif response == QtGui.QMessageBox.Cancel:
                     return None
+
+    def openfolder(self, filenames):
+        """
+        build a new tab from the folder path, add it to the tab view, and display it
+        """
+
+        if filenames is not u'':
+            if config.activeExperiment.iscalibrated or len(filenames) > 1:
+                import plugins
+
+                self.ui.statusbar.showMessage('Loading images from folder...')
+                self.app.processEvents()
+                plugins.base.activeplugin.opendirectory(filenames)
+
+                self.ui.statusbar.showMessage('Ready...')
 
     def exportimage(self):
         plugins.base.activeplugin.exportimage()
