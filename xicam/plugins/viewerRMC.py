@@ -14,7 +14,6 @@ from xicam import threads
 from daemon.daemon import daemon
 import multiprocessing
 import Queue
-from xicam.plugins import explorer, login
 
 """
 Bugs:
@@ -68,6 +67,11 @@ class plugin(base.plugin):
 
 
     def openfiles(self, paths):
+
+        """
+        Overrides inherited 'openfiles' method. Used for opening single image
+        """
+
         self.activate()
         view_widget = inOutViewer(paths = paths, worker = self.threadWorker)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
@@ -75,6 +79,9 @@ class plugin(base.plugin):
         view_widget.drawCameraLocation(view_widget.orig_view, view_widget.cameraLocation)
 
     def opendirectory(self, folder, operation=None):
+        """
+        Overrides inherited 'opendirectory' method. Used for opening hiprmc output folders.
+        """
         self.activate()
         if type(folder) is list:
             folder = folder[0]
@@ -99,7 +106,9 @@ class plugin(base.plugin):
         self.centerwidget.widget(index).deleteLater()
 
 class LogViewer(pg.ImageView):
-
+    """
+    Class to view images with log intensity
+    """
     def __init__(self):
         super(LogViewer, self).__init__()
 
@@ -119,67 +128,65 @@ class LogViewer(pg.ImageView):
 class inOutViewer(QtGui.QWidget, ):
     def __init__(self, paths, worker, parent=None):
         """
-           Class that holds image to be processed by HipRMC, image after it has been centered, and HipRMC output
+        Class that holds image to be processed by HipRMC, image after it has been centered, and HipRMC output
 
-           Attributes
-           ----------
-           emitter : threads.Emitter
-               Holds and emits a signal when HipRMc done processing
-           cameraLocation : tuple
-               2-tuple (x,y) of camera location on input image
-           rmcView : ximcam.RmcView.rncView
-               Timeline viewer which holds and displays HipRMC output
-           orig_image: np.array
-               Original input image
-           edited_image : np.array
-               Image with camera location adjusted to its center
-           orig_view : pyqtgraph.ImageView
-               Holds the original image
-           edited_view : pyqtgraph.ImageView
-               Holds the image after camera location adjustment
-           image_holder : QtGui.StackedWidget
-               Main widget of plugin. Holds original and edited images, as well as HipRMC output, in tabs
-           scatteringParams : pyqtgraph.parametertree
-               Occupies right side of main widget. Holds configparams
-           configparams : pyqtgraph.Parameter
-               Class held by scatteringParams which holds parameter values for HipRMC
-           output, err : str
-               Output and error from HipRMC subprocess call
+        Attributes
+        ----------
+        emitter : threads.Emitter
+            Holds and emits a signal when fHipRMc done processing
+        interrupt : bool
+            flag - set true if rmc processing was interrupted; affects post-rmc processes
+        cameraLocation : tuple
+            2-tuple (x,y) of camera location on input image
+        rmcView : ximcam.RmcView.rncView
+            Timeline viewer which holds and displays HipRMC output
+        orig_image: np.array
+            Original input image
+        edited_image : np.array
+            Image with camera location adjusted to its center
+        orig_view : pyqtgraph.ImageView
+            Holds the original image
+        edited_view : pyqtgraph.ImageView
+            Holds the image after camera location adjustment
+        image_holder : QtGui.StackedWidget
+            Main widget of plugin. Holds original and edited images, as well as HipRMC output, in tabs
+        scatteringParams : pyqtgraph.parametertree
+            Occupies right side of main widget. Holds configparams
+        configparams : pyqtgraph.Parameter
+            Class held by scatteringParams which holds parameter values for HipRMC
+        output, err : str
+            Output and error from HipRMC subprocess call
+        headings : QtGui.QTabBar
+            Displays name of corresponding tab of image_holder
 
-           Parameters
-           ----------
-           paths : str/list of str
-               Path to input dataset
-           worker: threads.Worker
-               Worker which queues up jobs and runs them on a QtCore.QThreadpool
-           parent : QtGui.QWidget
-               parent widget
-           args
-               Additional arguments
-           kwargs
-               Additional keyword arguments
-           """
+        Parameters
+        ----------
+        paths : str/list of str
+            Path to input dataset
+        worker: threads.Worker
+            Worker which queues up jobs and runs them on a QtCore.QThreadpool
+        parent : QtGui.QWidget
+            parent widget
+        args
+            Additional arguments
+        kwargs
+            Additional keyword arguments
+        """
 
 
         super(inOutViewer, self).__init__(parent=parent)
 
         self.emitter = threads.Emitter()
         self.interrupt = False
-
         self.cameraLocation = config.activeExperiment.center
-
-        # the next two will be filled as different functions are fun
         self.rmc_view= None
         self.edited_image = None
-
         self.worker = worker
 
 
-        # load and display image
+        # holders for original and edited images
         self.orig_view = LogViewer()
         self.orig_view.setContentsMargins(0,0,0,0)
-
-
         self.edited_view = LogViewer()
         self.edited_view.setContentsMargins(0,0,0,0)
 
@@ -197,6 +204,7 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
         scatteringHolder = QtGui.QStackedWidget()
 
+        # if paths is None, inOutViewer will only hold HipRMC output and the images/parameter table are not necessary
         if paths is not None:
 
             self.orig_image = np.transpose(loader.loadimage(self.path))
@@ -236,15 +244,14 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat.addWidget(runButton)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(stopButton)
-
         sideWidget.setLayout(sideWidgetFormat)
 
-
-
+        # connect buttons to processing
         centerButton.clicked.connect(self.center)
         runButton.clicked.connect(self.runRMC)
         stopButton.clicked.connect(self.stop_threads)
 
+        # tab headings for main widget
         self.headings = QtGui.QTabBar(self)
         self.headings.addTab('Original Image')
         self.headings.addTab('Recentered Image')
@@ -277,7 +284,7 @@ class inOutViewer(QtGui.QWidget, ):
 
     def currentChanged(self, index):
         """
-        Slot to recieve centerwidgets currentchanged signal when a new tab is selected
+        Slot to receive centerwidget's currentchanged signal when a new tab is selected
         """
         if self.image_holder.widget(index):
             self.image_holder.setCurrentIndex(index)
@@ -437,7 +444,7 @@ class inOutViewer(QtGui.QWidget, ):
                                          'scalefactor': params.child('Scale factor').value()}}}
 
         self.mask_path = params.child('Mask image').value()
-        if params.child('Mask image').value():
+        if self.mask_path and self.mask_path != "None":
             self.mask = np.transpose(loader.loadimage(self.mask_path))
             self.center(False)
             hig_info['hipRMCInput']['instrumentation']['maskimage'] = "{}".format(self.write_path_mask)
@@ -445,16 +452,20 @@ class inOutViewer(QtGui.QWidget, ):
         h = hig.hig(**hig_info)
         self.hig_name = os.path.join(os.path.abspath('.'), params.child('Save name').value())
 
-        # self.hig_name = './' + params.child('Save name').value()
         if not self.hig_name.endswith('.hig'):
             self.hig_name += '.hig'
 
+        # write hig file to disk
         h.write(self.hig_name)
         self.save_name = params.child('Save name').value()
         self.start_time = time.time()
 
+        # starts filewatcher to watch for new hiprmc folder, and the HipRMC job
+        # also starts worker if it is not already running
         process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done,)
         self.file_watcher = NewFolderWatcher(path=os.path.abspath("."), experiment=None)
+
+        # when filewatcher gets rmc folder, it passes it to self.start_watcher to start another watcher
         self.file_watcher.sigFinished.connect(self.start_watcher)
         watcher = threads.RunnableMethod(method=self.file_watcher.run,)
         self.worker.queue.put(watcher)
@@ -476,21 +487,30 @@ class inOutViewer(QtGui.QWidget, ):
 
 
     def start_watcher(self, folder):
+        """
+        Slot to receive signal to start looking for hiprmc output in 'folder'
+
+        Parameters
+        ----------
+        folder : str, unicode
+            folder to watch for hiprmc output
+        """
 
         self.rmc_folder = folder
 
+        # create and add rmcView to main plugin widget
         self.rmc_view = rmc.rmcView(self.rmc_folder)
         self.rmc_view.findChild(QtGui.QTabBar).hide()
         self.rmc_view.setContentsMargins(0, 0, 0, 0)
         self.image_holder.addWidget(self.rmc_view)
 
+        # fftview to view fft transforms of output images
         self.fft_view = rmc.fftView()
         self.fft_view.open_from_rmcView(self.rmc_view.image_list)
         self.fft_view.setContentsMargins(0, 0, 0, 0)
         self.image_holder.addWidget(self.fft_view)
 
-        # self.image_holder.setCurrentIndex(2)
-
+        # starts another filewatcher to watch rmc folder and add images to rmc_view as they are output
         self.rmc_watcher = HipRMCWatcher(path=self.rmc_folder,experiment=self.rmc_view)
         self.emitter.sigFinished.connect(self.rmc_watcher.stop)
         watchRMC = threads.RunnableMethod(method=self.rmc_watcher.run,)
@@ -503,6 +523,14 @@ class inOutViewer(QtGui.QWidget, ):
             self.worker.start()
 
     def add_images(self, root):
+        """
+        Looks in file given by 'root' and adds images to rmcView and fftView
+
+        Parameters
+        ----------
+        root : str, unicode
+            path to check for images to add to rmcView and fftView
+        """
         if not self.rmc_view.image_list:
             self.image_holder.setCurrentIndex(2)
         self.rmc_view.addNewImages(root=root)
@@ -510,6 +538,9 @@ class inOutViewer(QtGui.QWidget, ):
 
 
     def stop_threads(self):
+        """
+        Stops all background threads (worker, any filewatcher, hiprmc
+        """
         self.worker.stop()
         self.file_watcher.stop()
         self.rmc_watcher.stop()
@@ -545,6 +576,10 @@ class inOutViewer(QtGui.QWidget, ):
 
 
 class NewFolderWatcher(daemon):
+
+    """
+    Daemon subclass to watch for hiprmc folder when it is created
+    """
 
     sigFinished = QtCore.Signal(str)
 
@@ -587,6 +622,10 @@ class NewFolderWatcher(daemon):
 
 
 class HipRMCWatcher(daemon):
+
+    """
+    Daemon subclass to watch hiprmc output folder. Emits sigCallback whenever folder contents change
+    """
 
     num_cores = multiprocessing.cpu_count()
     sigCallback = QtCore.Signal(str)
