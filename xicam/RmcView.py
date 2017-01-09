@@ -47,10 +47,20 @@ class imagetimeline(list):  # Sets up the image so it will fin the the viewer
         return type(self[0][0, 0])
 
 
+
 class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
     def __init__(self, scalemax, *args, **kwargs):
         super(TimelineView, self).__init__(*args, **kwargs)
         self.scalemax = scalemax
+
+        self.view_label = QtGui.QLabel(self)
+        self.view_label.setText('No: ')
+        self.view_number = QtGui.QSpinBox(self)
+        self.view_number.setReadOnly(True)
+        self.view_number.setMaximum(10000)
+        self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
+        self.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
+
 
     def quickMinMax(self, data):  # Defines quickMinMax functon
         return min(map(np.min, data)), max(map(np.max, data))
@@ -74,6 +84,9 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
         self.imageItem.scale(scale, scale)  # Scales up by the factor of scale
         print 'Image shape' + str(image.shape)
         print 'Scale set to: ' + str(scale)
+
+        self.view_number.setValue(self.currentIndex)
+
 
 class fftView(QtGui.QTabWidget):
     def __init__(self, *args, **kwargs):
@@ -184,7 +197,7 @@ class rmcView(QtGui.QTabWidget):
             view.imageItem.resetTransform()
             view.imageItem.scale(scale, scale)
             view.autoRange()
-            view.getHistogramWidget().setHidden(True)
+            view.getHistogramWidget().setHidden(False)
             view.ui.roiBtn.setHidden(True)
             view.ui.menuBtn.setHidden(True)
             if loadingfactors is None:
@@ -235,7 +248,7 @@ class rmcView(QtGui.QTabWidget):
             view.imageItem.resetTransform()
             view.imageItem.scale(scale, scale)
             view.autoRange()
-            view.getHistogramWidget().setHidden(True)
+            view.getHistogramWidget().setHidden(False)
             view.ui.roiBtn.setHidden(True)
             view.ui.menuBtn.setHidden(True)
             if loadingfactors is None:

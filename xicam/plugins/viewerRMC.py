@@ -14,12 +14,11 @@ from xicam import threads
 from daemon.daemon import daemon
 import multiprocessing
 import Queue
+from xicam.plugins import explorer, login
 
 """
 Bugs:
     1. User can resize ROI after recentering
-    2. Centering/running RMC causes gui to return to original image tab, instead of staying on the current tab
-        or going to the tab relevant for the button pressed (has a quickfix)
 """
 
 class plugin(base.plugin):
@@ -73,7 +72,27 @@ class plugin(base.plugin):
         view_widget = inOutViewer(paths = paths, worker = self.threadWorker)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(view_widget)
-        view_widget.drawCameraLocation(view_widget.orig_view,view_widget.cameraLocation)
+        view_widget.drawCameraLocation(view_widget.orig_view, view_widget.cameraLocation)
+
+    def opendirectory(self, folder, operation=None):
+        self.activate()
+        if type(folder) is list:
+            folder = folder[0]
+        view_widget = inOutViewer(None, self.threadWorker,)
+        self.centerwidget.addTab(view_widget, os.path.basename(folder))
+        self.centerwidget.setCurrentWidget(view_widget)
+
+        view_widget.rmc_view = rmc.rmcView(folder)
+        view_widget.rmc_view.findChild(QtGui.QTabBar).hide()
+        view_widget.rmc_view.setContentsMargins(0, 0, 0, 0)
+        view_widget.image_holder.addWidget(view_widget.rmc_view)
+
+        view_widget.fft_view = rmc.fftView()
+        view_widget.fft_view.open_from_rmcView(view_widget.rmc_view.image_list)
+        view_widget.fft_view.setContentsMargins(0, 0, 0, 0)
+        view_widget.image_holder.addWidget(view_widget.fft_view)
+
+        view_widget.image_holder.setCurrentIndex(2)
 
 
     def tabClose(self,index):
@@ -147,7 +166,6 @@ class inOutViewer(QtGui.QWidget, ):
         self.emitter = threads.Emitter()
         self.interrupt = False
 
-        layout = QtGui.QHBoxLayout()
         self.cameraLocation = config.activeExperiment.center
 
         # the next two will be filled as different functions are fun
@@ -160,45 +178,52 @@ class inOutViewer(QtGui.QWidget, ):
         # load and display image
         self.orig_view = LogViewer()
         self.orig_view.setContentsMargins(0,0,0,0)
+
+
+        self.edited_view = LogViewer()
+        self.edited_view.setContentsMargins(0,0,0,0)
+
         if type(paths) == list:
             self.path = paths[0]
         else:
             self.path = paths
 
-        self.orig_image = np.transpose(loader.loadimage(self.path))
-        try:
-            start_size = max(self.orig_image.shape)/10
-        except ValueError:
-            print "Image must be 2-D"
-
-
         self.image_holder = QtGui.QStackedWidget()
         self.image_holder.setContentsMargins(0,0,0,0)
-        self.orig_view.setImage(self.orig_image)
-        self.orig_view.autoRange()
-        self.image_holder.addWidget(self.orig_view)
 
         # configuring right widget
         sideWidget = QtGui.QWidget()
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
-
-
-        image_name = self.path.split('/')[-1].split('.')[0]
-        self.scatteringParams = pt.ParameterTree()
-        params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Loading factor', 'type': 'float', 'value': 0.5, 'default': 0.5},
-                  {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
-                  {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
-                  {'name': 'Model start size', 'type': 'int', 'value': start_size},
-                  {'name': 'Save name', 'type': 'str', 'value': 'hiprmc_' + image_name},
-                  {'name': 'Mask image', 'type': 'str'}]
-        self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
-        self.scatteringParams.setParameters(self.configparams, showTop=False)
-
-
         scatteringHolder = QtGui.QStackedWidget()
-        scatteringHolder.addWidget(self.scatteringParams)
+
+        if paths is not None:
+
+            self.orig_image = np.transpose(loader.loadimage(self.path))
+            self.orig_view.setImage(self.orig_image)
+            self.orig_view.autoRange()
+            try:
+                start_size = max(self.orig_image.shape)/10
+            except ValueError:
+                print "Image must be 2-D"
+
+
+            image_name = self.path.split('/')[-1].split('.')[0]
+            self.scatteringParams = pt.ParameterTree()
+            params = [{'name': 'Num tiles', 'type': 'int', 'value': 1, 'default': 1},
+                      {'name': 'Loading factor', 'type': 'float', 'value': 0.5, 'default': 0.5},
+                      {'name': 'Scale factor', 'type': 'int', 'value': 32, 'default': 32},
+                      {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
+                      {'name': 'Model start size', 'type': 'int', 'value': start_size},
+                      {'name': 'Save name', 'type': 'str', 'value': 'hiprmc_' + image_name},
+                      {'name': 'Mask image', 'type': 'str'}]
+            self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
+            self.scatteringParams.setParameters(self.configparams, showTop=False)
+            scatteringHolder.addWidget(self.scatteringParams)
+
+            self.drawROI(0, 0, self.orig_image.shape[0], self.orig_image.shape[1], 'r',
+                         self.orig_view.getImageItem().getViewBox())
+
         scatteringHolder.setFixedHeight(300)
 
         centerButton = QtGui.QPushButton("Center camera location")
@@ -227,11 +252,6 @@ class inOutViewer(QtGui.QWidget, ):
         self.headings.addTab('FFT RMC Timeline')
         self.headings.setShape(QtGui.QTabBar.TriangularSouth)
 
-        self.drawROI(0,0,self.orig_image.shape[0],self.orig_image.shape[1], 'r',
-                     self.orig_view.getImageItem().getViewBox())
-
-        self.edited_view = LogViewer()
-        self.image_holder.addWidget(self.edited_view)
 
         leftWidget = QtGui.QWidget()
         sidelayout = QtGui.QVBoxLayout()
@@ -248,9 +268,8 @@ class inOutViewer(QtGui.QWidget, ):
         h.addWidget(fullPlugin)
         self.setLayout(h)
 
-        # layout.addLayout(sidelayout,10)
-        # layout.addLayout(sideWidgetFormat,4)
-        # self.setLayout(layout)
+        self.image_holder.addWidget(self.orig_view)
+        self.image_holder.addWidget(self.edited_view)
 
         self.headings.currentChanged.connect(self.currentChanged)
         self.image_holder.currentChanged.connect(self.headings.setCurrentIndex)
@@ -477,7 +496,6 @@ class inOutViewer(QtGui.QWidget, ):
         watchRMC = threads.RunnableMethod(method=self.rmc_watcher.run,)
         self.worker.queue.put(watchRMC)
         self.rmc_watcher.sigCallback.connect(self.add_images)
-        # self.rmc_watcher.sigCallback.connect(self.rmc_view.addNewImages)
         if self.rmc_view.image_list:
            self.image_holder.setCurrentIndex(2)
 
