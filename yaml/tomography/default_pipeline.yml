@@ -91,6 +91,7 @@
   Polar Mean Filter:
     Parameters:
       rec: tomo
+      int_mode: wrap
     Enabled: False
 14. Convert Data Type:
   Convert Data Type:

@@ -24,6 +24,11 @@ Polar Mean Filter:
 - name: rwidth
   suffix: px
   type: int
+- name: int_mode
+  type: list
+  values:
+    - wrap
+    - reflect
 - name: rec
   type: list
   values:
