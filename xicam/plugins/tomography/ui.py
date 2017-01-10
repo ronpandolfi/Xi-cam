@@ -100,8 +100,8 @@ class UIform(object):
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
-        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_18.png")) #metadata icon
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
         self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
 
         #
@@ -123,16 +123,6 @@ class UIform(object):
         # self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
         # configtree.setParameters(self.config_params, showTop=False)
         # rightwidget.addWidget(configtree)
-
-        icon_functions = QtGui.QIcon(QtGui.QPixmap("gui/icons_49.png"))
-        icon_properties = QtGui.QIcon(QtGui.QPixmap("gui/icons_61.png")) #metadata icon
-        icon_params = QtGui.QIcon(QtGui.QPixmap("gui/icons_62.png")) #parameter tree icon
-        self.leftmodes = [(leftwidget, icon_functions),
-                          (self.property_table, icon_properties)]
-
-        # self.leftmodes = [(leftwidget, icon_functions),
-        #                   (rightwidget, icon_params),
-        #                   (self.property_table, icon_properties)]
 
 
 
@@ -259,7 +249,7 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionRun_MultiSlicePreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_63.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_62.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_MultiSlicePreview.setIcon(icon)
         self.actionRun_MultiSlicePreview.setToolTip('Multi-slice preview')
 
@@ -277,7 +267,7 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionMBIR = QtGui.QWidgetAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_06.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_06.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionMBIR.setIcon(icon)
         self.actionMBIR.setToolTip('MBIR reconstruction')
         self.toolbuttonMBIR = QtGui.QToolButton(parent=self)
