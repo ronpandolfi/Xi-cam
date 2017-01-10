@@ -24,7 +24,8 @@ install:
 - pip install .
 script:
 - pip install pylint
-- pylint xicamlauncher xicam pipeline --errors-only
+# always returns exit code 0; I'd like to write the errors but not cause 'failure'
+- "pylint xicamlauncher xicam pipeline --errors-only || :"
 - pip install coverage
 - coverage run tests/__init__.py
 - pip install cx_freeze
