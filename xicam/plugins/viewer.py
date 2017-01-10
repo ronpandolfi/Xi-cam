@@ -20,18 +20,31 @@ from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
 from xicam import config
 import fabio
+from pipeline import calibration
+
+from xicam.widgets.calibrationpanel import calibrationpanel
 
 # Globals so Timeline can share the same rightmodes
 configtree = ParameterTree()
 configtree.setParameters(config.activeExperiment, showTop=False)
 
 
+def tiltStyleMenuRequested(pos):
+    config.activeExperiment.tiltStyleMenu.exec_(configtree.mapToGlobal(pos))
+
+
+configtree.customContextMenuRequested.connect(tiltStyleMenuRequested)
+configtree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+
+
+
 rightmodes = [(configtree, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
 
-class plugin(base.plugin):
+class ViewerPlugin(base.plugin):
     name = 'Viewer'
     sigUpdateExperiment = QtCore.Signal()
-    config.activeExperiment.sigTreeStateChanged.connect(sigUpdateExperiment)
+
 
     def __init__(self, *args, **kwargs):
 
@@ -51,20 +64,27 @@ class plugin(base.plugin):
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask,
-                                     capture=self.capture, removecosmics=self.removecosmics)
+                                     capture=None, removecosmics=self.removecosmics,thresholdmask=self.thresholdmask)
 
 
         self.spacegroupwidget = spacegroupwidget()
         self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
         sgicon = QtGui.QIcon()
-        sgicon.addPixmap(QtGui.QPixmap("gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        sgicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
 
         self.propertytable = widgets.frameproptable()
         self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
-        super(plugin, self).__init__(*args, **kwargs)
+        self.calibrationPanel = calibrationpanel()
+        calicon = QtGui.QIcon()
+        calicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rightmodes.append((self.calibrationPanel, calicon))
+        self.calibrationPanel.sigCalibrate.connect(self.calibrate)
 
+        super(ViewerPlugin, self).__init__(*args, **kwargs)
+
+        config.activeExperiment.sigTreeStateChanged.connect(self.sigUpdateExperiment)
         self.sigUpdateExperiment.connect(self.redrawcurrent)
         self.sigUpdateExperiment.connect(self.replotcurrent)
         self.sigUpdateExperiment.connect(self.invalidatecache)
@@ -170,8 +190,8 @@ class plugin(base.plugin):
         if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
         return self.centerwidget.currentWidget().widget
 
-    def calibrate(self):
-        self.getCurrentTab().calibrate()
+    def calibrate(self, algorithm=calibration.fourierAutocorrelation, calibrant='AgBh'):
+        self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):
         self.getCurrentTab().centerfind()
@@ -205,6 +225,9 @@ class plugin(base.plugin):
 
     def polymask(self):
         self.getCurrentTab().polymask()
+
+    def thresholdmask(self):
+        self.getCurrentTab().thresholdmask()
 
 
     def currentChanged(self, index):

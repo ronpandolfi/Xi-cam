@@ -7,6 +7,7 @@ class SplashScreen(QtGui.QSplashScreen):
         self.pixmap = pixmap
         self.timer = QtCore.QTimer(self)
         self.timer.singleShot(1000, self.launchwindow)
+        self.timer.singleShot(3000, self.hide)
         self._launching = False
 
     def mousePressEvent(self, *args, **kwargs):
@@ -21,13 +22,14 @@ class SplashScreen(QtGui.QSplashScreen):
             import xicam
             from xicam import xglobals
 
-            xglobals.window = xicam.xicamwindow.MyMainWindow(xglobals.app)
+            app = QtGui.QApplication.instance()
+            xglobals.window = xicam.xicamwindow.MyMainWindow(app)
             self.timer.stop()
 
             xglobals.window.ui.show()
             xglobals.window.ui.raise_()
             xglobals.window.ui.activateWindow()
-            xglobals.app.setActiveWindow(xglobals.window.ui)
+            app.setActiveWindow(xglobals.window.ui)
             self.hide()
             # self.finish(window.ui)
 

@@ -58,7 +58,7 @@ class UIform(object):
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.bottomwidget = viewers.RunConsole()
-        self.functionwidget = QUiLoader().load('gui/tomographyleft.ui')
+        self.functionwidget = QUiLoader().load('xicam/gui/tomographyleft.ui')
         self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
 
         self.functionwidget.addFunctionButton.setToolTip('Add function to pipeline')
@@ -74,13 +74,13 @@ class UIform(object):
 
         filefuncmenu = QtGui.QMenu()
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.openaction = QtGui.QAction(icon, 'Open', filefuncmenu)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_59.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.saveaction = QtGui.QAction(icon, 'Save', filefuncmenu)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.refreshaction = QtGui.QAction(icon, 'Reset', filefuncmenu)
         filefuncmenu.addActions([self.openaction, self.saveaction, self.refreshaction])
 
@@ -253,7 +253,7 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionRun_SlicePreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_50.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_50.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_SlicePreview.setIcon(icon)
         self.actionRun_SlicePreview.setToolTip('Slice preview')
 
@@ -265,13 +265,13 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_3DPreview.setIcon(icon)
         self.actionRun_3DPreview.setToolTip('3D preview')
 
         self.actionRun_FullRecon = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_FullRecon.setIcon(icon)
         self.actionRun_FullRecon.setToolTip('Full reconstruction')
 
@@ -288,7 +288,7 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionCenter = QtGui.QWidgetAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionCenter.setIcon(icon)
         self.actionCenter.setToolTip('Overlay center of rotation detection')
         self.toolbuttonCenter = QtGui.QToolButton(parent=self)
@@ -299,25 +299,25 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionPolyMask = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionPolyMask.setIcon(icon)
         self.actionPolyMask.setText("Polygon mask")
 
         self.actionCircMask = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionCircMask.setIcon(icon)
         self.actionCircMask.setText("Circular mask")
 
         self.actionRectMask = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_05.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRectMask.setIcon(icon)
         self.actionRectMask.setText('Rectangular mask')
 
         self.actionMask = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_03.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_03.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionMask.setIcon(icon)
 
         maskmenu = QtGui.QMenu(self)
@@ -334,7 +334,7 @@ class Toolbar(QtGui.QToolBar):
         # TODO working on ROI Selection TOOL
         self.actionROI = QtGui.QAction(self)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionROI.setIcon(icon)
         self.actionROI.setToolTip('Select region of interest')
 

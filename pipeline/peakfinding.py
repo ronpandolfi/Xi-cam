@@ -5,27 +5,46 @@ from xicam import debugtools
 import pyqtgraph as pg
 from PySide import QtCore
 
-maxfiltercoef = 5
-cwtrange = np.arange(1, 100)
+# maxfiltercoef = 5
+# cwtrange = np.arange(1, 100)
+#
+# maxfiltercoef = 5
+# cwtrange = np.arange(3, 100)
+# gaussiancentersigma = 2
+# gaussianwidthsigma = 5
+#
+#
+# @debugtools.timeit
+# def findpeaks(x, y):
+#     cwtdata = filters.gaussian_filter1d(
+#         filters.gaussian_filter1d(signal.cwt(y, signal.ricker, cwtrange), gaussiancentersigma, axis=1),
+#         gaussianwidthsigma, axis=0)
+#     maxima = (cwtdata == filters.maximum_filter(cwtdata, 5))
+#     maximaloc = np.where(maxima == 1)
+#     x = np.array(x)
+#     y = np.array(y)
+#
+#     # print('before',np.array(list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))).shape)
+#     return list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))
 
-maxfiltercoef = 5
-cwtrange = np.arange(3, 100)
-gaussiancentersigma = 2
-gaussianwidthsigma = 5
+
+wavelet = signal.ricker # wavelet of choice
+widths = np.arange(1, 20) # range of widths of the ricker wavelet to search/evaluate
+max_distances = widths / 8. # ridgeline connectivity threshold; smaller values gives more peaks; larger values considers overlapping peaks as one
+gap_thresh = 4 # threshold number of rows for ridgeline connectivity; smaller values gives more peaks
+min_length = 3 # minimum ridgeline length; smaller values gives more peaks
+min_snr = 2 # Minimum SNR
+noise_perc = 10 # percentile of points below which to consider noise
+h = 3 # number of points skipped in finite differences
+truncationlow = 10 # low q truncation for zeros
+truncationhigh = 50 # high q truncation for zeros
 
 
 @debugtools.timeit
 def findpeaks(x, y):
-    cwtdata = filters.gaussian_filter1d(
-        filters.gaussian_filter1d(signal.cwt(y, signal.ricker, cwtrange), gaussiancentersigma, axis=1),
-        gaussianwidthsigma, axis=0)
-    maxima = (cwtdata == filters.maximum_filter(cwtdata, 5))
-    maximaloc = np.where(maxima == 1)
-    x = np.array(x)
-    y = np.array(y)
-
-    # print('before',np.array(list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))).shape)
-    return list(np.array(np.vstack([x[maximaloc[1]], y[maximaloc[1]], maximaloc])))
+    peaks = signal.find_peaks_cwt(y,widths,wavelet,max_distances,gap_thresh,min_length,min_snr,noise_perc)
+    peaks = peaks[1:]
+    return list(np.array(np.vstack([x[peaks],y[peaks],peaks])))
 
 
 # def findpeaks(x, y, filtersize=(5, 5), gaussianwidthsigma=5, gaussiancentersigma=0, minimumsigma=100, snr=1.2):

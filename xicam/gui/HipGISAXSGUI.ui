@@ -98,7 +98,7 @@
                                                 </property>
                                                 <property name="icon">
                                                     <iconset>
-                                                        <normaloff>gui/icons_0.png</normaloff>gui/icons_0.png
+                                                        <normaloff>xicam/gui/icons_0.png</normaloff>xicam/gui/icons_0.png
                                                     </iconset>
                                                 </property>
                                                 <property name="iconSize">
@@ -116,7 +116,7 @@
                                                 </property>
                                                 <property name="icon">
                                                     <iconset>
-                                                        <normaloff>gui/icons_2.png</normaloff>gui/icons_2.png
+                                                        <normaloff>xicam/gui/icons_2.png</normaloff>xicam/gui/icons_2.png
                                                     </iconset>
                                                 </property>
                                                 <property name="iconSize">
@@ -134,7 +134,7 @@
                                                 </property>
                                                 <property name="icon">
                                                     <iconset>
-                                                        <normaloff>gui/icons_1.png</normaloff>gui/icons_1.png
+                                                        <normaloff>xicam/gui/icons_1.png</normaloff>xicam/gui/icons_1.png
                                                     </iconset>
                                                 </property>
                                                 <property name="iconSize">
@@ -152,7 +152,7 @@
                                                 </property>
                                                 <property name="icon">
                                                     <iconset>
-                                                        <normaloff>gui/icons_4.png</normaloff>gui/icons_4.png
+                                                        <normaloff>xicam/gui/icons_4.png</normaloff>xicam/gui/icons_4.png
                                                     </iconset>
                                                 </property>
                                                 <property name="iconSize">
@@ -170,7 +170,7 @@
                                                 </property>
                                                 <property name="icon">
                                                     <iconset>
-                                                        <normaloff>gui/icons_4.png</normaloff>gui/icons_4.png
+                                                        <normaloff>xicam/gui/icons_4.png</normaloff>xicam/gui/icons_4.png
                                                     </iconset>
                                                 </property>
                                                 <property name="iconSize">

@@ -359,7 +359,7 @@ class TomoPyReconFunctionWidget(FunctionWidget):
         self.param_dict['algorithm'] = subname.lower()
         self.submenu = QtGui.QMenu('Input Function')
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_39.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.submenu.setIcon(icon)
         ui.build_function_menu(self.submenu, config.funcs['Input Functions'][name], config.names,
                                self.addCenterDetectFunction)

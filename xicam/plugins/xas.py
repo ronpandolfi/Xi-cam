@@ -16,7 +16,7 @@ from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
 
 
-class plugin(base.plugin):
+class XASPlugin(base.plugin):
     name = 'XAS'
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +27,7 @@ class plugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(XASPlugin, self).__init__(*args, **kwargs)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)

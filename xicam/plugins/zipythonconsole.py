@@ -22,11 +22,11 @@ import os
 
 
 
-class plugin(base.plugin):
+class IPythonPlugin(base.plugin):
     name = 'IPython'
 
     def __init__(self, *args, **kwargs):
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('xicam/gui/style.stylesheet', 'r') as f:
             style = f.read()
         style = (qdarkstyle.load_stylesheet() + style)
 
@@ -64,6 +64,6 @@ class plugin(base.plugin):
 
         self.toolbar = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(IPythonPlugin, self).__init__(*args, **kwargs)
 
 

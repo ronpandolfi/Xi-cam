@@ -19,7 +19,6 @@ class User(object):
         self.username = None
 
     def __del__(self):
-        # Something weird is going on here??
         try:
             self.session.close()
         except TypeError:

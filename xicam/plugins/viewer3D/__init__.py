@@ -10,7 +10,7 @@ op_sys = platform.system()
 # if op_sys == 'Darwin':
 #     from Foundation import NSURL
 
-class plugin(base.plugin):
+class Viewer3DPlugin(base.plugin):
     name = "3D Viewer"
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +27,7 @@ class plugin(base.plugin):
         self.centerwidget.dropEvent = self.dropEvent
         self.rightwidget = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(Viewer3DPlugin, self).__init__(*args, **kwargs)
 
     def openfiles(self, paths):
         print paths

@@ -60,7 +60,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_39.png</normaloff>gui/icons_39.png</iconset>
+         <normaloff>xicam/gui/icons_39.png</normaloff>xicam/gui/icons_39.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -80,7 +80,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_38.png</normaloff>gui/icons_38.png</iconset>
+         <normaloff>xicam/gui/icons_38.png</normaloff>xicam/gui/icons_38.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -97,7 +97,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_37.png</normaloff>gui/icons_37.png</iconset>
+         <normaloff>xicam/gui/icons_37.png</normaloff>xicam/gui/icons_37.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -114,7 +114,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_55.png</normaloff>gui/icons_55.png</iconset>
+         <normaloff>xicam/gui/icons_55.png</normaloff>xicam/gui/icons_55.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -134,7 +134,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>gui/icons_36.png</normaloff>gui/icons_36.png</iconset>
+         <normaloff>xicam/gui/icons_36.png</normaloff>xicam/gui/icons_36.png</iconset>
        </property>
        <property name="iconSize">
         <size>

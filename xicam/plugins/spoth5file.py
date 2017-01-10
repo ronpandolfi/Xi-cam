@@ -110,7 +110,7 @@ class SPOT_H5:
         return self.node.calibration.text.value[0]
 
 
-class plugin(viewer.plugin):
+class SPOTViewerPlugin(viewer.ViewerPlugin):
     name = "SPOTH5"
 
     def openfiles(self, filenames):

@@ -1,7 +1,8 @@
 """
 Usage: python setup.py install
        python setup.py bdist_wheel
-       python setup.py sdist
+       python setup.py sdist bdist_egg
+       twine upload dist/*
 """
 
 # if __name__ == "__main__":
@@ -21,11 +22,9 @@ import glob
 from numpy.distutils.core import Extension
 
 
-print find_packages(exclude=['contrib', 'docs', 'tests'])
-
 here = path.abspath(path.dirname(__file__))
 
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:  # rst?
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:  # rst?
     long_description = f.read()
 
 EXT = Extension(name='pipeline.cWarpImage',
@@ -40,7 +39,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.2.2',
+    version='1.2.12',
 
     description='A synchrotron data analysis interface',
     long_description=long_description,
@@ -82,7 +81,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    #package_dir={'xicam.plugins':'xicam.plugins'},
+    package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline'},
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -92,8 +91,8 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'cython', 'pyFAI', 'fabio', 'h5py', 'shiboken', 'PySide', 'PyQtGraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed'],
+    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'Shiboken', 'PySide', 'pyqtgraph', 'QDarkStyle',
+                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
 
     setup_requires=['numpy', 'cython'],
 
@@ -110,24 +109,25 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-         'gui': ['gui'],
+         'xicam': ['gui/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files # noqa
     # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
-    data_files=[('lib/python2.7/site-packages/gui', glob.glob('gui/*')),
-                ('lib/python2.7/site-packages/yaml/tomography',glob.glob('yaml/tomography/*'))],
+    #data_files=[#('lib/python2.7/site-packages/gui', glob.glob('gui/*')),
+    #            ('lib/python2.7/site-packages/yaml/tomography',glob.glob('yaml/tomography/*'))],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'gui_scripts': [
-            'xicam=xicam.main:main',
+            'xicam=xicamlauncher.main:main',
         ],
     },
 
-    ext_modules=[EXT]
+    ext_modules=[EXT],
+    include_package_data=True
 )

@@ -54,6 +54,9 @@ def orientation_uvw(uvw, R):
 
 
 def orientation_hkl(hkl, R):
+    h = hkl[0]
+    k = hkl[1]
+    l = hkl[2]
     if h == 0 and k == 0 and l == 0:
         raise ValueError("one of [h k l] must be non-zero")
 
@@ -67,9 +70,9 @@ def orientation_hkl(hkl, R):
     else:
         A_c[0] = 1.;
         if not k == 0:
-            Ac[1] = 1
+            A_c[1] = 1
         else:
-            Ac[2] = 1
+            A_c[2] = 1
 
     # vector Bc
     if not k == 0:
@@ -83,7 +86,7 @@ def orientation_hkl(hkl, R):
 
     # vector Cc
     if not l == 0:
-        C_c[2] = 1. / hkl[1]
+        C_c[2] = 1. / hkl[2]
     else:
         C_c[2] = 1.
         if not h == 0:
@@ -160,18 +163,14 @@ def reflection_condtion(hkl, unitcell, space_grp):
         return True
 
 
-def alpha_exit(q, alphai, nu, k):
-    t1 = (q[2] / k) ** 2 + np.sin(alphai) ** 2
-    t2 = 2 * q[2] / k * np.sqrt(nu ** 2 - 1 + np.sin(alphai) ** 2)
-    af1 = np.arcsin(np.real(np.sqrt(t1 - t2)))
-    af2 = np.arcsin(np.real(np.sqrt(t1 + t2)))
-    return af1, af2
+def alpha_exit(qz, alphai, k):
+    alf = np.arcsin(qz / k - np.sin(alphai))
+    return alf
 
-
-def theta_exit(q, alphai, alphaf, k):
-    t1 = np.cos(alphaf) ** 2 + np.cos(alphai) ** 2 - (q[0] ** 2 + q[1] ** 2) / k ** 2
-    t2 = 2 * np.cos(alphaf) * np.cos(alphai)
-    return np.sign(q[1]) * np.arccos(t1 / t2)
+def theta_exit(q, alpha, alphai, k):
+    t1 = np.cos(alpha)**2 + np.cos(alphai)**2 - (q[0]**2 + q[1]**2)/(k*k)
+    t2 = 2 * np.cos(alpha) * np.cos(alphai)
+    return np.sign(q[1]) * np.arccos(t1/t2)
 
 def angles_to_pixels(angles, center, sdd, pixel_size=None):
     if pixel_size is None:
@@ -197,11 +196,19 @@ class peak(object):
         self.twotheta = None
         self.alphaf = None
         self.qpar = None
-        self.qvrt = None
+        self.qz = None
 
     def pos(self):
         return self.x, self.y
 
+    # qz, alphaf and y-poition are going to be different
+    def copy(self):
+        val = peak(self.mode)
+        val.twotheta = self.twotheta
+        val.qpar = self.qpar
+        val.hkl = self.hkl
+        val.x = self.x
+        return val
 
     def position(self, center, sdd, pixels):
         tan_2t = np.tan(self.twotheta)
@@ -209,7 +216,7 @@ class peak(object):
         x= tan_2t * sdd
         self.x = sdd * tan_2t / pixels# + config.activeExperiment.center[0]
         self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels# + config.activeExperiment.center[1]
-        
+
     def isAt(self, pos):
         if np.isnan(self.twotheta): return False
         return int(self.x) == int(pos.x()) and int(self.y) == int(pos.y())
@@ -219,8 +226,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"qpar: {}\n".format(self.qpar/1e10)
-        if self.qvrt is not None: s += u"qz: {}".format(self.qvrt/1e10)
+        if self.qpar is not None: s += u"q\u2225: {}\n".format(self.qpar/1e10)
+        if self.qz is not None: s += u"q\u27c2: {}\n".format(self.qz/1e10)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -230,6 +237,27 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
     qz = k * np.sin(alphaf) + np.sin(alphai)
     return np.sqrt(qx**2 + qy**2), qz
 
+def dwba_componets(Gz, k, nu, alphai):
+    alphaf = np.zeros(4, dtype=np.float)
+    gprime = Gz/k
+    t1 = nu**2 - np.cos(alphai)**2
+    if np.real(t1) < 0:
+        print 'Error: incoming angle is below the critical angle'
+        return None
+    cprime = np.sqrt(t1)
+    cosa1 = nu**2 - (gprime + cprime)**2 
+    cosa2 = nu**2 - (gprime - cprime)**2 
+    a1 = np.arccos(np.sqrt(cosa1))
+    a2 = np.arccos(np.sqrt(cosa2))
+    #TODO: this is a hack a1 should always be transmission
+    if abs(a2) > abs(a1):
+        alphaf[0] = a1
+        alphaf[1] = a2
+    else:
+        alphaf[0] = a2
+        alphaf[1] = a1
+    
+    return alphaf
 
 def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
                norm_type="uvw", wavelen=0.123984e-9, refdelta=2.236E-06, refbeta=-1.8790E-09, order=5, unitcell=None, space_grp=None):
@@ -240,23 +268,16 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
 
     A = crystal2sample(a, b, c, alpha, beta, gamma)
     # unit vector normal to sample plane
+    normal = np.array(normal)
     if norm_type == "xyz":
-        if isinstance(normal, np.ndarray):
-            e_norm = normal / norm(normal)
-        else:
-            n1 = np.array(normal, dtype=float)
-            e_norm = n1 / norm(n1)
+        e_norm = normal / norm(normal)
     elif norm_type == "hkl":
-        if not n.dtype.dtype is np.int_:
+        if not normal.dtype.type is np.int_:
             raise TypeError("hkl type must be integer datatype")
         e_norm = orientation_hkl(normal, A)
     elif norm_type == "uvw":
-        if isinstance(normal, np.ndarray):
-            n1 = np.array(normal, dtype=float)
-            e_norm = orientation_uvw(n1, A)
-        else:
-            n1 = np.array(normal, dtype=float)
-            e_norm = orientation_uvw(n1, A)
+        n1 = np.array(normal, dtype=float)
+        e_norm = orientation_uvw(n1, A)
     else:
         raise ValueError("error: unable to process normal direction")
 
@@ -277,39 +298,41 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     c = V[:, 2]
     RV = reciprocalvectors(a, b, c)
 
-    nu = 1 - np.complex(refdelta,refbeta)
+    nu = 1 - np.complex(refdelta, refbeta)
     HKL = itertools.product(range(-order, order + 1), repeat=3)
     alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
     k = 2 * np.pi / wavelen
     peaks = list()
     for hkl in HKL:
-        #if hkl[2] < 0: continue
-        if not sgexclusions.check(hkl,space_grp): continue
+        if not sgexclusions.check(hkl, space_grp): continue
         if (reflection_condtion(hkl, unitcell, space_grp)):
             G = RV[0, :] * hkl[0] + RV[1, :] * hkl[1] + RV[2, :] * hkl[2]
-            al_t, al_r = alpha_exit(G, alphai, nu, k)
+            qpar = np.sqrt(G[0]**2 + G[1]**2)
+            alpha = alpha_exit(G[2], alphai, k)
+            theta = theta_exit(G, alpha, alphai, k)
 
-            if al_t > 0:
-                th = theta_exit(G, alphai, al_t, k)
-                transmission = peak('Transmission')
-                transmission.hkl = hkl
-                transmission.twotheta = th
-                transmission.alphaf = al_t
-                qp, qv = qvalues(th, al_t, alphai, wavelen)
-                transmission.qpar = qp
-                transmission.qvrt = qv
-                peaks.append(transmission)
+            # compute DWBA components
+            alphaf = dwba_componets(G[2], k, nu, alphai)
+            if alphaf is None:
+                continue
 
-            if al_r > 0:
-                th = theta_exit(G, alphai, al_r, k)
-                reflection = peak('Reflection')
-                reflection.hkl = hkl
-                reflection.twotheta = th
-                reflection.alphaf = al_r
-                qp, qv = qvalues(th, al_r, alphai, wavelen)
-                reflection.qpar = qp
-                reflection.qvrt = qv
-                peaks.append(reflection)
+            # get the transmission peaks
+            transmission = peak('Transmission')
+            transmission.hkl = hkl
+            transmission.twotheta = theta
+            transmission.alphaf = alphaf[0]
+            transmission.qpar = qpar
+            transmission.qz = G[2]
+            peaks.append(transmission)
+
+            # calulate reflection peaks
+            reflection = peak('Reflection')
+            reflection.hkl = hkl
+            reflection.twotheta = theta
+            reflection.alphaf = alphaf[1]
+            reflection.qpar = qpar
+            reflection.qz = G[2]
+            peaks.append(reflection)
 
     return peaks
 

@@ -29,7 +29,10 @@ class NewtClient(User):
     def __del__(self):
         if self.logged_in:
             self.logout()
-        super(NewtClient, self).__del__()
+        try:
+            self.session.close()
+        except TypeError:
+            pass
 
     def login(self, username, password):
         """

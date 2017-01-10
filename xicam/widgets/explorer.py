@@ -18,7 +18,8 @@ from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
 from pipeline import pathtools, msg
-
+from xicam import config
+from modpkgs import guiinvoker
 
 class LocalFileView(QtGui.QTreeView):
     """
@@ -36,7 +37,8 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = os.path.expanduser('~')  # pathtools.getRoot()
+        self.path = config.settings['defaultlocalpath']
+        if not self.path: self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
         header = self.header()
@@ -77,6 +79,7 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.setRootIndex(self.file_model.index(root.absolutePath()))
         self.pathChanged.emit(path)
+        config.settings['defaultlocalpath'] = path
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
@@ -341,7 +344,7 @@ class SFTPFileView(QtGui.QTreeWidget):
 
     @threads.method(callback_slot=lambda self: self.pathChanged.emit(self.path))
     def refresh(self, path=None):
-        self.clear()
+        guiinvoker.invoke_in_main_thread(self.clear)
         if path is not None:
             self.path = path
             self.client.cd(path)
@@ -601,14 +604,14 @@ class FileExplorer(QtGui.QWidget):
         self.refresh_button.setToolTip('Refresh')
 
         for button, icon_file in zip((self.back_button, self.refresh_button),
-                                     ('gui/icons_44.png', 'gui/icons_57.png')):
+                                     ('xicam/gui/icons_44.png', 'xicam/gui/icons_57.png')):
             icon = QtGui.QIcon()
             icon.addPixmap(QtGui.QPixmap(icon_file), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             button.setIcon(icon)
             button.setIconSize(QtCore.QSize(18, 18))
             button.setFixedSize(32, 32)
 
-        self.path_label.setReadOnly(True)
+        # self.path_label.setReadOnly(True)
 
         l = QtGui.QVBoxLayout(self)
         l.setStretch(0, 0)
@@ -626,6 +629,11 @@ class FileExplorer(QtGui.QWidget):
         self.back_button.clicked.connect(self.onBackClicked)
         self.refresh_button.clicked.connect(self.onRefreshClicked)
         self.file_view.pathChanged.connect(self.setPathLabel)
+        self.path_label.textChanged.connect(self.pathlabelChanged)
+
+    def pathlabelChanged(self):
+        path = self.path_label.text()
+        self.file_view.refresh(path=path)
 
     def onBackClicked(self):
         path = self.file_view.path
