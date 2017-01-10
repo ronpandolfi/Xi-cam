@@ -27,6 +27,7 @@ script:
 - pylint xicamlauncher xicam pipeline --errors-only
 - pip install coverage
 - coverage run tests/__init__.py
+- pip install cx_freeze
 - ./buildlinux.sh
 after_success:
 - pip install codecov --upgrade
