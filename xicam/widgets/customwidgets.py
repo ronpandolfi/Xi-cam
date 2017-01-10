@@ -117,3 +117,76 @@ class ImageView(pg.ImageView):
                                              u"   <span style=''>y= </span>,   <span style=''>I= </span>")
         except AttributeError:
             pass
+
+class sliceDialog(QtGui.QDialog):
+
+    """
+    Subclass of QDialog to allow for more diverse returns from input dialog popups, specifically
+    relating to tomography slice previews
+
+    Attributes
+    ----------
+    field1: int
+        integer representing lowest slice number to reconstruct
+    field2: int
+        integer representing highest slice number to reconstruct
+    """
+
+    def __init__(self, parent=None, val1=0, val2=0, maximum=1000):
+
+        super(sliceDialog, self).__init__(parent)
+
+        text = QtGui.QLabel("Which slice(s) would you like to reconstruct?")
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(text)
+
+        label1 = QtGui.QLabel("Start slice: ")
+        label2 = QtGui.QLabel("End slice: ")
+        self.field1 = QtGui.QSpinBox()
+        self.field1.setRange(0,maximum)
+        self.field1.setValue(val1)
+        self.field2 = QtGui.QSpinBox()
+        self.field2.setRange(0,maximum)
+        self.field2.setValue(val2)
+
+
+        h1 = QtGui.QHBoxLayout()
+        h1.addWidget(label1)
+        h1.addWidget(self.field1)
+        h2 = QtGui.QHBoxLayout()
+        h2.addWidget(label2)
+        h2.addWidget(self.field2)
+
+        valueButton = QtGui.QPushButton("Ok")
+        valueButton.setDefault(True)
+        cancelButton = QtGui.QPushButton("Cancel")
+        valueButton.clicked.connect(self.return_vals)
+        cancelButton.clicked.connect(self.cancel)
+        h3 = QtGui.QHBoxLayout()
+        h3.addWidget(cancelButton)
+        h3.addWidget(valueButton)
+
+        layout.addLayout(h1)
+        layout.addLayout(h2)
+        layout.addLayout(h3)
+        self.setLayout(layout)
+        self.setWindowTitle("Slice Preview")
+        self.exec_()
+
+    def return_vals(self):
+        try:
+            val1 = int(self.field1.text())
+            val2 = int(self.field2.text())
+            if val1>val2:
+                self.value = [val2,val1]
+            else:
+                self.value = [val1,val2]
+        except ValueError:
+            self.value = "Slice values must be integers"
+
+        self.accept()
+
+
+    def cancel(self):
+        self.value = None
+        self.reject()

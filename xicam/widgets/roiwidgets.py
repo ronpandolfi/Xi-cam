@@ -11,6 +11,7 @@ __status__ = "Beta"
 
 
 import numpy as np
+import scipy as sp
 import pyqtgraph as pg
 from PySide import QtCore
 
@@ -134,11 +135,23 @@ class ROImageOverlay(pg.ROI):
         self._image_overlap[slc] = self.bg_imgeItem.image[bg_slc]
         return self._image_overlap
 
-    def updateImage(self, autolevels=False):
+    def remove_outlier(self, array1, array2, total, thresh = 0.05):
+        val = sp.integrate.trapz(array1, array2)
+        print 1- (float(val) / total)
+        if 1 - (float(val)/total) < thresh:
+            return self.remove_outlier(array1[1:-1],array2[1:-1], total, thresh=thresh)
+        else:
+            return array1, array2
+
+    def updateImage(self, autolevels=False, levels=None):
         """
         Updates the image shown in the ROI to the difference of the current image and the image_overlap
         """
-        self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
+        if levels:
+            self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels, levels=levels)
+        else:
+            self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
+
 
     def translate(self, *args, **kwargs):
         """

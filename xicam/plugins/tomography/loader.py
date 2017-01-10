@@ -30,6 +30,8 @@ class ProjectionStack(StackImage):
         self.darks = self.fabimage.darks
 
 
+
+
 class SinogramStack(StackImage):
     """
     Simply subclass of StackImage for Tomography Sinogram stacks.

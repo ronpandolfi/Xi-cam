@@ -10,6 +10,7 @@ __status__ = "Beta"
 
 
 import os
+import inspect
 from collections import OrderedDict
 import yaml
 from pipeline import msg
@@ -25,8 +26,8 @@ with open('yaml/tomography/functions.yml','r') as stream:
 parameter_files = ('tomopy_function_parameters.yml',
                    'aux_function_parameters.yml',
                    'dataexchange_function_parameters.yml',
-                   'astra_function_parameters.yml')
-                   #'mbir_function_parameters.yml')
+                   'astra_function_parameters.yml',
+                   'mbir_function_parameters.yml')
 parameters = {}
 
 for file in parameter_files:
@@ -44,9 +45,16 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
 for algorithm in funcs['Functions']['Reconstruction']['Astra']:
     names[algorithm] = ['recon', 'astra']
 
+for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
+    names[algorithm] = ['recon','mbir']
+
 # Load dictionary with function parameters to be retrieved from metadatas
 with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
+
+# Load dictionary for astra recon functions
+with open('yaml/tomography/function_defaults.yml','r') as stream:
+    function_defaults=yaml.load(stream)
 
 
 def load_pipeline(yaml_file):
@@ -77,7 +85,7 @@ def save_function_pipeline(pipeline, file_name):
             yamlmod.ordered_dump(pipeline, y)
 
 
-def set_als832_defaults(mdata, funcwidget_list):
+def set_als832_defaults(mdata, funcwidget_list, path, shape):
     """
     Set defaults for ALS Beamline 8.3.2 from dataset metadata
 
@@ -87,8 +95,12 @@ def set_als832_defaults(mdata, funcwidget_list):
         dataset metadata
     funcwidget_list : list of FunctionWidgets
         list of FunctionWidgets exposed in the UI workflow pipeline
+    path: str
+        path to dataset
+    shape: tuple
+        tuple containing dataset shape
     """
-
+    from psutil import cpu_count
     for f in funcwidget_list:
         if f is None:
             continue
@@ -106,11 +118,41 @@ def set_als832_defaults(mdata, funcwidget_list):
                     except KeyError as e:
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
-        elif f.func_name == 'Write':
-            outname = os.path.join(os.path.expanduser('~'), *2*('RECON_' + mdata['dataset'],))
+        elif f.func_name == 'Reader': #dataset specific read values
+            f.params.child('start_sinogram').setLimits([0, shape[2]])
+            f.params.child('end_sinogram').setLimits([0, shape[2]])
+            f.params.child('step_sinogram').setLimits([0, shape[2]+1])
+            f.params.child('start_projection').setLimits([0, shape[0]])
+            f.params.child('end_projection').setLimits([0, shape[0]])
+            f.params.child('step_projection').setLimits([0, shape[0]+1])
+            f.params.child('end_sinogram').setValue(shape[2])
+            f.params.child('end_sinogram').setDefault(shape[2])
+            f.params.child('end_projection').setValue(shape[0])
+            f.params.child('end_projection').setDefault(shape[0])
+            f.params.child('sinograms_per_chunk').setValue(cpu_count()*5)
+            f.params.child('sinograms_per_chunk').setDefault(cpu_count()*5)
+
+        elif f.func_name == 'Write': #dataset specific write values
+            data_folders = {'bl832data-raw':'bl832data-scratch', 'data-raw':'data-scratch'}
+            file_name = path.split("/")[-1].split(".")[0]
+            working_dir = path.split(file_name)[0]
+            for key in data_folders.keys():
+                if key in working_dir:
+                    user = working_dir.split('/' + key)[-1].split('/')[1]
+                    mount = working_dir.split(key)[0]
+                    working_dir = os.path.join(mount, data_folders[key], user)
+            outname = os.path.join(working_dir, *2*('RECON_' + file_name,))
+            f.params.child('parent folder').setValue(working_dir)
+            f.params.child('parent folder').setDefault(working_dir)
+            f.params.child('folder name').setValue('RECON_' + file_name)
+            f.params.child('folder name').setDefault('RECON_' + file_name)
+            f.params.child('file name').setValue('RECON_' + file_name)
+            f.params.child('file name').setDefault('RECON_' + file_name)
             f.params.child('fname').setValue(outname)
+            f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values())
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
+
 
 
 def extract_pipeline_dict(funwidget_list):
@@ -128,15 +170,108 @@ def extract_pipeline_dict(funwidget_list):
         dictionary specifying the workflow pipeline
     """
 
+    # list of parameter name exceptions, for the "Write" function
+    ex_lst = ['file name', 'fname', 'folder name', 'parent folder']
+
     d = OrderedDict()
+    count = 1
     for f in funwidget_list:
-        d[f.func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
-        d[f.func_name][f.subfunc_name]['Enabled'] = f.enabled
+        # a bunch of special cases for the write function
+        if 'Reader' in f.name:
+            continue
+        func_name = str(count) + ". " + f.func_name
+        if "Write" in f.func_name:
+            write_dict = OrderedDict()
+            d[func_name] = OrderedDict({f.subfunc_name: write_dict})
+            for child in f.params.children():
+                if child.name() in ex_lst:
+                    d[func_name][f.subfunc_name][child.name()] = str(child.value())
+                elif child.name() == "Browse":
+                    pass
+                else:
+                    d[func_name][f.subfunc_name][child.name()] = child.value()
+        else:
+            d[func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
+        d[func_name][f.subfunc_name]['Enabled'] = f.enabled
         if f.func_name == 'Reconstruction':
-            d[f.func_name][f.subfunc_name].update({'Package': f.packagename})
+            d[func_name][f.subfunc_name].update({'Package': f.packagename})
         for param, ipf in f.input_functions.iteritems():
-            if 'Input Functions' not in d[f.func_name][f.subfunc_name]:
-                d[f.func_name][f.subfunc_name]['Input Functions'] = {}
+            if 'Input Functions' not in d[func_name][f.subfunc_name]:
+                d[func_name][f.subfunc_name]['Input Functions'] = {}
             id = {ipf.func_name: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
-            d[f.func_name][f.subfunc_name]['Input Functions'][param] = id
+            d[func_name][f.subfunc_name]['Input Functions'][param] = id
+        count += 1
     return d
+
+def extract_runnable_dict(funwidget_list):
+    """
+    Extract a dictionary from a FunctionWidget list in the appropriate format to save as a python runnable.
+
+    Parameters
+    ----------
+    funwidget_list : list of FunctionWidgets
+        list of FunctionWidgets exposed in the UI workflow pipeline
+
+    Returns
+    -------
+    dict
+        dictionary specifying the workflow pipeline and important parameters
+    """
+    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'}}
+
+    d = OrderedDict()
+    func_dict = OrderedDict(); subfuncs = OrderedDict()
+    count = 1
+    for f in funwidget_list:
+        keywords = {}
+        if not f.enabled or 'Reader' in f.name:
+            continue
+
+        func = "{}.{}".format(f.package, f._function.func_name)
+        if 'xicam' in func:
+            func = func.split(".")[-1]
+        fpartial = f.partial
+        for key, val in fpartial.keywords.iteritems():
+            keywords[key] = val
+        for arg in inspect.getargspec(f._function)[0]:
+            if arg not in f.partial.keywords.iterkeys() or 'center' in arg:
+                keywords[arg] = arg
+
+
+        # get rid of degenerate keyword arguments
+        if 'arr' in keywords and 'tomo' in keywords:
+            keywords['tomo'] = keywords['arr']
+            keywords.pop('arr', None)
+
+        # special cases for the 'write' function
+        if 'start' in keywords:
+            keywords['start'] = 'start'
+        if 'Write' in f.name:
+            keywords.pop('parent folder', None)
+            keywords.pop('folder name', None)
+            keywords.pop('file name', None)
+
+
+        if 'Reconstruction' in f.name:
+            for param, ipf in f.input_functions.iteritems():
+                if 'theta' in param or 'center' in param:
+                    subfunc = "{}.{}(".format(ipf.package,ipf._function.func_name)
+                    for key, val in ipf.partial.keywords.iteritems():
+                        subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
+                            else '{}=\'{}\','.format(key, val)
+                    for cor_func in center_functions.iterkeys():
+                        if ipf._function.func_name in cor_func:
+                            for k, v in center_functions[cor_func].iteritems():
+                                subfunc += "{}={},".format(k, v)
+                    subfunc += ")"
+                    subfuncs[param] = subfunc
+            if 'astra' in keywords['algorithm']:
+                keywords['algorithm'] = 'tomopy.astra'
+
+        func_dict[str(count) + ". " + func] = keywords
+        count += 1
+
+    d['func'] = func_dict
+    d['subfunc'] = subfuncs
+    return d
+

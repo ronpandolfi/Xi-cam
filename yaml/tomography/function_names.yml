@@ -90,6 +90,24 @@ Crop:
 Convert Data Type:
 - convert_data
 - pipelinefunctions
-Array Operation:
-- array_operation
+Add:
+- array_operation_add
+- pipelinefunctions
+Subtract:
+- array_operation_sub
+- pipelinefunctions
+Mutiply:
+- array_operation_mult
+- pipelinefunctions
+Divide:
+- array_operation_div
+- pipelinefunctions
+Maximum:
+- array_operation_max
+- pipelinefunctions
+Slice:
+- slice
+- pipelinefunctions
+Read Data:
+- reader
 - pipelinefunctions
