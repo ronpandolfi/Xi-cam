@@ -128,22 +128,88 @@ def convert_data(arr, imin=None, imax=None, dtype='uint8', intcast='float32'):
     return out.astype(np.dtype(dtype), copy=False)
 
 
+# series of wrappers for simple array operations to expose in workflow pipeline GUI
+def array_operation_add(arr, value=0):
+    return ne.evaluate('arr + value')
 
-def array_operation(arr, value, operation='divide'):
+def array_operation_sub(arr, value=0):
+    return ne.evaluate('arr - value', truediv=True)
+
+def array_operation_mult(arr, value=1):
+    return ne.evaluate('arr * value')
+
+def array_operation_div(arr, value=1):
+    return ne.evaluate('arr / value')
+
+def array_operation_max(arr, value=0):
+    return np.maximum(arr, value)
+
+def reader(start_sinogram=0, end_sinogram=0, step_sinogram=1, start_projection=0, end_projection=0, step_projection=1,
+           sinograms_per_chunk=0):
+
     """
-    Simple wrapper function to expose array element by element operations in workflow pipeline GUI
+    Function to expose input tomography array parameters in function pipeline GUI
+
+    Parameters
+    ----------
+    start_sinogram : int
+        Start for sinogram processing
+    end_sinogram : int
+        End for sinogram processing
+    step_sinogram : int
+        Step for sinogram processing
+    start_projection : int
+        Start for projection processing
+    end_projection : int
+        End for projection processing
+    step_projection : int
+        Step for projection processing
+    sinograms_per_chunk : int
+        Number of sinograms processed at one time. Limited by machine memory size
+
+    Returns
+    -------
+    tuple, tuple, int:
+        Arguments rearranged into tuples to feed into reconstruction
     """
 
-    if operation not in ('add', 'subtract', 'multiply', 'divide'):
-        raise ValueError('Operation {} is not a valid array operation'.format(operation))
-    elif operation == 'add':
-        return ne.evaluate('arr + value')
-    elif operation == 'subtract':
-        return ne.evaluate('arr - value', truediv=True)
-    elif operation == 'multiply':
-        return ne.evaluate('arr * value')
-    elif operation == 'divide':
-        return ne.evaluate('arr / value')
+    return (start_projection, end_projection, step_projection), (start_sinogram, end_sinogram, step_sinogram), \
+           sinograms_per_chunk
+
+def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
+    """
+    Slices a 3D array according the points given
+
+    Parameters
+    ----------
+    arr : ndarray
+    p11 : int
+        First point along first axis
+    p12 : int
+        Second point along first axis
+    p21 : int
+        First point along second axis
+    p22 : int
+        Second point along second axis
+    p31 : int
+        First point along third axis
+    p32 : int
+        Second point along third axis
+    axis : int
+        Axis to crop along
+
+    Returns
+    -------
+    ndarray:
+        Cropped array
+    """
+
+    slc = []
+    pts = [p11, p12, p21, p22, p31, p32]
+    for n in range(len(arr.shape)):
+        slc.append(slice(pts.pop(0), pts.pop(0)))
+    return arr[slc]
+
 
 
 if __name__ == '__main__':

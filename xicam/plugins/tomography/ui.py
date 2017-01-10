@@ -93,40 +93,48 @@ class UIform(object):
         paramtree = pt.ParameterTree()
         self.param_form = QtGui.QStackedWidget()
         self.param_form.addWidget(paramtree)
-        leftwidget.addWidget(self.param_form)
-        leftwidget.addWidget(self.functionwidget)
-
-        icon = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
-        self.leftmodes = [(leftwidget, icon)]
-
-        rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
-
-        configtree = pt.ParameterTree()
-        configtree.setMinimumHeight(230)
-
-        params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
-                  {'name': 'End Sinogram', 'type': 'int'},
-                  {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'End Projection', 'type': 'int'},
-                  {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-                  {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 20*cpu_count()},
-                  {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
-                   'limits':[1, cpu_count()]}]
-
-        self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
-        configtree.setParameters(self.config_params, showTop=False)
-
-        rightwidget.addWidget(configtree)
-
         self.property_table = pg.TableWidget()
         self.property_table.verticalHeader().hide()
         self.property_table.horizontalHeader().setStretchLastSection(True)
         self.property_table.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+        leftwidget.addWidget(self.param_form)
+        leftwidget.addWidget(self.functionwidget)
 
-        rightwidget.addWidget(self.property_table)
-        self.property_table.hide()
-        self.rightmodes = [(rightwidget, QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.File))]
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
+        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
+
+        #
+        # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
+        #
+        # configtree = pt.ParameterTree()
+        # configtree.setMinimumHeight(230)
+        #
+        # params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
+        #           {'name': 'End Sinogram', 'type': 'int'},
+        #           {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
+        #           {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
+        #           {'name': 'End Projection', 'type': 'int'},
+        #           {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
+        #           {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
+        #           {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
+        #            'limits':[1, cpu_count()]}]
+        #
+        # self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
+        # configtree.setParameters(self.config_params, showTop=False)
+        # rightwidget.addWidget(configtree)
+
+        icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
+        icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
+        icon_params = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_62.png")) #parameter tree icon
+        self.leftmodes = [(leftwidget, icon_functions),
+                          (self.property_table, icon_properties)]
+
+        # self.leftmodes = [(leftwidget, icon_functions),
+        #                   (rightwidget, icon_params),
+        #                   (self.property_table, icon_properties)]
+
+
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
         """
@@ -154,18 +162,18 @@ class UIform(object):
         self.functionwidget.moveDownButton.clicked.connect(moveup)
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
-
-    def setConfigParams(self, proj, sino):
-        self.config_params.child('End Sinogram').setLimits([0, sino])
-        self.config_params.child('Start Sinogram').setLimits([0, sino])
-        self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
-        self.config_params.child('End Sinogram').setValue(sino)
-        self.config_params.child('End Sinogram').setDefault(sino)
-        self.config_params.child('End Projection').setLimits([0, proj])
-        self.config_params.child('Start Projection').setLimits([0, proj])
-        self.config_params.child('Step Projection').setLimits([0, proj + 1])
-        self.config_params.child('End Projection').setValue(proj)
-        self.config_params.child('End Projection').setDefault(proj)
+    #
+    # def setConfigParams(self, proj, sino):
+    #     self.config_params.child('End Sinogram').setLimits([0, sino])
+    #     self.config_params.child('Start Sinogram').setLimits([0, sino])
+    #     self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
+    #     self.config_params.child('End Sinogram').setValue(sino)
+    #     self.config_params.child('End Sinogram').setDefault(sino)
+    #     self.config_params.child('End Projection').setLimits([0, proj])
+    #     self.config_params.child('Start Projection').setLimits([0, proj])
+    #     self.config_params.child('Step Projection').setLimits([0, proj + 1])
+    #     self.config_params.child('End Projection').setValue(proj)
+    #     self.config_params.child('End Projection').setDefault(proj)
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):
@@ -249,6 +257,12 @@ class Toolbar(QtGui.QToolBar):
         self.actionRun_SlicePreview.setIcon(icon)
         self.actionRun_SlicePreview.setToolTip('Slice preview')
 
+        self.actionRun_MultiSlicePreview = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_63.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionRun_MultiSlicePreview.setIcon(icon)
+        self.actionRun_MultiSlicePreview.setToolTip('Multi-slice preview')
+
         self.actionRun_3DPreview = QtGui.QAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_42.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
@@ -260,6 +274,17 @@ class Toolbar(QtGui.QToolBar):
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun_FullRecon.setIcon(icon)
         self.actionRun_FullRecon.setToolTip('Full reconstruction')
+
+        self.actionMBIR = QtGui.QWidgetAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_06.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionMBIR.setIcon(icon)
+        self.actionMBIR.setToolTip('MBIR reconstruction')
+        self.toolbuttonMBIR = QtGui.QToolButton(parent=self)
+        self.toolbuttonMBIR.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.actionMBIR.setDefaultWidget(self.toolbuttonMBIR)
+        self.actionMBIR.setCheckable(True)
+        self.toolbuttonMBIR.setDefaultAction(self.actionMBIR)
 
         self.actionCenter = QtGui.QWidgetAction(self)
         icon = QtGui.QIcon()
@@ -317,13 +342,16 @@ class Toolbar(QtGui.QToolBar):
 
         self.addAction(self.actionRun_FullRecon)
         self.addAction(self.actionRun_SlicePreview)
+        self.addAction(self.actionRun_MultiSlicePreview)
         self.addAction(self.actionRun_3DPreview)
+        self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
         # self.addAction(self.actionROI)
         # self.addAction(toolbuttonMaskingAction)
 
 
-    def connectTriggers(self, slicepreview, preview3D, fullrecon, center, roiselection):
+    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir):
+
         """
         Connect toolbar action signals to give slots
 
@@ -340,7 +368,9 @@ class Toolbar(QtGui.QToolBar):
         """
 
         self.actionRun_SlicePreview.triggered.connect(slicepreview)
+        self.actionRun_MultiSlicePreview.triggered.connect(multislicepreview)
         self.actionRun_3DPreview.triggered.connect(preview3D)
         self.actionRun_FullRecon.triggered.connect(fullrecon)
         self.actionCenter.toggled.connect(center)
+        self.actionMBIR.toggled.connect(mbir)
         self.actionROI.triggered.connect(roiselection)

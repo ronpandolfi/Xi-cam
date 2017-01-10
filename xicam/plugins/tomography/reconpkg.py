@@ -21,5 +21,6 @@ for name in PACKAGE_LIST:
 packages['tomopy'] = tomopy
 
 # Add the extra functions
-import pipelinefunctions
+import pipelinefunctions, mbir
 packages['pipelinefunctions'] = pipelinefunctions
+packages['mbir'] = mbir

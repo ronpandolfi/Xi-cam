@@ -10,6 +10,31 @@ Crop:
 - name: axis
   type: int
   limits: [0, 2]
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Slice:
+- name: p11
+  type: int
+- name: p12
+  type: int
+- name: p21
+  type: int
+- name: p22
+  type: int
+- name: p31
+  type: int
+- name: p32
+  type: int
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 Convert Data Type:
 - name: dtype
   type: list
@@ -23,13 +48,69 @@ Convert Data Type:
   type: float
 - name: imax
   type: float
-Array Operation:
-- name: value
-  type: float
-- name: operation
+- name: arr
   type: list
   values:
-  - add
-  - subtract
-  - multiply
-  - divide
+  - tomo
+  - flats
+  - dark
+Add:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Subtract:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Multiply:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Divide:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Maximum:
+- name: value
+  type: float
+- name: arr
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+Read Data:
+- name: start_sinogram
+  type: int
+- name: end_sinogram
+  type: int
+- name: step_sinogram
+  type: int
+- name: start_projection
+  type: int
+- name: end_projection
+  type: int
+- name: step_projection
+  type: int
+- name: sinograms_per_chunk
+  type: int
