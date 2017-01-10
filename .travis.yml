@@ -6,8 +6,10 @@ branches:
   - master
 sudo: false
 cache:
-- apt
-- pip
+  apt: true
+  pip: true
+  directories:
+  - $HOME/virtualenv/python2.7.9/lib/python2.7/site-packages
 addons:
   apt:
     packages:
