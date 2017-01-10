@@ -217,6 +217,7 @@ def extract_runnable_dict(funwidget_list):
     dict
         dictionary specifying the workflow pipeline and important parameters
     """
+    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'}}
 
     d = OrderedDict()
     func_dict = OrderedDict(); subfuncs = OrderedDict()
@@ -253,11 +254,15 @@ def extract_runnable_dict(funwidget_list):
 
         if 'Reconstruction' in f.name:
             for param, ipf in f.input_functions.iteritems():
-                if 'theta' in param:
+                if 'theta' in param or 'center' in param:
                     subfunc = "{}.{}(".format(ipf.package,ipf._function.func_name)
                     for key, val in ipf.partial.keywords.iteritems():
                         subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
                             else '{}=\'{}\','.format(key, val)
+                    for cor_func in center_functions.iterkeys():
+                        if ipf._function.func_name in cor_func:
+                            for k, v in center_functions[cor_func].iteritems():
+                                subfunc += "{}={},".format(k, v)
                     subfunc += ")"
                     subfuncs[param] = subfunc
             if 'astra' in keywords['algorithm']:

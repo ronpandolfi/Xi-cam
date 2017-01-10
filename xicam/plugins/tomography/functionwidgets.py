@@ -1656,6 +1656,7 @@ class FunctionManager(fw.FeatureManager):
             Dictionary of functions and their necessary parameters to write the function information
         """
 
+
         signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\nimport inspect\n" \
                     "import numpy as np\nimport numexpr as ne\nfrom collections import OrderedDict\n\n"
 
@@ -1671,11 +1672,8 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tcor_scale = 0\n\n"
         signature += "\tstart_time = time.time()\n\n"
 
-        signature += "\tcenter = {}\n".format(center)
-        for key, val in subfunc_dict.iteritems():
-            signature += "\t{} = {}\n".format(key, val)
-
         signature += "\n\tdata = dxchange.read_als_832h5('{}')\n".format(path)
+        signature += "\ttomo=data[0]; flats=data[1]; dark=data[2]\n"
         signature += "\tmdata = read_als_832h5_metadata('{}')\n\n".format(path)
         signature += "\t# choose which projections and sinograms go into the reconstruction:\n"
         signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
@@ -1688,7 +1686,12 @@ class FunctionManager(fw.FeatureManager):
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
         signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
 
-        signature += "\t# MAIN LOOP FOR RECONSTRUCTION\n"
+        if 'center' not in subfunc_dict.iterkeys():
+            signature += "\tcenter = {}\n".format(center)
+        for key, val in subfunc_dict.iteritems():
+            signature += "\t{} = {}\n".format(key, val)
+
+        signature += "\n\n\t# MAIN LOOP FOR RECONSTRUCTION\n"
         signature += "\tfor i in range(nchunk):\n"
         signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
         signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
@@ -1854,20 +1857,23 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t# Cast data to specified type\n"
         signature += "\treturn out.astype(np.dtype(dtype), copy=False)\n\n"
 
-        signature += "def array_operation(arr, value, operation='divide'):\n\n"
+        signature += """
+def array_operation_add(arr, value=0):
+    return ne.evaluate('arr + value')
 
-        signature += "\tif operation not in ('add', 'subtract', 'multiply', 'divide'):\n"
-        signature += "\t\traise ValueError('Operation {} is not a valid array operation'.format(operation))\n"
-        signature += "\telif operation == 'add':\n"
-        signature += "\t\treturn ne.evaluate('arr + value')\n"
-        signature += "\telif operation == 'subtract':\n"
-        signature += "\t\treturn ne.evaluate('arr - value', truediv=True)\n"
-        signature += "\telif operation == 'multiply':\n"
-        signature += "\t\treturn ne.evaluate('arr * value')\n"
-        signature += "\telif operation == 'divide':\n"
-        signature += "\t\treturn ne.evaluate('arr / value')\n\n"
+def array_operation_sub(arr, value=0):
+    return ne.evaluate('arr - value', truediv=True)
 
-        signature += "if __name__ == '__main__':\n\tmain()"
+def array_operation_mult(arr, value=1):
+    return ne.evaluate('arr * value')
+
+def array_operation_div(arr, value=1):
+    return ne.evaluate('arr / value')
+
+def array_operation_max(arr, value=0):
+    return np.maximum(arr, value)"""
+
+        signature += "\n\nif __name__ == '__main__':\n\tmain()"
 
         return signature
 
