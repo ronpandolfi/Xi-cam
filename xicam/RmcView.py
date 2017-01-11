@@ -3,6 +3,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import glob
 from PIL import Image
+from collections import OrderedDict
 import os
 import re
 
@@ -49,6 +50,9 @@ class imagetimeline(list):  # Sets up the image so it will fin the the viewer
 
 
 class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
+
+    sigImageChanged = QtCore.Signal()
+
     def __init__(self, scalemax, *args, **kwargs):
         super(TimelineView, self).__init__(*args, **kwargs)
         self.scalemax = scalemax
@@ -60,6 +64,10 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
         self.view_number.setMaximum(10000)
         self.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
         self.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
+
+        self.label = QtGui.QLabel(parent=self)
+        self.ui.gridLayout.addWidget(self.label, 1, 0, 1, 1)
+
 
 
     def quickMinMax(self, data):  # Defines quickMinMax functon
@@ -86,12 +94,15 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
         print 'Scale set to: ' + str(scale)
 
         self.view_number.setValue(self.currentIndex)
+        self.sigImageChanged.emit()
+
+
 
 
 class fftView(QtGui.QTabWidget):
     def __init__(self, *args, **kwargs):
         super(fftView, self).__init__(*args, **kwargs)
-        self.img_list = []
+        self.img_dict = OrderedDict()
 
     def add_images(self, image_list, do_fft=True, loadingfactors=None):
 
@@ -99,22 +110,43 @@ class fftView(QtGui.QTabWidget):
 
         if not image_list:
             return
+        if type(image_list) == dict:
+            for path, img in image_list.iteritems():
+                try:
+                    img = np.array(img)
+                    len(img)
+                    flag = True
+                    if do_fft: img = self.do_fft(img)
 
-        for img in image_list:
-            try:
-                img = np.array(img)
-                len(img)
-                flag = True
-                if do_fft: img = self.do_fft(img)
+                    for item in self.img_dict.itervalues():
+                        if np.array_equal(img, item): flag = False
+                    if flag:
+                        self.img_dict[path.split('/')[-1]] = img
+                except TypeError:
+                    continue
+        else:
+            for img in image_list:
+                try:
+                    img = np.array(img)
+                    len(img)
+                    flag = True
+                    if do_fft: img = self.do_fft(img)
 
-                for item in self.img_list:
-                    if np.array_equal(img, item): flag = False
-                if flag:
-                    self.img_list.append(img)
-            except TypeError:
-                continue
+                    for item in self.img_dict.itervalues():
+                        if np.array_equal(img, item): flag = False
+                    if flag:
+                        self.img_dict[len(self.img_dict)] = img
+                except TypeError:
+                    continue
 
-        data = imagetimeline(self.img_list)
+        # sort img dictionary by key
+        img_dict = OrderedDict()
+        for key in sorted(self.img_dict.keys()):
+            img_dict[key] = self.img_dict[key]
+        del self.img_dict
+        self.img_dict = img_dict
+
+        data = imagetimeline(self.img_dict.itervalues())
         sizemax = max(map(np.shape, data))[0]
 
         view = TimelineView(sizemax)
@@ -127,12 +159,15 @@ class fftView(QtGui.QTabWidget):
         view.getHistogramWidget().setHidden(False)
         view.ui.roiBtn.setHidden(True)
         view.ui.menuBtn.setHidden(True)
+        view.sigImageChanged.connect(self.imageNameChanged)
 
         if loadingfactors is None:
             self.addTab(view, u"Tile " + str(1))
         else:
             self.addTab(view, str(loadingfactors))
         self.tabBar().hide()
+
+        view.sigImageChanged.emit()
 
     def do_fft(self, img):
         """
@@ -143,22 +178,31 @@ class fftView(QtGui.QTabWidget):
 
 
     def open_from_rmcView(self, image_list):
-        images = []
+        images = {}
         for lst in image_list:
             path = "/"
             for item in lst:
                 path = os.path.join(path, item)
             img = Image.open(path).convert('L')
             img = np.array(img)
+            images[path] = img
 
-            images.append(img)
         self.add_images(images)
 
+    def imageNameChanged(self):
+        view = self.currentWidget()
+        for key, val in self.img_dict.iteritems():
+            if np.array_equal(val, view.image[view.currentIndex]):
+                self.currentWidget().label.setText(key)
+
+
 class rmcView(QtGui.QTabWidget):
+
     def __init__(self, root, loadingfactors=[None]):
         super(rmcView, self).__init__()
 
         self.image_list = []
+        self.image_dict = OrderedDict()
 
         paths = glob.glob(os.path.join(root,
                                        '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
@@ -185,6 +229,7 @@ class rmcView(QtGui.QTabWidget):
                 print img.shape  # Prints the shape of the array
 
                 images.append(img)
+                self.image_dict[path.split('/')[-1]] = img
 
             data = imagetimeline(images)
 
@@ -200,10 +245,17 @@ class rmcView(QtGui.QTabWidget):
             view.getHistogramWidget().setHidden(False)
             view.ui.roiBtn.setHidden(True)
             view.ui.menuBtn.setHidden(True)
+            view.sigImageChanged.connect(self.imageNameChanged)
+
             if loadingfactors is None:
                 self.addTab(view, u"Tile " + str(tile + 1))
             else:
                 self.addTab(view, str(loadingfactor))
+
+            view.sigImageChanged.emit()
+
+
+
 
     def addNewImages(self, root, loadingfactors=[None]):
 
@@ -237,6 +289,7 @@ class rmcView(QtGui.QTabWidget):
                 print img.shape  # Prints the shape of the array
 
                 images.append(img)
+                self.image_dict[path.split('/')[-1]] = img
 
             data = imagetimeline(images)
             sizemax = max(map(np.shape, data))[0]
@@ -251,10 +304,24 @@ class rmcView(QtGui.QTabWidget):
             view.getHistogramWidget().setHidden(False)
             view.ui.roiBtn.setHidden(True)
             view.ui.menuBtn.setHidden(True)
+            view.sigImageChanged.connect(self.imageNameChanged)
+
+
             if loadingfactors is None:
                 self.addTab(view, u"Tile " + str(tile + 1))
             else:
                 self.addTab(view, str(loadingfactor))
+
+            view.sigImageChanged.emit()
+
+
+    def imageNameChanged(self):
+
+        view = self.currentWidget()
+        for key, val in self.image_dict.iteritems():
+            if np.array_equal(val, view.image[view.currentIndex]):
+                self.currentWidget().label.setText(key)
+
 
 
 

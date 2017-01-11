@@ -14,6 +14,7 @@ from xicam import threads
 from daemon.daemon import daemon
 import multiprocessing
 import Queue
+import glob
 
 """
 Bugs:
@@ -89,6 +90,12 @@ class plugin(base.plugin):
         self.centerwidget.addTab(view_widget, os.path.basename(folder))
         self.centerwidget.setCurrentWidget(view_widget)
 
+        input = glob.glob(os.path.join(folder, 'input_image.tif'))
+        if input:
+            view_widget.orig_image = np.transpose(loader.loadimage(input[0]))
+            view_widget.orig_view.setImage(view_widget.orig_image)
+            view_widget.orig_view.autoRange()
+
         view_widget.rmc_view = rmc.rmcView(folder)
         view_widget.rmc_view.findChild(QtGui.QTabBar).hide()
         view_widget.rmc_view.setContentsMargins(0, 0, 0, 0)
@@ -113,8 +120,10 @@ class LogViewer(pg.ImageView):
     def setImage(self,*args,**kwargs):
         super(LogViewer, self).setImage(*args,**kwargs)
 
-        levelmin = np.log(self.levelMin)/np.log(1.5)
-        levelmax = np.log(self.levelMax)/np.log(1.5)
+        # levelmin = np.log(self.levelMin)/np.log(1.5)
+        # levelmax = np.log(self.levelMax)/np.log(1.5)
+        levelmin = np.log(self.levelMin)
+        levelmax = np.log(self.levelMax)
         if np.isnan(levelmin): levelmin = 0
         if np.isnan(levelmax): levelmax = 1
         if np.isinf(levelmin): levelmin = 0
