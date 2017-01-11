@@ -1216,9 +1216,9 @@ class RunConsole(QtGui.QTabWidget):
     """
 
     icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
     icon_clear = QtGui.QIcon()
-    icon_clear.addPixmap(QtGui.QPixmap("gui/icons_57.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon_clear.addPixmap(QtGui.QPixmap("xicam/gui/icons_57.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
 
     def __init__(self, parent=None):
