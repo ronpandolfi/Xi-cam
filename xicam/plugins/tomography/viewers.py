@@ -438,15 +438,6 @@ class MBIRViewer(QtGui.QWidget):
         self.auto_tab = QtGui.QWidget()
         self.auto_tab_layout = QtGui.QVBoxLayout()
 
-        self.cor_method_box = QtGui.QComboBox()
-        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
-        for item in self.cor_detection_funcs:
-            self.cor_method_box.addItem(item)
-        cor_method_label = QtGui.QLabel('COR detection function: ')
-        cor_method_layout = QtGui.QHBoxLayout()
-        cor_method_layout.addWidget(cor_method_label)
-        cor_method_layout.addWidget(self.cor_method_box)
-
         self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname="Phase Correlation",
                                 package=reconpkg.packages[config.names["Phase Correlation"][1]])
         self.cor_params = pg.parametertree.Parameter.create(name=self.cor_function.name,
@@ -459,6 +450,15 @@ class MBIRViewer(QtGui.QWidget):
             if key in [p.name() for p in self.cor_params.children()]:
                 self.cor_params.child(key).setValue(val)
                 self.cor_params.child(key).setDefault(val)
+
+        self.cor_method_box = QtGui.QComboBox()
+        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+        for item in self.cor_detection_funcs:
+            self.cor_method_box.addItem(item)
+        cor_method_label = QtGui.QLabel('COR detection function: ')
+        cor_method_layout = QtGui.QHBoxLayout()
+        cor_method_layout.addWidget(cor_method_label)
+        cor_method_layout.addWidget(self.cor_method_box)
 
         # import inspect
         # for item in self.cor_detection_funcs:
