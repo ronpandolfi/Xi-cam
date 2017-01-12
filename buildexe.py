@@ -99,13 +99,15 @@ def include_OpenGL():
 
 getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name),name)
 
-buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email','pyqtgraph','numpy','distutils','IPython'],
+buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython',
+                             'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
+                             'pyqtgraph','numpy','distutils','IPython'],
                 'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
                              'pygments.lexers.python','ipykernel.datapub','distributed',
                              'cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto',
                              ],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
-                             'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk', 'py4syn.docs'], 'optimize': 2,
+                             'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
                 'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py')],
                 'zip_includes': [],
                 }
