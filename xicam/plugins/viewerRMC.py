@@ -90,11 +90,19 @@ class plugin(base.plugin):
         self.centerwidget.addTab(view_widget, os.path.basename(folder))
         self.centerwidget.setCurrentWidget(view_widget)
 
+        # check for input image and load into plugin if it exists
         input = glob.glob(os.path.join(folder, 'input_image.tif'))
         if input:
             view_widget.orig_image = np.transpose(loader.loadimage(input[0]))
+            if len(view_widget.orig_image.shape) > 2: # gets ride of extra dimensions if there are any
+                view_widget.orig_image = np.transpose(view_widget.orig_image).swapaxes(0,1)
+                while len(view_widget.orig_image.shape) > 2:
+                    view_widget.orig_image = view_widget.orig_image[:,:,0]
             view_widget.orig_view.setImage(view_widget.orig_image)
             view_widget.orig_view.autoRange()
+
+            view_widget.drawROI(0, 0, view_widget.orig_image.shape[0], view_widget.orig_image.shape[1], 'r',
+                         view_widget.orig_view.getImageItem().getViewBox())
 
         view_widget.rmc_view = rmc.rmcView(folder)
         view_widget.rmc_view.findChild(QtGui.QTabBar).hide()
@@ -215,6 +223,10 @@ class inOutViewer(QtGui.QWidget, ):
         if paths is not None:
 
             self.orig_image = np.transpose(loader.loadimage(self.path))
+            if len(self.orig_image.shape) > 2:
+                self.orig_image = np.transpose(self.orig_image).swapaxes(0,1)
+                while len(self.orig_image.shape) > 2:
+                    self.orig_image = self.orig_image[:,:,0]
             self.orig_view.setImage(self.orig_image)
             self.orig_view.autoRange()
             try:
@@ -235,6 +247,12 @@ class inOutViewer(QtGui.QWidget, ):
             self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
             self.scatteringParams.setParameters(self.configparams, showTop=False)
             scatteringHolder.addWidget(self.scatteringParams)
+
+            # # is there a better way to check for correct dimensions?
+            # if len(self.orig_image.shape) > 2:
+            #     shape = (self.orig_image.shape[1], self.orig_image.shape[2])
+            # else:
+            #     shape = self.orig_image.shape
 
             self.drawROI(0, 0, self.orig_image.shape[0], self.orig_image.shape[1], 'r',
                          self.orig_view.getImageItem().getViewBox())
@@ -321,7 +339,6 @@ class inOutViewer(QtGui.QWidget, ):
             image = self.mask
 
         #resize image so that it's in center and displays output if a sample image
-
         xdim = int(image.shape[0])
         ydim = int(image.shape[1])
 
