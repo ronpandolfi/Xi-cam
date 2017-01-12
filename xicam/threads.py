@@ -142,8 +142,7 @@ class RunnableMethod(QtCore.QRunnable):
                 self.lock.unlock()
 
     def emit(self,slot,*value):
-        print 'putting', value, 'in', type(slot)
-        if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name
+        if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name str
             if slot is None: return
             value = map(nonesigmod.pyside_none_wrap, value)
             tempemitter = EmitterFactory(*[object] * len(value))()
