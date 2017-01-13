@@ -217,7 +217,6 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidget = QtGui.QWidget()
         sideWidgetFormat = QtGui.QVBoxLayout()
         sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
-        scatteringHolder = QtGui.QStackedWidget()
 
         # if paths is None, inOutViewer will only hold HipRMC output and the images/parameter table are not necessary
         if paths is not None:
@@ -234,6 +233,7 @@ class inOutViewer(QtGui.QWidget, ):
             except ValueError:
                 print "Image must be 2-D"
 
+            scatteringHolder = QtGui.QStackedWidget()
 
             image_name = self.path.split('/')[-1].split('.')[0]
             self.scatteringParams = pt.ParameterTree()
@@ -257,12 +257,12 @@ class inOutViewer(QtGui.QWidget, ):
             self.drawROI(0, 0, self.orig_image.shape[0], self.orig_image.shape[1], 'r',
                          self.orig_view.getImageItem().getViewBox())
 
-        scatteringHolder.setFixedHeight(300)
+            scatteringHolder.setFixedHeight(300)
+            sideWidgetFormat.addWidget(scatteringHolder)
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
         stopButton = QtGui.QPushButton("Stop RMC")
-        sideWidgetFormat.addWidget(scatteringHolder)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(centerButton)
         sideWidgetFormat.addSpacing(5)
