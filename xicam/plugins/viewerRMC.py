@@ -16,10 +16,9 @@ import multiprocessing
 import Queue
 import glob
 
-"""
-Bugs:
-    1. User can resize ROI after recentering
-"""
+# drag/drop taken from tomography plugin
+import platform
+op_sys = platform.system()
 
 class plugin(base.plugin):
 
@@ -62,9 +61,28 @@ class plugin(base.plugin):
 
         self.threadWorker = threads.Worker(Queue.Queue())
         self.threadWorker.pool.setExpiryTimeout(1)
-
+        # DRAG-DROP
+        self.centerwidget.setAcceptDrops(True)
+        self.centerwidget.dragEnterEvent = self.dragEnterEvent
+        self.centerwidget.dropEvent = self.dropEvent
 
         super(plugin, self).__init__(*args, **kwargs)
+
+
+
+
+    def dropEvent(self, e):
+        for url in e.mimeData().urls():
+            if op_sys == 'Darwin':
+                fname = str(NSURL.URLWithString_(str(url.toString())).filePathURL().path())
+            else:
+                fname = str(url.toLocalFile())
+            if os.path.isfile(fname):
+                self.openfiles([fname])
+            e.accept()
+
+    def dragEnterEvent(self, e):
+        e.accept()
 
 
     def openfiles(self, paths):
@@ -72,7 +90,7 @@ class plugin(base.plugin):
         """
         Overrides inherited 'openfiles' method. Used for opening single image
         """
-
+        print paths
         self.activate()
         view_widget = inOutViewer(paths = paths, worker = self.threadWorker)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
