@@ -1,16 +1,16 @@
 #! /usr/bin/env python
 
 import os
-import numpy as np
-import pipeline
-import xicam.plugins.viewer
-from pipeline import loader
-from PySide import QtCore, QtGui
-from xicam import xglobals
-import widgets as twidgets
-from xicam.plugins import widgets
+from PySide import QtGui
+from  xicam.plugins import base
+from viewer import ThreeDViewer
 
-class plugin(xicam.plugins.viewer.plugin):
+import platform
+op_sys = platform.system()
+# if op_sys == 'Darwin':
+#     from Foundation import NSURL
+
+class Viewer3DPlugin(base.plugin):
     name = "3D Viewer"
 
     def __init__(self, *args, **kwargs):
@@ -21,26 +21,37 @@ class plugin(xicam.plugins.viewer.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        super(plugin, self).__init__(*args, **kwargs)
-
-        self.sigUpdateExperiment.connect(self.redrawcurrent)
-        self.sigUpdateExperiment.connect(self.replotcurrent)
-        self.sigUpdateExperiment.connect(self.invalidatecache)
-
-        self.toolbar = None
-        self.bottomwidget = None
-        self.rightwidget = None
-
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
+        self.rightwidget = None
 
-    def openfiles(self, paths,*args,**kwargs):
+        super(Viewer3DPlugin, self).__init__(*args, **kwargs)
+
+    def openfiles(self, paths):
+        print paths
         self.activate()
-        if type(paths) is list:
-            paths = paths[0]
-
-        widget = widgets.OOMTabItem(itemclass=twidgets.volumeViewer, path=paths)
-        self.centerwidget.addTab(widget, os.path.basename(paths))
+        widget = ThreeDViewer(paths=paths)
+        self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
+
+    def dropEvent(self, e):
+        for url in e.mimeData().urls():
+            if op_sys == 'Darwin':
+                fname = str(NSURL.URLWithString_(str(url.toString())).filePathURL().path())
+            else:
+                fname = str(url.toLocalFile())
+            if os.path.isfile(fname):
+                self.openfiles([fname])
+            e.accept()
+
+    def dragEnterEvent(self, e):
+        print(e)
+        e.accept()
+
+    def currentChanged(self, index):
+        pass
+
+    def tabCloseRequested(self, index):
+        self.centerwidget.widget(index).deleteLater()

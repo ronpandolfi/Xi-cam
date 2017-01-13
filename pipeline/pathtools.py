@@ -3,6 +3,10 @@ import string
 from PySide import QtGui
 import sys
 import re
+import msg
+from appdirs import *
+
+user_config_dir=user_config_dir('xicam')
 
 def similarframe(path, N):
     """
@@ -17,7 +21,7 @@ def similarframe(path, N):
         prevframenum = '{:0>{}}'.format(prevframenum,leadingzeroslen)
         return re.sub(expr, prevframenum, path)
     except ValueError:
-        print 'No earlier frame found for ' + path + ' with ' + N
+        msg.logMessage('No earlier frame found for ' + path + ' with ' + N,msg.ERROR)
         return None
 
 

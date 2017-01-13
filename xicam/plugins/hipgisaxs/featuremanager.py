@@ -28,7 +28,6 @@ def addSubstrate():
 def addLayer():
     global features
     features.append(customwidgets.layer())
-    print features
     update()
 
 
@@ -64,6 +63,9 @@ def update():
     for item in features[::-1]:
         layout.addWidget(item)
 
+    if display.viewWidget:
+        display.redraw()
+
 
 def loadform(path):
     guiloader = QUiLoader()
@@ -78,7 +80,6 @@ def load():
     global features, functionTree
     layout.setAlignment(QtCore.Qt.AlignBottom)
     addSubstrate()
-    addLayer()
     addLayer()
     addParticle()
 

@@ -7,7 +7,7 @@ import os
 import widgets
 
 
-class plugin(base.plugin):
+class FXSPlugin(base.plugin):
     name = 'FXS'
 
     def __init__(self, *args, **kwargs):
@@ -18,7 +18,7 @@ class plugin(base.plugin):
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(FXSPlugin, self).__init__(*args, **kwargs)
 
         # self.sigUpdateExperiment.connect()
 

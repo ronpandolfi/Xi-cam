@@ -13,6 +13,33 @@ import saxs_calibration
 import peakfindingrem
 
 
+def approx_width(r):
+    """
+    linearly varies the peak width between GISAXS, where peaks are
+    thinner to GIWAXS, where peaks are fewer but wider.
+    """
+    return (0.047 * r + 1.8261)
+
+
+def tophat2(radius, scale=1):
+    """
+    convolution kernel, revolved to form a ring, with Mexican Hat
+    profile along the radial direction.
+
+    radius : peak position along the radius
+    scale  : magnification factor
+    """
+    width = approx_width(radius)
+    N = np.round(radius) + 3 * round(width) + 1
+    x = np.arange(-N, N)
+    x, y = np.meshgrid(x, x)
+    t = np.sqrt(x ** 2 + y ** 2) - radius
+    s = width
+    a = scale / np.sqrt(2 * np.pi) / s ** 3
+    w = a * (1 - (t / s) ** 2) * np.exp(-t ** 2 / s ** 2 / 2.)
+    return w
+
+
 def calc_R(x, y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
     return np.sqrt((x - xc) ** 2 + (y - yc) ** 2)
@@ -227,7 +254,7 @@ def center_approx(img, log=False):
 
     #testimg(img)
 
-    con = signal.fftconvolve(img, img)
+    con = signal.fftconvolve(img, img) / signal.fftconvolve(np.ones_like(img), np.ones_like(img))
     #testimg(con)
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.

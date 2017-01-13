@@ -1,4 +1,5 @@
 import platform
+from pipeline import msg
 
 # Use NSURL as a workaround to pyside/Qt4 behaviour for dragging and dropping on OSx
 op_sys = platform.system()
@@ -6,20 +7,23 @@ if op_sys == 'Darwin':
     try:
         from Foundation import NSURL
     except ImportError:
-        print 'NSURL not found. Drag and drop may not work correctly'
+        msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
 
-import base
+import base, viewer
 from PySide import QtGui
 import os
 # from moviepy.editor import VideoClip
 import numpy as np
 
 import widgets
+from pipeline import calibration
+from xicam.widgets.NDTimelinePlotWidget import TimelinePlot
 
 
-class plugin(base.plugin):  ##### Inherit viewer instead!!!
+class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
     name = 'Timeline'
+    sigUpdateExperiment = viewer.ViewerPlugin.sigUpdateExperiment
 
     def __init__(self, *args, **kwargs):
         self.centerwidget = QtGui.QTabWidget()
@@ -28,23 +32,27 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+        self.bottomwidget = TimelinePlot()
+
+
+        # Share right modes with viewer
+        self.rightmodes = viewer.rightmodes
+
         self.toolbar = widgets.toolbar.difftoolbar()
         self.toolbar.connecttriggers(self.calibrate, self.centerfind, self.refinecenter, self.redrawcurrent,
                                      self.redrawcurrent, self.remeshmode, self.linecut, self.vertcut,
                                      self.horzcut, self.redrawcurrent, self.redrawcurrent, self.redrawcurrent,
                                      self.roi, self.arccut, self.polymask, process=self.process)
-        super(plugin, self).__init__(*args, **kwargs)
+        super(TimelinePlugin, self).__init__(*args, **kwargs)
 
-        self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
+        # self.booltoolbar.actionTimeline.triggered.connect(self.openSelected)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
 
-
     def dragEnterEvent(self, e):
-        print(e)
         e.accept()
         # TODO: We should do something a bit less aggressive here!
 
@@ -65,8 +73,11 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
     def getCurrentTab(self):
         return self.centerwidget.currentWidget().widget
 
-    def calibrate(self):
-        self.getCurrentTab().calibrate()
+    def currentImage(self):
+        return self.getCurrentTab()
+
+    def calibrate(self, algorithm=calibration.fourierAutocorrelation, calibrant='AgBh'):
+        self.getCurrentTab().calibrate(algorithm, calibrant)
 
     def centerfind(self):
         self.getCurrentTab().centerfind()
@@ -142,6 +153,8 @@ class plugin(base.plugin):  ##### Inherit viewer instead!!!
         widget = widgets.OOMTabItem(itemclass=widgets.timelineViewer, files=files, toolbar=self.toolbar)
         self.centerwidget.addTab(widget, 'Timeline: ' + os.path.basename(files[0]) + ', ...')
         self.centerwidget.setCurrentWidget(widget)
+        self.getCurrentTab().sigAddTimelineData.connect(self.bottomwidget.addData)
+        self.getCurrentTab().sigClearTimeline.connect(self.bottomwidget.clearData)
 
 
 def convertto8bit(image):

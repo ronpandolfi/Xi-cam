@@ -1,0 +1,56 @@
+Phase Retrieval:
+  pixel_size:
+    name: pxsize
+    conversion: 0.1
+    type: float
+  dist:
+    name: Camera_Z_Support
+    conversion: 0.1
+    type: float
+  energy:
+    name: senergy
+    conversion: 0.001
+    type: float
+Polar Mean Filter:
+  thresh:
+    name: ring_threshold
+    type: float
+  thresh_max:
+    name: upp_ring_value
+    type: float
+  thresh_min:
+    name: low_ring_value
+    type: float
+  theta_min:
+    name: max_arc_length
+    type: int
+  rwidth:
+    name: max_arc_length
+    type: int
+Divide:
+  value:
+    name: pxsize
+    type: float
+    conversion: 0.1
+Padding:
+  npad:
+    name: dxelements
+    type: int
+    conversion: 0.4
+Crop:
+  p11:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p12:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p21:
+    name: dxelements
+    type: int
+    conversion: 0.4
+  p22:
+    name: dxelements
+    type: int
+    conversion: 0.4

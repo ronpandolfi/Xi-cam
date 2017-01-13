@@ -13,9 +13,10 @@ from xicam import xglobals
 import re
 
 import widgets
+from pipeline import msg
 
 
-class plugin(base.plugin):
+class BatchPlugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
@@ -40,7 +41,7 @@ class plugin(base.plugin):
 
         self.processButton.sigActivated.connect(self.processfiles)
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(BatchPlugin, self).__init__(*args, **kwargs)
 
     def processfiles(self):
         pathlist = self.fileslistwidget.paths
@@ -51,7 +52,7 @@ class plugin(base.plugin):
         for path in paths:
 
             xglobals.statusbar.showMessage('Processing item ' + str(paths.index(path)+1) + ' of ' + str(len(paths))+ '...')
-            xglobals.app.processEvents()
+            QtGui.QApplication.instance().processEvents()
 
             dimg = loader.diffimage(path)
 
@@ -66,17 +67,17 @@ class plugin(base.plugin):
                     break
 
             if self.integrateOption.value():
-                x, y, _ = dimg.integrate()
+                x, y, _, _ = dimg.integrate()
                 data = np.array([x, y])
                 if not writer.writearray(data, path, suffix=''):
                     break
 
             if self.roiOption.value():
-                print 'lastroi:',xglobals.lastroi
+                msg.logMessage(('lastroi:',xglobals.lastroi),msg.DEBUG)
                 if xglobals.lastroi is not None:
                     # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
                     cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T
-                    x, y, _ = dimg.integrate(cut=cut)
+                    x, y, _, _ = dimg.integrate(cut=cut)
                     data = np.array([x, y])
                     if not writer.writearray(data, path, suffix='_roi'):
                         break

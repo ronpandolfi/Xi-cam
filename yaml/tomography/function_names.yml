@@ -35,10 +35,10 @@ Nearest Flats:
 Region of Interest:
 - normalize_roi
 - tomopy
-Pad:
+Padding:
 - pad
 - tomopy
-Outlier Removal:
+Remove Outliers:
 - remove_outlier
 - tomopy
 Polar Mean Filter:
@@ -65,6 +65,9 @@ Negative Logarithm:
 Projection Angles:
 - angles
 - tomopy
+Remove NAN:
+- remove_nan
+- tomopy
 
 # Data Exchange Functions
 Tiff Stack:
@@ -84,6 +87,27 @@ Write HDF5:
 Crop:
 - crop
 - pipelinefunctions
-Convert Data:
+Convert Data Type:
 - convert_data
+- pipelinefunctions
+Add:
+- array_operation_add
+- pipelinefunctions
+Subtract:
+- array_operation_sub
+- pipelinefunctions
+Mutiply:
+- array_operation_mult
+- pipelinefunctions
+Divide:
+- array_operation_div
+- pipelinefunctions
+Maximum:
+- array_operation_max
+- pipelinefunctions
+Slice:
+- slice
+- pipelinefunctions
+Read Data:
+- reader
 - pipelinefunctions

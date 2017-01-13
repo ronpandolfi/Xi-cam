@@ -4,7 +4,7 @@ import base
 import viewer
 
 
-class plugin(base.plugin):
+class LibraryPlugin(base.plugin):
     name = 'Library'
 
     def __init__(self, *args, **kwargs):
@@ -19,7 +19,7 @@ class plugin(base.plugin):
 
         self.rightwidget = None
 
-        self.leftwidget = None
+        self.featureform = None
 
         self.bottomwidget = None
 
@@ -200,10 +200,10 @@ class thumbwidgetitem(QtGui.QFrame):
         path = os.path.normpath(path)
 
         self.foldericon = QtGui.QImage()
-        self.foldericon.load('gui/GenericFolderIcon.png')
+        self.foldericon.load('xicam/gui/GenericFolderIcon.png')
 
         self.fileicon = QtGui.QImage()
-        self.fileicon.load('gui/post-360412-0-09676400-1365986245.png')
+        self.fileicon.load('xicam/gui/post-360412-0-09676400-1365986245.png')
 
         print 'Library widget generated for ' + path
         super(thumbwidgetitem, self).__init__()

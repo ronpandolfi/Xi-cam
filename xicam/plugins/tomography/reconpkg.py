@@ -1,19 +1,26 @@
-import warnings
+import importlib
+from pipeline import msg
+import tomopy
 
+# Packages to import
+PACKAGE_LIST = ['astra', 'dxchange']
+
+# Dictionary with package names as keys and package objects as values
 packages = {}
-try:
-    import tomopy
-    packages['tomopy'] = tomopy
-    print 'tomopy module loaded'
-except ImportError:
-    warnings.warn('tomopy module not available')
-    packages['tomopy'] = None
-    tomopy = None
-try:
-    import astra
-    packages['astra'] = astra
-    print 'astra module loaded'
-except ImportError:
-    warnings.warn('astra module not available')
-    packages['astra'] = None
-    astra = None
+
+for name in PACKAGE_LIST:
+    try:
+        package = importlib.import_module(name)
+        print package
+        packages[name] = package
+        msg.logMessage('{} module loaded'.format(name), level=20)
+    except ImportError as ex:
+        msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning'
+
+# Tomopy is actually necessary, so its important that its a hard import
+packages['tomopy'] = tomopy
+
+# Add the extra functions
+import pipelinefunctions, mbir
+packages['pipelinefunctions'] = pipelinefunctions
+packages['mbir'] = mbir

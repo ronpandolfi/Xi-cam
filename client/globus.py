@@ -26,6 +26,15 @@ class GlobusClient(User):
         self.authentication = None
 
     def login(self, username, password):
+        """
+        Login to NEWT
+
+        Parameters
+        ----------
+        username : str
+        password : str
+        """
+
         basic_auth = base64.b64encode('%s:%s'
                                       % (username, password))
         headers = {'Authorization': 'Basic %s' % basic_auth}
@@ -35,14 +44,17 @@ class GlobusClient(User):
             access_token = r.json()['access_token']
             self.authentication = {'Authorization': 'Globus-Goauthtoken %s'
                                    % access_token}
-            super(GlobusClient, self).login(username)
+            return super(GlobusClient, self).login(username)
+            return self
         else:
             self.authentication = None
+            raise GLOBUSError('Bad Authentication: Unable to log in')
 
     def add_standard_endpoints(self):
         """
         Add standard endpoints to the endpoint list
         """
+
         for endpoint in self.STANDARD_ENDPOINTS:
                 self.add_endpoint(endpoint)
 
@@ -52,15 +64,22 @@ class GlobusClient(User):
         where the key is the endpoint name and the value is the response
         in json format
 
-        :param endpoint: str, endpoint name
+        Parameters
+        ----------
+        endpoint : str
+            endpoint name
         """
+
         self.endpoints[endpoint] = self.get_endpoint(endpoint)
 
     def get_endpoint(self, endpoint):
         """
         Get globus endpoint information as json
 
-        :param endpoint: str, endpoint name
+        Parameters
+        ----------
+        endpoint : str
+            endpoint name
         """
         self.check_login()
         r = self.get(self.TRANSFER_URL + '/endpoint/' + quote(endpoint), headers=self.authentication)
@@ -71,7 +90,10 @@ class GlobusClient(User):
         """
         Remove an endpoint from the endpoint list
 
-        :param endpoint: str, endpoint name
+        Parameters
+        ---------
+        endpoint : str
+            endpoint name
         """
 
         endpoint = self.endpoints.pop(endpoint)
@@ -82,7 +104,10 @@ class GlobusClient(User):
         Find endpoints owned by user whose canonical name starts with the
         username as in user#*
 
-        :return list of endpoint names
+        Returns
+        -------
+        list of str
+            endpoint names
         """
         self.check_login()
         user_endpoints = []
@@ -100,7 +125,10 @@ class GlobusClient(User):
         Remove and endpoint key value pair from endpoint dictionary instance
         variable
 
-        :param endpoint: str, endpoint name
+        Parameters
+        ----------
+        endpoint : str
+            endpoint name
         """
         self.endpoints.pop(endpoint)
 
@@ -108,9 +136,17 @@ class GlobusClient(User):
         """
         Check if an endpoint is active
 
-        :param endpoint: str, endpoint name
-        :return: bool, true if active
+        Parameters
+        ----------
+        endpoint : str
+            endpoint name
+
+        Returns
+        -------
+        bool
+            true if active, false otherwise
         """
+
         self.check_login()
         self.add_endpoint(endpoint)
         if self.endpoints[endpoint]['activated'] is True:
@@ -124,7 +160,10 @@ class GlobusClient(User):
         if any. The function will essentially 'touch' a test file and then try
         to look for it through globus to find a match.
 
-        :return: str, name of local endpoint, None if not found
+        Returns
+        -------
+        str
+            name of local endpoint, None if not found
         """
         self.check_login()
         user_endpoints = self.find_user_endpoints()
@@ -155,9 +194,15 @@ class GlobusClient(User):
     def get_dir_contents(self, path, endpoint):
         """
         Get contents of a specified directory in a given endpoint
-        :param endpoint: str, endpoint name
-        :param path: str, directory path
-        :return: dict, dictionary with contents of directory
+
+        Parameters
+        ----------
+        endpoint : str
+            endpoint name
+        path : str
+            directory path
+        dict
+            dictionary with contents of directory
         """
 
         self.check_login()
@@ -177,12 +222,23 @@ class GlobusClient(User):
         """
         Make a file transfer submission to globus
 
-        :param src_endpoint: str, source endpoint name
-        :param src_path: str, path to file in source endpoint
-        :param dst_enpoint: str, destination endpoint name
-        :param dst_path: str, path to directory in destination endpoint including file name
-        :return: json dict, globus response
+        Parameters
+        ----------
+        src_endpoint : str
+            source endpoint name
+        src_path : str
+            path to file in source endpoint
+        dst_enpoint: str
+            destination endpoint name
+        dst_path: str
+            path to directory in destination endpoint including file name
+
+        Returns
+        -------
+        json
+            globus response
         """
+
         self.check_login()
 
         if dst_path is None:
@@ -215,9 +271,17 @@ class GlobusClient(User):
         """
         Make a delete file submission to globus
 
-        :param endpoint: str, endpoint name
-        :param fpath: str, path to file to delete
-        :return: json dict, globus response
+        Parameters
+        ----------
+        endpoint: str
+            endpoint name
+        fpath: str
+            path to file to delete
+
+        Returns
+        -------
+        json
+            globus response
         """
 
         self.check_login()
@@ -247,9 +311,17 @@ class GlobusClient(User):
         """
         Get the size of a file in specified endpoint
 
-        :param path: str, path to file
-        :param endpoint: str, endpoint name
-        :return: int, file size in bytes
+        Parameters
+        ----------
+        path : str
+            path to file
+        endpoint : str
+            endpoint name
+
+        Returns
+        -------
+        int
+            file size in bytes
         """
 
         self.check_login()
@@ -265,8 +337,15 @@ class GlobusClient(User):
         """
         Make a GET call to monitor status of a submitted task
 
-        :param id: str, taks id returned from a job submission
-        :return:
+        Parameters
+        ----------
+        id : str
+            task id returned from a job submission
+
+        Returns
+        -------
+        json
+            globus response
         """
         self.check_login()
 
@@ -280,11 +359,21 @@ class GlobusClient(User):
         """
         Sumbits a globus transfer task and yields the fraction downloaded
 
-        :param src_endpoint: str, source endpoint name
-        :param src_path: str, path to file in source endpoint
-        :param dst_enpoint: str, destination endpoint name
-        :param dst_path: str, path to directory in destination endpoint including file name
-        :return: json dict, globus response
+        Parameters
+        ----------
+        src_endpoint : str
+            source endpoint name
+        src_path : str
+            path to file in source endpoint
+        dst_enpoint : str
+            destination endpoint name
+        dst_path : str
+            path to directory in destination endpoint including file name
+
+        Returns
+        -------
+        json
+            globus response
         """
 
         self.check_login()

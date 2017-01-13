@@ -12,6 +12,7 @@ import os
 from PIL import Image
 from fabio import edfimage, tifimage
 import scipy.misc
+import msg
 
 
 class nexusmerger(QtCore.QThread):
@@ -52,7 +53,7 @@ def writenexus(nexroot, path):
     try:
         nexroot.save(path)
     except IOError:
-        print('IOError: Check that you have write permissions.')
+        msg.logMessage('IOError: Check that you have write permissions.',msg.ERROR)
 
 
 @debugtools.timeit
@@ -76,7 +77,7 @@ def jpeg(img):
     buffer = StringIO.StringIO()
     pilImage = Image.fromarray(img)
     pilImage.save(buffer, "JPEG", quality=85)
-    print 'JPEG buffer size (bytes):', buffer.len
+    msg.logMessage(('JPEG buffer size (bytes):', buffer.len),msg.DEBUG)
     return buffer
 
 
@@ -96,7 +97,7 @@ def writeimage(image, path, headers=None, suffix='',ext=None):
             fabimg = edfimage.edfimage(np.rot90(image), header=headers)
             fabimg.write(path)
         elif ext.lower() == '.tif':
-            fabimg = tifimage.tifimage(np.rot90(image), header=headers)
+            fabimg = tifimage.tifimage(np.rot90((image.astype(float)/image.max()*2**16).astype(np.int16)), header=headers)
             fabimg.write(path)
         elif ext.lower() == '.png':
             raise NotImplementedError

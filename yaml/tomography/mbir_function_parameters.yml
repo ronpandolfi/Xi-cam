@@ -1,0 +1,23 @@
+Gridrec TomoCam:
+  - name: center
+    type: float
+    suffix: px
+  - name: oversamp_factor
+    type: float
+  - name: cutoff
+    type: float
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
+
+SIRT TomoCam:
+  - name: center
+    type: float
+    suffix: px
+  - name: oversamp_factor
+    type: float
+  - name: num_iter
+    type: int

@@ -1,13 +1,20 @@
-from os.path import split, join
-
+import os
 from requests import HTTPError
-
 from client.user import User
-
+from pipeline import msg
 
 class NewtClient(User):
     """
     Client class to handle Newt API calls
+
+    Attributes
+    ----------
+    authentication : str
+        authentication token
+    scratch_dir : str
+        path to a user's scratch directory on NERSC system
+    home_dir : str
+        path to a user's scratch directory on NERSC system
     """
 
     BASE_URL = "https://newt.nersc.gov/newt"
@@ -22,9 +29,21 @@ class NewtClient(User):
     def __del__(self):
         if self.logged_in:
             self.logout()
-        super(NewtClient, self).__del__()
+        try:
+            self.session.close()
+        except TypeError:
+            pass
 
     def login(self, username, password):
+        """
+        Login to NEWT
+
+        Parameters
+        ----------
+        username : str
+        password : str
+        """
+
         credentials = {"username": username,
                        "password": password}
 
@@ -32,11 +51,15 @@ class NewtClient(User):
 
         if response.json()['auth']:
             self.authentication = response
-            super(NewtClient, self).login(username)
+            return super(NewtClient, self).login(username)
         else:
             self.authentication = None
+            raise NEWTError('Bad Authentication: Unable to log in')
 
     def logout(self):
+        """
+        Send REST call to logout from NEWT
+        """
         self.authentication = self.post(self.BASE_URL + '/logout')
         User.logout(self)
 
@@ -46,19 +69,30 @@ class NewtClient(User):
         Check if the given system is in the class's allowed systems list.
         Raise an error if not
 
-        :param system: str, NERSC system name
-        :return: None
+        Parameters
+        ----------
+        system : str
+            NERSC system name
         """
+
         if system not in cls.systems:
-            raise NERSCError('%s is not a NERSC system' % system)
+            raise NEWTError('%s is not a NERSC system' % system)
 
     def get_system_status(self, system='all'):
         """
         Get system status via NEWT API status call
 
-        :param system: str, NERSC system name ('all' for all systems)
-        :return: json status response
+        Parameters
+        ----------
+        system : str
+            NERSC system name ('all' for all systems)
+
+        Returns
+        -------
+        json
+            status response
         """
+
         self.check_login()
         if system is 'all':
             system = ''
@@ -72,10 +106,19 @@ class NewtClient(User):
         """
         Get contents of a directory on a NERSC system
 
-        :param path: str, path of directory
-        :param system: str, NERSC system name
-        :return: json response of directory contents
+        Parameters
+        ----------
+        path : str
+            path of directory
+        system : str
+            NERSC system name
+
+        Returns
+        -------
+        json
+            response of directory contents
         """
+
         self.check_login()
         self.check_system(system)
 
@@ -86,12 +129,21 @@ class NewtClient(User):
     def get_file_size(self, path, system):
         """
         Get the size of a file in bytes
-        :param path: str, path to file
-        :return: int, file size
+
+        Parameters
+        ----------
+        path : str
+            path to file
+
+        Returns
+        -------
+        int
+            file size
         """
+
         info = self.get_dir_contents(path, system)
         if len(info) > 1:
-            raise NERSCError('{} is a directory'.format(path))
+            raise NEWTError('{} is a directory'.format(path))
 
         return int(info[0]['size'])
 
@@ -99,9 +151,17 @@ class NewtClient(User):
         """
         Get a users scratch directory on a NERSC platform
 
-        :param system: str, optional, NERSC system name
-        :return: str, path of user's scratch if found. None, if not found
+        Parameters
+        ----------
+        system : str, optional
+            NERSC system name
+
+        Returns
+        -------
+        str
+            path of user's scratch if found. None, if not found
         """
+
         self.check_login()
         scratch_dir = None
         if system == 'edison':
@@ -116,10 +176,8 @@ class NewtClient(User):
                 scratch_dir = root_folder
 
         if scratch_dir is None:
-            # raise NERSCError('User %s scratch directory not found'
+            # raise NEWTError('User %s scratch directory not found'
             #                  % self.username)
-
-            print 'User %s scratch directory not found' % self.username
             return '/'
         return scratch_dir
 
@@ -127,11 +185,24 @@ class NewtClient(User):
         """
         Get a users scratch directory on a NERSC platform and set it to the instance variable
 
-        :param system: str, optional, NERSC system name
+        Parameters
+        ----------
+        system : str, optional
+            NERSC system name
         """
         self.scratch_dir = self.get_scratch_dir(system)
 
     def _check_scratch_path(self, path, system):
+        """
+        Checks to see if the path is accessible by NEWT
+
+        Parameters
+        ----------
+        path : str
+        system : str
+            NERSC system
+        """
+
         try:
             contents = self.get_dir_contents(path, system)
             for item in contents:
@@ -145,9 +216,17 @@ class NewtClient(User):
         """
         Get a user's home directory on a NERSC system
 
-        :param system: str, NERSC system name
-        :return: str, path of users home directory if found. None, if not found
+        Parameters
+        ----------
+        system : str
+            NERSC system name
+
+        Returns
+        -------
+        str
+            path of users home directory if found. None, if not found
         """
+
         self.check_login()
         home_dir = None
         try:
@@ -168,19 +247,28 @@ class NewtClient(User):
         """
         Get a users home directory on a NERSC platform and set it to the instance variable
 
-        :param system: str, optional, NERSC system name
+        Parameters
+        ----------
+        system : str, optional
+            NERSC system name
         """
+
         self.home_dir = self.get_home_dir(system)
 
     def execute_command(self, command, system, bin_path='/bin'):
         """
         Execute a system command on a NERSC system
 
-        :param command: str, command including any arguments
-        :param system: str, NERSC system name
-        :param bin_path: str, path to binary
-        :return: None
+        Parameters
+        ----------
+        command : str
+            command including any arguments
+        system : str
+            NERSC system name
+        bin_path : str
+            path to binary
         """
+
         self.check_login()
         self.check_system(system)
 
@@ -193,10 +281,14 @@ class NewtClient(User):
         """
         Delete a specific file on a NERSC system, 'rm -rf' command
 
-        :param fpath: str, path to file
-        :param system: str, NERSC system name
-        :return: None
+        Parameters
+        ----------
+        fpath : str
+            path to file
+        system : str
+            NERSC system name
         """
+
         command = 'rm -rf ' + fpath
         return self.execute_command(command, system)
 
@@ -204,11 +296,16 @@ class NewtClient(User):
         """
         Move a specified file on a NERSC system. 'mv' command
 
-        :param fpath: str, path to file
-        :param dst_path: str, path to new directory
-        :param system: str, NERSC system name
-        :return: None
+        Parameters
+        ----------
+        fpath : str
+            path to file
+        dst_path : str
+            path to new directory
+        system: str
+            NERSC system name
         """
+
         command = 'mv ' + fpath + ' ' + dst_path
         return self.execute_command(command, system)
 
@@ -217,9 +314,14 @@ class NewtClient(User):
         Copy a specified file to a new location on a NERSC system.
         'cp -ar' command
 
-        :param fpath: str, path to file
-        :param dst_path: str, path to copy into
-        :param system: str, NERSC system name
+        Parameters
+        ----------
+        fpath : str
+            path to file
+        dst_path : str
+            path to copy into
+        system : str
+            NERSC system name
         """
         command = 'cp -ar ' + fpath + ' ' + dst_path
         return self.execute_command(command, system)
@@ -228,11 +330,16 @@ class NewtClient(User):
         """
         Use rsync locally on a nersc system
 
-        :param fpath: str, source path
-        :param dst_path: str, dest path
-        :param system: str, nersc system
-        :param args: str, flags for rsync (ie '-p'
-        :return:
+        Parameters
+        ----------
+        fpath : str
+            source path
+        dst_path : str
+            dest path
+        system : str
+            nersc system
+        args : str
+            lags for rsync (ie '-p'
         """
         command = 'rsync '
         for arg in args:
@@ -244,14 +351,20 @@ class NewtClient(User):
     def upload_file(self, fpath, dpath, system):
         """
         Upload a file (<100 MB or it will not work)
-        :param fpath:
-        :param dpath:
-        :param system:
-        :return:
+
+        Parameters
+        ----------
+        fpath : str
+            Local path to file
+        dpath : str
+            Destination path
+        system : str
+            NERSC system
         """
+
         self.check_login()
         self.check_system(system)
-        fname = split(fpath)[-1]
+        fname = os.path.split(fpath)[-1]
         with open(fpath, 'rb') as f:
             file = {'file': (fpath, f), 'file_name': fname}
             response = self.post(self.BASE_URL + '/file/' + system + dpath, files=file)
@@ -261,11 +374,18 @@ class NewtClient(User):
     def download_file(self, path, system, save_path=None):
         """
         Download a file on a NERSC system. (<100 MB or it will not work)
-        :param path: str, file path on NERSC
-        :param system: str, NERSC system
-        :param save_path: str, path and name to save file locally. If None name on NERSC is used and save in home directory
+
+        Parameters
+        ----------
+        path : str
+            file path on NERSC
+        system : str
+            NERSC system
+        save_path : str
+            path and name to save file locally. If None name on NERSC is used and save in home directory
         :return:
         """
+
         self.check_login()
 
         if save_path is None:
@@ -287,11 +407,21 @@ class NewtClient(User):
         Download a dataset as a generator (yields the fraction downloaded)
         Useful to know the status of a download (for gui purposes)
 
-        :param path: str, file path on NERSC
-        :param system: str, NERSC system
-        :param save_path: str, path and name to save file locally. If None name on NERSC is used and save in home directory
-        :param chunk_size:
-        :return:
+        Parameters
+        ----------
+        path : str
+            file path on NERSC
+        system : str
+            NERSC system
+        save_path : str
+            path and name to save file locally. If None name on NERSC is used and save in home directory
+        chunk_size: in, optional
+            Chunks size in bytes
+
+        Yields
+        ------
+        float
+            percent downloaded
         """
         self.check_login()
 
@@ -312,6 +442,6 @@ class NewtClient(User):
         r.close()
 
 
-class NERSCError(Exception):
+class NEWTError(Exception):
     """Raised when a parameter that will be used for the NEWT API is invalid"""
     pass

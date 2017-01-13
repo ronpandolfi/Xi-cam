@@ -3,7 +3,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 import yaml
-from collectionsmod import UnsortableOrderedDict
+from modpkgs.collectionsmod import UnsortableOrderedDict
 import ui
 import featuremanager
 import display
@@ -23,7 +23,7 @@ class mainwindow():
 
         # STYLE
         self.app.setStyle('Plastique')
-        with open('gui/style.stylesheet', 'r') as f:
+        with open('xicam/gui/style.stylesheet', 'r') as f:
             self.app.setStyleSheet(f.read())
 
 
@@ -44,7 +44,7 @@ class mainwindow():
         ui.mainwindow.addSubstrateButton.clicked.connect(featuremanager.addSubstrate)
         ui.mainwindow.addParticleButton.clicked.connect(featuremanager.addParticle)
         ui.mainwindow.showScatteringButton.clicked.connect(self.showScattering)
-        ui.mainwindow.showComputationButton.clicked.connect(self.showComputation)
+        ui.mainwindow.showComp50utationButton.clicked.connect(self.showComputation)
         ui.mainwindow.showDetectorButton.clicked.connect(self.showDetector)
         ui.mainwindow.addParticleButton.setMenu(ui.particlemenu)
         ui.mainwindow.runLocal.clicked.connect(self.runLocal)
@@ -68,12 +68,11 @@ class mainwindow():
 
     def showFeature(self, index):
         self.showForm(index.internalPointer().form)
-        print 'clicked:', index.row(), index.parent().internalPointer()
 
 
     def showComputation(self):
         if self.computationForm is None:
-            self.computationForm = featuremanager.loadform('gui/guiComputation.ui')
+            self.computationForm = featuremanager.loadform('xicam/gui/guiComputation.ui')
         self.showForm(self.computationForm)
 
     def showScattering(self):
@@ -98,31 +97,31 @@ class mainwindow():
             self._scatteringForm = customwidgets.scattering()
         return self._scatteringForm
 
-    def runLocal(self):
-        shapes = []
-        layers = []
-
-        shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
-        layers = [feature.toDict() for feature in featuremanager.features if
-                  type(feature) is customwidgets.layer or customwidgets.substrate]
-        unitcells = [feature.structure.toUnitCellDict() for feature in featuremanager.features if
-                     type(feature) is customwidgets.particle]
-        structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
-                      type(feature) is customwidgets.particle]
-
-        out = {'hipGisaxsInput': UnsortableOrderedDict([('shapes', shapes),
-                                                        ('unitcells', unitcells),
-                                                        ('layers', layers),
-                                                        ('structures', structures),
-                                                        ('instrumentation', self.detectorForm.toDict()),
-                                                        ('computation', self.scatteringForm.toDict())])}
-        with open('test.json', 'w') as outfile:
-            json.dump(out, outfile, indent=4)
-
-        with open('test.yml', 'w') as outfile:
-            yaml.dump(out, outfile, indent=4)
-
-        print yaml.dump(out, indent=4)
+    # def runLocal(self):
+    #     shapes = []
+    #     layers = []
+    #
+    #     shapes = [feature.toDict() for feature in featuremanager.features if type(feature) is customwidgets.particle]
+    #     layers = [feature.toDict() for feature in featuremanager.features if
+    #               type(feature) is customwidgets.layer or customwidgets.substrate]
+    #     unitcells = [feature.structure.toUnitCellDict() for feature in featuremanager.features if
+    #                  type(feature) is customwidgets.particle]
+    #     structures = [feature.structure.toStructureDict() for feature in featuremanager.features if
+    #                   type(feature) is customwidgets.particle]
+    #
+    #     out = {'hipGisaxsInput': UnsortableOrderedDict([('shapes', shapes),
+    #                                                     ('unitcells', unitcells),
+    #                                                     ('layers', layers),
+    #                                                     ('structures', structures),
+    #                                                     ('instrumentation', self.detectorForm.toDict()),
+    #                                                     ('computation', self.scatteringForm.toDict())])}
+    #     with open('test.json', 'w') as outfile:
+    #         json.dump(out, outfile, indent=4)
+    #
+    #     with open('test.yml', 'w') as outfile:
+    #         yaml.dump(out, outfile, indent=4)
+    #
+    #     print yaml.dump(out, indent=4)
 
 
 

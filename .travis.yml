@@ -1,0 +1,45 @@
+language: python
+python:
+- '2.7'
+branches:
+  only:
+  - master
+sudo: false
+cache:
+  apt: true
+  pip: true
+  directories:
+  - $HOME/virtualenv/python2.7.9/lib/python2.7/site-packages
+  - $HOME/virtualenv/python2.7_with_system_site_packages/local/lib/python.7/site-packages
+addons:
+  apt:
+    packages:
+    - python-scipy
+    - python-numpy
+    - python-pyside
+    - python-h5py
+    - python-matplotlib
+    - libqt4-dev
+virtualenv:
+  system_site_packages: true
+install:
+- pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
+- pip install .
+script:
+- pip install pylint
+# always returns exit code 0; I'd like to write the errors but not cause 'failure'
+- "pylint xicamlauncher xicam pipeline --errors-only || :"
+- pip install coverage
+- coverage run tests/__init__.py
+- pip install cx_freeze
+- ./buildlinux.sh
+after_success:
+- pip install codecov --upgrade
+- bash <(curl -s https://codecov.io/bash)
+deploy:
+  provider: releases
+  api_key:
+    secure: PCYu0sZjBCqJMFaiyBn8V5scjfZa8ZBENwPsgT9EE8wvuOofyEhub37oyriXb76yX7phPId6fSSDO6nT9i8YtcvIThIu7zB6bqLbiT6S1VcqNCq+At8SEGO+aFjMFpLqmz5o6GXeIuieInCyRor77X54OFy+Gs6ZlIhMxNn0wX6WWlVMT5RLAtymTiwchVzmi/AmG/B3YpIyMys5KoUB5F9DFna43Pv9qogQtk/wHiyX6uKSQoM5e3KCq28FOMS3rdJH+JW/h0TeUGJMfMzyWlJZqMKNbsEajaX+4BnSDPfEavU3DqzsQt/aIlEnHg1cmhnndn8VsqHiC0hjjMyQ7fewy8XUamAaFW56vD6Tjrh/0Oo/R958z2S1+fkqInkohYosp9WUFDqb4UtIgUymWXPKPlf37LffayNqpcP1N8wa13CVCXJ+GJTzdBJNpzgTta3TvZ4PZbUzgqnQblOK0iNlpba6aiAREBFs9DvSCbnkSBFYjSYjDJW7XqMDROYYIVDo9JKP1Bls4wVfXVwDQIUsTe/6IFp9dOGUHM73EveIRTBYKXNdu98BK94MrOuiRrVHrtIY5yuHXMzmgtKFMpFsxoPqKBPJuG/oXrXa+v2pgMPpu2nY2kCXzJIFNzmxU4LHbC7v27m4mFvG2FPIbE9IcjcRv5/uaNH/7y2XQ9k=
+  file: dist/Xi-cam_Linux-x86_64-2.7.tar.gz
+  on:
+    repo: ronpandolfi/Xi-cam

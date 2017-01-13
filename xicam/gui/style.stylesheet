@@ -1,0 +1,146 @@
+QSplitter::handle {
+    background-color: #222222;
+}
+
+
+
+QWidget {
+    color: silver;
+    background-color: #302F2F;
+    selection-background-color:darkorange;
+    selection-color: black;
+    background-clip: padding;
+    outline: 0;
+}
+
+SpinBox{
+    min-height: 25px;
+}
+
+ParameterTree::item{
+    min-height: 35px;
+}
+
+QHeaderView::section
+{
+    background-color: #3A3939;
+    color: silver;
+    /*padding-left: 4px;
+    padding-top:2px;
+    border: 1px solid #6c6c6c;*/
+
+    padding: 6px;
+}
+
+
+
+QTreeView, QListView {
+    background-color:#666666;
+    border: 1px solid #222222;
+    margin: 4px;
+}
+
+QWidget#centralwidget {
+    background-color:#111111;
+}
+
+QWidget#centralwidget > QLabel {
+    background-color:#111111;
+}
+
+
+QPushButton::pressed {
+    background-color:#111111;
+    color:#666666;
+}
+
+QPushButton[isMode="true"]:checked {
+    /*font-weight:bold;*/
+
+    background-color:#111111;
+    border-width:1px;
+}
+
+QPushButton[isMode="true"] {
+    font-family:Zero Threes;
+    font-size:20px;
+    border: 0px;
+}
+
+QListView{
+    outline:none;
+}
+
+QCheckBox[isFoldingTab="true"]::indicator:checked {
+    image:url(xicam/gui/icons_10.png);
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+QCheckBox[isFoldingTab="true"]::indicator:unchecked {
+    image:url(xicam/gui/icons_09.png);
+}
+
+QToolButton
+{
+    width:32px;
+    height:32px;
+}
+
+#thumbbox QFrame:focus{
+    background-color:#666666;
+    border-radius:6px;
+}
+
+#thumbbox QFrame * {
+    background-color: transparent;
+}
+
+QPushButton {
+    padding:6px;
+}
+
+QTabWidget {
+    padding:0px;
+}
+
+QMenu {
+    icon-size:32px 32px;
+
+}
+
+QLayout {
+    padding:0px;
+    margin:0px;
+    }
+
+
+/* OVERRIDE QDARKSTYLE with ORANGE! */
+QPushButton:focus {
+    background-color: darkorange;
+}
+
+QComboBox
+{
+    selection-background-color: darkorange;
+}
+
+QComboBox QAbstractItemView
+{
+    selection-background-color: darkorange;
+}
+
+QListView::item:selected:hover, QListView::item:selected:hover, QTreeView::item:selected:hover  {
+    background: darkorange;
+}
+
+QTableView::item:selected:active, QTreeView::item:selected:active, QListView::item:selected:active  {
+    background: darkorange;
+}
+
+QToolBox::tab:selected { /* italicize selected tabs */
+    border-color: darkorange;
+}
