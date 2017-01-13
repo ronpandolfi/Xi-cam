@@ -27,9 +27,9 @@ def main():
     import xicam  # IMPORTANT! DO NOT REMOVE! Xicam must be loaded early to avoid graphical bugs on mac (?!)
     app=QtGui.QApplication(sys.argv)
 
-    pixmap = QtGui.QPixmap("splash.gif")
+    pixmap = QtGui.QPixmap("xicam/gui/splash.gif")
     print 'CWD:', os.getcwd()
-    if False:  # Disable to bypass splashscreen for testing on windows
+    if True:  # Disable to bypass splashscreen for testing on windows
         splash = SplashScreen(pixmap, f=QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.SplashScreen)
         splash.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         splash.setMask(pixmap.mask())
