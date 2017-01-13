@@ -431,7 +431,7 @@ class inOutViewer(QtGui.QWidget, ):
             Class which holds the ROI drawn by the function
         """
 
-        roi = pg.RectROI((xpos,ypos),(xdim,ydim),movable = False,removable=True)
+        roi = pg.RectROI((xpos,ypos),(xdim,ydim),movable = False,removable=True, snapSize = 100000000, scaleSnap=True)
         roi.setPen(color = color)
 
         view_box.addItem(roi)
