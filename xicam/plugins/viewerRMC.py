@@ -269,6 +269,7 @@ class inOutViewer(QtGui.QWidget, ):
         sideWidgetFormat.addWidget(runButton)
         sideWidgetFormat.addSpacing(5)
         sideWidgetFormat.addWidget(stopButton)
+        sideWidgetFormat.addStretch(10)
         sideWidget.setLayout(sideWidgetFormat)
 
         # connect buttons to processing
