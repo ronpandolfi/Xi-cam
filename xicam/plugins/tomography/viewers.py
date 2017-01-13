@@ -1220,7 +1220,6 @@ class RunConsole(QtGui.QTabWidget):
     icon_clear = QtGui.QIcon()
     icon_clear.addPixmap(QtGui.QPixmap("xicam/gui/icons_57.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
-
     def __init__(self, parent=None):
         super(RunConsole, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)

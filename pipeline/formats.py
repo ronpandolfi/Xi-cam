@@ -12,9 +12,58 @@ import pyFAI
 from pyFAI import detectors
 import logging
 import msg
+import pyfits
+
+def register_fabioclass(cls):
+    setattr(fabio.openimage,cls.__name__,cls)
+    for extension in cls.extensions:
+        if extension in fabioutils.FILETYPES:
+            fabioutils.FILETYPES[extension].append(cls.__name__.rstrip('image'))
+        else:
+            fabioutils.FILETYPES[extension] = [cls.__name__.rstrip('image')]
+    return cls
+
+@register_fabioclass
+class npyimage(fabioimage):
+    extensions=['.npy']
+    def read(self, f, frame=None):
+        self.data = np.load(f)
+        return self
+
+@register_fabioclass
+class hipgisaxsimage(fabioimage):
+    extensions=['out']
+    def read(self, f, frame=None):
+        data = np.loadtxt(f)
+        data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
+        self.data = data
+        return self
+
+@register_fabioclass
+class fitsimage(fabioimage):
+    extensions=['fits']
+    def read(self, f, frame=None):
+        self.data = np.rot90(np.fliplr(pyfits.open(f)[2].data), 2)
+        return self
+
+@register_fabioclass
+class gbimage(fabioimage):
+    extensions=['gb']
+    def read(self, f, frame=None):
+        data = np.fromfile(f, np.float32)
+        if len(data) == 1475 * 1679:
+            data.shape = (1679, 1475)
+        elif len(data) == 981 * 1043:
+            data.shape = (1043, 981)
+        elif len(data) == 1475 * 195:
+            data.shape = (195, 1475)
+        self.data = data
+        return self
 
 
+@register_fabioclass
 class rawimage(fabioimage):
+    extensions=['raw']
     def read(self, f, frame=None):
         with open(f, 'r') as f:
             data = np.fromfile(f, dtype=np.int32)
@@ -36,10 +85,7 @@ class rawimage(fabioimage):
         self.data = data
         return self
 
-fabio.openimage.rawimage = rawimage
-fabioutils.FILETYPES['raw'] = ['raw']
-
-
+@register_fabioclass
 class H5image(fabioimage):
     """
     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
@@ -67,7 +113,7 @@ class H5image(fabioimage):
     #         raise RuntimeError('H5 format not recognized')
     #     return super(H5image, cls).__new__(cls)
     #  can call super.__new__ or simply return the instance (obj) and bypass init
-
+    extensions=['h5']
     def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
                            if 'H5image' in image[0] and image[0] != 'H5image']
@@ -91,8 +137,9 @@ fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
-
+@register_fabioclass
 class ALS733H5image(fabioimage):
+    extensions=['h5']
     def _readheader(self, f):
         fname = f.name  # get filename from file object
         with h5py.File(fname, 'r') as h:
@@ -171,12 +218,12 @@ class ALS733H5image(fabioimage):
         except AttributeError:
             return False
 
-
+@register_fabioclass
 class ALS832H5image(fabioimage):
     """
     Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
     """
-
+    extensions=['h5']
     def __init__(self, data=None , header=None):
         super(ALS832H5image, self).__init__(data=data, header=header)
         self.frames = None
@@ -331,11 +378,12 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
-
+@register_fabioclass
 class DXchangeH5image(fabioimage):
     """
     Fabio Image class for Data-Exchange HDF5 Datasets
     """
+    extensions=['h5']
 
     def __init__(self, data=None , header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)

@@ -21,6 +21,7 @@ from pipeline import msg
 # Error is raised if this import is removed probably due to some circular with this module and something???
 from client import spot, globus, sftp
 from modpkgs import nonesigmod
+from modpkgs import guiinvoker
 
 class Emitter(QtCore.QObject):
     """
@@ -141,12 +142,17 @@ class RunnableMethod(QtCore.QRunnable):
                 self.lock.unlock()
 
     def emit(self,slot,*value):
-        if slot is None: return
-        # print 'value:',value
-        value = map(nonesigmod.pyside_none_wrap, value)
-        tempemitter = EmitterFactory(*[object]*len(value))()
-        tempemitter.sigTemp.connect(slot,QtCore.Qt.QueuedConnection)
-        tempemitter.sigTemp.emit(*value)
+        if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name str
+            if slot is None: return
+            value = map(nonesigmod.pyside_none_wrap, value)
+            tempemitter = EmitterFactory(*[object] * len(value))()
+            tempemitter.sigTemp.connect(slot, QtCore.Qt.QueuedConnection)
+            tempemitter.sigTemp.emit(*value)
+        else:
+            guiinvoker.invoke_in_main_thread(slot, *value) # actually works better than communicating with signals
+
+
+
 
 
 class RunnableIterator(RunnableMethod):
