@@ -135,6 +135,7 @@ class RemoteFileView(QtGui.QListWidget):
     pathChanged = QtCore.Signal(str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
@@ -146,12 +147,13 @@ class RemoteFileView(QtGui.QListWidget):
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self),
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Open Folder', self). QtGui.QAction('Download', self),
                            QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
-        standardActions[1].triggered.connect(self.handleDownloadAction)
-        standardActions[2].triggered.connect(self.handleDeleteAction)
-        standardActions[3].triggered.connect(self.handleTransferAction)
+        standardActions[0].triggered.connect(self.handleOpenFolderAction)
+        standardActions[2].triggered.connect(self.handleDownloadAction)
+        standardActions[3].triggered.connect(self.handleDeleteAction)
+        standardActions[4].triggered.connect(self.handleTransferAction)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
@@ -193,6 +195,9 @@ class RemoteFileView(QtGui.QListWidget):
                 self.addItem(item['name'])
 
     def handleOpenAction(self):
+        pass
+
+    def handleOpenFolderAction(self):
         pass
 
     def handleTransferAction(self):
@@ -316,6 +321,7 @@ class SFTPFileView(QtGui.QTreeWidget):
     sigAddTopLevelItem = QtCore.Signal(str, str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
@@ -334,12 +340,13 @@ class SFTPFileView(QtGui.QTreeWidget):
 
         self.menu = QtGui.QMenu(parent=self)
         openAction = QtGui.QAction('Open', self)
+        openFolderAction = QtGui.QAction('Open Folder', self)
         downloadAction = QtGui.QAction('Download', self)
         deleteAction = QtGui.QAction('Delete', self)
         openAction.triggered.connect(self.handleOpenAction)
         downloadAction.triggered.connect(self.handleDownloadAction)
         deleteAction.triggered.connect(self.handleDeleteAction)
-        self.menu.addActions([openAction, downloadAction, deleteAction])
+        self.menu.addActions([openAction, openFolderAction, downloadAction, deleteAction])
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
@@ -452,6 +459,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     """
 
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(object)
