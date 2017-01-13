@@ -120,7 +120,7 @@ class plugin(QtCore.QObject):
     def isActive(self):
         return activeplugin == self
 
-    def opendirectory(files, operation=None):
+    def opendirectory(self, files, operation=None):
         pass
 
     def addfiles(files, operation=None):
