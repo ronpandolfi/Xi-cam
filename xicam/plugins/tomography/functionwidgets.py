@@ -1547,6 +1547,8 @@ class FunctionManager(fw.FeatureManager):
             Range of parameters to be evaluated
         """
         self.updateParameters()
+        if function.func_name in 'Reader':
+            return
         for i in prange:
             function.param_dict[parameter] = i
             # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
