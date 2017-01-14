@@ -248,7 +248,7 @@ class inOutViewer(QtGui.QWidget, ):
             try:
                 start_size = max(self.orig_image.shape)/10
             except ValueError:
-                print "Image must be 2-D"
+                msg.showMessage("Image must be 2-D")
 
             scatteringHolder = QtGui.QStackedWidget()
 
