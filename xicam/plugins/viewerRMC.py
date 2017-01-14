@@ -90,7 +90,6 @@ class plugin(base.plugin):
         """
         Overrides inherited 'openfiles' method. Used for opening single image
         """
-        print paths
         self.activate()
         view_widget = inOutViewer(paths = paths, worker = self.threadWorker)
         self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
@@ -349,9 +348,8 @@ class inOutViewer(QtGui.QWidget, ):
 
         if sample:
             if self.edited_image is not None:
-                self.image_holder.removeWidget(self.edited_view)
-                self.edited_view = LogViewer()
-                self.image_holder.addWidget(self.edited_view)
+                msg.showMessage('Image already centered.')
+                return
 
             image = self.orig_image
         else:
@@ -505,7 +503,8 @@ class inOutViewer(QtGui.QWidget, ):
 
         # starts filewatcher to watch for new hiprmc folder, and the HipRMC job
         # also starts worker if it is not already running
-        process = threads.RunnableMethod(method = self.run_RMCthread,finished_slot = self.RMC_done,)
+        process = threads.RunnableMethod(method = self.run_RMCthread, finished_slot = self.RMC_done,)
+        print 'herherher'
         self.file_watcher = NewFolderWatcher(path=os.path.abspath("."), experiment=None)
 
         # when filewatcher gets rmc folder, it passes it to self.start_watcher to start another watcher
@@ -522,7 +521,7 @@ class inOutViewer(QtGui.QWidget, ):
         """
         Slot to receive signal to run HipRMC as subprocess on background thread
         """
-
+        print 'here'
         self.proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.output, self.err = self.proc.communicate()
 
