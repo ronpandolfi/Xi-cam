@@ -581,11 +581,14 @@ class inOutViewer(QtGui.QWidget, ):
         """
         Stops all background threads (worker, any filewatcher, hiprmc
         """
-        self.worker.stop()
-        self.file_watcher.stop()
-        self.rmc_watcher.stop()
-        self.interrupt = True
-        self.proc.terminate()
+        try:
+            self.worker.stop()
+            self.file_watcher.stop()
+            self.rmc_watcher.stop()
+            self.interrupt = True
+            self.proc.terminate()
+        except IOError:
+            pass
 
     @QtCore.Slot()
     def RMC_done(self):
