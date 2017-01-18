@@ -7,6 +7,12 @@ OSX Source Install
 Preparing OSX
 -------------
 
+1. Install Command Line Tools:
+
+.. code-block:: bash
+
+    xcode-select --install
+
 1. Install the Homebrew package manager:
 
 .. code-block:: bash
@@ -17,7 +23,7 @@ Preparing OSX
 
 .. code-block:: bash
 
-    brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config libfreetype libpng cartr/qt4/qt
+    brew install python openssl cmake homebrew/science/hdf5 libjpeg pkg-config freetype libpng cartr/qt4/qt cartr/qt4/pyside cartr/qt4/shiboken
 
 General source install
 ----------------------
@@ -28,17 +34,17 @@ General source install
 
     git clone https://github.com/ronpandolfi/Xi-cam.git && cd Xi-cam
 
-2.  Install the virtualenv python package and activate it:
+2.  Install the virtualenv python package:
 
 .. code-block:: bash
 
-    pip install virtualenv && source venv/bin/activate
+    pip install virtualenv
 
-3.  Create a virtual environment:
+3.  Create a virtual environment and activate it:
 
 .. code-block:: bash
 
-    virtualenv venv --system-site-packages
+    virtualenv venv --system-site-packages && source venv/bin/activate
 
 4.  Upgrade pip:
 
