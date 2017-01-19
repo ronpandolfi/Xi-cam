@@ -158,13 +158,13 @@ class experiment(Parameter):
             # print(self.experiment.mask,maskedarea)
             self._mask = np.bitwise_and(self._mask, maskedarea.astype(np.int))
 
-        try:  # hack for mask export
-            from fabio import edfimage
-
-            edf = edfimage.edfimage(np.rot90(self.mask))
-            edf.write('mask.edf')
-        except Exception:
-            pass
+        # try:  # hack for mask export
+        #     from fabio import edfimage
+        #
+        #     edf = edfimage.edfimage(np.rot90(self.mask))
+        #     edf.write('mask.edf')
+        # except Exception:
+        #     pass
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match
@@ -231,6 +231,7 @@ class experiment(Parameter):
                         360. - (2 * np.pi - self.getvalue('Detector Rotation')) / 2. / np.pi * 360.,
                         self.getvalue('Pixel Size Y') * 1.e6,
                         self.getvalue('Pixel Size X') * 1.e6)
+        AI.set_wavelength(self.getvalue('Wavelength'))
         # print AI
         return AI
 
@@ -259,7 +260,7 @@ class experiment(Parameter):
         #             self.getvalue('Pixel Size X')*1.e6)
         # print AI
 
-        return geo
+        # return geo
 
     def getDetector(self):
         key = self.getvalue('Detector')
@@ -311,5 +312,9 @@ class experiment(Parameter):
             tilt.setOpts(**{'suffix': ' rad'})
 
 
+activeExperiment = None
 
-activeExperiment = experiment()
+
+def activate():
+    global activeExperiment
+    activeExperiment = experiment()

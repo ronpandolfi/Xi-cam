@@ -30,14 +30,14 @@ l.addWidget(fileexplorer)
 
 booltoolbar = QtGui.QToolBar()
 
-booltoolbar.actionTimeline = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_26.png'), 'Timeline', w)
-booltoolbar.actionAdd = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_11.png'), 'actionAdd', w)
-booltoolbar.actionSubtract = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_13.png'), 'actionSubtract', w)
-booltoolbar.actionAdd_with_coefficient = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_14.png'), 'actionAdd_with_coefficient', w)
+booltoolbar.actionTimeline = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_26.png'), 'Open as Timeline', w)
+booltoolbar.actionAdd = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_11.png'), 'Sum data', w)
+booltoolbar.actionSubtract = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_13.png'), 'Subtract data', w)
+booltoolbar.actionAdd_with_coefficient = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_14.png'), 'Add data with coefficient', w)
 booltoolbar.actionSubtract_with_coefficient = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_15.png'),
-                                                            'actionSubtract_with_coefficient', w)
-booltoolbar.actionDivide = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_12.png'), 'actionDivide', w)
-booltoolbar.actionAverage = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_16.png'), 'actionAverage', w)
+                                                            'Subtract data with coefficient', w)
+booltoolbar.actionDivide = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_12.png'), 'Divide data', w)
+booltoolbar.actionAverage = QtGui.QAction(QtGui.QIcon('xicam/gui/icons_16.png'), 'Average data', w)
 
 booltoolbar.addAction(booltoolbar.actionTimeline)
 booltoolbar.addAction(booltoolbar.actionAdd)
@@ -80,6 +80,10 @@ class plugin(QtCore.QObject):
         super(plugin, self).__init__()
 
         self.placeholders = placeholders
+        self.setup()
+
+    def setup(self, placeholders=None):
+        if placeholders: self.placeholders = placeholders
 
         if not hasattr(self, 'centerwidget'):
             self.centerwidget = None
@@ -166,3 +170,41 @@ class plugin(QtCore.QObject):
 
     def currentImage(self):
         pass
+
+import pyqtgraph as pg
+from pyqtgraph.parametertree import Parameter, ParameterTree
+
+class EZplugin(plugin):
+
+    def __init__(self,name='TestPlugin',toolbuttons=[],parameters=[],openfileshandler=None):
+        self.name=name
+
+        self.parameters = Parameter(name='Params',type='group',children=parameters)
+
+        self.centerwidget=pg.ImageView()
+        self.bottomwidget=pg.PlotWidget()
+        self.rightwidget=ParameterTree()
+        self.toolbar=QtGui.QToolBar()
+
+        self.rightwidget.setParameters(self.parameters,showTop=False)
+
+        for toolbutton in toolbuttons:
+            self.addToolButton(*toolbutton)
+
+        if openfileshandler: self.openfiles=openfileshandler
+
+        super(EZplugin, self).__init__([])
+
+    def setImage(self,data):
+        self.centerwidget.setImage(data)
+
+    def plot(self,*args,**kwargs):
+        self.bottomwidget.plot(*args,**kwargs)
+
+    def addParameter(self,**kwargs):
+        self.rightwidget.addParameters(Parameter(**kwargs))
+
+    def addToolButton(self, icon, method, text=None):
+        tb = QtGui.QAction(QtGui.QIcon(icon), text, self.toolbar)
+        tb.triggered.connect(method)
+        self.toolbar.addAction(tb)

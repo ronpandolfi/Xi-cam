@@ -2,7 +2,7 @@
 import numpy as np
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
-
+from modpkgs import nonesigmod
 
 class timelineLinePlot(pg.PlotWidget):
     def __init__(self):
@@ -14,7 +14,8 @@ class timelineLinePlot(pg.PlotWidget):
         if not colorhash in self.variationcurve:
             self.variationcurve[colorhash] = self.plot()
 
-        self.variationcurve[colorhash].setData(x=t, y=y)
+        l=min(len(t),len(y))
+        self.variationcurve[colorhash].setData(x=t[:l], y=y[:l])
         self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
 
 
@@ -104,7 +105,9 @@ class TimelinePlot(QtGui.QTabWidget):
         self.currentChanged.connect(self.widgetChanged)
 
     @QtCore.Slot(tuple, list)
+    @nonesigmod.pyside_none_deco
     def addData(self, data, color=None):
+
         if data is None: return
         if color is None: color = [255, 255, 255]
         is1D = type(data[1]) is not tuple
@@ -119,7 +122,7 @@ class TimelinePlot(QtGui.QTabWidget):
         # append data to currentData
         if is1D:
             colorhash = ','.join([str(c) for c in color])
-            self._data['t'].append(t)
+            if colorhash=='255,255,255': self._data['t'].append(t)
             if colorhash not in self._data:
                 self._data[colorhash] = []
                 self._data['colors'].append(colorhash)

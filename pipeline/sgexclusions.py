@@ -71,7 +71,7 @@ class SGClass:
         Get the relevant exclusion rule column and then test against it.
         """
         col,m=self.getcolumn(m)
-        if type(self.conditions[SG]) is str: # ALLOW LINKED CONDITIONS
+        if type(self.conditions[SG]) is not list: # ALLOW LINKED CONDITIONS
             SG = self.conditions[SG]
         return self.checkcolumn(SG,col,m)
 
