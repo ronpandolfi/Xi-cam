@@ -911,6 +911,7 @@ class StackImage(object):
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
+        # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
             if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
