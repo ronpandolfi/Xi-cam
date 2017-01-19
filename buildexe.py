@@ -1,10 +1,15 @@
 from cx_Freeze import setup, Executable
+import opcode
 import sys
 from numpy.distutils.core import Extension
 import numpy as np
 # import scipy.sparse.csgraph._validation
 sys.path.append('xicam/')
-import zmq.libzmq
+try:
+    import zmq.libzmq # not available on linux (?)
+except:
+    zmq = None
+
 import pyFAI
 import os
 
@@ -14,6 +19,15 @@ import os
 # Missing ufuncs? Its fine, copy numpy's lib/libifcoremd.dll and libmmd.dll into build directory...
 # pyfits unsupported operand type? Comment those lines!...
 # Missing h5py _errors? edit cx_Freeze hooks.py for h5py...
+# lmfit is not a directory? uninstall/reinstall it (replaces .egg)
+# numpy _methods missing? add this to hooks.py:
+    # def load_numpy_core(finder, module):
+    #     finder.IncludeModule('numpy.core._methods')
+# numpy .format missing? add this to hooks.py:
+    # def load_numpy_lib(finder, module):
+    #     finder.IncludeModule('numpy.lib.format')
+# distutils __version__ missing? replace h5py.version version number over engineering with a tuple
+    # version = (2,6,0)
 
 # H5PY FIX:
 # def load_h5py(finder, module):
@@ -76,18 +90,33 @@ def include_OpenGL():
     for root, sub_folders, files in os.walk(path_base):
         for file_in_root in files:
             zip_includes.append(
-                    ("{}".format(os.path.join(root, file_in_root)),
-                     "{}".format(os.path.join("OpenGL", root[skip_count+1:], file_in_root))
-                    )
+                ("{}".format(os.path.join(root, file_in_root)),
+                 "{}".format(os.path.join("OpenGL", root[skip_count+1:], file_in_root))
+                 )
             )
     return zip_includes
 
-buildOptions = {'packages': ['xicam', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email'],
-                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython','pygments.lexers.python','ipykernel.datapub','distributed','cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto'],  # ,'scipy.sparse.csgraph._validation'
-                'excludes': ['PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
+
+getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name),name)
+
+buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython',
+                             'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
+                             'pyqtgraph','numpy','distutils','IPython'],
+                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
+                             'pygments.lexers.python','ipykernel.datapub','distributed',
+                             'cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto',
+                             ],  # ,'scipy.sparse.csgraph._validation'
+                'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': ['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
-                'zip_includes': include_OpenGL(),}
+                'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py')],
+                'zip_includes': [],
+                }
+
+if sys.platform == 'win32':
+    buildOptions['include_files']+=['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),pyFAI.__path__[0]]
+    buildOptions['zip_includes']+=include_OpenGL()
+
+if zmq is not None: buildOptions['include_files'].append(zmq.libzmq.__file__)
 
 msiOptions = {'initial_target_dir': r'[ProgramFilesFolder]\%s\%s' % (company_name, product_name)}
 
@@ -99,8 +128,8 @@ bdistmsiOptions = {"data": msi_data}
 base = 'Win32GUI' if sys.platform == 'win32' else None
 
 executables = [
-    Executable('xicamlauncher/main.py', base=base, targetName='xicam.exe', icon='icon.ico', shortcutName="Xi-cam",
-               shortcutDir="StartMenuFolder", )
+    Executable('run_xicam.py', base=base, targetName='Xi-cam', icon='icon.ico', shortcutName="Xi-cam",
+               shortcutDir="StartMenuFolder")
 ]
 
 EXT = Extension(name='pipeline.cWarpImage',

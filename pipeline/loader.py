@@ -40,21 +40,7 @@ def loadimage(path):
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
-            if ext == '.gb':
-                data = np.fromfile(path, np.float32)
-                if len(data) == 1475 * 1679:
-                    data.shape = (1679, 1475)
-                elif len(data) == 981 * 1043:
-                    data.shape = (1043, 981)
-                elif len(data) == 1475 * 195:
-                    data.shape = (195, 1475)
-                return data
-
-
-            elif ext == '.fits':
-                data = np.rot90(np.fliplr(pyfits.open(path)[2].data), 2)
-                return data
-            elif ext in ['.nxs', '.hdf']:
+            if ext in ['.nxs', '.hdf']:
                 nxroot = nx.load(path)
                 # print nxroot.tree
                 if hasattr(nxroot, 'data'):
@@ -63,12 +49,6 @@ def loadimage(path):
                         return data
                     else:
                         return loadimage(str(nxroot.data.rawfile))
-            elif ext == '.out':
-                data = np.loadtxt(path)
-                data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
-                return data
-            elif ext == '.npy':
-                return np.load(path)
             else:
                 data = fabio.open(path).data
                 return data

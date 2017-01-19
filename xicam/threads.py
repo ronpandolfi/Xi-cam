@@ -21,6 +21,7 @@ from pipeline import msg
 # Error is raised if this import is removed probably due to some circular with this module and something???
 from client import spot, globus, sftp
 from modpkgs import nonesigmod
+from modpkgs import guiinvoker
 
 class Emitter(QtCore.QObject):
     """
@@ -124,8 +125,9 @@ class RunnableMethod(QtCore.QRunnable):
             if value is None:
                 value = False
             try:
-                self.emit(self._callback_slot, value)
+                if self._callback_slot: self.emit(self._callback_slot, value)
             except RuntimeError:
+                print 'this did not run'
                 msg.logMessage(('Runnable method tried to return value, but signal was already disconnected.'),
                                msg.WARNING)
                 if self.lock is not None: self.lock.unlock()
@@ -141,12 +143,17 @@ class RunnableMethod(QtCore.QRunnable):
                 self.lock.unlock()
 
     def emit(self,slot,*value):
-        if slot is None: return
-        # print 'value:',value
-        value = map(nonesigmod.pyside_none_wrap, value)
-        tempemitter = EmitterFactory(*[object]*len(value))()
-        tempemitter.sigTemp.connect(slot,QtCore.Qt.QueuedConnection)
-        tempemitter.sigTemp.emit(*value)
+        if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name str
+            if slot is None: return
+            value = map(nonesigmod.pyside_none_wrap, value)
+            tempemitter = EmitterFactory(*[object] * len(value))()
+            tempemitter.sigTemp.connect(slot, QtCore.Qt.QueuedConnection)
+            tempemitter.sigTemp.emit(*value)
+        else:
+            guiinvoker.invoke_in_main_thread(slot, *value) # actually works better than communicating with signals
+
+
+
 
 
 class RunnableIterator(RunnableMethod):
@@ -353,7 +360,7 @@ class Worker(QtCore.QThread):
         """
         while True:
             runnable = self.queue.get()
-            # print "Worker got item {} off queue".format(type(item))
+            # print "Worker got item {} off queue".format(type(runnable))
             if runnable is None:
                 break
             self.pool.start(runnable, runnable._priority)
