@@ -104,15 +104,24 @@ class TomoViewer(QtGui.QWidget):
 
         if self.data.flats is None and self.data.darks is None:
             import fabio
-            flat_dialog = QtGui.QFileDialog().getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
-            dark_dialog = QtGui.QFileDialog().getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
+            flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
+            dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
 
-            flats = fabio.open(flat_dialog[0])
-            darks = fabio.open(dark_dialog[0])
-            self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
-            self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
+            if flat_dialog[0] and dark_dialog[0]:
+                try:
+                    flats = fabio.open(flat_dialog[0])
+                    darks = fabio.open(dark_dialog[0])
+                    self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
+                    self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
 
-            del flats, darks
+                    del flats, darks
+                except IOError:
+                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded. Cannot perform \
+                                                              reconstructions on this data set')
+            else:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided. Cannot perform \
+                                                          reconstructions on this data set')
+
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
@@ -141,9 +150,6 @@ class TomoViewer(QtGui.QWidget):
 
         self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
-
-        print self.data.flats.shape
-        # print self.getflats()
 
     def wireupCenterSelection(self, recon_function):
         """
