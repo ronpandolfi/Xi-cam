@@ -35,6 +35,7 @@ from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
 DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
+APS_PIPELINE_YAML = 'yaml/tomography/aps_default_pipeline.yml'
 
 
 class TomographyPlugin(base.plugin):
@@ -285,8 +286,13 @@ class TomographyPlugin(base.plugin):
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
             # self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
-            config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
-                    path = widget.path, shape=widget.data.shape)
+            if widget.data.fabimage.classname == 'ALS832H5image':
+                config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
+                        path = widget.path, shape=widget.data.shape)
+            elif widget.data.fabimage.classname == 'GeneralAPSH5image':
+                self.manager.setPipelineFromYAML(config.load_pipeline(APS_PIPELINE_YAML))
+                config.set_aps_defaults(widget.data.header, funcwidget_list=self.manager.features,
+                        path = widget.path, shape=widget.data.shape)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
                 rfunc.params.child('center').setValue(widget.data.shape[1]/2)

@@ -1547,6 +1547,8 @@ class FunctionManager(fw.FeatureManager):
             Range of parameters to be evaluated
         """
         self.updateParameters()
+        if function.func_name in 'Reader':
+            return
         for i in prange:
             function.param_dict[parameter] = i
             # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
@@ -1657,8 +1659,8 @@ class FunctionManager(fw.FeatureManager):
         """
 
 
-        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\nimport inspect\n" \
-                    "import numpy as np\nimport numexpr as ne\nfrom collections import OrderedDict\n\n"
+        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\n" \
+                    "import numpy as np\nimport numexpr as ne\n\n"
 
         # set up function pipeline
         runnable_pipe = run_state[3][1]
@@ -1773,7 +1775,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn np.ndarray.tolist(loc)\n\n"
 
         # function for loading data dictionary
-        signature += "def loadDataDict(data, mdata, theta,center,slc=None):\n\tdata_dict = OrderedDict()\n"
+        signature += "def loadDataDict(data, mdata, theta,center,slc=None):\n\tdata_dict = {}\n"
         signature += "\tif slc is not None and slc[0].start is not None:\n"
         signature += "\t\tslc_ = slice(slc[0].start,data[0].shape[0],slc[0].step)\n"
         signature += "\t\tflat_loc = map_loc(slc_, flatindices(mdata))\n"
