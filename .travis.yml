@@ -25,7 +25,6 @@ virtualenv:
   system_site_packages: true
 install:
 - python -c "import h5py; print h5py.__file__"
-- bash -c "exit 1" # force fail so we can cleanup quickly
 - pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
 - pip install .
 script:
@@ -35,7 +34,15 @@ script:
 - pip install coverage
 - coverage run tests/__init__.py
 - pip install cx_freeze
-- ./buildlinux.sh
+- python -c "import h5py; print h5py.__file__"
+- sudo rm -rf build
+- # export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages/
+- echo $PYTHONPATH
+- echo "/usr/lib/python2.7/dist-packages/" > ~/virtualenv/python2.7_with_system_site_packages/local/lib/python2.7/site-packages/global.pth
+- cat ~/virtualenv/python2.7_with_system_site_packages/local/lib/python2.7/site-packages/global.pth
+- python -c "import numpy; print numpy.__file__"
+- python buildexe.py build
+- tar -zcvf Xi-cam.linux-x86_64-2.7 build/exe.linux-x86_64-2.7
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
