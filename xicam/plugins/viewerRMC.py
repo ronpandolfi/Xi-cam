@@ -503,7 +503,8 @@ class inOutViewer(QtGui.QWidget, ):
 
         # starts filewatcher to watch for new hiprmc folder, and the HipRMC job
         # also starts worker if it is not already running
-        process = threads.RunnableMethod(method = self.run_RMCthread, finished_slot = self.RMC_done,)
+        process = threads.RunnableMethod(method = self.run_RMCthread, finished_slot = self.RMC_done,
+                                         except_slot=self.hiprmc_not_found)
         self.file_watcher = NewFolderWatcher(path=os.path.abspath("."), experiment=None)
 
         # when filewatcher gets rmc folder, it passes it to self.start_watcher to start another watcher
@@ -520,10 +521,18 @@ class inOutViewer(QtGui.QWidget, ):
         """
         Slot to receive signal to run HipRMC as subprocess on background thread
         """
-        self.proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.output, self.err = self.proc.communicate()
+        if os.path.isfile('./hiprmc/bin/hiprmfc'):
+            self.proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.output, self.err = self.proc.communicate()
+        else:
+            raise Exception
 
-
+    def hiprmc_not_found(self):
+        """
+        Slot to receive exception signal in case hiprmc is not found.
+        """
+        msg.showMessage('Cannot find HipRMC executable. Cannot run HipRMC.')
+        QtGui.QMessageBox.critical(self, 'Error', 'Cannot find HipRMC executable. Cannot run HipRMC.')
 
 
     def start_watcher(self, folder):
