@@ -521,7 +521,7 @@ class inOutViewer(QtGui.QWidget, ):
         """
         Slot to receive signal to run HipRMC as subprocess on background thread
         """
-        if os.path.isfile('./hiprmc/bin/hiprmfc'):
+        if os.path.isfile('./hiprmc/bin/hiprmc'):
             self.proc = subprocess.Popen(['./hiprmc/bin/hiprmc', self.hig_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.output, self.err = self.proc.communicate()
         else:
