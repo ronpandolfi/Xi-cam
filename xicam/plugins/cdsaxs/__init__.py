@@ -6,7 +6,7 @@ from matplotlib.colors import LogNorm
 from scipy.interpolate import LinearNDInterpolator
 from scipy.ndimage import map_coordinates
 from scipy.optimize import leastsq, minimize
-from  numpy.fft import*
+from  numpy.fft import *
 from scipy.signal import resample
 import platform
 from fabio import edfimage
@@ -42,6 +42,7 @@ class plugin(base.plugin):
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabClose)
+        self.centerwidget.currentChanged.connect(self.currentChanged)
         self.rightwidget.setDocumentMode(True)
         self.rightwidget.setTabsClosable(True)
         self.rightwidget.tabCloseRequested.connect(self.tabClose)
@@ -66,12 +67,28 @@ class plugin(base.plugin):
         super(plugin, self).__init__(*args, **kwargs)
 
         funcButton_1 = QtGui.QPushButton("Run interpol")
-        self.centerwidget.addTab(funcButton_1, 'interpol')
+        # self.centerwidget.addTab(funcButton_1, 'interpol')
         funcButton_1.clicked.connect(self.main)
 
         funcButton_2 = QtGui.QPushButton("Run fit")
-        self.rightwidget.addTab(funcButton_2, 'fit')
+        # self.rightwidget.addTab(funcButton_2, 'fit')
         funcButton_2.clicked.connect(self.fitting)
+
+    def openfiles(self, files, operation=None, operationname=None):
+        self.activate()
+        if type(files) is not list:
+            files = [files]
+        print files
+        widget = widgets.OOMTabItem(itemclass=CDSAXSWidget, src=files, operation=operation,
+                                    operationname=operationname, plotwidget=self.bottomwidget,
+                                    toolbar=self.toolbar)
+        self.centerwidget.addTab(widget, os.path.basename(files[0]))
+        self.centerwidget.setCurrentWidget(widget)
+
+    def currentChanged(self, index):
+        for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
+            tab.unload()
+        self.centerwidget.currentWidget().load()
 
     def tabClose(self,index):
         self.centerwidget.widget(index).deleteLater()
@@ -362,3 +379,38 @@ class plugin(base.plugin):
         data1[ind] = min(data0)
         return data0, data1
 
+
+class CDSAXSWidget(QtGui.QTabWidget):
+    def __init__(self, src, *args, **kwargs):
+        super(CDSAXSWidget, self).__init__()
+
+        self.CDRawWidget = CDRawWidget()
+        self.CDCartoWidget = CDCartoWidget()
+        self.CDModelWidget = CDModelWidget()
+
+        self.addTab(self.CDRawWidget, 'RAW')
+        self.addTab(self.CDCartoWidget, 'Cartography')
+        self.addTab(self.CDModelWidget, 'Model')
+
+        self.setTabPosition(self.South)
+        self.setTabShape(self.Triangular)
+
+        self.src=src
+
+        self.loadRAW()
+
+    def loadRAW(self):
+        data = np.stack([np.rot90(loader.loadimage(file),2) for file in self.src])
+        data = np.log(data - data.min()+1.)
+
+        self.CDRawWidget.setImage(data)
+
+
+class CDRawWidget(pg.ImageView):
+    pass
+
+class CDCartoWidget(pg.ImageView):
+    pass
+
+class CDModelWidget(pg.PlotWidget):
+    pass
