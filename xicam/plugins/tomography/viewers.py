@@ -116,11 +116,9 @@ class TomoViewer(QtGui.QWidget):
 
                     del flats, darks
                 except IOError:
-                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded. Cannot perform \
-                                                              reconstructions on this data set')
+                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded.')
             else:
-                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided. Cannot perform \
-                                                          reconstructions on this data set')
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided.')
 
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)

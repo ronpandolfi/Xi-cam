@@ -999,17 +999,21 @@ class FunctionManager(fw.FeatureManager):
 
         data_dict = OrderedDict()
 
-        if slc is not None and slc[0].start is not None:
-            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                    else slc[0])
-            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-        else:
-            flat_loc = datawidget.data.fabimage.flatindices()
+        try:
 
-        data_dict['tomo'] = datawidget.getsino(slc=slc)
-        data_dict['flats'] = datawidget.getflats(slc=slc)
-        data_dict['dark'] = datawidget.getdarks(slc=slc)
-        data_dict['flat_loc'] = flat_loc
+            if slc is not None and slc[0].start is not None:
+                slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                        else slc[0])
+                flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+            else:
+                flat_loc = datawidget.data.fabimage.flatindices()
+
+            data_dict['tomo'] = datawidget.getsino(slc=slc)
+            data_dict['flats'] = datawidget.getflats(slc=slc)
+            data_dict['dark'] = datawidget.getdarks(slc=slc)
+            data_dict['flat_loc'] = flat_loc
+        except TypeError:
+            pass
         data_dict['theta'] = theta
         data_dict['center'] = center
 
