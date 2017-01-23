@@ -256,8 +256,6 @@ def extract_pipeline_dict(funwidget_list):
     count = 1
     for f in funwidget_list:
         # a bunch of special cases for the write function
-        if 'Reader' in f.name:
-            continue
         func_name = str(count) + ". " + f.func_name
         if "Write" in f.func_name:
             write_dict = OrderedDict()

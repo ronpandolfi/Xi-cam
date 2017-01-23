@@ -1174,6 +1174,7 @@ class FunctionManager(fw.FeatureManager):
                 continue
             elif func.func_name in skip_names:
                 stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+                count += 1
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
                 func = fixed_func
@@ -1183,7 +1184,6 @@ class FunctionManager(fw.FeatureManager):
                     elif key in params_dict[name].iterkeys() and key not in 'center':
                         params_dict[name][key] = val
             stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-
             count += 1
 
             # load partial_stack
