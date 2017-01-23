@@ -13,9 +13,11 @@ from pyFAI import detectors
 import logging
 import msg
 import pyfits
+from nexusformat import nexus as nx
+
 
 def register_fabioclass(cls):
-    setattr(fabio.openimage,cls.__name__,cls)
+    setattr(fabio.openimage, cls.__name__, cls)
     for extension in cls.extensions:
         if extension in fabioutils.FILETYPES:
             fabioutils.FILETYPES[extension].append(cls.__name__.rstrip('image'))
@@ -23,32 +25,57 @@ def register_fabioclass(cls):
             fabioutils.FILETYPES[extension] = [cls.__name__.rstrip('image')]
     return cls
 
+
+@register_fabioclass
+class nexusimage(fabioimage):
+    extensions = ['.hdf']
+
+    def read(self, f, frame=None):
+        nxroot = nx.nxload(f)
+        # print nxroot.tree
+        if hasattr(nxroot, 'entry'):
+            if hasattr(nxroot.entry, 'data'):
+                if hasattr(nxroot.entry.data,'data'):
+                    self.data = nxroot.entry.data.data
+
+        return self
+
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'nexus'))
+
+
 @register_fabioclass
 class npyimage(fabioimage):
-    extensions=['.npy']
+    extensions = ['.npy']
+
     def read(self, f, frame=None):
         self.data = np.load(f)
         return self
 
+
 @register_fabioclass
 class hipgisaxsimage(fabioimage):
-    extensions=['out']
+    extensions = ['out']
+
     def read(self, f, frame=None):
         data = np.loadtxt(f)
         data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
         self.data = data
         return self
 
+
 @register_fabioclass
 class fitsimage(fabioimage):
-    extensions=['fits']
+    extensions = ['fits']
+
     def read(self, f, frame=None):
         self.data = np.rot90(np.fliplr(pyfits.open(f)[2].data), 2)
         return self
 
+
 @register_fabioclass
 class gbimage(fabioimage):
-    extensions=['gb']
+    extensions = ['gb']
+
     def read(self, f, frame=None):
         data = np.fromfile(f, np.float32)
         if len(data) == 1475 * 1679:
@@ -63,7 +90,8 @@ class gbimage(fabioimage):
 
 @register_fabioclass
 class rawimage(fabioimage):
-    extensions=['raw']
+    extensions = ['raw']
+
     def read(self, f, frame=None):
         with open(f, 'r') as f:
             data = np.fromfile(f, dtype=np.int32)
@@ -72,18 +100,19 @@ class rawimage(fabioimage):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if np.prod(detector.MAX_SHAPE) == len(data):  #
                     detector = detector()
-                    msg.logMessage('Detector found: ' + name,msg.INFO)
+                    msg.logMessage('Detector found: ' + name, msg.INFO)
                     break
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
                 if len(data) in [np.prod(np.array(detector.MAX_SHAPE) / b) for b in
                                  detector.BINNED_PIXEL_SIZE.keys()]:
                     detector = detector()
-                    msg.logMessage('Detector found with binning: ' + name,msg.INFO)
+                    msg.logMessage('Detector found with binning: ' + name, msg.INFO)
                     break
         data.shape = detector.MAX_SHAPE
         self.data = data
         return self
+
 
 @register_fabioclass
 class H5image(fabioimage):
@@ -113,7 +142,8 @@ class H5image(fabioimage):
     #         raise RuntimeError('H5 format not recognized')
     #     return super(H5image, cls).__new__(cls)
     #  can call super.__new__ or simply return the instance (obj) and bypass init
-    extensions=['h5']
+    extensions = ['h5']
+
     def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
                            if 'H5image' in image[0] and image[0] != 'H5image']
@@ -132,20 +162,23 @@ class H5image(fabioimage):
             raise H5ReadError('H5 format not recognized')
         return obj  # return the successfully read object
 
+
 # Register H5image class to fabioimages
 fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
-fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
+fabio.openimage.MAGIC_NUMBERS.append(tuple([b"\x89\x48\x44\x46", 'h5']))
+
 
 @register_fabioclass
 class ALS733H5image(fabioimage):
-    extensions=['h5']
+    extensions = ['h5']
+
     def _readheader(self, f):
         fname = f.name  # get filename from file object
         with h5py.File(fname, 'r') as h:
-            self.header= dict(h.attrs)
+            self.header = dict(h.attrs)
 
-    def read(self,f,frame=None):
+    def read(self, f, frame=None):
         self.readheader(f)
 
         # Check header for unique attributes
@@ -155,7 +188,7 @@ class ALS733H5image(fabioimage):
         except KeyError:
             raise H5ReadError
 
-        self.filename=f
+        self.filename = f
         if frame is None:
             frame = 0
         return self.getframe(frame)
@@ -218,13 +251,15 @@ class ALS733H5image(fabioimage):
         except AttributeError:
             return False
 
+
 @register_fabioclass
 class ALS832H5image(fabioimage):
     """
     Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
     """
-    extensions=['h5']
-    def __init__(self, data=None , header=None):
+    extensions = ['h5']
+
+    def __init__(self, data=None, header=None):
         super(ALS832H5image, self).__init__(data=data, header=header)
         self.frames = None
         self.currentframe = 0
@@ -243,7 +278,7 @@ class ALS832H5image(fabioimage):
 
     def _readheader(self, f):
         if self._h5 is not None:
-            self.header=dict(self._h5.attrs)
+            self.header = dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
 
     def read(self, f, frame=None):
@@ -323,7 +358,7 @@ class ALS832H5image(fabioimage):
     def __getitem__(self, item):
         s = []
         if not isinstance(item, tuple) and not isinstance(item, list):
-            item = (item, )
+            item = (item,)
         for n in range(3):
             if n == 0:
                 stop = len(self)
@@ -332,14 +367,14 @@ class ALS832H5image(fabioimage):
             elif n == 2:
                 stop = self.data.shape[1]
             if n < len(item) and isinstance(item[n], slice):
-                    start = item[n].start if item[n].start is not None else 0
-                    step = item[n].step if item[n].step is not None else 1
-                    stop = item[n].stop if item[n].stop is not None else stop
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
             elif n < len(item) and isinstance(item[n], int):
-                    if item[n] < 0:
-                        start, stop, step = stop + item[n], stop + item[n] + 1, 1
-                    else:
-                        start, stop, step = item[n], item[n] + 1, 1
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
             else:
                 start, step = 0, 1
 
@@ -378,14 +413,15 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
+
 @register_fabioclass
 class DXchangeH5image(fabioimage):
     """
     Fabio Image class for Data-Exchange HDF5 Datasets
     """
-    extensions=['h5']
+    extensions = ['h5']
 
-    def __init__(self, data=None , header=None):
+    def __init__(self, data=None, header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)
         self.currentframe = 0
         self.header = None
@@ -401,10 +437,10 @@ class DXchangeH5image(fabioimage):
     def __exit__(self, *arg, **kwarg):
         self.close()
 
-    def _readheader(self,f):
+    def _readheader(self, f):
         # TODO What data should be read here?
         if self._h5 is not None:
-            self.header={'foo': 'bar'} #dict(self._h5.attrs)
+            self.header = {'foo': 'bar'}  # dict(self._h5.attrs)
             # self.header.update(**self._dgroup.attrs)
 
     def read(self, f, frame=None):
@@ -481,7 +517,7 @@ class TiffStack(object):
         elif os.path.isdir(paths):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
-        self.header= header
+        self.header = header
 
     def __len__(self):
         return len(self.frames)
@@ -501,16 +537,16 @@ class H5ReadError(IOError):
     pass
 
 
-# # Testing
-# if __name__ == '__main__':
-#     from matplotlib.pyplot import imshow, show
-#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-#     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-#     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-#     # arr = data.__getitem__(slc)
-#     arr = data.getsinogram(100)
-#     # print sorted(data.frames, reverse=True)
-#     # print data.darks.shape
-#     # print data.flats.shape
-#     imshow(arr, cmap='gray')
-#     show()
+    # # Testing
+    # if __name__ == '__main__':
+    #     from matplotlib.pyplot import imshow, show
+    #     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+    #     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+    #     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+    #     # arr = data.__getitem__(slc)
+    #     arr = data.getsinogram(100)
+    #     # print sorted(data.frames, reverse=True)
+    #     # print data.darks.shape
+    #     # print data.flats.shape
+    #     imshow(arr, cmap='gray')
+    #     show()
