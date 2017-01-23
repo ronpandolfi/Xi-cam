@@ -6,7 +6,7 @@ import tifffile
 import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
-from fabio import fabioutils
+from fabio import fabioutils, edfimage
 import fabio
 import pyFAI
 from pyFAI import detectors
@@ -14,6 +14,8 @@ import logging
 import msg
 import pyfits
 from nexusformat import nexus as nx
+from collections import OrderedDict
+import re
 
 
 def register_fabioclass(cls):
@@ -25,6 +27,46 @@ def register_fabioclass(cls):
             fabioutils.FILETYPES[extension] = [cls.__name__.rstrip('image')]
     return cls
 
+
+@register_fabioclass
+class EdfImage(edfimage.EdfImage):
+    extensions = ['.edf']
+
+    def read(self, f, frame=None):
+        return super(EdfImage, self).read(f, frame)
+
+    def _readheader(self, f):
+        super(EdfImage, self)._readheader(f)
+        f = f.name.replace('.edf', '.txt')
+        if os.path.isfile(f):
+            self.header.update(self.scanparas(f))
+
+    @staticmethod
+    def scanparas(path):
+        if not os.path.isfile(path):
+            return dict()
+
+        with open(path, 'r') as f:
+            lines = f.readlines()
+
+        paras = OrderedDict()
+
+        # The 7.3.3 txt format is messy, with keyless values, and extra whitespaces
+
+        keylesslines = 0
+        for line in lines:
+            cells = filter(None, re.split('[=:]+', line))
+
+            key = cells[0].strip()
+
+            if cells.__len__() == 2:
+                cells[1] = cells[1].split('/')[0]
+                paras[key] = cells[1].strip()
+            elif cells.__len__() == 1:
+                keylesslines += 1
+                paras['Keyless value #' + str(keylesslines)] = key
+
+        return paras
 
 @register_fabioclass
 class nexusimage(fabioimage):
