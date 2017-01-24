@@ -133,14 +133,8 @@ def loadparas(path):
 
         elif extension in ['.tif', '.img', '.tiff']:
             fimg = fabio.open(path)
-            try:
-                frame = int(re.search('\d+(?=.tif)', path).group(0))
-                paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
-                textheader = scanparas(paraspath, frame)
-            except AttributeError:
-                textheader = dict()
+            return fimg.header
 
-            return merge_dicts(fimg.header, textheader)
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
