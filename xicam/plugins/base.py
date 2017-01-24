@@ -176,13 +176,13 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 class EZplugin(plugin):
 
-    def __init__(self,name='TestPlugin',toolbuttons=[],parameters=[],openfileshandler=None):
+    def __init__(self,name='TestPlugin',toolbuttons=[],parameters=[],openfileshandler=None,plotenabled=True,imageenabled=True):
         self.name=name
 
         self.parameters = Parameter(name='Params',type='group',children=parameters)
 
-        self.centerwidget=pg.ImageView()
-        self.bottomwidget=pg.PlotWidget()
+        self.centerwidget=pg.ImageView() if imageenabled else None
+        self.bottomwidget=pg.PlotWidget() if plotenabled else None
         self.rightwidget=ParameterTree()
         self.toolbar=QtGui.QToolBar()
 
