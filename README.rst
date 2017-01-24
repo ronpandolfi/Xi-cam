@@ -1,4 +1,4 @@
-.. image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?branch=master
+.. hidden image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?branch=master
 .. image:: https://readthedocs.org/projects/xi-cam/badge/?version=latest
 
 Xi-cam
