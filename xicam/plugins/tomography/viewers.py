@@ -8,7 +8,7 @@ from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
-from xicam.widgets.customwidgets import DataTreeWidget, ImageView
+from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer
 from xicam.widgets.volumeviewers import VolumeViewer
@@ -102,14 +102,30 @@ class TomoViewer(QtGui.QWidget):
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
 
+        if self.data.flats is None and self.data.darks is None:
+            import fabio
+            flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
+            dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
+
+            if flat_dialog[0] and dark_dialog[0]:
+                try:
+                    flats = fabio.open(flat_dialog[0])
+                    darks = fabio.open(dark_dialog[0])
+                    self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
+                    self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
+
+                    del flats, darks
+                except IOError:
+                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded. Cannot perform \
+                                                              reconstructions on this data set')
+            else:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided. Cannot perform \
+                                                          reconstructions on this data set')
 
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.viewstack.addWidget(self.projectionViewer)
-
-
-
 
         self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
@@ -134,7 +150,6 @@ class TomoViewer(QtGui.QWidget):
 
         self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
-
 
     def wireupCenterSelection(self, recon_function):
         """
@@ -182,6 +197,7 @@ class TomoViewer(QtGui.QWidget):
             return ProjectionStack(paths)
         else:
             return StackImage(paths)
+
 
     def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         """
@@ -428,7 +444,7 @@ class MBIRViewer(QtGui.QWidget):
         self.val_box = QtGui.QDoubleSpinBox(parent = self.manual_tab)
         self.val_box.setRange(0,10000)
         self.val_box.setDecimals(1)
-        self.val_box.setValue(int(self.mdata['dxelements'])/2)
+        self.val_box.setValue(int(data.shape[1])/2)
         text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
         text_layout = QtGui.QHBoxLayout()
         text_layout.addWidget(text_label)
@@ -437,15 +453,6 @@ class MBIRViewer(QtGui.QWidget):
 
         self.auto_tab = QtGui.QWidget()
         self.auto_tab_layout = QtGui.QVBoxLayout()
-
-        self.cor_method_box = QtGui.QComboBox()
-        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
-        for item in self.cor_detection_funcs:
-            self.cor_method_box.addItem(item)
-        cor_method_label = QtGui.QLabel('COR detection function: ')
-        cor_method_layout = QtGui.QHBoxLayout()
-        cor_method_layout.addWidget(cor_method_label)
-        cor_method_layout.addWidget(self.cor_method_box)
 
         self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname="Phase Correlation",
                                 package=reconpkg.packages[config.names["Phase Correlation"][1]])
@@ -459,6 +466,15 @@ class MBIRViewer(QtGui.QWidget):
             if key in [p.name() for p in self.cor_params.children()]:
                 self.cor_params.child(key).setValue(val)
                 self.cor_params.child(key).setDefault(val)
+
+        self.cor_method_box = QtGui.QComboBox()
+        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+        for item in self.cor_detection_funcs:
+            self.cor_method_box.addItem(item)
+        cor_method_label = QtGui.QLabel('COR detection function: ')
+        cor_method_layout = QtGui.QHBoxLayout()
+        cor_method_layout.addWidget(cor_method_label)
+        cor_method_layout.addWidget(self.cor_method_box)
 
         # import inspect
         # for item in self.cor_detection_funcs:
@@ -494,8 +510,8 @@ class MBIRViewer(QtGui.QWidget):
         self.mbirParams.setMinimumHeight(230)
         params = [{'name': 'Dataset path', 'type': 'str'},
                   {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
-                  {'name': 'Z num elts', 'type': 'int', 'value': int(self.mdata['dzelements']) ,
-                   'default': int(self.mdata['dzelements'])},
+                  {'name': 'Z num elts', 'type': 'int', 'value': int(data.shape[-1]) ,
+                   'default': int(data.shape[-1])},
                   {'name': 'Smoothness', 'type': 'float', 'value': 0.15, 'default': 0.15},
                   {'name': 'Zinger thresh', 'type': 'float', 'value': 5, 'default': 5},
                   {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2},
@@ -581,7 +597,7 @@ class MBIRViewer(QtGui.QWidget):
                 kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :])}
             elif cor_function == 'Nelder-Mead':
                 kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :]),
-                          'theta' : tomopy.angles(self.mdata['dxelements'],ang1=90,ang2=270)}
+                          'theta' : tomopy.angles(int(self.data.shape[0]),ang1=90,ang2=270)}
             else:
                 return -1
 
@@ -603,17 +619,21 @@ class MBIRViewer(QtGui.QWidget):
 
         self.center = self.loadCOR()
 
-        if not self.center > 0 or self.center > self.mdata['dxelements']:
+        if not self.center > 0 or self.center > self.data.shape[0]:
             msg.showMessage('Invalid center of rotation')
             pass
         else:
 
-            views = int(self.mdata['nangles']) - 1
+            views = int(self.data[0]) - 1
             file_name = self.path.split("/")[-1].split(".")[0]
             nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
             output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
 
-            group = self.mdata['archdir'].split("\\")[-1]
+            try:
+                group = self.mdata['archdir'].split("\\")[-1]
+                px_size = float(self.mdata['pzdist'])*1000
+            except KeyError:
+                msg.showMessage('Insufficient metadata to write slurm file.', timeout=0)
             if group != file_name:
                 group_hdf5 = "{}/{}".format(group, file_name)
             else:
@@ -628,11 +648,11 @@ class MBIRViewer(QtGui.QWidget):
             slurm += ' --input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
             slurm += ' --group_hdf5 /{}'.format(group_hdf5)
             slurm += ' --code_launch_folder $SCRATCH/LaunchFolder/'
-            slurm += ' --output_hdf5 $SCRATCH/Results/{}_mbir/ --x_width {}'.format(file_name, self.mdata['dxelements'])
-            slurm += ' --recon_x_width {} --num_dark {}'.format(str(self.mdata['dxelements']), str(self.mdata['num_dark_fields']))
-            slurm += ' --num_bright {} --z_numElts {}'.format(str(self.mdata['num_bright_field']),self.mbir_params.child('Z num elts').value())
+            slurm += ' --output_hdf5 $SCRATCH/Results/{}_mbir/ --x_width {}'.format(file_name, int(self.data.shape[0]))
+            slurm += ' --recon_x_width {} --num_dark {}'.format(str(int(self.data.shape[0])), str(len(self.data.fabimage.darks)))
+            slurm += ' --num_bright {} --z_numElts {}'.format(str(self.data.fabimage.flats),self.mbir_params.child('Z num elts').value())
             slurm += ' --z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
-            slurm += ' --pix_size {} --rot_center {}'.format(float(self.mdata['pzdist'])*1000, self.center)
+            slurm += ' --pix_size {} --rot_center {}'.format(px_size, self.center)
             slurm += ' --smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
                                                                  self.mbir_params.child('Zinger thresh').value())
             slurm += ' --Variance_Est 1 --num_threads 24 --num_nodes {} '.format(nodes)
