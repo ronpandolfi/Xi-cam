@@ -999,17 +999,21 @@ class FunctionManager(fw.FeatureManager):
 
         data_dict = OrderedDict()
 
-        if slc is not None and slc[0].start is not None:
-            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                    else slc[0])
-            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-        else:
-            flat_loc = datawidget.data.fabimage.flatindices()
+        try:
 
-        data_dict['tomo'] = datawidget.getsino(slc=slc)
-        data_dict['flats'] = datawidget.getflats(slc=slc)
-        data_dict['dark'] = datawidget.getdarks(slc=slc)
-        data_dict['flat_loc'] = flat_loc
+            if slc is not None and slc[0].start is not None:
+                slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                        else slc[0])
+                flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+            else:
+                flat_loc = datawidget.data.fabimage.flatindices()
+
+            data_dict['tomo'] = datawidget.getsino(slc=slc)
+            data_dict['flats'] = datawidget.getflats(slc=slc)
+            data_dict['dark'] = datawidget.getdarks(slc=slc)
+            data_dict['flat_loc'] = flat_loc
+        except TypeError:
+            pass
         data_dict['theta'] = theta
         data_dict['center'] = center
 
@@ -1174,6 +1178,7 @@ class FunctionManager(fw.FeatureManager):
                 continue
             elif func.func_name in skip_names:
                 stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+                count += 1
                 continue
             elif fixed_func is not None and func.func_name == fixed_func.func_name:
                 func = fixed_func
@@ -1183,7 +1188,6 @@ class FunctionManager(fw.FeatureManager):
                     elif key in params_dict[name].iterkeys() and key not in 'center':
                         params_dict[name][key] = val
             stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-
             count += 1
 
             # load partial_stack
@@ -1547,6 +1551,8 @@ class FunctionManager(fw.FeatureManager):
             Range of parameters to be evaluated
         """
         self.updateParameters()
+        if function.func_name in 'Reader':
+            return
         for i in prange:
             function.param_dict[parameter] = i
             # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
@@ -1657,8 +1663,8 @@ class FunctionManager(fw.FeatureManager):
         """
 
 
-        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\nimport inspect\n" \
-                    "import numpy as np\nimport numexpr as ne\nfrom collections import OrderedDict\n\n"
+        signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\n" \
+                    "import numpy as np\nimport numexpr as ne\n\n"
 
         # set up function pipeline
         runnable_pipe = run_state[3][1]
@@ -1773,7 +1779,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn np.ndarray.tolist(loc)\n\n"
 
         # function for loading data dictionary
-        signature += "def loadDataDict(data, mdata, theta,center,slc=None):\n\tdata_dict = OrderedDict()\n"
+        signature += "def loadDataDict(data, mdata, theta,center,slc=None):\n\tdata_dict = {}\n"
         signature += "\tif slc is not None and slc[0].start is not None:\n"
         signature += "\t\tslc_ = slice(slc[0].start,data[0].shape[0],slc[0].step)\n"
         signature += "\t\tflat_loc = map_loc(slc_, flatindices(mdata))\n"

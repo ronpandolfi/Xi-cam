@@ -117,6 +117,15 @@ class H5image(fabioimage):
     def read(self, filename, frame=None):
         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
                            if 'H5image' in image[0] and image[0] != 'H5image']
+
+        # this block ensures that the Dxchange class is the last one checked, as it breaks the following loop if
+        # the image does not match this class
+        for image_class in h5image_classes:
+            if 'DXchangeH5image' in str(image_class):
+                dxchange_class = image_class
+        h5image_classes.remove(dxchange_class)
+        h5image_classes.append(dxchange_class)
+
         for image_class in h5image_classes:
             try:
                 obj = image_class[1](self.data, self.header)
@@ -136,6 +145,7 @@ class H5image(fabioimage):
 fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
+
 
 @register_fabioclass
 class ALS733H5image(fabioimage):
@@ -263,7 +273,6 @@ class ALS832H5image(fabioimage):
                 raise H5ReadError
 
             self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
-
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm[0]
@@ -359,6 +368,163 @@ class ALS832H5image(fabioimage):
 
     def getframe(self, frame=0):
         self.data = self._dgroup[self.frames[frame]][0]
+        return self.data
+
+    def next(self):
+        if self.currentframe < self.__len__() - 1:
+            self.currentframe += 1
+        else:
+            raise StopIteration
+        return self.getframe(self.currentframe)
+
+    def previous(self):
+        if self.currentframe > 0:
+            self.currentframe -= 1
+            return self.getframe(self.currentframe)
+        else:
+            raise StopIteration
+
+    def close(self):
+        self._h5.close()
+
+@register_fabioclass
+class GeneralAPSH5image(fabioimage):
+    """
+    Fabio Image class for arbitrary APS H5 structure
+    """
+    extensions=['h5']
+    def __init__(self, data=None , header=None):
+        super(GeneralAPSH5image, self).__init__(data=data, header=header)
+        self.frames = None
+        self.currentframe = 0
+        self.header = None
+        self._h5 = None
+        self._dgroup = None
+        self._flats = None
+        self._darks = None
+
+    # Context manager for "with" statement compatibility
+    def __enter__(self, *arg, **kwarg):
+        return self
+
+    def __exit__(self, *arg, **kwarg):
+        self.close()
+
+    def _readheader(self, f):
+        #not really useful at this point
+        if self._h5 is not None:
+            self.header=dict(self._h5.attrs)
+            self.header.update(**self._dgroup.attrs)
+
+    def read(self, f, frame=None):
+        self.filename = f
+        if frame is None:
+            frame = 0
+        if self._h5 is None:
+
+            # Check header for unique attributes
+            self._h5 = h5py.File(self.filename, 'r')
+            self._dgroup = self._finddatagroup(self._h5)
+            self.readheader(f)
+
+            self.frames = range(self._dgroup.shape[0])
+            # self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+
+        dfrm = self._dgroup[self.frames[frame]]
+        self.currentframe = frame
+        self.data = dfrm
+        return self
+
+    def _finddatagroup(self, h5object):
+        keys = h5object.keys()
+        for key in keys:
+            try:
+                data, data_key = self._check_if_dataset(h5object, key)
+                break
+            except TypeError:
+                pass
+
+        try:
+            return data[data_key]
+        except NameError:
+            raise H5ReadError('Unable to find dataset group')
+
+    def _check_if_dataset(self, h5object, key):
+        #recursively find dataset in h5 tree structure
+        if isinstance(h5object[key], h5py.Dataset):
+            return h5object, key
+        else:
+            try:
+                for lower_key in h5object[key].keys():
+                    return self._check_if_dataset(h5object[key], lower_key)
+            except AttributeError:
+                pass
+
+    @property
+    def flats(self):
+        return self._flats
+
+    @property
+    def darks(self):
+        return self._darks
+
+    def flatindices(self):
+        nproj = len(self)
+        return [0, nproj - 1]
+
+    @property
+    def nframes(self):
+        return len(self.frames)
+
+    @nframes.setter
+    def nframes(self, n):
+        pass
+
+    # def getsinogram(self, idx=None):
+    #     if idx is None: idx = self.data.shape[0]//2
+    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
+    #                                                               range(self.nframes))])
+    #     return self.sinogram
+
+    def __getitem__(self, item):
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item, )
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                    start = item[n].start if item[n].start is not None else 0
+                    step = item[n].step if item[n].step is not None else 1
+                    stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and isinstance(item[n], int):
+                    if item[n] < 0:
+                        start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                    else:
+                        start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+    def __len__(self):
+        return self.nframes
+
+    def getframe(self, frame=0):
+        self.data = self._dgroup[self.frames[frame]]
         return self.data
 
     def next(self):
@@ -482,6 +648,11 @@ class TiffStack(object):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
         self.header= header
+        self.rawdata = np.stack([self.getframe(frame) for frame in range(len(self.frames))])
+
+        self._readheader()
+
+
 
     def __len__(self):
         return len(self.frames)
@@ -489,6 +660,49 @@ class TiffStack(object):
     def getframe(self, frame=0):
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
+
+    def close(self):
+        pass
+
+class CondensedTiffStack(object):
+    """
+    Class for 3D tiffs to view in pyqtgraph ImageView - very similar to TiffStack class
+    """
+    def __init__(self, path, header=None):
+        super(CondensedTiffStack, self).__init__()
+
+        self.rawdata = tifffile.imread(path, memmap=True)
+        self.frames = range(self.rawdata.shape[0])
+        self.header = header
+        self._readheader()
+
+    @property
+    def classname(self):
+        return 'CondensedTiffStack'
+
+    def __len__(self):
+        return len(self.frames)
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def getframe(self, frame=0):
+        return self.rawdata[frame]
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
 
     def close(self):
         pass

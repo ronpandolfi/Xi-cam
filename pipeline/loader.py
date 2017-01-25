@@ -13,7 +13,7 @@ import glob
 import re
 import writer
 from xicam import debugtools, config
-from pipeline.formats import TiffStack
+from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
@@ -40,16 +40,16 @@ def loadimage(path):
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
-            if ext in ['.nxs', '.hdf']:
-                nxroot = nx.load(path)
-                # print nxroot.tree
-                if hasattr(nxroot, 'data'):
-                    if hasattr(nxroot.data, 'signal'):
-                        data = nxroot.data.signal
-                        return data
-                    else:
-                        return loadimage(str(nxroot.data.rawfile))
-            else:
+            # if ext in ['.nxs', '.hdf']:
+            #     nxroot = nx.load(path)
+            #     # print nxroot.tree
+            #     if hasattr(nxroot, 'data'):
+            #         if hasattr(nxroot.data, 'signal'):
+            #             data = nxroot.data.signal
+            #             return data
+            #         else:
+            #             return loadimage(str(nxroot.data.rawfile))
+            # else:
                 data = fabio.open(path).data
                 return data
     except IOError:
@@ -870,6 +870,8 @@ class StackImage(object):
                 filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
+            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
+                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -911,6 +913,7 @@ class StackImage(object):
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
+        # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
             if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
