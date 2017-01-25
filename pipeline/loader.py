@@ -13,7 +13,7 @@ import glob
 import re
 import writer
 from xicam import debugtools, config
-from pipeline.formats import TiffStack
+from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
@@ -870,6 +870,8 @@ class StackImage(object):
                 filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
+            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
+                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:

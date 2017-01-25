@@ -146,6 +146,7 @@ fabio.openimage.H5 = H5image
 fabioutils.FILETYPES['h5'] = ['h5']
 fabio.openimage.MAGIC_NUMBERS[21]=(b"\x89\x48\x44\x46",'h5')
 
+
 @register_fabioclass
 class ALS733H5image(fabioimage):
     extensions=['h5']
@@ -647,6 +648,11 @@ class TiffStack(object):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
         self.header= header
+        self.rawdata = np.stack([self.getframe(frame) for frame in range(len(self.frames))])
+
+        self._readheader()
+
+
 
     def __len__(self):
         return len(self.frames)
@@ -654,6 +660,49 @@ class TiffStack(object):
     def getframe(self, frame=0):
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
+
+    def close(self):
+        pass
+
+class CondensedTiffStack(object):
+    """
+    Class for 3D tiffs to view in pyqtgraph ImageView - very similar to TiffStack class
+    """
+    def __init__(self, path, header=None):
+        super(CondensedTiffStack, self).__init__()
+
+        self.rawdata = tifffile.imread(path, memmap=True)
+        self.frames = range(self.rawdata.shape[0])
+        self.header = header
+        self._readheader()
+
+    @property
+    def classname(self):
+        return 'CondensedTiffStack'
+
+    def __len__(self):
+        return len(self.frames)
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def getframe(self, frame=0):
+        return self.rawdata[frame]
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
 
     def close(self):
         pass
