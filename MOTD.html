@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Flask Template Example</title>
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <style type="text/css">
+      .container {
+        max-width: 500px;
+        padding-top: 100px;
+      }
+      h2 {color: red;}
+    </style>-->
+    <style type="text/css">
+      body {
+        background-color: #2B2B2B;
+        color: #A8B6C4;
+      }
+    </style>
+
+  </head>
+  <body>
+
+   <div align='center'>
+       <br />
+       <br />
+       <img src='/static/camera.jpg' width='200'/>
+       <h1 style='font-family:Zero Threes;'>
+           Welcome to Xi-cam
+       </h1>
+       <br />
+       Please cite Xi-cam in published work: <br />
+       Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A.
+       (under preparation)
+
+   </div>
+
+
+        <div class="attribution">
+            <h1 style="text-align:center">Xi-cam</h1>
+            <span class="container">
+                <div style="width:50%;float:left;">
+                    <div class="section">Authors</div>
+                    <ul>
+
+                            <li>Ronald J Pandolfi</li>
+
+                            <li>Dinesh Kumar</li>
+
+                            <li>Singanallur Venkatakrishnan</li>
+
+                            <li>Luis Barrosso-Luque</li>
+
+                            <li>Austin Blair</li>
+
+                            <li>Hari Krishnan</li>
+
+                            <li>James A Sethian</li>
+
+                            <li>Alexander Hexemer</li>
+
+                    </ul>
+                </div>
+                <div style="margin-left:50%">
+                    <div class="section">Organizations</div>
+                    <ul>
+
+                            <li>Advanced Light Source (ALS)</li>
+
+                            <li>Center for Advanced Mathematics for Energy Research Applications (CAMERA)</li>
+
+                    </ul>
+                </div>
+                <div style="clear:both;"></div>
+                <div style="position:relative;width:600px;display:block;margin:0 auto;">
+
+                        <img class="slideXicam" src="static/camera.jpg" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+
+                        <img class="slideXicam" src="static/Berkeley_Lab_Logo_Small.jpg" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+
+                        <img class="slideXicam" src="static/4206860375_5cb494745d_z.jpg" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+
+
+                        <a class="w3-btn-floating" onclick="plusDivsXicam(-1)" style="position:absolute;top:45%;left:0">&#10094;</a>
+                        <a class="w3-btn-floating" onclick="plusDivsXicam(+1)" style="position:absolute;top:45%;right:0">&#10095;</a>
+
+                </div>
+            </span>
+        </div>
+
+          <script>
+            var slideIndexXicam = 1;
+            showDivsXicam(slideIndexXicam);
+
+            function plusDivsXicam(n) {
+                showDivsXicam(slideIndexXicam += n);
+            }
+
+            function showDivsXicam(n) {
+                var i;
+                var x = document.getElementsByClassName("slideXicam");
+                if (n > x.length) {slideIndexXicam = 1}
+                if (n < 1) {slideIndexXicam = x.length} ;
+                for (i = 0; i < x.length; i++) {
+                    x[i].style.display = "none";
+                }
+                x[slideIndexXicam-1].style.display = "block";
+            }
+          </script>
+
+
+        <div class="attribution">
+            <h1 style="text-align:center">Tomopy</h1>
+            <span class="container">
+                <div style="width:50%;float:left;">
+                    <div class="section">Authors</div>
+                    <ul>
+
+                            <li>Doga Gursoy</li>
+
+                            <li>Francesco De Carlo</li>
+
+                            <li>Xianghui Xiao</li>
+
+                            <li>Chris Jacobsen</li>
+
+                    </ul>
+                </div>
+                <div style="margin-left:50%">
+                    <div class="section">Organizations</div>
+                    <ul>
+
+                            <li>Argonne National Lab</li>
+
+                            <li>Advanced Photon Source</li>
+
+                    </ul>
+                </div>
+                <div style="clear:both;"></div>
+                <div style="position:relative;width:600px;display:block;margin:0 auto;">
+
+                        <img class="slideTomopy" src="static/Argonnelablogo.PNG" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+
+                        <img class="slideTomopy" src="static/Tomopy-logo-wiki.png" style="height:150px;text-align:center;display:block;margin:0 auto;" />
+
+
+                        <a class="w3-btn-floating" onclick="plusDivsTomopy(-1)" style="position:absolute;top:45%;left:0">&#10094;</a>
+                        <a class="w3-btn-floating" onclick="plusDivsTomopy(+1)" style="position:absolute;top:45%;right:0">&#10095;</a>
+
+                </div>
+            </span>
+        </div>
+
+          <script>
+            var slideIndexTomopy = 1;
+            showDivsTomopy(slideIndexTomopy);
+
+            function plusDivsTomopy(n) {
+                showDivsTomopy(slideIndexTomopy += n);
+            }
+
+            function showDivsTomopy(n) {
+                var i;
+                var x = document.getElementsByClassName("slideTomopy");
+                if (n > x.length) {slideIndexTomopy = 1}
+                if (n < 1) {slideIndexTomopy = x.length} ;
+                for (i = 0; i < x.length; i++) {
+                    x[i].style.display = "none";
+                }
+                x[slideIndexTomopy-1].style.display = "block";
+            }
+          </script>
+
+
+        <div class="attribution">
+            <h1 style="text-align:center">Tomography Plugin</h1>
+            <span class="container">
+                <div style="width:50%;float:left;">
+                    <div class="section">Authors</div>
+                    <ul>
+
+                            <li>Luis Barrosso-Luque</li>
+
+                            <li>Ronald J Pandolfi</li>
+
+                            <li>Holden Parks</li>
+
+                            <li>Dilworth Parkinson</li>
+
+                    </ul>
+                </div>
+                <div style="margin-left:50%">
+                    <div class="section">Organizations</div>
+                    <ul>
+
+                            <li>Advanced Light Source (ALS)</li>
+
+                            <li>Center for Advanced Mathematics for Energy Research Applications (CAMERA)</li>
+
+                    </ul>
+                </div>
+                <div style="clear:both;"></div>
+                <div style="position:relative;width:600px;display:block;margin:0 auto;">
+
+
+                </div>
+            </span>
+        </div>
+
+
+
+    <!--
+    <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    -->
+  </body>
+
+</html>
