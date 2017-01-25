@@ -3,15 +3,20 @@ from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
 from pipeline import msg
+from functools import partial
 import f3d_viewers
 import os
-import xicam.widgets.featurewidgets as fw
 import pyqtgraph as pg
+import filtermanager as fm
+import importer
 
 
 class plugin(base.plugin):
 
     name = "F3D"
+
+    sigFilterAdded = QtCore.Signal(dict)
+
 
     def __init__(self, placeholders, *args, **kwargs):
 
@@ -36,6 +41,7 @@ class plugin(base.plugin):
         self.functionwidget.moveDownButton.setToolTip('Move selected function down')
         self.functionwidget.moveUpButton.setToolTip('Move selected function up')
 
+
         filefuncmenu = QtGui.QMenu()
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -47,10 +53,6 @@ class plugin(base.plugin):
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.refreshaction = QtGui.QAction(icon, 'Reset', filefuncmenu)
         filefuncmenu.addActions([self.openaction, self.saveaction, self.refreshaction])
-
-        self.functionwidget.fileButton.setMenu(filefuncmenu)
-        self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
 
         leftwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
         paramtree = pg.parametertree.ParameterTree()
@@ -76,10 +78,42 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
         self.rightwidget = None
 
-        self.manager = FilterManager(self.functionwidget.functionsList, self.param_form,
+        self.manager = fm.FilterManager(self.functionwidget.functionsList, self.param_form,
                                        blank_form='Select a filter from\n below to set parameters...')
 
+        self.functionwidget.fileButton.setMenu(filefuncmenu)
+        self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.functionwidget.fileButton.setArrowType(QtCore.Qt.NoArrow)
+
+        self.addfunctionmenu = QtGui.QMenu()
+        self.functionwidget.addFunctionButton.setMenu(self.addfunctionmenu)
+        self.functionwidget.addFunctionButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.functionwidget.addFunctionButton.setArrowType(QtCore.Qt.NoArrow)
+        self.openaction.triggered.connect(self.loadPipeline)
+        self.saveaction.triggered.connect(self.savePipeline)
+        self.functionwidget.moveDownButton.clicked.connect(
+            lambda: self.manager.swapFeatures(self.manager.selectedFeature,self.manager.previousFeature))
+        self.functionwidget.moveUpButton.clicked.connect(
+            lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature))
+        self.functionwidget.clearButton.clicked.connect(self.clearPipeline)
+
+
+
+        """
+        connect a button to self.uploadFilterImage to add mask image
+        """
+
         super(plugin, self).__init__(placeholders, *args, **kwargs)
+
+
+        self.sigFilterAdded.connect(self.manager.updateFilterMasks)
+
+        # dict to contain key-value pairs of paths and corresponding images. Used for user-uploaded images to be
+        # used as filters
+        self.filter_images = {}
+
+        self.build_function_menu(self.addfunctionmenu, importer.filters, self.manager.addFilter)
+
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -89,6 +123,8 @@ class plugin(base.plugin):
                 fname = str(url.toLocalFile())
             if os.path.isfile(fname):
                 self.openfiles([fname])
+            if os.path.isdir(fname):
+                self.opendirectory([fname])
             e.accept()
 
     def dragEnterEvent(self, e):
@@ -114,7 +150,6 @@ class plugin(base.plugin):
             paths = paths[0]
 
         widget = f3d_viewers.F3DViewer(files=paths)
-        widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
@@ -174,6 +209,50 @@ class plugin(base.plugin):
     def run(self):
         pass
 
+    def build_function_menu(self, menu, filter_data, actionslot):
+        """
+        Builds the filter menu and connects it to the corresponding slot to add them to the workflow pipeline
+
+        Parameters
+        ----------
+        menu : QtGui.QMenu
+            Menu object to populate with filter names
+        functiondata : dict
+            Dictionary with function information. See importer.filters.yml
+        actionslot : QtCore.Slot
+            slot where the function action triggered signal should be connected
+        """
+
+        for func, options in filter_data.iteritems():
+                try:
+                    funcaction = QtGui.QAction(func, menu)
+                    funcaction.triggered.connect(
+                        partial(actionslot, func))
+                    menu.addAction(funcaction)
+                except KeyError:
+                    pass
+
+    def uploadFilterImage(self, path):
+        self.sigFilterAdded.emit(self.filter_images)
+        """
+        try:
+            open image
+        except Error: raise warning
+
+        self.filter_images[path] = image
+        update each filterwidget in filterManager
+
+        """
+
+    def loadPipeline(self):
+        pass
+
+    def savePipeline(self):
+        pass
+
+    def clearPipeline(self):
+        pass
+
 class Toolbar(QtGui.QToolBar):
 
     def __init__(self):
@@ -194,8 +273,3 @@ class Toolbar(QtGui.QToolBar):
 
         self.actionRun.triggered.connect(run)
 
-class FilterManager(fw.FeatureManager):
-    def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
-
-        super(FilterManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
-                                              blank_form=blank_form)

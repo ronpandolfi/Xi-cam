@@ -1,7 +1,6 @@
 from PySide import QtGui, QtCore
 from xicam.widgets.imageviewers import StackViewer
 from pipeline.loader import StackImage
-from pipeline.formats import TiffStack
 import numpy as np
 
 class F3DViewer(QtGui.QWidget):
@@ -21,3 +20,7 @@ class F3DViewer(QtGui.QWidget):
         fullLayout.addWidget(fullPlugin)
 
         self.setLayout(fullLayout)
+
+
+
+

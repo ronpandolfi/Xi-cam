@@ -1,0 +1,71 @@
+BilateralFilter:
+  Parameters:
+    - name: Range Radius
+      type: int
+      default: 30
+    - name: Spatial Radius
+      type: int
+      default: 3
+  Package: src
+FFTFilter:
+  Parameters:
+    - name: FFT Choices
+      type: list
+      values:
+        - Forward
+        - Inverse
+  Package: src
+MMFilterClo:
+  Parameters:
+    - name: Mask
+      type: list
+      values:
+        - StructuredElementL
+        - Diagonal 3x3x3
+        - Diagonal 10x10x4
+        - Diagonal 10x10x10
+  Package: src
+MMFilterDil:
+  Parameters:
+    - name: Mask
+      type: list
+      values:
+        - StructuredElementL
+        - Diagonal 3x3x3
+        - Diagonal 10x10x4
+        - Diagonal 10x10x10
+  Package: src
+MMFilterEro:
+  Parameters:
+    - name: Mask
+      type: list
+      values:
+        - StructuredElementL
+        - Diagonal 3x3x3
+        - Diagonal 10x10x4
+        - Diagonal 10x10x10
+  Package: src
+MMFilterOpe:
+  Parameters:
+    - name: Mask
+      type: list
+      values:
+        - StructuredElementL
+        - Diagonal 3x3x3
+        - Diagonal 10x10x4
+        - Diagonal 10x10x10
+  Package: src
+MaskFilter:
+  Parameters:
+    - name: Mask
+      type: list
+      values:
+        - StructuredElementL
+        - Diagonal 3x3x3
+        - Diagonal 10x10x4
+        - Diagonal 10x10x10
+  Package: src
+MedianFilter:
+  Package: src
+
+
