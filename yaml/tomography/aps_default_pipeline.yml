@@ -1,0 +1,122 @@
+1. Reader:
+  Read Data:
+    Enabled: True
+2. Outlier Removal:
+  Remove Outliers:
+    Parameters:
+      dif: 500
+      size: 5
+      arr: tomo
+    Enabled: True
+3. Outlier Removal:
+  Remove Outliers:
+    Parameters:
+      dif: 500
+      size: 5
+      arr: flats
+    Enabled: False
+4. Normalization:
+  Nearest Flats:
+    Enabled: True
+5. Stripe Removal:
+  Fourier-Wavelet:
+    Parameters:
+      level: 8
+      wname: db5
+      sigma: 3
+      pad: True
+      arr: tomo
+    Enabled: True
+6. Phase Retrieval:
+  Phase Retrieval:
+    Parameters:
+      pixel_size: 0.000065
+      dist: 3
+      energy: 27
+      alpha: 0.0005
+    Enabled: True
+7. Array Operation:
+  Maximum:
+    Parameters:
+      arr: tomo
+      value: 0.0000000000000001
+    Enabled: False
+8. Negative Logarithm:
+  Negative Logarithm:
+    Parameters:
+      arr: tomo
+    Enabled: False
+9. Padding:
+  Padding:
+    Parameters:
+      axis: 2
+      mode: edge
+      npad: 531
+      arr: tomo
+    Enabled: True
+10. Reconstruction:
+  Gridrec:
+    Parameters:
+      cutoff: 0.2
+      order: 2
+      filter_name: butterworth
+      arr: tomo
+    Package: tomopy
+    Input Functions:
+      center:
+        Center Detection:
+          Phase Correlation:
+            Enabled: True
+      theta:
+        Projection Angles:
+          Projection Angles:
+            Parameters:
+              ang1: 270
+              ang2: 90
+11. Crop:
+  Crop:
+    Parameters:
+      p11: 531
+      p12: 531
+      p21: 531
+      p22: 531
+      arr: tomo
+    Enabled: True
+12. Array Operation:
+  Divide:
+    Parameters:
+      arr: tomo
+    Enabled: False
+13. Circular Mask:
+  Circular Mask:
+    Parameters:
+      ratio: 1.0
+      val: 0
+      axis: 0
+      arr: tomo
+    Enabled: True
+14. Ring Removal:
+  Polar Mean Filter:
+    Parameters:
+      rec: tomo
+      theta_min: 30
+      rwidth: 30
+      thresh_max: 300
+      thresh: 300
+      thresh_min: 100
+      int_mode: wrap
+    Enabled: True
+15. Convert Data Type:
+  Convert Data Type:
+    Parameters:
+      dtype: uint8
+      imin: -10
+      imax: 30
+      arr: tomo
+    Enabled: False
+16. Write:
+  Tiff Stack:
+    Parameters:
+      digit: 4
+      data: tomo
+    Enabled: True

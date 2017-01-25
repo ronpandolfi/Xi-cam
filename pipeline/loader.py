@@ -40,16 +40,16 @@ def loadimage(path):
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
-            if ext in ['.nxs', '.hdf']:
-                nxroot = nx.load(path)
-                # print nxroot.tree
-                if hasattr(nxroot, 'data'):
-                    if hasattr(nxroot.data, 'signal'):
-                        data = nxroot.data.signal
-                        return data
-                    else:
-                        return loadimage(str(nxroot.data.rawfile))
-            else:
+            # if ext in ['.nxs', '.hdf']:
+            #     nxroot = nx.load(path)
+            #     # print nxroot.tree
+            #     if hasattr(nxroot, 'data'):
+            #         if hasattr(nxroot.data, 'signal'):
+            #             data = nxroot.data.signal
+            #             return data
+            #         else:
+            #             return loadimage(str(nxroot.data.rawfile))
+            # else:
                 data = fabio.open(path).data
                 return data
     except IOError:
@@ -121,21 +121,7 @@ def loadparas(path):
             return head[0].header
 
         elif extension == '.edf':
-            txtpath = os.path.splitext(path)[0] + '.txt'
-            fimg = fabio.open(path)
-            if os.path.isfile(txtpath):
-                return merge_dicts(fimg.header, scanparas(txtpath))
-            else:
-                basename = os.path.splitext(path)[0]
-                obj = re.search('_\d+$', basename)
-                if obj is not None:
-                    iend = obj.start()
-                    token = basename[:iend] + '*txt'
-                    txtpath = glob.glob(token)[0]
-
-                    return merge_dicts(fimg.header, scanparas(txtpath))
-                else:
-                    return fimg.header
+            return fabio.open(path).header
 
         elif extension == '.gb':
             return {}
@@ -147,73 +133,14 @@ def loadparas(path):
 
         elif extension in ['.tif', '.img', '.tiff']:
             fimg = fabio.open(path)
-            try:
-                frame = int(re.search('\d+(?=.tif)', path).group(0))
-                paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
-                textheader = scanparas(paraspath, frame)
-            except AttributeError:
-                textheader = dict()
+            return fimg.header
 
-            return merge_dicts(fimg.header, textheader)
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
     except IndexError:
         msg.logMessage('No txt file found in loadparas',msg.WARNING)
     return OrderedDict()
-
-
-def scanparas(path, frame=None):
-    if not os.path.isfile(path):
-        return dict()
-
-    with open(path, 'r') as f:
-        lines = f.readlines()
-
-    if lines[0][:2] == '#F':
-        paras = scanalesandroparaslines(lines, frame)
-    else:
-        paras = scanparaslines(lines)
-
-    return paras
-
-
-def scanparaslines(lines):
-    paras = OrderedDict()
-    keylesslines = 0
-    for line in lines:
-        cells = filter(None, re.split('[=:]+', line))
-
-        key = cells[0].strip()
-
-        if cells.__len__() == 2:
-            cells[1] = cells[1].split('/')[0]
-            paras[key] = cells[1].strip()
-        elif cells.__len__() == 1:
-            keylesslines += 1
-            paras['Keyless value #' + str(keylesslines)] = key
-
-    return paras
-
-
-def scanalesandroparaslines(lines, frame):
-    keys = []
-    values = []
-    correctframe = False
-    for line in lines:
-        token = line[:2]
-        if token == '#O':
-            keys.extend(line.split()[1:])
-        elif token == '#S':
-            if int(line.split()[1]) == frame:
-                correctframe = True
-            else:
-                correctframe = False
-        elif token == '#P' and correctframe:
-            values.extend(line.split()[1:])
-
-    return OrderedDict(zip(keys, values))
-
 
 def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
     if data1 is None or data2 is None or paras1 is None or paras2 is None:
@@ -911,6 +838,7 @@ class StackImage(object):
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
+        # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
             if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
