@@ -26,8 +26,11 @@ class ProjectionStack(StackImage):
 
     def __init__(self, filepath=None, data=None):
         super(ProjectionStack, self).__init__(filepath=filepath, data=data)
-        self.flats = self.fabimage.flats
-        self.darks = self.fabimage.darks
+        try:
+            self.flats = self.fabimage.flats
+            self.darks = self.fabimage.darks
+        except AttributeError:
+            self.flats, self.darks = None, None
 
 
 

@@ -100,7 +100,10 @@ class TomoViewer(QtGui.QWidget):
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
-            self.data = self.loaddata(paths)
+            if paths.endswith('.tif') or paths.endswith('.tiff'):
+                self.data = self.loaddata(paths, raw=True)
+            else:
+                self.data = self.loaddata(paths)
 
         if self.data.flats is None and self.data.darks is None:
             import fabio

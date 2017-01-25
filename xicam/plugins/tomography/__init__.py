@@ -162,6 +162,18 @@ class TomographyPlugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
+    def opendirectory(self, files, operation=None):
+        msg.showMessage('Loading directory...', timeout=10)
+        self.activate()
+        if type(files) is list:
+            files = files[0]
+
+        widget = TomoViewer(paths=files)
+        widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
+        widget.wireupCenterSelection(self.manager.recon_function)
+        self.centerwidget.addTab(widget, os.path.basename(files))
+        self.centerwidget.setCurrentWidget(widget)
+
     # def currentWidget(self):
     #     """
     #     Return the current widget (viewer.TomoViewer) from the centerwidgets tabs
@@ -185,7 +197,6 @@ class TomographyPlugin(base.plugin):
         """
         Slot to recieve centerwidgets currentchanged signal when a new tab is selected
         """
-
         try:
             self.setPipelineValues()
             self.manager.updateParameters()
@@ -278,7 +289,6 @@ class TomographyPlugin(base.plugin):
         Sets up the metadata table and default values in configuration parameters and functions based on the selected
         dataset
         """
-
         widget =  self.centerwidget.widget(self.currentWidget())
         if widget is not None:
             self.ui.property_table.setData(widget.data.header.items())
@@ -289,7 +299,8 @@ class TomographyPlugin(base.plugin):
             if widget.data.fabimage.classname == 'ALS832H5image':
                 config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)
-            elif widget.data.fabimage.classname == 'GeneralAPSH5image':
+            # if widget.data.fabimage.classname == 'GeneralAPSH5image':
+            else:
                 self.manager.setPipelineFromYAML(config.load_pipeline(APS_PIPELINE_YAML))
                 config.set_aps_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)
