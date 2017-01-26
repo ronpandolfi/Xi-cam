@@ -2,6 +2,7 @@ from xicam.plugins import base
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
+from pipeline.loader import StackImage
 from pipeline import msg
 from functools import partial
 import f3d_viewers
@@ -20,17 +21,11 @@ class plugin(base.plugin):
 
     def __init__(self, placeholders, *args, **kwargs):
 
-
-        # self.centerwidget.currentChanged.connect(self.currentChanged)
-        # self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
-        #
-        # # DRAG-DROP
-        # self.centerwidget.setAcceptDrops(True)
-        # self.centerwidget.dragEnterEvent = self.dragEnterEvent
-        # self.centerwidget.dropEvent = self.dropEvent
-
         self.toolbar = Toolbar()
         self.toolbar.connectTriggers(self.run)
+        # self.build_toolbutton_menu(self.toolbar.addMaskMenu, 'Open file for mask', self.openMaskFile)
+        # self.build_toolbutton_menu(self.toolbar.addMaskMenu, 'Open directory for mask', self.openMaskFolder)
+
 
         self.functionwidget = QUiLoader().load('xicam/gui/tomographyleft.ui')
         self.functionwidget.functionsList.setAlignment(QtCore.Qt.AlignBottom)
@@ -66,7 +61,6 @@ class plugin(base.plugin):
         leftwidget.addWidget(self.functionwidget)
 
         self.log = RunConsole()
-
         icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
         icon_log = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_64.png"))
 
@@ -96,6 +90,15 @@ class plugin(base.plugin):
         self.functionwidget.moveUpButton.clicked.connect(
             lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature))
         self.functionwidget.clearButton.clicked.connect(self.clearPipeline)
+
+        # self.centerwidget.currentChanged.connect(self.currentChanged)
+        self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
+        # DRAG-DROP
+        self.centerwidget.setAcceptDrops(True)
+        self.centerwidget.dragEnterEvent = self.dragEnterEvent
+        self.centerwidget.dropEvent = self.dropEvent
+
 
 
 
@@ -150,8 +153,15 @@ class plugin(base.plugin):
             paths = paths[0]
 
         widget = f3d_viewers.F3DViewer(files=paths)
+
+        # check if file is already in filter_images, and load if it is not
+        if not paths in self.filter_images.iterkeys():
+            self.filter_images[paths] = widget
+            self.sigFilterAdded.emit(self.filter_images)
+
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
+        msg.showMessage('Done.', timeout=10)
 
     def opendirectory(self, file, operation=None):
         msg.showMessage('Loading directory...', timeout=10)
@@ -161,8 +171,54 @@ class plugin(base.plugin):
 
         files = [os.path.join(file, path) for path in os.listdir(file) if path.endswith('.tif') or path.endswith('.tiff')]
         widget = f3d_viewers.F3DViewer(files=files)
+
+        # check if file is already in filter_images, and load if it is not
+        if not file in self.filter_images.iterkeys():
+            self.filter_images[file] = widget
+            self.sigFilterAdded.emit(self.filter_images)
+
         self.centerwidget.addTab(widget, os.path.basename(file))
         self.centerwidget.setCurrentWidget(widget)
+        msg.showMessage('Done.', timeout=10)
+
+
+    ## TODO: have separate readers for masks? maybe just have all open images be available as masks
+
+    # def openMaskFile(self):
+    #
+    #     mask_path = QtGui.QFileDialog().getOpenFileName(caption="Select file to open as mask: ")
+    #
+    #     if not mask_path[0]:
+    #         return
+    #     try:
+    #         mask = StackImage(mask_path[0]).fabimage.rawdata
+    #     except AttributeError:
+    #         self.log.log2local("Could not open file \'{}\'".format(mask_path[0]))
+    #
+    #     self.filter_images[mask_path[0]] = mask
+    #     self.log.log2local('Successfully loaded \'{}\' as mask'.format(os.path.basename(mask_path[0])))
+    #     self.leftwidget.setCurrentWidget(self.log)
+    #     self.sigFilterAdded.emit(self.filter_images)
+    #
+    #
+    #
+    # def openMaskFolder(self):
+    #     mask_path = QtGui.QFileDialog().getExistingDirectory(caption=
+    #                                                 "Select directory to search for mask images: ")
+    #
+    #     if not mask_path:
+    #         return
+    #     try:
+    #         files = [os.path.join(mask_path, path) for path in os.listdir(mask_path) if
+    #                  path.endswith('.tif') or path.endswith('.tiff')]
+    #         mask = StackImage(files).fabimage.rawdata
+    #     except AttributeError:
+    #         self.log.log2local("Could not open directory \'{}\'".format(mask_path))
+    #
+    #     self.filter_images[mask_path] = mask
+    #     self.log.log2local('Successfully loaded images in \'{}\' as mask'.format(os.path.basename(mask_path)))
+    #     self.leftwidget.setCurrentWidget(self.log)
+    #     self.sigFilterAdded.emit(self.filter_images)
 
     def currentWidget(self):
         """
@@ -226,23 +282,16 @@ class plugin(base.plugin):
         for func, options in filter_data.iteritems():
                 try:
                     funcaction = QtGui.QAction(func, menu)
-                    funcaction.triggered.connect(
-                        partial(actionslot, func))
+                    funcaction.triggered.connect(partial(actionslot, func))
                     menu.addAction(funcaction)
                 except KeyError:
                     pass
 
-    def uploadFilterImage(self, path):
-        self.sigFilterAdded.emit(self.filter_images)
-        """
-        try:
-            open image
-        except Error: raise warning
+    def build_toolbutton_menu(self, menu, heading, actionslot):
 
-        self.filter_images[path] = image
-        update each filterwidget in filterManager
-
-        """
+        action = QtGui.QAction(heading, menu)
+        action.triggered.connect(actionslot)
+        menu.addAction(action)
 
     def loadPipeline(self):
         pass
@@ -262,12 +311,22 @@ class Toolbar(QtGui.QToolBar):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun.setIcon(icon)
-        self.actionRun.setToolTip('Full reconstruction')
+        self.actionRun.setToolTip('Run pipeline')
+
+        # self.actionAddMask = QtGui.QToolButton(self)
+        # self.addMaskMenu = QtGui.QMenu()
+        # self.actionAddMask.setMenu(self.addMaskMenu)
+        # self.actionAddMask.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        # self.actionAddMask.setArrowType(QtCore.Qt.NoArrow)
+        # icon = QtGui.QIcon()
+        # icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_08.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        # self.actionAddMask.setIcon(icon)
+        # self.actionAddMask.setToolTip('Add additional mask from disk')
 
         self.setIconSize(QtCore.QSize(32, 32))
 
         self.addAction(self.actionRun)
-
+        # self.addWidget(self.actionAddMask)
 
     def connectTriggers(self, run):
 

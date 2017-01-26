@@ -1,4 +1,6 @@
+import os
 from xicam.widgets import featurewidgets as fw
+from pyqtgraph.parametertree import Parameter
 from filters import JOCLFilter
 import importer
 
@@ -8,12 +10,32 @@ class FilterManager(fw.FeatureManager):
         super(FilterManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
                                               blank_form=blank_form)
 
-    def updateFilterMasks(self, image_masks):
-        pass
-
+    def updateFilterMasks(self, mask_dict):
         """
         For each filterwidget, update its masks to include everything in image_masks
+
+        Parameters
+        ----------
+        mask_dict: dict
+            dictionary of path-f3dviewer pairs representing all potential masks usable in filter pipeline
         """
+
+        for feature in self.features:
+            try:
+                for child in feature.params.children():
+                    if child.name() == 'Mask':
+                        for param in feature.details['Parameters']:
+                            if "Mask" in param.itervalues():
+                                masks = param['values']
+                                for path in mask_dict.iterkeys():
+                                    if os.path.basename(path) not in masks: masks.append(os.path.basename(path))
+                                feature.form.clear()
+                                feature.params = Parameter.create(name=feature.name,
+                                            children=feature.details['Parameters'], type='group')
+                                feature.form.setParameters(feature.params, showTop=True)
+            except AttributeError: pass
+
+
 
     def addFilter(self, name):
 
