@@ -28,47 +28,39 @@ def register_fabioclass(cls):
     return cls
 
 
+h5classes = list()
+
+def register_h5class(cls):
+    global h5classes
+    h5classes.append(cls)
+    return cls
+
 @register_fabioclass
-class EdfImage(edfimage.EdfImage):
-    extensions = ['.edf']
+class hdf5image(fabioimage):
+    extensions = ['.hdf','.h5','.hdf5']
 
-    def read(self, f, frame=None):
-        return super(EdfImage, self).read(f, frame)
-
-    def _readheader(self, f):
-        super(EdfImage, self)._readheader(f)
-        f = f.name.replace('.edf', '.txt')
-        if os.path.isfile(f):
-            self.header.update(self.scanparas(f))
+    # A proxy class which defers to specific hdf5 schema classes
+    def read(self, filename, frame=None):
+        for h5cls in h5classes:
+            if hasattr(h5cls,'validate'): # check which class preferably based on the validate staticmethod
+                try:
+                    h5cls.validate(filename, frame)
+                except Exception as ex:
+                    continue
+            try: # if there isn't one, try to read with this class
+                return hdf5image._instantiate_read(h5cls,filename,frame)
+            except Exception as ex:
+                continue
 
     @staticmethod
-    def scanparas(path):
-        if not os.path.isfile(path):
-            return dict()
+    def _instantiate_read(cls,filename,frame):
+        fabh5 = cls()
+        fabh5.filename = filename
+        return fabh5.read(filename, frame)
 
-        with open(path, 'r') as f:
-            lines = f.readlines()
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'hdf5'))
 
-        paras = OrderedDict()
-
-        # The 7.3.3 txt format is messy, with keyless values, and extra whitespaces
-
-        keylesslines = 0
-        for line in lines:
-            cells = filter(None, re.split('[=:]+', line))
-
-            key = cells[0].strip()
-
-            if cells.__len__() == 2:
-                cells[1] = cells[1].split('/')[0]
-                paras[key] = cells[1].strip()
-            elif cells.__len__() == 1:
-                keylesslines += 1
-                paras['Keyless value #' + str(keylesslines)] = key
-
-        return paras
-
-@register_fabioclass
+@register_h5class
 class nexusimage(fabioimage):
     extensions = ['.hdf']
 
@@ -82,7 +74,15 @@ class nexusimage(fabioimage):
 
         return self
 
-fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'nexus'))
+    @staticmethod
+    def validate(f, frame=None):
+        nxroot = nx.nxload(f)
+        assert hasattr(nxroot, 'entry')
+        assert hasattr(nxroot.entry, 'data')
+        assert hasattr(nxroot.entry.data, 'data')
+
+
+
 
 
 @register_fabioclass
@@ -156,73 +156,67 @@ class rawimage(fabioimage):
         return self
 
 
-@register_fabioclass
-class H5image(fabioimage):
-    """
-    HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
-    To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
-    subclass and include 'H5image' somewhere in its name.
-    """
-
-    # This does not really work because fabio creates the instance of the class with not connection to the filename
-    # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
-    # def __new__(cls, *args, **kwargs):
-    #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    #                        if 'h5' in image[0] and image[0] != 'H5image']
-    #     for image_class in h5image_classes:
-    #         try:
-    #             print 'Testing class ', image_class[0]
-    #             obj = image_class[1](*args, **kwargs)
-    #             # obj.read(obj.filename)
-    #             print 'Success!'
-    #         except Exception:
-    #             continue
-    #         else:
-    #             cls = image_class[1]
-    #             break
-    #     else:
-    #         raise RuntimeError('H5 format not recognized')
-    #     return super(H5image, cls).__new__(cls)
-    #  can call super.__new__ or simply return the instance (obj) and bypass init
-    extensions = ['h5']
-
-    def read(self, filename, frame=None):
-        h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-                           if 'H5image' in image[0] and image[0] != 'H5image']
-
-        # this block ensures that the Dxchange class is the last one checked, as it breaks the following loop if
-        # the image does not match this class
-        for image_class in h5image_classes:
-            if 'DXchangeH5image' in str(image_class):
-                dxchange_class = image_class
-        h5image_classes.remove(dxchange_class)
-        h5image_classes.append(dxchange_class)
-
-        for image_class in h5image_classes:
-            try:
-                obj = image_class[1](self.data, self.header)
-                obj.read(filename)
-            except H5ReadError:
-                # Skip exception and try the next H5 image class
-                continue
-            else:
-                # If not error was thrown break out of loop
-                break
-        else:
-            # If for loop finished without breaking raise ReadError
-            raise H5ReadError('H5 format not recognized')
-        return obj  # return the successfully read object
-
-
-# Register H5image class to fabioimages
-fabio.openimage.H5 = H5image
-fabioutils.FILETYPES['h5'] = ['h5']
-fabio.openimage.MAGIC_NUMBERS.append(tuple([b"\x89\x48\x44\x46", 'h5']))
+# @register_fabioclass
+# class H5image(fabioimage):
+#     """
+#     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
+#     To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
+#     subclass and include 'H5image' somewhere in its name.
+#     """
+#
+#     # This does not really work because fabio creates the instance of the class with not connection to the filename
+#     # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
+#     # def __new__(cls, *args, **kwargs):
+#     #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+#     #                        if 'h5' in image[0] and image[0] != 'H5image']
+#     #     for image_class in h5image_classes:
+#     #         try:
+#     #             print 'Testing class ', image_class[0]
+#     #             obj = image_class[1](*args, **kwargs)
+#     #             # obj.read(obj.filename)
+#     #             print 'Success!'
+#     #         except Exception:
+#     #             continue
+#     #         else:
+#     #             cls = image_class[1]
+#     #             break
+#     #     else:
+#     #         raise RuntimeError('H5 format not recognized')
+#     #     return super(H5image, cls).__new__(cls)
+#     #  can call super.__new__ or simply return the instance (obj) and bypass init
+#     extensions = ['h5']
+#
+#     def read(self, filename, frame=None):
+#         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+#                            if 'H5image' in image[0] and image[0] != 'H5image']
+#
+#         # this block ensures that the Dxchange class is the last one checked, as it breaks the following loop if
+#         # the image does not match this class
+#         for image_class in h5image_classes:
+#             if 'DXchangeH5image' in str(image_class):
+#                 dxchange_class = image_class
+#         h5image_classes.remove(dxchange_class)
+#         h5image_classes.append(dxchange_class)
+#
+#         for image_class in h5image_classes:
+#             try:
+#                 obj = image_class[1](self.data, self.header)
+#                 obj.read(filename)
+#             except H5ReadError:
+#                 # Skip exception and try the next H5 image class
+#                 continue
+#             else:
+#                 # If not error was thrown break out of loop
+#                 break
+#         else:
+#             # If for loop finished without breaking raise ReadError
+#             raise H5ReadError('H5 format not recognized')
+#         return obj  # return the successfully read object
 
 
-@register_fabioclass
+
+@register_h5class
 class ALS733H5image(fabioimage):
-    extensions = ['h5']
 
     def _readheader(self, f):
         fname = f.name  # get filename from file object
@@ -302,8 +296,7 @@ class ALS733H5image(fabioimage):
         except AttributeError:
             return False
 
-
-@register_fabioclass
+@register_h5class
 class ALS832H5image(fabioimage):
     """
     Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
@@ -331,6 +324,13 @@ class ALS832H5image(fabioimage):
         if self._h5 is not None:
             self.header = dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
+
+    @staticmethod
+    def validate(f, frame=None):
+        h5 = h5py.File(f, 'r')
+        header = dict(h5.attrs)
+        assert header['facility'] == 'als'
+        assert header['end_station'] == 'bl832'
 
     def read(self, f, frame=None):
         self.filename = f
@@ -463,13 +463,11 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
-
-@register_fabioclass
+@register_h5class
 class GeneralAPSH5image(fabioimage):
     """
     Fabio Image class for arbitrary APS H5 structure
     """
-    extensions=['h5']
     def __init__(self, data=None , header=None):
         super(GeneralAPSH5image, self).__init__(data=data, header=header)
         self.frames = None
@@ -621,12 +619,11 @@ class GeneralAPSH5image(fabioimage):
     def close(self):
         self._h5.close()
 
-@register_fabioclass
+@register_h5class
 class DXchangeH5image(fabioimage):
     """
     Fabio Image class for Data-Exchange HDF5 Datasets
     """
-    extensions = ['h5']
 
     def __init__(self, data=None, header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)
@@ -737,6 +734,48 @@ class TiffStack(object):
         pass
 
 
+@register_fabioclass
+class EdfImage(edfimage.EdfImage):
+    extensions = ['.edf']
+
+    def read(self, f, frame=None):
+        return super(EdfImage, self).read(f, frame)
+
+    def _readheader(self, f):
+        super(EdfImage, self)._readheader(f)
+        f = f.name.replace('.edf', '.txt')
+        if os.path.isfile(f):
+            self.header.update(self.scanparas(f))
+
+    @staticmethod
+    def scanparas(path):
+        if not os.path.isfile(path):
+            return dict()
+
+        with open(path, 'r') as f:
+            lines = f.readlines()
+
+        paras = OrderedDict()
+
+        # The 7.3.3 txt format is messy, with keyless values, and extra whitespaces
+
+        keylesslines = 0
+        for line in lines:
+            cells = filter(None, re.split('[=:]+', line))
+
+            key = cells[0].strip()
+
+            if cells.__len__() == 2:
+                cells[1] = cells[1].split('/')[0]
+                paras[key] = cells[1].strip()
+            elif cells.__len__() == 1:
+                keylesslines += 1
+                paras['Keyless value #' + str(keylesslines)] = key
+
+        return paras
+
+
+
 class H5ReadError(IOError):
     """
     Exception class raised when checking for the specific schema/structure of an HDF5 file.
@@ -744,16 +783,8 @@ class H5ReadError(IOError):
     pass
 
 
-    # # Testing
-    # if __name__ == '__main__':
-    #     from matplotlib.pyplot import imshow, show
-    #     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    #     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-    #     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-    #     # arr = data.__getitem__(slc)
-    #     arr = data.getsinogram(100)
-    #     # print sorted(data.frames, reverse=True)
-    #     # print data.darks.shape
-    #     # print data.flats.shape
-    #     imshow(arr, cmap='gray')
-    #     show()
+def tests():
+    print fabio.open('/home/rp/data/Tomography/20150820_130628_Dleucopodia_10458_pieceA_10x_z30mm.h5').data
+
+if __name__ == '__main__':
+    tests()
