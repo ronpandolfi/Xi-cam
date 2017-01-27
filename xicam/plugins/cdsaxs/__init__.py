@@ -20,6 +20,8 @@ from xicam.plugins import base
 import widgets
 import subprocess
 import xicam.RmcView as rmc
+from xicam import threads
+from modpkgs import guiinvoker
 
 from PySide import QtGui, QtCore
 
@@ -29,50 +31,58 @@ import fabio
 
 from xicam.widgets.calibrationpanel import calibrationpanel
 
-
 class plugin(base.plugin):
-    name = "cdsaxs"
+    name = "CDSAXS"
 
     def __init__(self, *args, **kwargs):
 
         self.centerwidget = QtGui.QTabWidget()
-        self.rightwidget = QtGui.QTabWidget()
-        self.bottomwidget = QtGui.QTabWidget()
+        self.rightwidget = self.parametertree = pg.parametertree.ParameterTree()
         self.topwidget = QtGui.QTabWidget()
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabClose)
         self.centerwidget.currentChanged.connect(self.currentChanged)
-        self.rightwidget.setDocumentMode(True)
-        self.rightwidget.setTabsClosable(True)
-        self.rightwidget.tabCloseRequested.connect(self.tabClose)
-        #self.rightwidget = None
+        self.bottomwidget = pg.ImageView()
+
+        # Setup parametertree
+        self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[{'name':'Phi_min','type':'float'},
+                                                                                         {'name':'Phi_max','type':'float'},
+                                                                                         {'name':'Phi_step','type':'float'},
+                                                                                         {'name':'H0','type':'float'},
+                                                                                         {'name':'w0','type':'float'},
+                                                                                         {'name':'Beta','type': 'float'},
+                                                                                         {'name': 'Run1', 'type': 'action'}])
+
+        self.parametertree.setParameters(self.param,showTop=False)
+
+        Phi_min, Phi_max, Phi_step = self.param['Phi_min'], self.param['Phi_max'], self.param['Phi_step']
 
 
-        '''
-        VBoxButton_1 = QtGui.QVBoxLayout()
-        self.rightwidget.addWidget(VBoxButton_1, 'Phi_min')
-        VBoxButton_2 = QtGui.QVBoxLayout()
-        self.rightwidget.addTab(VBoxButton_2, 'Phi_max')
-        VBoxButton_3 = QtGui.QVBoxLayout()
-        self.rightwidget.addTab(VBoxButton_3, 'Phi_step')
 
-        VerticalLayout = QtGui.QVBoxLayout()
-        self.rightwidget.addTab(VerticalLayout, 'test1')
-        funcButton_3 = QtGui.QPushButton("test")
-        self.rightwidget.addTab(funcButton_3, 'test')
-        '''
+        funcButton = QtGui.QPushButton("Run ")
 
+
+
+
+        #self.param1['test'].sigActivated.connect(self.main)
+        print self.param.children()
+        self.param.param('Run1').sigActivated.connect(self.fit)
+
+        #name='test', type='group', children=[{'name':'RUN', 'type': 'action'}])
 
         super(plugin, self).__init__(*args, **kwargs)
 
-        funcButton_1 = QtGui.QPushButton("Run interpol")
-        # self.centerwidget.addTab(funcButton_1, 'interpol')
-        funcButton_1.clicked.connect(self.main)
+    def update_model(self,widget):
+        self.bottomwidget.setImage(widget.modelImage)
 
-        funcButton_2 = QtGui.QPushButton("Run fit")
-        # self.rightwidget.addTab(funcButton_2, 'fit')
-        funcButton_2.clicked.connect(self.fitting)
+    def fit(self):
+        H0, w0, Beta = self.param['H0'], self.param['w0'], self.param['Beta']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().fitting_test,method_args=(H0,w0,Beta))
+        threads.add_to_queue(fitrunnable)
+
+    def test(self):
+        print('OK')
 
     def openfiles(self, files, operation=None, operationname=None):
         self.activate()
@@ -89,9 +99,44 @@ class plugin(base.plugin):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
             tab.unload()
         self.centerwidget.currentWidget().load()
+        self.getCurrentTab().sigDrawModel.connect(self.update_model)
 
     def tabClose(self,index):
         self.centerwidget.widget(index).deleteLater()
+
+    def getCurrentTab(self):
+        if self.centerwidget.currentWidget() is None: return None
+        if not hasattr(self.centerwidget.currentWidget(),'widget'): return None
+        return self.centerwidget.currentWidget().widget
+
+class CDSAXSWidget(QtGui.QTabWidget):
+    sigDrawModel = QtCore.Signal(object)
+
+    def __init__(self, src, *args, **kwargs):
+        super(CDSAXSWidget, self).__init__()
+
+        self.CDRawWidget = CDRawWidget()
+        self.CDCartoWidget = CDCartoWidget()
+        self.CDModelWidget = CDModelWidget()
+
+        self.addTab(self.CDRawWidget, 'RAW')
+        self.addTab(self.CDCartoWidget, 'Cartography')
+        self.addTab(self.CDModelWidget, 'Model')
+
+        self.setTabPosition(self.South)
+        self.setTabShape(self.Triangular)
+
+        self.src=src
+
+        self.loadRAW()
+        self.main()
+
+    def loadRAW(self):
+        #data = np.stack([np.rot90(loader.loadimage(file),2) for file in self.src])
+        data = np.stack([np.transpose(loader.loadimage(file)) for file in self.src])
+        data = np.log(data - data.min()+1.)
+
+        self.CDRawWidget.setImage(data)
 
     def main(self):
         prefix = 'contacta1_hs104_'
@@ -102,10 +147,12 @@ class plugin(base.plugin):
         center_x, center_y = 248, 1668  # Position of the direct beam
 
         I_norm = self.tiff('/Users/guillaumefreychet/GitHub/Xi-cam/xicam/plugins/cdsaxs/contacta1_hs104_060_0000.tif')
-        qxyi = np.zeros([len(I_norm[0]), 3], dtype=np.float32)
-        qxyi = self.data_fusion_2D(qxyi, prefix, wavelength, serie1, phi_min, phi_max, phi_step, center_x, center_y)
+        self.qxyi = np.zeros([len(I_norm[0]), 3], dtype=np.float32)
+        self.qxyi = self.data_fusion_2D(self.qxyi, prefix, wavelength, serie1, phi_min, phi_max, phi_step, center_x, center_y)
 
-        self.interpolation(qxyi, sampling_size)
+
+        self.interpolation(self.qxyi, sampling_size)
+        #self.fitting_test(self.qxyi, 300, 35, 2)
 
     def tiff(self, tif_name):
         I = plt.imread(tif_name)
@@ -191,14 +238,13 @@ class plugin(base.plugin):
                 cpt += 1
                 pass
 
-        plt.imshow(img, interpolation='none', norm=LogNorm(vmin=100, vmax=1000000));
-        plt.show()
-        return img
+        log_possible = np.where(img!='nan')
+        img[log_possible] = np.log(img[log_possible] - img[log_possible].min() + 1.)
 
+        self.CDCartoWidget.setImage(img, levels = (100, 200000))
 
-
-    def get_exp_values(self):
-        cut_val = 0.1256
+    def get_exp_values(self,qxyi):
+        cut_val = 1.5 * 0.0628
         delta = 0.0005
         dtype = [('qx', np.float32), ('qy', np.float32), ('i', np.float32)]
         Sqxyi = []
@@ -210,39 +256,41 @@ class plugin(base.plugin):
 
         binf_1, bsup_1 = cut_val - delta, cut_val + delta
         binf_2, bsup_2 = 2 * cut_val - delta, 2 * cut_val + delta
-        binf_3, bsup_3 = 2 * cut_val - delta, 2 * cut_val + delta
+        binf_3, bsup_3 = 3 * cut_val - delta, 3 * cut_val + delta
 
         idx_1 = np.where((SQi['qx'] > binf_1) * (SQi['qx'] < bsup_1))  # selection contraints by qy vals
         idx_2 = np.where((SQi['qx'] > binf_2) * (SQi['qx'] < bsup_2))
         idx_3 = np.where((SQi['qx'] > binf_3) * (SQi['qx'] < bsup_3))
 
-        plt.plot(SQi['qy'][idx_1], SQi['i'][idx_1])
-        plt.plot(SQi['qy'][idx_2], SQi['i'][idx_2])
-        plt.plot(SQi['qy'][idx_3], SQi['i'][idx_3])
-        plt.yscale('log')
-        plt.show()
+        return SQi['i'][idx_1], SQi['i'][idx_2], SQi['i'][idx_3]
 
-        return SQi['i'][idx_1], SQi['i'][idx_2], SQi['i'][idx_2]
+    def fitting_test(self, H, w0, Beta):
+        initial_value = (H, w0, Beta)
+        bnds = ((305, 320), (32, 37), (0.5, 3.) )
+
+        Qxexp1, Qxexp2, Qxexp3 = self.get_exp_values(self.qxyi)
+
+        self.CDModelWidget.clear()
+        self.CDModelWidget.plot(np.log(Qxexp1))
+        self.CDModelWidget.plot(np.log(Qxexp2))
+        self.CDModelWidget.plot(np.log(Qxexp3))
+
+        #self.SL_model(300, 40, np.radians(2))
 
 
-
-    def fitting(self):
-        print 'Function under maintenance'
-        self.get_exp_values()
-        # initial_value => load by the user
-        # Could be  implement in function of the precision needed
-        initial_value = (320, 35, 2)
-        bnds = ((305, 320), (32, 37), (0.5, 3.))
-        opt = minimize(self.residual(qxyi), initial_value, bounds=bnds, method='L-BFGS-B',
-                       options={'disp': True, 'eps': (1, 0.2, 0.1), 'ftol': 0.00001})
+        opt = minimize(self.residual, initial_value, bounds=bnds, method='L-BFGS-B',
+                       options={'disp': True, 'eps': (1, 0.2, 0.1), 'ftol': 0.01}, callback=lambda w: guiinvoker.invoke_in_main_thread(self.update_model,w))
         print(opt.x)
         print(opt.message)
 
-    def residual(self, qxyi, p, plot_mode=False):
+    def update_model(self,_):
+        self.sigDrawModel.emit(self)
+
+
+
+    def residual(self, p, plot_mode=False):
         H, LL, beta = p
-        Qxexp1, Qxexp2, Qxexp3  = self.get_exp_values(qxyi)
-
-
+        Qxexp1, Qxexp2, Qxexp3  = self.get_exp_values(self.qxyi)
         Qxfit1, Qxfit2, Qxfit3 = self.SL_model(H, LL, beta)
 
         # recalage en y
@@ -255,35 +303,20 @@ class plugin(base.plugin):
         Qxexp2, Qxfit2 = self.resize_iset(Qxexp2, Qxfit2)
         Qxexp3, Qxfit3 = self.resize_iset(Qxexp3, Qxfit3)
 
-        # permet de visualiser la correspondance entre profil
-        if plot_mode:
-            plt.plot(Qxexp1)
-            plt.plot(Qxexp2)
-            plt.plot(Qxexp3)
-            plt.plot(Qxfit1)
-            plt.plot(Qxfit2)
-            plt.plot(Qxfit3)
-            plt.yscale('log')
-            plt.xlim(0, 128)
-            plt.show()
-            sys.exit()
-
         # Calcul de la difference
         res = (sum(abs(Qxfit1 - Qxexp1)) + sum(abs(Qxfit2 - Qxexp2)) + sum(abs(Qxfit3 - Qxexp3))) / (
         sum(Qxexp1) + sum(Qxexp2) + sum(Qxexp3))
+        self.Qxexp1, self.Qxexp2, self.Qxexp3 = Qxexp1, Qxexp2, Qxexp3
         print(p)
         print('fval : ', res)
         return res
 
-
-
-    def SL_model(self, H=300, LL=35, beta=1, plot_mode=False):
+    def SL_model(self, H, LL, beta, plot_mode=False):
+        pitch, nbligne = 100, 2
         I = []
-        pitch = 100  # To implement with the approach as an entry parameter
-        nbligne = 1  # To implement with the approach as an entry parameter
-        I = self.Fitlignes(H, LL, beta, pitch, nbligne)
+        I = self.Fitlignes(pitch, beta, LL, H, nbligne)
+
         # Fitting qx cut
-        Iroi = []
         Tailleimagex = 2000
         qref = 1.5 * 0.0628
         Position1 = np.floor(qref / (2 * np.pi / Tailleimagex))
@@ -291,17 +324,10 @@ class plugin(base.plugin):
         Position3 = np.floor(3 * qref / (2 * np.pi / Tailleimagex))
         Iroi, Qxfit1, Qxfit2, Qxfit3 = self.Qxcut(I, Position1, Position2, Position3)
 
-        if plot_mode:
-            plt.plot(Qxfit1[Qxfit1.nonzero()[0]])
-            plt.plot(Qxfit2[Qxfit2.nonzero()[0]])
-            plt.plot(Qxfit3[Qxfit3.nonzero()[0]])
-            plt.yscale('log')
-            plt.show()
-
         return Qxfit1[Qxfit1.nonzero()[0]], Qxfit2[Qxfit2.nonzero()[0]], Qxfit3[Qxfit3.nonzero()[0]]
 
     # Generation of the form factor for the line profile generated with the fonction ligne1
-    def Fitlignes(self, pitch, beta, Largeurligne, H, nbligne, Taille_image=(2000, 2000)):
+    def Fitlignes(self, pitch, beta, LL, H, nbligne, Taille_image=(2000, 2000)):
         # assert pitch >= Largeurligne+2*H*abs(np.tan(beta)), 'uncorrect desription of lines'
         Tailleximage = Taille_image[0]
         Tailleyimage = Taille_image[1]
@@ -313,7 +339,12 @@ class plugin(base.plugin):
                 for c in range(0, nbligne, 1):
                     if x > pitch:
                         x = x - pitch
-                    Obj[a + (Tailleximage / 2), b + (Tailleyimage - H) / 2] = self.ligne1(x, b, beta, Largeurligne, H, pitch)
+                    Obj[a + (Tailleximage / 2), b + (Tailleyimage - H) / 2] = self.ligne1(x, b, beta, LL, H, pitch)
+
+        #self.CDProfileWidget.setImage(Obj, levels=(100, 200000))
+        #self.sigDrawModel.emit(Obj)
+        self.modelImage = Obj
+
         I = np.random.poisson(abs(fftshift(fftn(Obj))) ** 2)
         Dynamic = I.max() / 1000
         II = np.zeros(I.shape, dtype='float64')
@@ -364,12 +395,12 @@ class plugin(base.plugin):
         return Iroi, I1, I2, I3
 
     # Rescale  the experimental and simulated data in qy
-    def resize_yset(data0, data1):
+    def resize_yset(self, data0, data1):
         max_size = max(data0.size, data1.size)
         if max_size == data0.size:
-            data1 = self.resample(data1, max_size)
+            data1 = resample(data1, max_size)
         else:
-            data0 = self.resample(data0, max_size)
+            data0 = resample(data0, max_size)
         return data0, data1
 
     # Rescale the experimental and simulated data in intensity
@@ -379,33 +410,6 @@ class plugin(base.plugin):
         data1[ind] = min(data0)
         return data0, data1
 
-
-class CDSAXSWidget(QtGui.QTabWidget):
-    def __init__(self, src, *args, **kwargs):
-        super(CDSAXSWidget, self).__init__()
-
-        self.CDRawWidget = CDRawWidget()
-        self.CDCartoWidget = CDCartoWidget()
-        self.CDModelWidget = CDModelWidget()
-
-        self.addTab(self.CDRawWidget, 'RAW')
-        self.addTab(self.CDCartoWidget, 'Cartography')
-        self.addTab(self.CDModelWidget, 'Model')
-
-        self.setTabPosition(self.South)
-        self.setTabShape(self.Triangular)
-
-        self.src=src
-
-        self.loadRAW()
-
-    def loadRAW(self):
-        data = np.stack([np.rot90(loader.loadimage(file),2) for file in self.src])
-        data = np.log(data - data.min()+1.)
-
-        self.CDRawWidget.setImage(data)
-
-
 class CDRawWidget(pg.ImageView):
     pass
 
@@ -414,3 +418,14 @@ class CDCartoWidget(pg.ImageView):
 
 class CDModelWidget(pg.PlotWidget):
     pass
+
+class CDProfileWidget(pg.ImageView):
+    pass
+
+'''
+class LineEdit(QtGui.QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super(LineEdit, self).__init__(*args, **kwargs)
+        self.setReadOnly(True)
+        self.setFrame(False)
+'''
