@@ -24,6 +24,8 @@ MMFilterClo:
         - Diagonal 3x3x3
         - Diagonal 10x10x4
         - Diagonal 10x10x10
+    - name: L
+      type: int
   Package: src
 MMFilterDil:
   Parameters:
@@ -34,6 +36,8 @@ MMFilterDil:
         - Diagonal 3x3x3
         - Diagonal 10x10x4
         - Diagonal 10x10x10
+    - name: L
+      type: int
   Package: src
 MMFilterEro:
   Parameters:
@@ -44,6 +48,8 @@ MMFilterEro:
         - Diagonal 3x3x3
         - Diagonal 10x10x4
         - Diagonal 10x10x10
+    - name: L
+      type: int
   Package: src
 MMFilterOpe:
   Parameters:
@@ -54,6 +60,8 @@ MMFilterOpe:
         - Diagonal 3x3x3
         - Diagonal 10x10x4
         - Diagonal 10x10x10
+    - name: L
+      type: int
   Package: src
 MaskFilter:
   Parameters:
@@ -64,6 +72,8 @@ MaskFilter:
         - Diagonal 3x3x3
         - Diagonal 10x10x4
         - Diagonal 10x10x10
+    - name: L
+      type: int
   Package: src
 MedianFilter:
   Package: src

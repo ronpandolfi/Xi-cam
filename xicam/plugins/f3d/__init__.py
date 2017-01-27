@@ -70,7 +70,16 @@ class plugin(base.plugin):
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
-        self.rightwidget = None
+        # self.centerwidget.currentChanged.connect(self.currentChanged)
+        self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
+        # DRAG-DROP
+        self.centerwidget.setAcceptDrops(True)
+        self.centerwidget.dragEnterEvent = self.dragEnterEvent
+        self.centerwidget.dropEvent = self.dropEvent
+
+        self.rightwidget = F3DOptionsWidget()
+
 
         self.manager = fm.FilterManager(self.functionwidget.functionsList, self.param_form,
                                        blank_form='Select a filter from\n below to set parameters...')
@@ -91,30 +100,14 @@ class plugin(base.plugin):
             lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature))
         self.functionwidget.clearButton.clicked.connect(self.clearPipeline)
 
-        # self.centerwidget.currentChanged.connect(self.currentChanged)
-        self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
-
-        # DRAG-DROP
-        self.centerwidget.setAcceptDrops(True)
-        self.centerwidget.dragEnterEvent = self.dragEnterEvent
-        self.centerwidget.dropEvent = self.dropEvent
 
 
-
-
-        """
-        connect a button to self.uploadFilterImage to add mask image
-        """
 
         super(plugin, self).__init__(placeholders, *args, **kwargs)
 
-
-        self.sigFilterAdded.connect(self.manager.updateFilterMasks)
-
-        # dict to contain key-value pairs of paths and corresponding images. Used for user-uploaded images to be
-        # used as filters
         self.filter_images = {}
 
+        self.sigFilterAdded.connect(self.manager.updateFilterMasks)
         self.build_function_menu(self.addfunctionmenu, importer.filters, self.manager.addFilter)
 
 
@@ -331,4 +324,117 @@ class Toolbar(QtGui.QToolBar):
     def connectTriggers(self, run):
 
         self.actionRun.triggered.connect(run)
+
+class F3DOptionsWidget(QtGui.QWidget):
+    """
+    bottomwidget for f3d plugin
+    """
+
+    def __init__(self, parent=None):
+        super(F3DOptionsWidget, self).__init__(parent=parent)
+        layout = QtGui.QVBoxLayout()
+        options = QtGui.QLabel('Devices Options')
+        self.devices = {}
+
+
+
+        layout.addWidget(options)
+        layout.addSpacing(10)
+
+        counter = 0
+        for device, cores in self.readAvailableDevices().iteritems():
+            self.devices[device] = DeviceWidget(device, counter, cores)
+            if counter == 0:
+                self.devices[device].checkbox.setChecked(True)
+            layout.addWidget(self.devices[device])
+            counter += 1
+
+        layout.addSpacing(30)
+
+        # widget to hold virtual stack options
+        l = QtGui.QVBoxLayout()
+        h = QtGui.QHBoxLayout()
+        self.virtual_stack = QtGui.QCheckBox()
+        self.virtual_stack.stateChanged.connect(self.findDirectory)
+        self.output = QtGui.QLineEdit(' ')
+        self.output.setReadOnly(True)
+        h.addWidget(self.virtual_stack)
+        h.addWidget(QtGui.QLabel('Use Virtual Stack'))
+        l.addLayout(h)
+        l.addWidget(self.output)
+        layout.addLayout(l)
+        layout.addSpacing(10)
+
+        self.intermediate_steps = QtGui.QCheckBox()
+        h_layout = QtGui.QHBoxLayout()
+        h_layout.addWidget(self.intermediate_steps)
+        h_layout.addWidget(QtGui.QLabel('Show Intermediate Steps '))
+        layout.addLayout(h_layout)
+        layout.addStretch(50)
+
+        self.setLayout(layout)
+
+    @property
+    def use_virtual(self):
+        return self.virtual_stack.checkState()
+
+    @property
+    def use_intermediate(self):
+        return self.intermediate_steps.checkState()
+
+    def findDirectory(self, bool):
+
+        if bool:
+            path = QtGui.QFileDialog().getExistingDirectory(caption=
+                                                    "Choose output directory: ")
+            if path: self.output.setText(path)
+
+
+    def readAvailableDevices(self):
+        """
+        Somehow read and return list of all gpus usable for processing
+        """
+
+        return {'GeForce GTX TITAN': 2160, 'Something else': 4000}
+
+class DeviceWidget(QtGui.QWidget):
+
+    """
+    Widget to hold checkbox, name, and spinbox for cores (?) used in processing
+    """
+
+    def __init__(self, name, number, cores):
+        super(DeviceWidget, self).__init__(parent=None)
+
+
+        top_layout = QtGui.QHBoxLayout()
+        bottom_layout = QtGui.QVBoxLayout()
+        layout = QtGui.QVBoxLayout()
+
+        self.enabled = False
+        self.name = name
+        self.cores = cores
+
+        self.checkbox = QtGui.QCheckBox()
+        self.label = QtGui.QLabel('Device {} ({})'.format(str(number), self.name))
+        self.corebox = QtGui.QSpinBox()
+        self.corebox.setMinimum(1)
+        self.corebox.setMaximum(self.cores)
+        self.corebox.setValue(self.cores)
+        self.checkbox.stateChanged.connect(self.checkbox_changed)
+        self.corebox.valueChanged.connect(self.corebox_changed)
+
+        top_layout.addWidget(self.checkbox)
+        top_layout.addWidget(self.label)
+        bottom_layout.addWidget(self.corebox)
+        layout.addLayout(top_layout)
+        layout.addLayout(bottom_layout)
+
+        self.setLayout(layout)
+
+    def checkbox_changed(self, enabled):
+        self.enabled = enabled
+
+    def corebox_changed(self, val):
+        self.cores = val
 

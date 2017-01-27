@@ -8,31 +8,35 @@ class JOCLFilter(fw.FeatureWidget):
 
     def __init__(self, name, checkable=True, closeable=True,parent=None):
         super(JOCLFilter, self).__init__(name, checkable=checkable, closeable=closeable, parent=parent)
-        self.name = name
         self.parent = parent
-        self.details = importer.filters[self.name]
+        self.details = importer.filters[name]
+        self.info = self.FilterInfo()
+        self.info.name = name
+
 
         try:
-            self.params = Parameter.create(name=self.name, children=self.details['Parameters'], type='group')
+            self.params = Parameter.create(name=name, children=self.details['Parameters'], type='group')
             self.form = ParameterTree(showHeader=False)
             self.form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             self.form.customContextMenuRequested.connect(self.paramMenuRequested)
             self.form.setParameters(self.params, showTop=True)
 
-            # set parameter defaults if there are any
-            for item in self.details['Parameters']:
-                if 'default' in item.iterkeys():
-                    self.params.child(item['name']).setValue(item['default'])
-                    self.params.child(item['name']).setDefault(item['default'])
-
         except KeyError:
             self.params = None
             self.form.clear()
 
-        # self.parammenu = QtGui.QMenu()
-        # action = QtGui.QAction('Test Parameter Range', self)
-        # action.triggered.connect(self.testParamTriggered)
-        # self.parammenu.addAction(action)
+        # set parameter defaults if there are any
+        for item in self.details['Parameters']:
+            if 'default' in item.iterkeys():
+                self.params.child(item['name']).setValue(item['default'])
+                self.params.child(item['name']).setDefault(item['default'])
+
+            # connect structuredElementL to show extra parameter
+            if 'Mask' in item.itervalues():
+                self.params.child(item['name']).sigValueChanged.connect(self.hideL)
+                self.params.child('L').setLimits([1,20])
+                self.params.child('L').sigValueChanged.connect(self.setL)
+
 
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
         self.menu = QtGui.QMenu()
@@ -53,6 +57,7 @@ class JOCLFilter(fw.FeatureWidget):
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
+
     def menuRequested(self):
         pass
 
@@ -63,6 +68,17 @@ class JOCLFilter(fw.FeatureWidget):
         if self.form.currentItem().parent():
             self.parammenu.exec_(self.form.mapToGlobal(pos))
 
+    def hideL(self, parameter):
+
+        if parameter.value() == 'StructuredElementL':
+            self.params.child('L').show()
+        else:
+            self.params.child('L').hide()
+
+    def setL(self, parameter):
+
+        self.info.L = parameter.value()
+
     class Type(Enum):
         Byte = bytes
         Float = float
@@ -71,17 +87,20 @@ class JOCLFilter(fw.FeatureWidget):
 
         def __init__(self):
             self.name = ""
+            self.L = -1
             self.overlapX = 0
             self.overlapY = 0
             self.overlapZ = 0
             self.memtype = JOCLFilter.Type.Byte
             self.useTempBuffer = False
 
-    class FilterPanel(object):
 
-        L = -1
-        maskImage = ""
-        maskImages = None #need to set as empty list?
+
+    # class FilterPanel(object):
+    #
+    #     L = -1
+    #     maskImage = ""
+    #     maskImages = None #need to set as empty list?
 
         # def toJSONString(self):
         #     result = "[{"  + "\"maskImage\" : \"" + self.maskImage + "\""
@@ -148,10 +167,10 @@ class JOCLFilter(fw.FeatureWidget):
         self.index = idx
         self.monitor = F3DMonitor
 
-    def clone(self):
-        filter = self.newInstance()
-
-        filter.fromJSONString(self.toJSONString())
-        filter.processFilterWindowComponent()
-
-        return filter
+    # def clone(self):
+    #     filter = self.newInstance()
+    #
+    #     filter.fromJSONString(self.toJSONString())
+    #     filter.processFilterWindowComponent()
+    #
+    #     return filter
