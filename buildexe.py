@@ -57,7 +57,7 @@ shortcut_table = [
      "DesktopFolder",  # Directory_
      "Xi-cam",  # Name
      "TARGETDIR",  # Component_
-     "[TARGETDIR]xicam.exe",  # Target
+     "[TARGETDIR]Xi-cam.exe",  # Target
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
@@ -109,9 +109,13 @@ buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'dae
                              ],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
-                'include_files': [[getglobalpkg('distutils'),getglobalpkg('site.py')],'tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),zmq.libzmq.__file__,pyFAI.__path__[0]],
+                'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py'),'tiff.dll','hipgisaxs.exe',
+                                  ('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico',
+                                  ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
+                                  zmq.libzmq.__file__,pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),
-                'include_msvcr': True}
+                'include_msvcr': True
+                }
 
 if sys.platform == 'win32':
     buildOptions['include_files']+=['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),pyFAI.__path__[0]]
@@ -129,7 +133,7 @@ bdistmsiOptions = {"data": msi_data}
 base = 'Win32GUI' if sys.platform == 'win32' else None
 
 executables = [
-    Executable('run_xicam.py', base=base, targetName='Xi-cam', icon='icon.ico', shortcutName="Xi-cam",
+    Executable('run_xicam.py', base=base, targetName='Xi-cam.exe', icon='icon.ico', shortcutName="Xi-cam", # DO NOT REMOVE '.exe' FOR WINDOWS BUILDS
                shortcutDir="StartMenuFolder")
 ]
 
@@ -142,7 +146,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.14',
+      version='1.2.15',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
