@@ -1252,10 +1252,10 @@ class integrationsubwidget(pg.PlotWidget):
         #                                                                None, self.requestkey, qvrt, qpar),
         #                           callback=self.replotcallback)
 
-        runnable = threads.RunnableMethod(integrationfunction, method_args=(
+        self.replotcallback(integrationfunction(
         data, mask, dimg.experiment.getAI().getPyFAI(), None, None, self.requestkey, qvrt, qpar),
-                                          callback_slot=self.replotcallback)
-        threads.add_to_queue(runnable)
+                                          )
+
         # replot roi integration
         for roi in rois:
             if roi.isdeleting:

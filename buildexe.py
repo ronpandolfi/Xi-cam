@@ -21,9 +21,6 @@ import os
 # Missing h5py _errors? edit cx_Freeze hooks.py for h5py...
 # Pyqtgraph plots displaying wrong? PySide 1.2.4 seems broken on windows; install 1.2.2 from .exe
 # lmfit is not a directory? uninstall/reinstall it (replaces .egg)
-# numpy _methods missing? add this to hooks.py:
-    # def load_numpy_core(finder, module):
-    #     finder.IncludeModule('numpy.core._methods')
 # numpy .format missing? add this to hooks.py:
     # def load_numpy_lib(finder, module):
     #     finder.IncludeModule('numpy.lib.format')
@@ -61,7 +58,7 @@ shortcut_table = [
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
-     'icon.ico',  # Icon
+     'C:\\Program Files\\Xi-cam\\icon.ico',  # Icon
      None,  # IconIndex
      None,  # ShowCmd
      'TARGETDIR'  # WkDir
@@ -70,11 +67,11 @@ shortcut_table = [
      "StartMenuFolder",  # Directory_
      "Xi-cam",  # Name
      "TARGETDIR",  # Component_
-     "[TARGETDIR]xicam.exe",  # Target
+     "[TARGETDIR]Xi-cam.exe",  # Target
      None,  # Arguments
      None,  # Description
      None,  # Hotkey
-     'C:\\Program Files (x86)\\Xi-cam\\icon.ico',
+     'C:\\Program Files\\Xi-cam\\icon.ico',
      # Icon [This is bad, but I can't find a better way; would have to edit msi database builder, which I'd rather not do for now]
      None,  # IconIndex
      None,  # ShowCmd
@@ -85,7 +82,7 @@ shortcut_table = [
 msi_data = {'Shortcut': shortcut_table}
 
 def include_OpenGL():
-    path_base = "C:\\Python27\\Lib\\site-packages\\OpenGL"
+    path_base = "C:\\Python27-64\\Lib\\site-packages\\OpenGL"
     skip_count = len(path_base)
     zip_includes = [(path_base, "OpenGL")]
     for root, sub_folders, files in os.walk(path_base):
@@ -100,26 +97,23 @@ def include_OpenGL():
 
 getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name),name)
 
-buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython',
+buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL',
                              'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
-                             'pyqtgraph','numpy','distutils','IPython'],
-                'includes': ['PIL', 'PySide.QtXml','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
+                             'pyqtgraph','distutils','IPython','numpy'],
+                'includes': ['PIL', 'PySide.QtXml','PySide.QtNetwork','PySide.QtWebKit','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
                              'pygments.lexers.python','ipykernel.datapub','distributed',
                              'cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto',
+                             'numpy.core._methods','numpy.lib.format'
                              ],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
-                             'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 2,
+                             'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 0,
                 'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py'),'tiff.dll','hipgisaxs.exe',
                                   ('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico',
-                                  ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
+                                  ('C:\\Python27-64\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
                                   zmq.libzmq.__file__,pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),
                 'include_msvcr': True
                 }
-
-if sys.platform == 'win32':
-    buildOptions['include_files']+=['tiff.dll','hipgisaxs.exe',('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico', ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),pyFAI.__path__[0]]
-    buildOptions['zip_includes']+=include_OpenGL()
 
 if zmq is not None: buildOptions['include_files'].append(zmq.libzmq.__file__)
 
@@ -146,7 +140,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.15',
+      version='1.2.18',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',
