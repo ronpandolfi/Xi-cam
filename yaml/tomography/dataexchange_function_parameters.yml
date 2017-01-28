@@ -5,13 +5,32 @@ Tiff Stack:
   type: int
 - name: overwrite
   type: bool
+- name: data
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
+- name: parent folder
+  type: str
+- name: folder name
+  type: str
+- name: file name
+  type: str
 - name: fname
   type: str
 - name: Browse
   type: action
+
 Numpy Array:
 - name: overwrite
   type: bool
+- name: data
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 - name: fname
   type: str
 - name: Browse
@@ -21,6 +40,12 @@ Data Exchange:
   type: str
 - name: overwrite
   type: bool
+- name: data
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 - name: fname
   type: str
 - name: Browse
@@ -30,6 +55,12 @@ Write HDF5:
   type: str
 - name: overwrite
   type: bool
+- name: data
+  type: list
+  values:
+  - tomo
+  - flats
+  - dark
 - name: appendaxis
   type: int
 - name: maxsize

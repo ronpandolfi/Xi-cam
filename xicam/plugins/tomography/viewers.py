@@ -1,14 +1,18 @@
 from collections import deque
 import numpy as np
+import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
+from collections import OrderedDict
 from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
-from xicam.widgets.customwidgets import DataTreeWidget, ImageView
+from xicam.plugins.tomography import functionwidgets, reconpkg, config
+from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer
 from xicam.widgets.volumeviewers import VolumeViewer
+
 
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
@@ -40,6 +44,9 @@ class TomoViewer(QtGui.QWidget):
         Viewer class to hold a set of preview reconstructions of a single sinogram/slice
     preview3DViewer : Preview3DViewer
         Viewer class to visualize a reconstruction of subsampled set of the raw data
+    pipeline : OrderedDict
+        Dictionary to hold parameters for reconstruction, referenced by the iterations
+        of the reconstruction function
 
     Signals
     -------
@@ -66,6 +73,12 @@ class TomoViewer(QtGui.QWidget):
 
         super(TomoViewer, self).__init__(*args, **kwargs)
 
+        # pipeline dictionary of parameters
+        self.pipeline = OrderedDict()
+
+        # set path as field of TomoViewer
+        self.path = paths
+
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
@@ -75,10 +88,40 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode.addTab('3D Preview')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
 
+
+        # keep a timer for reconstruction
+        self.recon_start_time = 0
+        self.preview_holder = []
+        self.prange = []
+
+
+
+
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
             self.data = self.loaddata(paths)
+
+        if self.data.flats is None and self.data.darks is None:
+            import fabio
+            flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
+            dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
+
+            if flat_dialog[0] and dark_dialog[0]:
+                try:
+                    flats = fabio.open(flat_dialog[0])
+                    darks = fabio.open(dark_dialog[0])
+                    self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
+                    self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
+
+                    del flats, darks
+                except IOError:
+                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded. Cannot perform \
+                                                              reconstructions on this data set')
+            else:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided. Cannot perform \
+                                                          reconstructions on this data set')
+
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
@@ -97,11 +140,13 @@ class TomoViewer(QtGui.QWidget):
         self.preview3DViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
         self.viewstack.addWidget(self.preview3DViewer)
 
+
         v = QtGui.QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         v.addWidget(self.viewstack)
         v.addWidget(self.viewmode)
         self.setLayout(v)
+
 
         self.viewmode.currentChanged.connect(self.viewstack.setCurrentIndex)
         self.viewstack.currentChanged.connect(self.viewmode.setCurrentIndex)
@@ -152,6 +197,7 @@ class TomoViewer(QtGui.QWidget):
             return ProjectionStack(paths)
         else:
             return StackImage(paths)
+
 
     def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         """
@@ -237,7 +283,7 @@ class TomoViewer(QtGui.QWidget):
         """Return the data's header (metadata)"""
         return self.data.header
 
-    def addSlicePreview(self, params, recon, slice_no=None):
+    def addSlicePreview(self, params, recon, slice_no=None, prange=None):
         """
         Adds a slice reconstruction preview with the corresponding workflow pipeline dictionary to the previewViewer
 
@@ -251,10 +297,44 @@ class TomoViewer(QtGui.QWidget):
             Sinogram/slice number reconstructed
 
         """
-
         if slice_no is None:
-            slice_no = self.sinogramViewer.view_spinBox.value()
-        self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
+            slice_num = self.sinogramViewer.view_spinBox.value()
+            self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_num)
+        elif type(slice_no) is list:
+            for item in range(slice_no[1]- slice_no[0]+1):
+                self.previewViewer.addPreview(np.rot90(recon[item], 1), params, item+slice_no[0])
+        # this block ensures that the previews are added in order if testparamrange is triggered
+        elif prange:
+            dummy_prange = dict(prange)
+            func = dummy_prange.pop('function')
+            param = dummy_prange.keys()[0]
+
+            if len(self.prange) < 1 and recon is not None:
+                self.prange = prange[param]
+
+            # this if loop and try statement ensure no errors due to the recursion below
+            if recon is not None:
+                self.preview_holder.append([recon, params, slice_no])
+            try:
+                top_val = self.prange[0]
+            except IndexError:
+                pass
+
+            # run through each recon in the preview_holder, and add them to the preview viewer if the top param in
+            # prange matches the preview metadata
+            for index, rec in enumerate(self.preview_holder):
+                for key in rec[1].iterkeys():
+                    if func in key:
+                        subfunc = rec[1][key].keys()[0]
+                        param_val = rec[1][key][subfunc][param]
+                if top_val == param_val:
+                    self.previewViewer.addPreview(np.rot90(rec[0][0], 1), rec[1], rec[2])
+                    self.preview_holder.pop(index)
+                    self.prange = np.delete(self.prange, 0)
+                    self.addSlicePreview(params, None, slice_no, prange=prange)
+
+        else:
+            self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_no)
         self.viewstack.setCurrentWidget(self.previewViewer)
         msg.clearMessage()
 
@@ -289,11 +369,23 @@ class TomoViewer(QtGui.QWidget):
             Boolean specifying to activate or not. True activate, False deactivate
 
         """
+
         if active:
-            self.projectionViewer.showCenterDetection()
             self.viewstack.setCurrentWidget(self.projectionViewer)
+            self.projectionViewer.showCenterDetection()
+            self.projectionViewer.hideMBIR()
         else:
             self.projectionViewer.hideCenterDetection()
+
+    def onMBIR(self, active):
+
+
+        if active:
+            self.viewstack.setCurrentWidget(self.projectionViewer)
+            self.projectionViewer.showMBIR()
+            self.projectionViewer.hideCenterDetection()
+        else:
+            self.projectionViewer.hideMBIR()
 
     def onROIselection(self):
         """
@@ -307,6 +399,275 @@ class TomoViewer(QtGui.QWidget):
         """
         self.viewstack.setCurrentWidget(self.projectionViewer)
         self.projectionViewer.addROIselection()
+
+class MBIRViewer(QtGui.QWidget):
+
+
+    def __init__(self, data, path, *args, **kwargs):
+        super(MBIRViewer, self).__init__(*args, **kwargs)
+        self.mdata = data.header
+        if path is list:
+            paths = path[0]
+        else:
+            paths = path
+        self.path = paths
+        self.data = data
+        self.center = 0
+        self.cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+
+        self.runButton = QtGui.QPushButton(parent=self)
+        self.runButton.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed))
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.runButton.setIcon(icon)
+        # self.runButton.setToolTip("Submit MBIR job to NERSC")
+        self.runButton.setToolTip("Generate slurm file")
+
+        self.cor_widget = QtGui.QWidget() #parent widget for center of rotation input
+
+        # set up widget for user choice of manual or auto COR detection
+        self.cor_Holder = QtGui.QGroupBox('Center of Rotation', parent = self.cor_widget)
+        manual_cor = QtGui.QRadioButton('Manually input center of rotation')
+        manual_cor.clicked.connect(self.manualCOR)
+        auto_cor = QtGui.QRadioButton('Auto-detect center of rotation')
+        auto_cor.clicked.connect(self.autoCOR)
+        manual_cor.setChecked(True)
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(manual_cor)
+        vbox.addWidget(auto_cor)
+        self.cor_Holder.setLayout(vbox)
+
+        # series of widgets for manual COR input
+        self.cor_Value = QtGui.QStackedWidget(parent = self.cor_widget)
+
+        self.manual_tab = QtGui.QWidget()
+        self.val_box = QtGui.QDoubleSpinBox(parent = self.manual_tab)
+        self.val_box.setRange(0,10000)
+        self.val_box.setDecimals(1)
+        self.val_box.setValue(int(data.shape[1])/2)
+        text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
+        text_layout = QtGui.QHBoxLayout()
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.val_box)
+        self.manual_tab.setLayout(text_layout)
+
+        self.auto_tab = QtGui.QWidget()
+        self.auto_tab_layout = QtGui.QVBoxLayout()
+
+        self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname="Phase Correlation",
+                                package=reconpkg.packages[config.names["Phase Correlation"][1]])
+        self.cor_params = pg.parametertree.Parameter.create(name=self.cor_function.name,
+                                             children=config.parameters[self.cor_function.subfunc_name], type='group')
+        self.cor_param_tree = pg.parametertree.ParameterTree()
+        self.cor_param_tree.setMinimumHeight(200)
+        self.cor_param_tree.setMinimumWidth(200)
+        self.cor_param_tree.setParameters(self.cor_params,showTop = False)
+        for key, val in self.cor_function.param_dict.iteritems():
+            if key in [p.name() for p in self.cor_params.children()]:
+                self.cor_params.child(key).setValue(val)
+                self.cor_params.child(key).setDefault(val)
+
+        self.cor_method_box = QtGui.QComboBox()
+        self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+        for item in self.cor_detection_funcs:
+            self.cor_method_box.addItem(item)
+        cor_method_label = QtGui.QLabel('COR detection function: ')
+        cor_method_layout = QtGui.QHBoxLayout()
+        cor_method_layout.addWidget(cor_method_label)
+        cor_method_layout.addWidget(self.cor_method_box)
+
+        # import inspect
+        # for item in self.cor_detection_funcs:
+        #     func = functionwidgets.FunctionWidget(name="Center Detection", subname=item,
+        #                         package=reconpkg.packages[config.names[item][1]])
+        #     print item
+        #     print func.param_dict
+        #     print func.exposed_param_dict
+        #     print inspect.getargspec(func._function)[0]
+        #     print "======================="
+
+        # for param in self.params.children():
+            # param.sigValueChanged.connect(self.paramChanged)
+
+        self.auto_tab_layout.addLayout(cor_method_layout)
+        self.auto_tab_layout.addWidget(self.cor_param_tree)
+        self.auto_tab.setLayout(self.auto_tab_layout)
+
+        # set up COR stackwidget
+        self.cor_Value.addWidget(self.manual_tab)
+        self.cor_Value.addWidget(self.auto_tab)
+
+        # set up COR widget
+        v = QtGui.QVBoxLayout()
+        v.addWidget(self.cor_Holder)
+        v.addWidget(self.cor_Value)
+        self.cor_widget.setLayout(v)
+
+
+        self.runButton.clicked.connect(self.write_slurm)
+
+        self.mbirParams = pg.parametertree.ParameterTree()
+        self.mbirParams.setMinimumHeight(230)
+        params = [{'name': 'Dataset path', 'type': 'str'},
+                  {'name': 'Z start', 'type': 'int', 'value': 0, 'default': 0},
+                  {'name': 'Z num elts', 'type': 'int', 'value': int(data.shape[-1]) ,
+                   'default': int(data.shape[-1])},
+                  {'name': 'Smoothness', 'type': 'float', 'value': 0.15, 'default': 0.15},
+                  {'name': 'Zinger thresh', 'type': 'float', 'value': 5, 'default': 5},
+                  {'name': 'View subsample factor', 'type': 'int', 'value': 2, 'default': 2},
+                  {'name': 'Output folder', 'type':'str', 'value':'Results', 'default': 'Results'}]
+
+        self.mbir_params = pg.parametertree.Parameter.create(name='MBIR Parameters', type='group', children=params)
+        self.mbirParams.setParameters(self.mbir_params,showTop=False)
+
+
+        right_menu = QtGui.QSplitter(self)
+        right_menu.setOrientation(QtCore.Qt.Vertical)
+        button_holder = QtGui.QStackedWidget()
+        button_holder.addWidget(self.runButton)
+        right_menu.addWidget(button_holder)
+        right_menu.addWidget(self.cor_widget)
+
+        container = QtGui.QWidget()
+        container_layout = QtGui.QVBoxLayout()
+        container_layout.addWidget(right_menu)
+        container.setLayout(container_layout)
+
+        left_menu = QtGui.QSplitter(self)
+        left_menu.addWidget(self.mbirParams)
+        left_menu.addWidget(container)
+
+
+        h = QtGui.QHBoxLayout()
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(left_menu)
+
+
+        self.setLayout(h)
+
+    def changeCORfunction(self, index):
+
+        subname = self.cor_method_box.itemText(index)
+        self.auto_tab_layout.removeWidget(self.cor_param_tree)
+
+        self.cor_function = functionwidgets.FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.cor_params = pg.parametertree.Parameter.create(name=self.cor_function.name,
+                                             children=config.parameters[self.cor_function.subfunc_name], type='group')
+        self.cor_param_tree = pg.parametertree.ParameterTree()
+        self.cor_param_tree.setMinimumHeight(200)
+        self.cor_param_tree.setMinimumWidth(200)
+        self.cor_param_tree.setParameters(self.cor_params,showTop = False)
+        for key, val in self.cor_function.param_dict.iteritems():
+            if key in [p.name() for p in self.cor_params.children()]:
+                self.cor_params.child(key).setValue(val)
+                self.cor_params.child(key).setDefault(val)
+
+        self.auto_tab_layout.addWidget(self.cor_param_tree)
+        self.auto_tab.setLayout(self.auto_tab_layout)
+
+
+
+    def manualCOR(self):
+        self.cor_Value.setCurrentWidget(self.manual_tab)
+
+    def autoCOR(self):
+        self.cor_Value.setCurrentWidget(self.auto_tab)
+
+    def loadCOR(self):
+
+
+        widget = self.cor_Value.currentWidget()
+        if widget is self.manual_tab:
+            return self.val_box.value()
+        else:
+            if self.parentWidget():
+                return self.find_COR(self.cor_function.subfunc_name)
+            else:
+                return -1
+
+    def find_COR(self, cor_function):
+        if not cor_function in self.cor_detection_funcs:
+            return -1
+        else:
+            if cor_function == 'Phase Correlation':
+                proj1, proj2 = map(self.data.fabimage.__getitem__, (0,-1))
+                kwargs = {'proj1' : proj1, 'proj2' : proj2}
+            elif cor_function == 'Vo':
+                kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :])}
+            elif cor_function == 'Nelder-Mead':
+                kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :]),
+                          'theta' : tomopy.angles(int(self.data.shape[0]),ang1=90,ang2=270)}
+            else:
+                return -1
+
+            for child in self.cor_params.children():
+                kwargs[child.name()] = child.value()
+
+            val = self.cor_function._function(**kwargs)
+            return val[0] if val is list else val
+
+
+
+    def write_slurm(self):
+        """
+        A 'slurm' file is a job to run on nersc
+        """
+
+        import os.path
+        msg.showMessage("Generating slurm file...", timeout=0)
+
+        self.center = self.loadCOR()
+
+        if not self.center > 0 or self.center > self.data.shape[0]:
+            msg.showMessage('Invalid center of rotation')
+            pass
+        else:
+
+            views = int(self.data[0]) - 1
+            file_name = self.path.split("/")[-1].split(".")[0]
+            nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
+            output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
+
+            try:
+                group = self.mdata['archdir'].split("\\")[-1]
+                px_size = float(self.mdata['pzdist'])*1000
+            except KeyError:
+                msg.showMessage('Insufficient metadata to write slurm file.', timeout=0)
+            if group != file_name:
+                group_hdf5 = "{}/{}".format(group, file_name)
+            else:
+                group_hdf5 = file_name
+
+            slurm = '#!/bin/tcsh\n#SBATCH -p regular\n#SBATCH -N {}\n'.format(nodes)
+            slurm += '#SBATCH -t 4:00:00\n#SBATCH -J {}\n#SBATCH -e {}.err\n#SBATCH -o {}.out\n\n'.format(file_name, file_name, file_name)
+            slurm += 'setenv OMP_NUM_THREADS 24\nsetenv CRAY_ROOTFS DSL\nmodule load PrgEnv-intel\n'
+            slurm += 'module load python/2.7.3\nmodule load h5py\nmodule load pil\nmodule load mpi4py\n\n'
+            slurm += 'mkdir $SCRATCH/LaunchFolder\nmkdir $SCRATCH/Results\n\n'
+            slurm += 'python XT_MBIR_3D.py --setup_launch_folder --run_reconstruction --Edison'
+            slurm += ' --input_hdf5 {}/{}.h5'.format(self.mbir_params.child('Dataset path').value(), file_name)
+            slurm += ' --group_hdf5 /{}'.format(group_hdf5)
+            slurm += ' --code_launch_folder $SCRATCH/LaunchFolder/'
+            slurm += ' --output_hdf5 $SCRATCH/Results/{}_mbir/ --x_width {}'.format(file_name, int(self.data.shape[0]))
+            slurm += ' --recon_x_width {} --num_dark {}'.format(str(int(self.data.shape[0])), str(len(self.data.fabimage.darks)))
+            slurm += ' --num_bright {} --z_numElts {}'.format(str(self.data.fabimage.flats),self.mbir_params.child('Z num elts').value())
+            slurm += ' --z_start {} --num_views {}'.format(self.mbir_params.child('Z start').value(), views)
+            slurm += ' --pix_size {} --rot_center {}'.format(px_size, self.center)
+            slurm += ' --smoothness {} --zinger_thresh {}'.format(self.mbir_params.child('Smoothness').value(),
+                                                                 self.mbir_params.child('Zinger thresh').value())
+            slurm += ' --Variance_Est 1 --num_threads 24 --num_nodes {} '.format(nodes)
+            slurm += '--view_subsmpl_fact {}'.format(self.mbir_params.child('View subsample factor').value())
+
+
+
+            parent_folder = self.path.split(self.path.split('/')[-1])[0]
+            write = os.path.join(parent_folder, '{}.slurm'.format(file_name))
+
+            with open(write, 'w') as job:
+                job.write(slurm)
+
+            msg.showMessage("Done.", timeout=0)
+
 
 
 class ProjectionViewer(QtGui.QWidget):
@@ -353,19 +714,23 @@ class ProjectionViewer(QtGui.QWidget):
 
     sigCenterChanged = QtCore.Signal(float)
 
-    def __init__(self, data, view_label=None, center=None, *args, **kwargs):
+    def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
+
+
+
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
-        self.flat = np.median(self.data.flats, axis=0).transpose()
-        self.dark = np.median(self.data.darks, axis=0).transpose()
-
+        # self.flat = np.median(self.data.flats, axis=0).transpose()
+        # self.dark = np.median(self.data.darks, axis=0).transpose()
         self.imgoverlay_roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+        self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
+
 
         # roi to select region of interest
         self.selection_roi = None
@@ -425,7 +790,6 @@ class ProjectionViewer(QtGui.QWidget):
         # h2.addWidget(rotateCheckBox) # This needs to be implemented correctly
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
-
         spinBox.setFixedWidth(spinBox.width())
         v = QtGui.QVBoxLayout(self.cor_widget)
         v.addLayout(h1)
@@ -436,6 +800,9 @@ class ProjectionViewer(QtGui.QWidget):
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(self.cor_widget)
         l.addWidget(self.stackViewer)
+        l.addWidget(self.mbir_viewer)
+        self.hideMBIR()
+        # self.mbir_viewer.hide()
 
         slider.valueChanged.connect(spinBox.setValue)
         slider.valueChanged.connect(self.stackViewer.resetImage)
@@ -443,13 +810,17 @@ class ProjectionViewer(QtGui.QWidget):
         flipCheckBox.stateChanged.connect(self.flipOverlayProj)
         constrainYCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainY(v))
         constrainXCheckBox.stateChanged.connect(lambda v: self.imgoverlay_roi.constrainX(v))
+
         # rotateCheckBox.stateChanged.connect(self.addRotateHandle)
         self.normCheckBox.stateChanged.connect(self.normalize)
         self.stackViewer.sigTimeChanged.connect(lambda: self.normalize(False))
         self.imgoverlay_roi.sigTranslated.connect(self.setCenter)
         self.imgoverlay_roi.sigTranslated.connect(lambda x, y: originBox.setText('x={}   y={}'.format(x, y)))
-
         self.hideCenterDetection()
+
+        self.bounds = None
+        # self.normalize(True)
+
 
     def changeOverlayProj(self, idx):
         """
@@ -489,9 +860,20 @@ class ProjectionViewer(QtGui.QWidget):
         """
         Shows the center detection widget and corresponding histogram
         """
+        # self.normalize(True)
         self.cor_widget.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
+
+    def showMBIR(self):
+        self.mbir_viewer.show()
+        # self.hideCenterDetection()
+        self.stackViewer.hide()
+
+    def hideMBIR(self):
+        self.mbir_viewer.hide()
+        self.stackViewer.show()
+
 
     def updateROIFromCenter(self, center):
         """
@@ -549,8 +931,10 @@ class ProjectionViewer(QtGui.QWidget):
         val : bool
             Boolean specifying to normalize image
         """
-
         if val and not self.normalized:
+            self.flat = np.median(self.data.flats, axis=0).transpose()
+            self.dark = np.median(self.data.darks, axis=0).transpose()
+
             proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
             overlay = self.imgoverlay_roi.currentImage
             if self.imgoverlay_roi.flipped:
@@ -559,10 +943,21 @@ class ProjectionViewer(QtGui.QWidget):
             if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
             self.imgoverlay_roi.currentImage = overlay
+
+            # TODO: change roi default levels during normalization to prevent washed out color
+            # if not self.bounds:
+            #     hist = self.imgoverlay_roi.imageItem.getHistogram()
+            #     arr1, arr2 = self.imgoverlay_roi.remove_outlier(hist[1], hist[0], sp.integrate.trapz(hist[1],hist[0]),
+            #                                                     thresh=0.4)
+            #     print len(arr1), ", ", len(arr2)
+            #     self.bounds = [arr2[0],arr2[-1]]
+            #     print self.bounds
+
             self.imgoverlay_roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
+            self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
             self.stackViewer.resetImage()
             self.imgoverlay_roi.resetImage()
@@ -619,7 +1014,7 @@ class PreviewViewer(QtGui.QSplitter):
 
     def __init__(self, dim, maxpreviews=None, *args, **kwargs):
         super(PreviewViewer, self).__init__(*args, **kwargs)
-        self.maxpreviews = maxpreviews if maxpreviews is not None else 10
+        self.maxpreviews = maxpreviews if maxpreviews is not None else 40
 
         self.dim = dim
 
@@ -710,12 +1105,16 @@ class PreviewViewer(QtGui.QSplitter):
         functree = DataTreeWidget()
         functree.setHeaderHidden(True)
         functree.setData(funcdata, hideRoot=True)
+        functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        functree.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
         self.slice_numbers.appendleft(slice_number)
         self.view_number.setValue(slice_number)
         self.functionform.addWidget(functree)
-        self.imageview.setImage(self.previews)
+        levels = False if len(self.data) > 1 else True
+        self.imageview.setImage(self.previews, autoRange=False, autoLevels=levels, autoHistogramRange=False)
         self.functionform.setCurrentWidget(functree)
 
     def removePreview(self):
@@ -838,12 +1237,15 @@ class RunConsole(QtGui.QTabWidget):
 
     icon = QtGui.QIcon()
     icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+    icon_clear = QtGui.QIcon()
+    icon_clear.addPixmap(QtGui.QPixmap("xicam/gui/icons_57.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
     def __init__(self, parent=None):
         super(RunConsole, self).__init__(parent=parent)
         self.setTabPosition(QtGui.QTabWidget.West)
         # Text Browser for local run console
-        self.local_console, self.local_cancelButton = self.addConsole('Local')
+        self.local_console, self.local_cancelButton, self.local_clearButton = self.addConsole('Local')
+        self.local_clearButton.clicked.connect(self.local_console.clear)
 
     def addConsole(self, name):
         """
@@ -855,8 +1257,12 @@ class RunConsole(QtGui.QTabWidget):
         name : str
             Name to be used in tab for console added
         """
+
+        # TODO: finish adding message clear button
         console = QtGui.QTextEdit()
         button = QtGui.QToolButton()
+        button_clear = QtGui.QToolButton()
+
         console.setObjectName(name)
         console.setReadOnly(True)
         console.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
@@ -864,17 +1270,23 @@ class RunConsole(QtGui.QTabWidget):
         button.setIconSize(QtCore.QSize(24, 24))
         button.setFixedSize(32, 32)
         button.setToolTip('Cancel running process')
+        button_clear.setIcon(self.icon_clear)
+        button_clear.setIconSize(QtCore.QSize(24,24))
+        button_clear.setFixedSize(32,32)
+        button_clear.setToolTip('Clear console log')
+
         w = QtGui.QWidget()
         w.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
         w.setContentsMargins(0, 0, 0, 0)
         l = QtGui.QGridLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.setSpacing(0)
-        l.addWidget(console, 0, 0, 2, 2)
-        l.addWidget(button, 1, 2, 1, 1)
+        l.addWidget(console, 0, 0, 3, 2)
+        l.addWidget(button, 0, 2, 1, 1)
+        l.addWidget(button_clear,1,2,1,1)
         w.setLayout(l)
         self.addTab(w, console.objectName())
-        return console, button
+        return console, button, button_clear
 
     def log2local(self, msg):
         """

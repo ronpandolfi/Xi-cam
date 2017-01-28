@@ -1,5 +1,5 @@
 import base
-from PySide import QtGui
+from PySide import QtGui,QtWebKit
 import os
 from xicam import xglobals
 
@@ -10,21 +10,12 @@ class MOTDPlugin(base.plugin):
     name = 'MOTD'
     hidden = True
 
-    MOTD = """
-    <div align='center'>
-        <img src='xicam/gui/camera.jpg' width='200'/>
-        <h1 style='font-family:Zero Threes;'>
-            Welcome to Xi-cam
-        </h1>
-        <br />
-        Please cite Xi-cam in published work: <br />
-        Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A.
-        (under preparation)
-    </div>"""
 
     def __init__(self, *args, **kwargs):
-        self.centerwidget = QtGui.QLabel(self.MOTD)
+        self.centerwidget = webview = QtWebKit.QWebView()
         self.rightwidget = None
+
+        webview.load('MOTD.html')
 
         super(MOTDPlugin, self).__init__(*args, **kwargs)
 

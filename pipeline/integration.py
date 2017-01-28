@@ -373,10 +373,11 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 
     q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
+    maxq = (qsquared*mask).max()
+    if cut is not None: qsquared[np.logical_not(cut.astype(np.bool))]=np.inf
+    minq = qsquared.min()
 
-
-
-    #q = np.linspace(np.sqrt(qsquared.min()),np.sqrt(qsquared.max()),len(qprofile))/10. #WRONG!
+    q = np.linspace(minq,maxq,len(qprofile))/10.
 
     return q, qprofile, color, requestkey
 

@@ -1,0 +1,146 @@
+Other:
+
+Tomopy:
+  ART:
+    ncore:
+      default: None
+      type: int
+  FBP:
+    ncore:
+      default: None
+      type: int
+  BART:
+    ncore:
+      default: None
+      type: int
+  Gridrec:
+    ncore:
+      default: None
+      type: int
+  MLEM:
+    ncore:
+      default: None
+      type: int
+  OSEM:
+    ncore:
+      default: None
+      type: int
+  OSMPL_Hybrid:
+    ncore:
+      default: None
+      type: int
+  OSMPL_Quad:
+    ncore:
+      default: None
+      type: int
+  PML Hybrid:
+    ncore:
+      default: None
+      type: int
+  PML Quad:
+    ncore:
+      default: None
+      type: int
+  SIRT:
+    ncore:
+      default: None
+      type: int
+Astra:
+  BP:
+    ncore:
+      default: None
+      type: int
+  FBP_astra:
+    ncore:
+      default: None
+      type: int
+  SIRT:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+  SART:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+  ART:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+  BP_CUDA:
+    GPUIndex:
+      default: 0
+    PixelSuperSampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+  FBP_CUDA:
+    Filtertype:
+      default: None
+    GPUIndex:
+      default: 0
+    PixelSupersampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+  SIRT_CUDA:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    GPUIndex:
+      default: 0
+    PixelSupersampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+  SART_CUDA:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    GPUIndex:
+      default: 0
+    PixelSupersampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int

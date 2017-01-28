@@ -16,6 +16,7 @@ import scipy
 from pipeline import variation
 from xicam import threads
 from pipeline import msg
+from scipy.ndimage import morphology
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -829,6 +830,19 @@ class dimgViewer(QtGui.QWidget):
             # Redo the integration
             self.replot()
 
+
+    def thresholdmask(self):
+        threshold, ok = QtGui.QInputDialog.getInt(self, 'Threshold value','Input intensity threshold:',3,0,10000000)
+        print 'threshold:',threshold
+
+        if ok and threshold:
+            mask = self.dimg.rawdata>threshold
+
+            morphology.binary_closing(mask,morphology.generate_binary_structure(2,2),output=mask) # write-back to mask
+
+            config.activeExperiment.addtomask(mask)
+
+
     def maskoverlay(self):
         if self.iscake:
             mask = self.dimg.cakemask
@@ -1041,8 +1055,9 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=lambda ret: self.sigAddTimelineData.emit(*ret),
-                                        finished_slot=self.processingfinished)(variation.variationiterator)
+        bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
+                                        finished_slot=self.processingfinished,
+                                        parent=self)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
@@ -1444,7 +1459,7 @@ def getHistogram(self, bins='auto', step='auto', targetImageSize=None, targetHis
                 np.ceil(self.image.shape[1] / targetImageSize))
     if np.isscalar(step):
         step = (step, step)
-    stepData = self.image[::step[0], ::step[1]]
+    stepData = self.image[::int(step[0]), ::int(step[1])]
 
     if bins == 'auto':
         if stepData.dtype.kind in "ui":

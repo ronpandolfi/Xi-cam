@@ -11,6 +11,7 @@ __status__ = "Beta"
 
 
 import numpy as np
+import scipy as sp
 import pyqtgraph as pg
 from PySide import QtCore
 
@@ -119,26 +120,38 @@ class ROImageOverlay(pg.ROI):
         if x == 0:
             x_slc, bg_x_slc = None, None
         elif x < 0:
-            x_slc, bg_x_slc = slice(-x, None), slice(None, x)
+            x_slc, bg_x_slc = slice(-int(x), None), slice(None, int(x))
         elif x > 0:
-            x_slc, bg_x_slc = slice(None, -x), slice(x, None)
+            x_slc, bg_x_slc = slice(None, -int(x)), slice(int(x), None)
 
         if y == 0:
             y_slc, bg_y_slc = None, None
         elif y < 0:
-            y_slc, bg_y_slc = slice(-y, None), slice(None, y)
+            y_slc, bg_y_slc = slice(-int(y), None), slice(None, int(y))
         elif y > 0:
-            y_slc, bg_y_slc = slice(None, -y), slice(y, None)
+            y_slc, bg_y_slc = slice(None, -int(y)), slice(int(y), None)
 
         slc, bg_slc = (x_slc, y_slc), (bg_x_slc, bg_y_slc)
         self._image_overlap[slc] = self.bg_imgeItem.image[bg_slc]
         return self._image_overlap
 
-    def updateImage(self, autolevels=False):
+    def remove_outlier(self, array1, array2, total, thresh = 0.05):
+        val = sp.integrate.trapz(array1, array2)
+        print 1- (float(val) / total)
+        if 1 - (float(val)/total) < thresh:
+            return self.remove_outlier(array1[1:-1],array2[1:-1], total, thresh=thresh)
+        else:
+            return array1, array2
+
+    def updateImage(self, autolevels=False, levels=None):
         """
         Updates the image shown in the ROI to the difference of the current image and the image_overlap
         """
-        self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
+        if levels:
+            self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels, levels=levels)
+        else:
+            self.imageItem.setImage(self.currentImage - self.image_overlap, autoLevels=autolevels)
+
 
     def translate(self, *args, **kwargs):
         """

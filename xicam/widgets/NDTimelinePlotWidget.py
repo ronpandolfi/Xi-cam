@@ -2,7 +2,7 @@
 import numpy as np
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
-
+from modpkgs import nonesigmod
 
 class timelineLinePlot(pg.PlotWidget):
     def __init__(self):
@@ -105,7 +105,9 @@ class TimelinePlot(QtGui.QTabWidget):
         self.currentChanged.connect(self.widgetChanged)
 
     @QtCore.Slot(tuple, list)
+    @nonesigmod.pyside_none_deco
     def addData(self, data, color=None):
+
         if data is None: return
         if color is None: color = [255, 255, 255]
         is1D = type(data[1]) is not tuple

@@ -19,7 +19,7 @@ from xicam import threads
 from xicam import clientmanager as cmanager
 from pipeline import pathtools, msg
 from xicam import config
-
+from modpkgs import guiinvoker
 
 class LocalFileView(QtGui.QTreeView):
     """
@@ -28,6 +28,7 @@ class LocalFileView(QtGui.QTreeView):
 
     pathChanged = QtCore.Signal(str)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
     sigItemPreview = QtCore.Signal(str)
@@ -56,9 +57,11 @@ class LocalFileView(QtGui.QTreeView):
         self.setIconSize(QtCore.QSize(16, 16))
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Delete', self)]
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Open Folder', self),
+                           QtGui.QAction('Delete', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
-        standardActions[1].triggered.connect(self.handleDeleteAction)
+        standardActions[1].triggered.connect(self.handleOpenFolderAction)
+        standardActions[2].triggered.connect(self.handleDeleteAction)
         self.menu.addActions(standardActions)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -117,6 +120,13 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.sigOpen.emit(paths)
 
+    def handleOpenFolderAction(self):
+        paths = self.getSelectedFilePaths()
+        if os.path.isdir(paths[0]) and len(paths) == 1:
+            self.sigOpenFolder.emit(paths)
+        else:
+            pass
+
     def handleDeleteAction(self):
         paths = self.getSelectedFilePaths()
         self.sigDelete.emit(paths)
@@ -133,6 +143,7 @@ class RemoteFileView(QtGui.QListWidget):
     pathChanged = QtCore.Signal(str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
@@ -144,12 +155,13 @@ class RemoteFileView(QtGui.QListWidget):
         self.itemDoubleClicked.connect(self.onDoubleClick)
 
         self.menu = QtGui.QMenu()
-        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Download', self),
+        standardActions = [QtGui.QAction('Open', self), QtGui.QAction('Open Folder', self). QtGui.QAction('Download', self),
                            QtGui.QAction('Delete', self), QtGui.QAction('Transfer', self)]
         standardActions[0].triggered.connect(self.handleOpenAction)
-        standardActions[1].triggered.connect(self.handleDownloadAction)
-        standardActions[2].triggered.connect(self.handleDeleteAction)
-        standardActions[3].triggered.connect(self.handleTransferAction)
+        standardActions[0].triggered.connect(self.handleOpenFolderAction)
+        standardActions[2].triggered.connect(self.handleDownloadAction)
+        standardActions[3].triggered.connect(self.handleDeleteAction)
+        standardActions[4].triggered.connect(self.handleTransferAction)
         self.menu.addActions(standardActions)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
@@ -191,6 +203,9 @@ class RemoteFileView(QtGui.QListWidget):
                 self.addItem(item['name'])
 
     def handleOpenAction(self):
+        pass
+
+    def handleOpenFolderAction(self):
         pass
 
     def handleTransferAction(self):
@@ -314,6 +329,7 @@ class SFTPFileView(QtGui.QTreeWidget):
     sigAddTopLevelItem = QtCore.Signal(str, str)
     sigDelete = QtCore.Signal(list)
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
@@ -332,19 +348,20 @@ class SFTPFileView(QtGui.QTreeWidget):
 
         self.menu = QtGui.QMenu(parent=self)
         openAction = QtGui.QAction('Open', self)
+        openFolderAction = QtGui.QAction('Open Folder', self)
         downloadAction = QtGui.QAction('Download', self)
         deleteAction = QtGui.QAction('Delete', self)
         openAction.triggered.connect(self.handleOpenAction)
         downloadAction.triggered.connect(self.handleDownloadAction)
         deleteAction.triggered.connect(self.handleDeleteAction)
-        self.menu.addActions([openAction, downloadAction, deleteAction])
+        self.menu.addActions([openAction, openFolderAction, downloadAction, deleteAction])
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.menuRequested)
 
     @threads.method(callback_slot=lambda self: self.pathChanged.emit(self.path))
     def refresh(self, path=None):
-        self.clear()
+        guiinvoker.invoke_in_main_thread(self.clear)
         if path is not None:
             self.path = path
             self.client.cd(path)
@@ -450,6 +467,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     """
 
     sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(object)
@@ -723,6 +741,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpen = QtCore.Signal(list)
+    sigFolderOpen = QtCore.Signal(list)
     sigPreview = QtCore.Signal(object)
 
     def __init__(self, parent=None):
@@ -806,6 +825,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.handleOpenActions)
+        explorer.file_view.sigOpenFolder.connect(self.handleOpenFolderActions)
         try:
             explorer.file_view.sigDownload.connect(self.handleDownloadActions)
         except AttributeError:
@@ -894,6 +914,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleOpenActions(self, paths):
         if len(paths) > 0:
             self.sigOpen.emit(paths)
+
+    def handleOpenFolderActions(self, paths):
+        if len(paths) > 0:
+            self.sigFolderOpen.emit(paths)
 
     def handleDeleteActions(self, paths):
         r = QtGui.QMessageBox.warning(self, 'Delete file',
