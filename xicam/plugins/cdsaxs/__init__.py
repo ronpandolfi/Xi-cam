@@ -17,7 +17,7 @@ from fabio import tifimage
 from pipeline import loader, hig, msg
 import numpy as np
 from xicam.plugins import base
-import widgets
+from xicam.plugins import widgets
 import subprocess
 import xicam.RmcView as rmc
 from xicam import threads
@@ -59,36 +59,24 @@ class plugin(base.plugin):
         Phi_min, Phi_max, Phi_step = self.param['Phi_min'], self.param['Phi_max'], self.param['Phi_step']
 
 
-
-        funcButton = QtGui.QPushButton("Run ")
-
-
-
-
-        #self.param1['test'].sigActivated.connect(self.main)
-        print self.param.children()
         self.param.param('Run1').sigActivated.connect(self.fit)
-
-        #name='test', type='group', children=[{'name':'RUN', 'type': 'action'}])
 
         super(plugin, self).__init__(*args, **kwargs)
 
     def update_model(self,widget):
-        self.bottomwidget.setImage(widget.modelImage)
+        guiinvoker.invoke_in_main_thread(self.bottomwidget.setImage,widget.modelImage)
 
     def fit(self):
+        activeSet = self.getCurrentTab()
+        activeSet.setCurrentWidget(activeSet.CDModelWidget)
         H0, w0, Beta = self.param['H0'], self.param['w0'], self.param['Beta']
         fitrunnable = threads.RunnableMethod(self.getCurrentTab().fitting_test,method_args=(H0,w0,Beta))
         threads.add_to_queue(fitrunnable)
-
-    def test(self):
-        print('OK')
 
     def openfiles(self, files, operation=None, operationname=None):
         self.activate()
         if type(files) is not list:
             files = [files]
-        print files
         widget = widgets.OOMTabItem(itemclass=CDSAXSWidget, src=files, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
@@ -268,23 +256,22 @@ class CDSAXSWidget(QtGui.QTabWidget):
         initial_value = (H, w0, Beta)
         bnds = ((305, 320), (32, 37), (0.5, 3.) )
 
-        Qxexp1, Qxexp2, Qxexp3 = self.get_exp_values(self.qxyi)
-
-        self.CDModelWidget.clear()
-        self.CDModelWidget.plot(np.log(Qxexp1))
-        self.CDModelWidget.plot(np.log(Qxexp2))
-        self.CDModelWidget.plot(np.log(Qxexp3))
-
-        #self.SL_model(300, 40, np.radians(2))
-
+        self.Qxexp1, self.Qxexp2, self.Qxexp3 = self.get_exp_values(self.qxyi)
+        self.update_profile()
 
         opt = minimize(self.residual, initial_value, bounds=bnds, method='L-BFGS-B',
-                       options={'disp': True, 'eps': (1, 0.2, 0.1), 'ftol': 0.01}, callback=lambda w: guiinvoker.invoke_in_main_thread(self.update_model,w))
-        print(opt.x)
-        print(opt.message)
+                       options={'disp': True, 'eps': (1, 0.2, 0.1), 'ftol': 0.01})
+        # print(opt.x)
+        # print(opt.message)
 
-    def update_model(self,_):
+    def update_model(self):
         self.sigDrawModel.emit(self)
+
+    def update_profile(self):
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order1.setData,np.log(self.Qxexp1))
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order2.setData,np.log(self.Qxexp2))
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order3.setData,np.log(self.Qxexp3))
+
 
 
 
@@ -307,8 +294,12 @@ class CDSAXSWidget(QtGui.QTabWidget):
         res = (sum(abs(Qxfit1 - Qxexp1)) + sum(abs(Qxfit2 - Qxexp2)) + sum(abs(Qxfit3 - Qxexp3))) / (
         sum(Qxexp1) + sum(Qxexp2) + sum(Qxexp3))
         self.Qxexp1, self.Qxexp2, self.Qxexp3 = Qxexp1, Qxexp2, Qxexp3
-        print(p)
-        print('fval : ', res)
+        # print(p)
+        # print('fval : ', res)
+
+        self.update_model()
+        self.update_profile()
+
         return res
 
     def SL_model(self, H, LL, beta, plot_mode=False):
@@ -339,7 +330,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
                 for c in range(0, nbligne, 1):
                     if x > pitch:
                         x = x - pitch
-                    Obj[a + (Tailleximage / 2), b + (Tailleyimage - H) / 2] = self.ligne1(x, b, beta, LL, H, pitch)
+                    Obj[int(a + (Tailleximage / 2)), int(b + (Tailleyimage - H) / 2)] = self.ligne1(x, b, beta, LL, H, pitch)
 
         #self.CDProfileWidget.setImage(Obj, levels=(100, 200000))
         #self.sigDrawModel.emit(Obj)
@@ -389,9 +380,9 @@ class CDSAXSWidget(QtGui.QTabWidget):
                         np.tan(phimax) * (originx - i) / 2) >= -(originy - j):
                     Iroi[i, j] = (I[i + center_x, j + center_y - roisizey / 2])
 
-        I1 = np.sum(Iroi[Position1 - 1:Position1 + 1, :], axis=0)
-        I2 = np.sum(Iroi[Position2 - 1:Position2 + 1, :], axis=0)
-        I3 = np.sum(Iroi[Position3 - 1:Position3 + 1, :], axis=0)
+        I1 = np.sum(Iroi[int(Position1) - 1:int(Position1) + 1, :], axis=0)
+        I2 = np.sum(Iroi[int(Position2) - 1:int(Position2) + 1, :], axis=0)
+        I3 = np.sum(Iroi[int(Position3) - 1:int(Position3) + 1, :], axis=0)
         return Iroi, I1, I2, I3
 
     # Rescale  the experimental and simulated data in qy
@@ -417,7 +408,12 @@ class CDCartoWidget(pg.ImageView):
     pass
 
 class CDModelWidget(pg.PlotWidget):
-    pass
+    def __init__(self):
+        super(CDModelWidget, self).__init__()
+        self.addLegend()
+        self.order1 = self.plot([],pen=pg.mkPen('g'),name='Order 1')
+        self.order2 = self.plot([],pen=pg.mkPen('y'),name='Order 2')
+        self.order3 = self.plot([],pen=pg.mkPen('r'),name='Order 3')
 
 class CDProfileWidget(pg.ImageView):
     pass
