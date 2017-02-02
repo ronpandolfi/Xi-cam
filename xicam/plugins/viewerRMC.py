@@ -20,7 +20,6 @@ import glob
 # TODO: Check mask behavior
 
 
-# drag/drop taken from tomography plugin
 import platform
 op_sys = platform.system()
 
