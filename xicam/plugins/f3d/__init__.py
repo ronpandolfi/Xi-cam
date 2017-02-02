@@ -2,6 +2,7 @@ from xicam.plugins import base
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
+from xicam.widgets.customwidgets import F3DButtonGroup, DeviceWidget
 from pipeline.loader import StackImage
 from pipeline import msg
 from functools import partial
@@ -9,6 +10,7 @@ import f3d_viewers
 import os
 import pyqtgraph as pg
 import filtermanager as fm
+import pyopencl as cl
 import importer
 
 
@@ -22,7 +24,7 @@ class plugin(base.plugin):
     def __init__(self, placeholders, *args, **kwargs):
 
         self.toolbar = Toolbar()
-        self.toolbar.connectTriggers(self.run)
+        self.toolbar.connectTriggers(self.run, self.preview)
         # self.build_toolbutton_menu(self.toolbar.addMaskMenu, 'Open file for mask', self.openMaskFile)
         # self.build_toolbutton_menu(self.toolbar.addMaskMenu, 'Open directory for mask', self.openMaskFolder)
 
@@ -70,7 +72,7 @@ class plugin(base.plugin):
         self.centerwidget.setDocumentMode(True)
         self.centerwidget.setTabsClosable(True)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
-        # self.centerwidget.currentChanged.connect(self.currentChanged)
+        self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
         # DRAG-DROP
@@ -78,11 +80,14 @@ class plugin(base.plugin):
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent
 
-        self.rightwidget = F3DOptionsWidget()
+        self.readAvailableDevices()
+        self.rightwidget = F3DOptionsWidget(self.devices, 0)
 
 
         self.manager = fm.FilterManager(self.functionwidget.functionsList, self.param_form,
                                        blank_form='Select a filter from\n below to set parameters...')
+        self.manager.sigFilterAdded.connect(lambda: self.sigFilterAdded.emit(self.filter_images))
+        # self.manager.sigFilterAdded.connect(self.emit_filters)
 
         self.functionwidget.fileButton.setMenu(filefuncmenu)
         self.functionwidget.fileButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -109,7 +114,6 @@ class plugin(base.plugin):
 
         self.sigFilterAdded.connect(self.manager.updateFilterMasks)
         self.build_function_menu(self.addfunctionmenu, importer.filters, self.manager.addFilter)
-
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -229,9 +233,11 @@ class plugin(base.plugin):
         """
 
         try:
-            self.setPipelineValues()
-            self.manager.updateParameters()
-            self.toolbar.actionCenter.setChecked(False)
+            current_widget = self.centerwidget.widget(index)
+            self.rightwidget.update_widget_spinboxes(current_widget.data.shape[0])
+        #     self.setPipelineValues()
+        #     self.manager.updateParameters()
+        #     self.toolbar.actionCenter.setChecked(False)
         except (AttributeError, RuntimeError) as e:
             msg.logMessage(e.message, level=msg.ERROR)
 
@@ -256,6 +262,35 @@ class plugin(base.plugin):
         self.centerwidget.widget(index).deleteLater()
 
     def run(self):
+        # corresponds to F3DImageProcessing_JOCL_.java.run() (?)
+
+        intermediateSteps = self.rightwidget.use_intermediate
+        chooseConstantDevices = False
+        inputDeviceLength = self.rightwidget.maxNumDevices
+        maxSliceCount = None
+        overlap = None
+
+        pipeline = self.manager.getAttributes()
+
+        # print status output
+        devices_tmp = self.rightwidget.chosen_devices
+        devices_tmp.reverse(); pipeline.reverse()
+        for filter in pipeline:
+            self.log.log2local("{}".format(filter))
+        self.log.log2local("Pipeline to be processed:")
+        for device in devices_tmp:
+            self.log.log2local("{}".format(device.name))
+        self.log.log2local("Using {} device(s):".format(str(len(devices_tmp))))
+        del devices_tmp; pipeline.reverse()
+        self.leftwidget.setCurrentWidget(self.log)
+
+        # execute filters. Create one thread per device
+        runnables = []
+        for i in range(len(self.rightwidget.chosen_devices)):
+            clattr = None # instantiate ClAttributes class here
+            runnables.append(fm.RunnableJOCLFilter(self.manager.run, clattr))
+
+    def preview(self):
         pass
 
     def build_function_menu(self, menu, filter_data, actionslot):
@@ -295,6 +330,35 @@ class plugin(base.plugin):
     def clearPipeline(self):
         pass
 
+    def readAvailableDevices(self):
+        """
+        Somehow read and return list of all gpus usable for processing
+        """
+
+        platforms = cl.get_platforms()
+        devices_tmp = []
+        for item in platforms:
+            devices_tmp.append(item.get_devices())
+
+        self.contexts = []
+        self.devices = []
+        if len(devices_tmp) == 1:
+            self.devices = devices_tmp[0]
+            self.contexts.append(cl.Context(devices_tmp[0]))
+        else:
+            for i in range(len(devices_tmp)):
+                # devices = devices_tmp[i] + devices_tmp[i + 1]
+                self.devices += devices_tmp[i]
+                try:
+                    self.contexts.append(cl.Context(devices_tmp[i]))
+                except RuntimeError as e:
+                    self.log.log2local("ERROR: There was a problem detecting drivers. Please verify the installation" +
+                                       " of your graphics device\'s drivers.")
+                    msg.logMessage(e.message, level=msg.ERROR)
+                    self.leftwidget.setCurrentWidget(self.log)
+                # except NoClassFoundError - does not apply for this?
+
+
 class Toolbar(QtGui.QToolBar):
 
     def __init__(self):
@@ -305,6 +369,13 @@ class Toolbar(QtGui.QToolBar):
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_34.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionRun.setIcon(icon)
         self.actionRun.setToolTip('Run pipeline')
+
+        self.actionPreview = QtGui.QAction(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_50.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.actionPreview.setIcon(icon)
+        self.actionPreview.setToolTip('Run preview')
+
 
         # self.actionAddMask = QtGui.QToolButton(self)
         # self.addMaskMenu = QtGui.QMenu()
@@ -319,35 +390,49 @@ class Toolbar(QtGui.QToolBar):
         self.setIconSize(QtCore.QSize(32, 32))
 
         self.addAction(self.actionRun)
+        self.addAction(self.actionPreview)
         # self.addWidget(self.actionAddMask)
 
-    def connectTriggers(self, run):
+    def connectTriggers(self, run, preview):
 
         self.actionRun.triggered.connect(run)
+        self.actionPreview.triggered.connect(preview)
+
+
 
 class F3DOptionsWidget(QtGui.QWidget):
     """
-    bottomwidget for f3d plugin
+    rightwidget for f3d plugin
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, devices, shape, parent=None):
         super(F3DOptionsWidget, self).__init__(parent=parent)
         layout = QtGui.QVBoxLayout()
         options = QtGui.QLabel('Devices Options')
-        self.devices = {}
-
-
+        self.device_widgets = {}
+        self.devices = devices
+        self.buttons = F3DButtonGroup()
 
         layout.addWidget(options)
         layout.addSpacing(10)
 
+
         counter = 0
-        for device, cores in self.readAvailableDevices().iteritems():
-            self.devices[device] = DeviceWidget(device, counter, cores)
+        for device in devices:
+            self.device_widgets[device.name] = DeviceWidget(device.name, counter, shape)
+            self.buttons.addButton(self.device_widgets[device.name].checkbox, counter)
             if counter == 0:
-                self.devices[device].checkbox.setChecked(True)
-            layout.addWidget(self.devices[device])
+                self.device_widgets[device.name].checkbox.setChecked(True)
             counter += 1
+        self.maxNumDevices = counter - 1
+
+        layout.addWidget(QtGui.QLabel('Total number of devices: {}'.format(str(counter))))
+        layout.addSpacing(5)
+
+        for idx in range(len(self.device_widgets)):
+            for widget in self.device_widgets.itervalues():
+                if widget.number == idx: layout.addWidget(widget)
+
 
         layout.addSpacing(30)
 
@@ -374,6 +459,12 @@ class F3DOptionsWidget(QtGui.QWidget):
 
         self.setLayout(layout)
 
+    def update_widget_spinboxes(self, shape):
+        for name in self.device_widgets.iterkeys():
+            self.device_widgets[name].slicebox.setMinimum(1)
+            self.device_widgets[name].slicebox.setMaximum(shape)
+            self.device_widgets[name].slicebox.setValue(shape)
+
     @property
     def use_virtual(self):
         return self.virtual_stack.checkState()
@@ -389,52 +480,11 @@ class F3DOptionsWidget(QtGui.QWidget):
                                                     "Choose output directory: ")
             if path: self.output.setText(path)
 
+    @property
+    def chosen_devices(self):
+        device_names = []
+        for name, widget in self.device_widgets.iteritems():
+            if self.device_widgets[name].checkbox.isChecked(): device_names.append(name)
 
-    def readAvailableDevices(self):
-        """
-        Somehow read and return list of all gpus usable for processing
-        """
-
-        return {'GeForce GTX TITAN': 2160, 'Something else': 4000}
-
-class DeviceWidget(QtGui.QWidget):
-
-    """
-    Widget to hold checkbox, name, and spinbox for cores (?) used in processing
-    """
-
-    def __init__(self, name, number, cores):
-        super(DeviceWidget, self).__init__(parent=None)
-
-
-        top_layout = QtGui.QHBoxLayout()
-        bottom_layout = QtGui.QVBoxLayout()
-        layout = QtGui.QVBoxLayout()
-
-        self.enabled = False
-        self.name = name
-        self.cores = cores
-
-        self.checkbox = QtGui.QCheckBox()
-        self.label = QtGui.QLabel('Device {} ({})'.format(str(number), self.name))
-        self.corebox = QtGui.QSpinBox()
-        self.corebox.setMinimum(1)
-        self.corebox.setMaximum(self.cores)
-        self.corebox.setValue(self.cores)
-        self.checkbox.stateChanged.connect(self.checkbox_changed)
-        self.corebox.valueChanged.connect(self.corebox_changed)
-
-        top_layout.addWidget(self.checkbox)
-        top_layout.addWidget(self.label)
-        bottom_layout.addWidget(self.corebox)
-        layout.addLayout(top_layout)
-        layout.addLayout(bottom_layout)
-
-        self.setLayout(layout)
-
-    def checkbox_changed(self, enabled):
-        self.enabled = enabled
-
-    def corebox_changed(self, val):
-        self.cores = val
+        return [device for device in self.devices if device.name in device_names]
 

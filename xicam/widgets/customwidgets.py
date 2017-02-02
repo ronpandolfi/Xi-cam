@@ -233,3 +233,85 @@ class sliceDialog(QtGui.QDialog):
     def cancel(self):
         self.value = None
         self.reject()
+
+# primarily for F3D
+class DeviceWidget(QtGui.QWidget):
+
+    """
+    Widget to hold checkbox, name, and spinbox, the important parts of a 'device.' Also includes
+    device 'number'
+    """
+
+    def __init__(self, name, number, slices):
+        super(DeviceWidget, self).__init__(parent=None)
+
+
+        top_layout = QtGui.QHBoxLayout()
+        bottom_layout = QtGui.QVBoxLayout()
+        layout = QtGui.QVBoxLayout()
+
+        self.enabled = False
+        self.name = name
+        self.number = number
+        self.slices = slices
+
+        self.checkbox = QtGui.QCheckBox()
+        self.label = QtGui.QLabel('Device {} ({})'.format(str(number), self.name))
+        self.label.setWordWrap(True)
+        self.label.setAlignment(QtCore.Qt.AlignLeft)
+        self.slicebox = QtGui.QSpinBox()
+        self.slicebox.setMinimum(1)
+        self.slicebox.setMaximum(self.slices)
+        self.slicebox.setValue(self.slices)
+        self.checkbox.stateChanged.connect(self.checkbox_changed)
+        self.slicebox.valueChanged.connect(self.slicebox_changed)
+
+        top_layout.addWidget(self.checkbox)
+        top_layout.addWidget(self.label)
+        bottom_layout.addWidget(self.slicebox)
+        layout.addLayout(top_layout)
+        layout.addLayout(bottom_layout)
+
+        self.setLayout(layout)
+
+    def checkbox_changed(self, enabled):
+        self.enabled = enabled
+
+    def slicebox_changed(self, val):
+        self.slices = val
+
+# primarily for F3D
+class F3DButtonGroup(QtGui.QButtonGroup):
+    """
+    Widget to hold a group of buttons. Ensures that at least button in group is always checked
+    """
+
+    signalButtonChanged = QtCore.Signal(QtGui.QWidget)
+
+    def __init__(self):
+        super(F3DButtonGroup, self).__init__()
+        self.setExclusive(False)
+        self.signalButtonChanged.connect(self.enforce_limits)
+
+    def addButton(self, button, id):
+        super(F3DButtonGroup, self).addButton(button, id)
+        button.clicked.connect(lambda: self.signalButtonChanged.emit(button))
+
+    def enforce_limits(self, button):
+        """
+        function to make sure at least one checkbox is checked, and that if group has two buttons then unchecking
+        one automatically checks the other
+        """
+
+        if len(self.buttons()) < 2:
+            button.setChecked(True)
+        elif len(self.buttons()) == 2:
+            if not button.checkState():
+                for check in self.buttons():
+                    if check != button:
+                        check.setChecked(True)
+        else:
+            other_buttons = [check for check in self.buttons() if check != button]
+            for check in other_buttons:
+                if check.checkState(): return
+            button.setChecked(True)

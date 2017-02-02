@@ -13,6 +13,15 @@ class JOCLFilter(fw.FeatureWidget):
         self.info = self.FilterInfo()
         self.info.name = name
 
+        self.width = 0
+        self.height = 0
+        self.channels = 0
+        self.slices = 0
+        self.sliceStart = -1
+        self.sliceEnd = -1
+
+        # filter package (?) will go here. Its processing methods will be inherited by the JOCLFilter
+        self.filter = None
 
         try:
             self.params = Parameter.create(name=name, children=self.details['Parameters'], type='group')
@@ -21,21 +30,12 @@ class JOCLFilter(fw.FeatureWidget):
             self.form.customContextMenuRequested.connect(self.paramMenuRequested)
             self.form.setParameters(self.params, showTop=True)
 
+
         except KeyError:
             self.params = None
             self.form.clear()
 
-        # set parameter defaults if there are any
-        for item in self.details['Parameters']:
-            if 'default' in item.iterkeys():
-                self.params.child(item['name']).setValue(item['default'])
-                self.params.child(item['name']).setDefault(item['default'])
-
-            # connect structuredElementL to show extra parameter
-            if 'Mask' in item.itervalues():
-                self.params.child(item['name']).sigValueChanged.connect(self.hideL)
-                self.params.child('L').setLimits([1,20])
-                self.params.child('L').sigValueChanged.connect(self.setL)
+        self.reconnectDefaults()
 
 
         self.previewButton.customContextMenuRequested.connect(self.menuRequested)
@@ -57,6 +57,34 @@ class JOCLFilter(fw.FeatureWidget):
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
+
+    # for eventual use with previews
+    @property
+    def stack_dict(self):
+        stack_dict = {'Name': self.info.name}
+
+        if self.params:
+            for param in self.params.children():
+                stack_dict[param.name()] = param.value()
+            try:
+                if stack_dict['Mask'] != 'StructuredElementL':
+                    stack_dict.pop('L')
+            except KeyError:
+                pass
+        return stack_dict
+
+    def reconnectDefaults(self):
+        # set parameter defaults if there are any
+        for item in self.details['Parameters']:
+            if 'default' in item.iterkeys():
+                self.params.child(item['name']).setValue(item['default'])
+                self.params.child(item['name']).setDefault(item['default'])
+
+            # connect structuredElementL to show extra parameter
+            if 'Mask' in item.itervalues():
+                self.params.child(item['name']).sigValueChanged.connect(self.hideL)
+                self.params.child('L').setLimits([1,20])
+                self.params.child('L').sigValueChanged.connect(self.setL)
 
     def menuRequested(self):
         pass
@@ -141,6 +169,9 @@ class JOCLFilter(fw.FeatureWidget):
         pass
 
     def runFilter(self):
+
+        # self.filter.runFilter()
+
         pass
 
     def releaseKernel(self):
