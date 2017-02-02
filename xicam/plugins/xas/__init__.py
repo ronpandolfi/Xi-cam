@@ -10,7 +10,7 @@ from larch_plugins.math.mathutils import index_of
 from larch_plugins.xafs import pre_edge
 
 import xasloader
-
+from xicam.widgets.NDTimelinePlotWidget import XASTimelineWidget
 
 
 def runtest():
@@ -26,10 +26,10 @@ def openfiles(filepaths):
     for path in filepaths:
         spectra = xasloader.open(path)
 
-        for scan in spectra.scans:
-            EZTest.plot(np.array(scan.e), np.array(scan.y))
+        for t,scan in enumerate(spectra.scans):
+            EZTest.plot((t,(np.array(scan.e), np.array(scan.y))))
 
 
 
 
-EZTest=base.EZplugin(name='XAS',toolbuttons=[('xicam/gui/icons_34.png',runtest)],parameters=[{'name':'Test','value':10,'type':'int'}],openfileshandler=openfiles,imageenabled=False)
+EZTest=base.EZplugin(name='XAS',toolbuttons=[('xicam/gui/icons_34.png',runtest)],parameters=[{'name':'Test','value':10,'type':'int'}],openfileshandler=openfiles,centerwidget=None,bottomwidget=XASTimelineWidget)
