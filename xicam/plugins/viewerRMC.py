@@ -263,7 +263,8 @@ class inOutViewer(QtGui.QWidget, ):
                       {'name': 'Numsteps factor', 'type': 'int', 'value': 100, 'default': 100},
                       {'name': 'Model start size', 'type': 'int', 'value': start_size},
                       {'name': 'Save name', 'type': 'str', 'value': 'hiprmc_' + image_name},
-                      {'name': 'Mask image', 'type': 'str'}]
+                      {'name': 'Mask image', 'type': 'str'},
+                      {'name': 'Browse mask image', 'type': 'action'}]
             self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
             self.scatteringParams.setParameters(self.configparams, showTop=False)
             scatteringHolder.addWidget(self.scatteringParams)
@@ -297,6 +298,9 @@ class inOutViewer(QtGui.QWidget, ):
         runButton.clicked.connect(self.runRMC)
         stopButton.clicked.connect(self.stop_threads)
 
+        self.configparams.child('Browse mask image').sigActivated.connect(self.setBrowse)
+        # self.configparams.param('Mask image').setReadonly()
+
         # tab headings for main widget
         self.headings = QtGui.QTabBar(self)
         self.headings.addTab('Original Image')
@@ -327,6 +331,13 @@ class inOutViewer(QtGui.QWidget, ):
         self.headings.currentChanged.connect(self.currentChanged)
         self.image_holder.currentChanged.connect(self.headings.setCurrentIndex)
 
+    def setBrowse(self):
+        """
+        Uses result of browse button in 'parent folder' and 'folder name' fields
+        """
+
+        path = str(QtGui.QFileDialog.getOpenFileName(None, 'Save reconstruction as',self.path)[0])
+        self.configparams.param('Mask image').setValue(path)
 
     def currentChanged(self, index):
         """
