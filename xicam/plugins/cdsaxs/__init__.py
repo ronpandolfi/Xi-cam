@@ -46,31 +46,44 @@ class plugin(base.plugin):
         self.bottomwidget = pg.ImageView()
 
         # Setup parametertree
-        self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[{'name':'Phi_min','type':'float'},
-                                                                                         {'name':'Phi_max','type':'float'},
-                                                                                         {'name':'Phi_step','type':'float'},
-                                                                                         {'name':'H0','type':'float'},
-                                                                                         {'name':'w0','type':'float'},
-                                                                                         {'name':'Beta','type': 'float'},
-                                                                                         {'name': 'Run1', 'type': 'action'}])
+
+        self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[
+                                                                                        {'name' : 'test', 'type' : 'group', 'children' : [
+                                                                                        {'name':'Phi_min','type':'float'},
+                                                                                        {'name':'Phi_max','type':'float'},
+                                                                                        {'name':'Phi_step','type':'float'},
+                                                                                        {'name':'H','type':'float'},
+                                                                                        {'name':'w0','type':'float'},
+                                                                                        {'name':'Beta','type': 'float'},
+                                                                                        {'name': 'Run1', 'type': 'action'}]},
+                                                                                        {'name' : 'test1', 'type' : 'group', 'children' : [
+                                                                                        {'name':'H_fit','type':'float', 'readonly': True},
+                                                                                        {'name':'w0_fit','type':'float', 'readonly': True},
+                                                                                        {'name':'Beta_fit','type':'float', 'readonly': True},
+                                                                                        {'name':'f_val','type':'float', 'readonly': True}]}])
 
         self.parametertree.setParameters(self.param,showTop=False)
+        Phi_min, Phi_max, Phi_step = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param['test', 'Phi_step']
 
-        Phi_min, Phi_max, Phi_step = self.param['Phi_min'], self.param['Phi_max'], self.param['Phi_step']
-
-
-        self.param.param('Run1').sigActivated.connect(self.fit)
+        self.param.param('test', 'Run1').sigActivated.connect(self.fit)
 
         super(plugin, self).__init__(*args, **kwargs)
 
     def update_model(self,widget):
         guiinvoker.invoke_in_main_thread(self.bottomwidget.setImage,widget.modelImage)
 
+    def update_right_widget(self,widget):
+        H, LL, beta, f_val = widget.modelParameter
+        guiinvoker.invoke_in_main_thread(self.param.param('test1', 'H_fit').setValue,H)
+        guiinvoker.invoke_in_main_thread(self.param.param('test1', 'w0_fit').setValue, LL)
+        guiinvoker.invoke_in_main_thread(self.param.param('test1', 'Beta_fit').setValue, beta)
+        guiinvoker.invoke_in_main_thread(self.param.param('test1', 'f_val').setValue, f_val)
+
     def fit(self):
         activeSet = self.getCurrentTab()
         activeSet.setCurrentWidget(activeSet.CDModelWidget)
-        H0, w0, Beta = self.param['H0'], self.param['w0'], self.param['Beta']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().fitting_test,method_args=(H0,w0,Beta))
+        H, w0, Beta = self.param['test', 'H'], self.param['test', 'w0'], self.param['test', 'Beta']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().fitting_test,method_args=(H,w0,Beta))
         threads.add_to_queue(fitrunnable)
 
     def openfiles(self, files, operation=None, operationname=None):
@@ -88,6 +101,7 @@ class plugin(base.plugin):
             tab.unload()
         self.centerwidget.currentWidget().load()
         self.getCurrentTab().sigDrawModel.connect(self.update_model)
+        self.getCurrentTab().sigDrawParam.connect(self.update_right_widget)
 
     def tabClose(self,index):
         self.centerwidget.widget(index).deleteLater()
@@ -99,6 +113,7 @@ class plugin(base.plugin):
 
 class CDSAXSWidget(QtGui.QTabWidget):
     sigDrawModel = QtCore.Signal(object)
+    sigDrawParam = QtCore.Signal(object)
 
     def __init__(self, src, *args, **kwargs):
         super(CDSAXSWidget, self).__init__()
@@ -134,11 +149,10 @@ class CDSAXSWidget(QtGui.QTabWidget):
         phi_min, phi_max, phi_step = -30, 30, 1
         center_x, center_y = 248, 1668  # Position of the direct beam
 
-        I_norm = self.tiff('/Users/guillaumefreychet/GitHub/Xi-cam/xicam/plugins/cdsaxs/contacta1_hs104_060_0000.tif')
-        self.qxyi = np.zeros([len(I_norm[0]), 3], dtype=np.float32)
-        self.qxyi = self.data_fusion_2D(self.qxyi, prefix, wavelength, serie1, phi_min, phi_max, phi_step, center_x, center_y)
-
-
+        #I_norm = self.tiff('/Users/guillaumefreychet/GitHub/Xi-cam/xicam/plugins/cdsaxs/contacta1_hs104_060_0000.tif')
+        #self.qxyi = np.zeros([len(I_norm[0]), 3], dtype=np.float32)
+        #self.qxyi = self.data_fusion_2D(self.qxyi, prefix, wavelength, serie1, phi_min, phi_max, phi_step, center_x, center_y)
+        self.qxyi = np.load('/Users/guillaumefreychet/Desktop/QxyiData_MemA.npy')
         self.interpolation(self.qxyi, sampling_size)
         #self.fitting_test(self.qxyi, 300, 35, 2)
 
@@ -232,7 +246,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.CDCartoWidget.setImage(img, levels = (100, 200000))
 
     def get_exp_values(self,qxyi):
-        cut_val = 1.5 * 0.0628
+        cut_val = 2 * 0.0625
         delta = 0.0005
         dtype = [('qx', np.float32), ('qy', np.float32), ('i', np.float32)]
         Sqxyi = []
@@ -254,56 +268,67 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
     def fitting_test(self, H, w0, Beta):
         initial_value = (H, w0, Beta)
-        bnds = ((305, 320), (32, 37), (0.5, 3.) )
+        bnds = ((250, 350), (20, 50), (1., 2.) )
 
-        self.Qxexp1, self.Qxexp2, self.Qxexp3 = self.get_exp_values(self.qxyi)
-        self.update_profile()
+        #self.Qxexp1, self.Qxexp2, self.Qxexp3 = self.get_exp_values(self.qxyi)
+        self.update_right_widget()
 
         opt = minimize(self.residual, initial_value, bounds=bnds, method='L-BFGS-B',
-                       options={'disp': True, 'eps': (1, 0.2, 0.1), 'ftol': 0.01})
+                       options={'disp': True, 'eps': (0.5, 0.5, 0.1), 'ftol': 0.001})
         # print(opt.x)
         # print(opt.message)
 
     def update_model(self):
         self.sigDrawModel.emit(self)
 
+    def update_right_widget(self):
+        self.sigDrawParam.emit(self)
+
     def update_profile(self):
         guiinvoker.invoke_in_main_thread(self.CDModelWidget.order1.setData,np.log(self.Qxexp1))
         guiinvoker.invoke_in_main_thread(self.CDModelWidget.order2.setData,np.log(self.Qxexp2))
         guiinvoker.invoke_in_main_thread(self.CDModelWidget.order3.setData,np.log(self.Qxexp3))
 
-
-
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order4.setData, np.log(self.Qxfit1))
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order5.setData, np.log(self.Qxfit2))
+        guiinvoker.invoke_in_main_thread(self.CDModelWidget.order6.setData, np.log(self.Qxfit3))
 
     def residual(self, p, plot_mode=False):
         H, LL, beta = p
-        Qxexp1, Qxexp2, Qxexp3  = self.get_exp_values(self.qxyi)
-        Qxfit1, Qxfit2, Qxfit3 = self.SL_model(H, LL, beta)
+        beta = np.radians(beta)
+        self.Qxexp1, self.Qxexp2, self.Qxexp3  = self.get_exp_values(self.qxyi)
+        self.Qxfit1, self.Qxfit2, self.Qxfit3 = self.SL_model(H, LL, beta)
 
         # recalage en y
-        Qxexp1, Qxfit1 = self.resize_yset(Qxexp1, Qxfit1)
-        Qxexp2, Qxfit2 = self.resize_yset(Qxexp2, Qxfit2)
-        Qxexp3, Qxfit3 = self.resize_yset(Qxexp3, Qxfit3)
+        self.Qxexp1, self.Qxfit1 = self.resize_yset(self.Qxexp1, self.Qxfit1)
+        self.Qxexp2, self.Qxfit2 = self.resize_yset(self.Qxexp2, self.Qxfit2)
+        self.Qxexp3, self.Qxfit3 = self.resize_yset(self.Qxexp3, self.Qxfit3)
+
+        max_size = self.Qxexp3.size
+        self.Qxexp1, self.Qxfit1 = self.centering(self.Qxexp1, self.Qxfit1, np.int(max_size))
+        self.Qxexp2, self.Qxfit2 = self.centering(self.Qxexp2, self.Qxfit2, np.int(max_size))
 
         # recalage en intensite
-        Qxexp1, Qxfit1 = self.resize_iset(Qxexp1, Qxfit1)
-        Qxexp2, Qxfit2 = self.resize_iset(Qxexp2, Qxfit2)
-        Qxexp3, Qxfit3 = self.resize_iset(Qxexp3, Qxfit3)
+        self.Qxexp1, self.Qxfit1 = self.resize_iset(self.Qxexp1, self.Qxfit1)
+        self.Qxexp2, self.Qxfit2 = self.resize_iset(self.Qxexp2, self.Qxfit2)
+        self.Qxexp3, self.Qxfit3 = self.resize_iset(self.Qxexp3, self.Qxfit3)
 
-        # Calcul de la difference
-        res = (sum(abs(Qxfit1 - Qxexp1)) + sum(abs(Qxfit2 - Qxexp2)) + sum(abs(Qxfit3 - Qxexp3))) / (
-        sum(Qxexp1) + sum(Qxexp2) + sum(Qxexp3))
-        self.Qxexp1, self.Qxexp2, self.Qxexp3 = Qxexp1, Qxexp2, Qxexp3
-        # print(p)
-        # print('fval : ', res)
+        self.update_profile()
+        self.update_right_widget()
+        #self.results()
 
+        res = (sum(abs(self.Qxfit1 - self.Qxexp1)) + sum(abs(self.Qxfit2 - self.Qxexp2)*(max(self.Qxfit1) / max(self.Qxfit2))) + sum(abs(self.Qxfit3 - self.Qxexp3)*(max(self.Qxfit1) / max(self.Qxfit3)))) / (
+        sum(self.Qxexp1) + sum(self.Qxexp2)*(max(self.Qxfit1) / max(self.Qxfit2)) + sum(self.Qxexp3))*(max(self.Qxfit1) / max(self.Qxfit3))
+
+        self.modelParameter = H, LL, np.degrees(beta), res
         self.update_model()
         self.update_profile()
+        self.update_right_widget()
 
         return res
 
     def SL_model(self, H, LL, beta, plot_mode=False):
-        pitch, nbligne = 100, 2
+        pitch, nbligne = 100, 1
         I = []
         I = self.Fitlignes(pitch, beta, LL, H, nbligne)
 
@@ -332,12 +357,10 @@ class CDSAXSWidget(QtGui.QTabWidget):
                         x = x - pitch
                     Obj[int(a + (Tailleximage / 2)), int(b + (Tailleyimage - H) / 2)] = self.ligne1(x, b, beta, LL, H, pitch)
 
-        #self.CDProfileWidget.setImage(Obj, levels=(100, 200000))
-        #self.sigDrawModel.emit(Obj)
-        self.modelImage = Obj
+        self.modelImage = Obj[950:1100, 800:1200]
 
         I = np.random.poisson(abs(fftshift(fftn(Obj))) ** 2)
-        Dynamic = I.max() / 1000
+        Dynamic = I.max()
         II = np.zeros(I.shape, dtype='float64')
         III = np.zeros(I.shape, dtype='int64')
         II = (I * Dynamic) / I.max()
@@ -371,10 +394,10 @@ class CDSAXSWidget(QtGui.QTabWidget):
         center_x = Taille_image[0] / 2
         center_y = Taille_image[1] / 2
         originx = 0
-        originy = roisizey / 2
-        Iroi = np.zeros([roisizex, roisizey])
-        for i in range(1, roisizex, 1):
-            for j in range(1, roisizey, 1):
+        originy = (roisizey / 2) - 0.5
+        Iroi = np.zeros([roisizex+1, roisizey +1 ])
+        for i in range(0, roisizex , 1):
+            for j in range(1, roisizey +1 , 1):
                 if (np.tan(phimax) * (originx - i) / 2) <= (originy - j) and (np.tan(phimax) * (originx - i) / 2) <= -(
                     originy - j) or (np.tan(phimax) * (originx - i) / 2) >= (originy - j) and (
                         np.tan(phimax) * (originx - i) / 2) >= -(originy - j):
@@ -392,6 +415,13 @@ class CDSAXSWidget(QtGui.QTabWidget):
             data1 = resample(data1, max_size)
         else:
             data0 = resample(data0, max_size)
+        return data0, data1
+
+    def centering(self, data0, data1, max_size):
+        data0 = np.resize(data0, max_size)
+        np.roll(data0, np.int((max_size-data0.size)/2))
+        data1 = np.resize(data1, max_size)
+        np.roll(data1, np.int((max_size - data1.size) / 2))
         return data0, data1
 
     # Rescale the experimental and simulated data in intensity
@@ -414,6 +444,9 @@ class CDModelWidget(pg.PlotWidget):
         self.order1 = self.plot([],pen=pg.mkPen('g'),name='Order 1')
         self.order2 = self.plot([],pen=pg.mkPen('y'),name='Order 2')
         self.order3 = self.plot([],pen=pg.mkPen('r'),name='Order 3')
+        self.order4 = self.plot([], pen=pg.mkPen('g'), name='Order 4')
+        self.order5 = self.plot([], pen=pg.mkPen('y'), name='Order 5')
+        self.order6 = self.plot([], pen=pg.mkPen('r'), name='Order 6')
 
 class CDProfileWidget(pg.ImageView):
     pass
