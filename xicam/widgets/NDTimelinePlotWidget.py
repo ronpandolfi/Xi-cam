@@ -27,7 +27,7 @@ class timelineStackPlot(QtGui.QWidget):
         self.slider.setGeometry(500, 500, 30, 10)
         # slider.setFocusPolicy(QtCore.Qt.NoFocus)
 
-        self.plotWidget = pg.PlotWidget()
+        self.plotWidget = pg.PlotWidget(labels={'bottom':(xaxes['label'])})
 
         layout = QtGui.QHBoxLayout()
         self.setLayout(layout)
@@ -174,6 +174,10 @@ class TimelinePlot(QtGui.QTabWidget):
 
     def clearData(self):
         self._data = {'t': [], 'colors': []}
+
+    def clear(self):
+        self.clearData()
+        self.currentPlot().clear()
 
     def widgetChanged(self, *args, **kwargs):
         self.currentPlot().clear()

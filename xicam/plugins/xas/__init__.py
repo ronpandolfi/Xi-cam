@@ -14,22 +14,23 @@ from xicam.widgets.NDTimelinePlotWidget import XASTimelineWidget
 
 
 def runtest():
-    import numpy as np
-
-    img = np.random.random((100,100,100))
-    EZTest.setImage(img)
-
-    hist = np.histogram(img,100)
-    EZTest.plot(hist[1][:-1],hist[0])
+    EZTest.bottomwidget.clear()
 
 def openfiles(filepaths):
     for path in filepaths:
         spectra = xasloader.open(path)
+        spectra.treat()
 
         for t,scan in enumerate(spectra.scans):
-            EZTest.plot((t,(np.array(scan.e), np.array(scan.y))))
+            EZTest.plot((t,(np.array(scan.Energy), np.array(scan.I_norm))))
 
 
 
 
-EZTest=base.EZplugin(name='XAS',toolbuttons=[('xicam/gui/icons_34.png',runtest)],parameters=[{'name':'Test','value':10,'type':'int'}],openfileshandler=openfiles,centerwidget=None,bottomwidget=XASTimelineWidget)
+EZTest=base.EZplugin(name='XAS',
+                     toolbuttons=[('xicam/gui/icons_34.png',runtest)],
+                     parameters=[{'name':'Pre-edge Min','value':10,'type':'int'},
+                                 {'name':'Pre-edge Max','value':30,'type':'int'}],
+                     openfileshandler=openfiles,
+                     centerwidget=None,
+                     bottomwidget=XASTimelineWidget)
