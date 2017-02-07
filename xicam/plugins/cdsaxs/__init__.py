@@ -268,13 +268,13 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
     def fitting_test(self, H, w0, Beta):
         initial_value = (H, w0, Beta)
-        bnds = ((250, 350), (20, 50), (1., 2.) )
+        bnds = ((250, 350), (20, 50), (0.5, 3.) )
 
         #self.Qxexp1, self.Qxexp2, self.Qxexp3 = self.get_exp_values(self.qxyi)
         self.update_right_widget()
 
         opt = minimize(self.residual, initial_value, bounds=bnds, method='L-BFGS-B',
-                       options={'disp': True, 'eps': (0.5, 0.5, 0.1), 'ftol': 0.001})
+                       options={'disp': True, 'eps': (10, 1, 0.1), 'ftol': 0.000000001})
         # print(opt.x)
         # print(opt.message)
 
@@ -317,8 +317,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.update_right_widget()
         #self.results()
 
-        res = (sum(abs(self.Qxfit1 - self.Qxexp1)) + sum(abs(self.Qxfit2 - self.Qxexp2)*(max(self.Qxfit1) / max(self.Qxfit2))) + sum(abs(self.Qxfit3 - self.Qxexp3)*(max(self.Qxfit1) / max(self.Qxfit3)))) / (
-        sum(self.Qxexp1) + sum(self.Qxexp2)*(max(self.Qxfit1) / max(self.Qxfit2)) + sum(self.Qxexp3))*(max(self.Qxfit1) / max(self.Qxfit3))
+        res = (sum(abs(self.Qxfit1 - self.Qxexp1)) + sum(abs(self.Qxfit2 - self.Qxexp2)) + sum(abs(self.Qxfit3 - self.Qxexp3))) / (
+        sum(self.Qxexp1) + sum(self.Qxexp2)*(max(self.Qxfit1) / max(self.Qxfit2)) + sum(self.Qxexp3))
 
         self.modelParameter = H, LL, np.degrees(beta), res
         self.update_model()
@@ -333,7 +333,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         I = self.Fitlignes(pitch, beta, LL, H, nbligne)
 
         # Fitting qx cut
-        Tailleimagex = 2000
+        Tailleimagex = 600
         qref = 1.5 * 0.0628
         Position1 = np.floor(qref / (2 * np.pi / Tailleimagex))
         Position2 = np.floor(2 * qref / (2 * np.pi / Tailleimagex))
@@ -342,9 +342,12 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         return Qxfit1[Qxfit1.nonzero()[0]], Qxfit2[Qxfit2.nonzero()[0]], Qxfit3[Qxfit3.nonzero()[0]]
 
+
     # Generation of the form factor for the line profile generated with the fonction ligne1
-    def Fitlignes(self, pitch, beta, LL, H, nbligne, Taille_image=(2000, 2000)):
+    def Fitlignes(self, pitch, beta, LL, H, nbligne, Taille_image=(600, 600)):
         # assert pitch >= Largeurligne+2*H*abs(np.tan(beta)), 'uncorrect desription of lines'
+
+        '''
         Tailleximage = Taille_image[0]
         Tailleyimage = Taille_image[1]
         Obj = np.zeros([Tailleximage, Tailleyimage])
@@ -357,15 +360,46 @@ class CDSAXSWidget(QtGui.QTabWidget):
                         x = x - pitch
                     Obj[int(a + (Tailleximage / 2)), int(b + (Tailleyimage - H) / 2)] = self.ligne1(x, b, beta, LL, H, pitch)
 
-        self.modelImage = Obj[950:1100, 800:1200]
+        self.modelImage = Obj[250:350, 100:500]
+        '''
 
-        I = np.random.poisson(abs(fftshift(fftn(Obj))) ** 2)
+        #'''
+        Obj = self.pyramid(LL, H, 90 + np.degrees(beta), 600, 600)
+        self.modelImage = Obj[950:1100, 800:1200]
+        #'''
+
+        I = np.random.poisson(abs(fftshift(fftn(np.rot90(Obj,1)))) ** 2)
         Dynamic = I.max()
         II = np.zeros(I.shape, dtype='float64')
         III = np.zeros(I.shape, dtype='int64')
         II = (I * Dynamic) / I.max()
         III = np.int64((II >= 1) * II)
         return III
+
+
+    def pyramid(self, w, h, a, nx, ny):
+        if nx % 2 == 1:
+            nx = nx + 1
+
+        # compute half and mirror it later
+        n2 = nx / 2
+        w2 = w / 2
+
+        # setup arrays
+        img = np.zeros((ny, n2))
+        y, x = np.mgrid[0:ny, 0:n2]
+
+        # equation of line for side of trapezium
+        a = np.deg2rad(a)
+        A = np.sin(np.pi - a)
+        B = -np.cos(np.pi - a)
+        C = - A * w2
+
+        # calculate distance from line
+        d = A * x + B * y + C
+        img[np.logical_and(d < 0, y < h)] = 1
+        return np.hstack((np.fliplr(img), img))
+
 
     # Simulation of 1 line pofil => move through NURBS
     def ligne1(self, x, y, beta, largeurligne, H, pitch):
@@ -387,7 +421,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
             return 0
 
     # Function doing the 1D cut along qx of the simulated signal along Position1, Position2, Position3
-    def Qxcut(self, I, Position1, Position2, Position3, Taille_image=(2000, 2000), phimax=np.radians(27)):
+    def Qxcut(self, I, Position1, Position2, Position3, Taille_image=(600, 600), phimax=np.radians(27)):
         roisizex = np.int(1 / (2 * np.pi) * Taille_image[0])
         roisizey = np.int(1 / (2 * np.pi) * Taille_image[1])
         phimax = np.radians(27)
