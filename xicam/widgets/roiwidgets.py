@@ -120,16 +120,16 @@ class ROImageOverlay(pg.ROI):
         if x == 0:
             x_slc, bg_x_slc = None, None
         elif x < 0:
-            x_slc, bg_x_slc = slice(-x, None), slice(None, x)
+            x_slc, bg_x_slc = slice(-int(x), None), slice(None, int(x))
         elif x > 0:
-            x_slc, bg_x_slc = slice(None, -x), slice(x, None)
+            x_slc, bg_x_slc = slice(None, -int(x)), slice(int(x), None)
 
         if y == 0:
             y_slc, bg_y_slc = None, None
         elif y < 0:
-            y_slc, bg_y_slc = slice(-y, None), slice(None, y)
+            y_slc, bg_y_slc = slice(-int(y), None), slice(None, int(y))
         elif y > 0:
-            y_slc, bg_y_slc = slice(None, -y), slice(y, None)
+            y_slc, bg_y_slc = slice(None, -int(y)), slice(int(y), None)
 
         slc, bg_slc = (x_slc, y_slc), (bg_x_slc, bg_y_slc)
         self._image_overlap[slc] = self.bg_imgeItem.image[bg_slc]

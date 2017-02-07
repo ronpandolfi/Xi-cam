@@ -12,12 +12,20 @@ def reciprocalvectors(a, b, c, order=2):
     vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]
     return vecs
 
+def combs_generator(x,y,z):
+    for i in range(-x/2,x/2+1):
+        for j in range(-y/2,y/2+1):
+            for k in range(0,z+1):
+                yield (i,j,k)
 
-def latticevectors(a, b, c, zoffset, order=2, maxr=100000, maxz=100000):
+def latticevectors(a, b, c, zoffset, maxreps=100, repetitions=None,scaling=1.):
+    if repetitions is None: repetitions = [0,0,0]
     mi = np.vstack([a, b, c])
-    combs = itertools.product(range(-order, order + 1), repeat=3)
-    vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]
-    vecs = [zoffsetvec(vec,zoffset) for vec in vecs if vec[2] >= 0 and np.sqrt(vec[0]**2+vec[1]**2)<=maxr and vec[2]<=maxz]
+    combs = combs_generator(*repetitions) #itertools.product(range(-order, order + 1), repeat=3)
+    # vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]
+    # vecs = [zoffsetvec(vec,zoffset) for vec in vecs if vec[2] >= 0 and np.sqrt(vec[0]**2+vec[1]**2)<=maxr and vec[2]<=maxz]
+    vecs = [zoffsetvec(np.sum((mi.T * np.array(comb)*scaling).T, axis=0),zoffset) for comb in combs]
+    vecs = sorted(vecs,key=lambda v: np.vdot(v,v))[:maxreps]
     return vecs
 
 def zoffsetvec(vec,zoffset=0):
@@ -25,8 +33,8 @@ def zoffsetvec(vec,zoffset=0):
     return vec
 
 
-def latticelines(a, b, c, zoffset, order=2, maxr=None, maxz=None):
-    vecs = latticevectors(a, b, c, zoffset, order, maxr, maxz)
+def latticelines(a, b, c, zoffset, maxreps=100, repetitions=None, scaling=1.):
+    vecs = latticevectors(a, b, c, zoffset, maxreps, repetitions, scaling)
 
     lines = []
     for vec in vecs:
