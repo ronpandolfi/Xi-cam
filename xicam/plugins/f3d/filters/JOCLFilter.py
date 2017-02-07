@@ -163,6 +163,7 @@ class JOCLFilter(fw.FeatureWidget):
         pass
 
     def getName(self):
+        # self.filter.getName()
         pass
 
     def loadKernel(self):
@@ -192,11 +193,9 @@ class JOCLFilter(fw.FeatureWidget):
     def fromJSONString(self):
         pass
 
-    def setAttributes(self, CLAttributes, FilterAttributes, F3DMonitor, idx):
+    def setAttributes(self, CLAttributes, idx):
         self.clattr = CLAttributes
-        self.atts = FilterAttributes
         self.index = idx
-        self.monitor = F3DMonitor
 
     # def clone(self):
     #     filter = self.newInstance()

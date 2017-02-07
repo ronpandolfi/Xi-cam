@@ -3,6 +3,7 @@ from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
 from xicam.widgets.customwidgets import F3DButtonGroup, DeviceWidget
+from xicam.threads import Worker
 from pipeline.loader import StackImage
 from pipeline import msg
 from functools import partial
@@ -12,6 +13,7 @@ import pyqtgraph as pg
 import filtermanager as fm
 import pyopencl as cl
 import importer
+import Queue
 
 
 class plugin(base.plugin):
@@ -109,6 +111,9 @@ class plugin(base.plugin):
 
 
         super(plugin, self).__init__(placeholders, *args, **kwargs)
+
+        self.threadWorker = Worker(Queue.Queue())
+        self.threadWorker.pool.setExpiryTimeout(1)
 
         self.filter_images = {}
 
@@ -264,13 +269,7 @@ class plugin(base.plugin):
     def run(self):
         # corresponds to F3DImageProcessing_JOCL_.java.run() (?)
 
-        intermediateSteps = self.rightwidget.use_intermediate
-        chooseConstantDevices = False
-        inputDeviceLength = self.rightwidget.maxNumDevices
-        maxSliceCount = None
-        overlap = None
-
-        pipeline = self.manager.getAttributes()
+        pipeline = self.manager.getPipeline()
 
         # print status output
         devices_tmp = self.rightwidget.chosen_devices
@@ -289,9 +288,31 @@ class plugin(base.plugin):
         for i in range(len(self.rightwidget.chosen_devices)):
             clattr = None # instantiate ClAttributes class here
             runnables.append(fm.RunnableJOCLFilter(self.manager.run, clattr))
+            device = self.rightwidget.chosen_devices[i]
+            runnables[i].setAttributes(rank=i, device=device, context=self.contexts[device],
+                                        overlapAmount=0, atts=self.createAttributes(),
+                                       index=self.rightwidget.chosen_devices.index(device))
+
+        # necessary?
+        # # if only one device is available then skip thread creation and execute
+        # if len(runnables) == 1:
+        #     runnables[0]()
+
+        for i in range(len(runnables)):
+            self.threadWorker.queue.put(runnables[i])
+
+        # run worker
 
     def preview(self):
         pass
+
+    def createAttributes(self):
+
+        fixed_func = type('FilteringAttributes', (), {'intermediateSteps': self.rightwidget.use_intermediate,
+                                                    'chooseConstantDevices': False,
+                                                    'inputDeviceLength': self.rightwidget.maxNumDevices,
+                                                    'maxSliceCount': None,
+                                                    'overlap': None})
 
     def build_function_menu(self, menu, filter_data, actionslot):
         """
@@ -340,17 +361,17 @@ class plugin(base.plugin):
         for item in platforms:
             devices_tmp.append(item.get_devices())
 
-        self.contexts = []
+        self.contexts = {}
         self.devices = []
         if len(devices_tmp) == 1:
             self.devices = devices_tmp[0]
-            self.contexts.append(cl.Context(devices_tmp[0]))
+            self.contexts[devices_tmp[0]] = (cl.Context(devices_tmp[0]))
         else:
             for i in range(len(devices_tmp)):
                 # devices = devices_tmp[i] + devices_tmp[i + 1]
                 self.devices += devices_tmp[i]
                 try:
-                    self.contexts.append(cl.Context(devices_tmp[i]))
+                    self.contexts[devices_tmp[i]] = (cl.Context(devices_tmp[i]))
                 except RuntimeError as e:
                     self.log.log2local("ERROR: There was a problem detecting drivers. Please verify the installation" +
                                        " of your graphics device\'s drivers.")

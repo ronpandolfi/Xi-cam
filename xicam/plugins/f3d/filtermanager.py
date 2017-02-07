@@ -4,6 +4,8 @@ from xicam.widgets import featurewidgets as fw
 from pyqtgraph.parametertree import Parameter
 from filters import JOCLFilter
 from xicam.threads import RunnableMethod
+import ClAttributes as clattr
+import pyopencl as cl
 import importer
 
 class FilterManager(fw.FeatureManager):
@@ -55,7 +57,7 @@ class FilterManager(fw.FeatureManager):
     #other helper functions involving getting filter information will be added here
 
 
-    def getAttributes(self):
+    def getPipeline(self):
 
         # return some representation of the pipeline, other necessary things
 
@@ -68,13 +70,30 @@ class RunnableJOCLFilter(RunnableMethod):
 
     def __init__(self, method, method_args=(), method_kwargs={}, callback_slot=None,
                  finished_slot=None, except_slot=None, default_exhandle=True, priority=0, lock=None):
-        super(RunnableJOCLFilter, self).__init__(method, method_args=(), method_kwargs={}, callback_slot=None,
-                 finished_slot=None, except_slot=None, default_exhandle=True, priority=0, lock=None)
+        super(RunnableJOCLFilter, self).__init__(method, method_args=method_args, method_kwargs=method_kwargs,
+                  callback_slot=callback_slot, finished_slot=finished_slot, except_slot=except_slot,
+                  default_exhandle=default_exhandle, priority=priority, lock=lock)
         self.rank = 0
         self.device = None
         self.overlapAmount = 0
         self.attributes = None
         self.index = -1
+
+
+    def setAttributes(self, rank, device, context, overlapAmount, attributes, index):
+
+        self.rank = rank
+        self.device = device
+        self.overlapAmount = overlapAmount
+        self.attributes = attributes
+        self.index = index
+
+        self.clattr = clattr.ClAttributes(context, device, cl.CommandQueue(context, device),
+                                          None, None, None)
+
+    def run(self):
+
+        pass
 
 
 
