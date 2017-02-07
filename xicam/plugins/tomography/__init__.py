@@ -480,7 +480,7 @@ class TomographyPlugin(base.plugin):
 
 
 
-    def run3DPreview(self, partial_stack, stack_dict, data_dict):
+    def run3DPreview(self, partial_stack, stack_dict, data_dict, prange=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
@@ -492,6 +492,10 @@ class TomographyPlugin(base.plugin):
         stack_dict : dict
             Dictionary describing the workflow pipeline being run. This is displayed to the left of the preview image in
             the viewer.TomoViewer.previewViewer
+        data_dict: dict
+            Dictionary of data to be reconstructed
+        prange: list
+            list of values to be iterated over in reconstruction preview. Not used in 3D previews
         """
 
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
