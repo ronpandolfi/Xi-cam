@@ -140,7 +140,7 @@ class HipGISAXSPlugin(base.plugin):
         self.writeyaml()
 
         import subprocess
-        p=subprocess.Popen(["hipgisaxs", os.path.join(os.path.expanduser('~'),'test.yml')], stdout=subprocess.PIPE)
+        p=subprocess.Popen(["./hipgisaxs", os.path.join(os.path.expanduser('~'),'test.yml')], stdout=subprocess.PIPE)
         stdout,stderr=p.communicate()
         stdout=stdout.replace('\r\r','\r')        # Hack to fix double carriage returns
         out = np.array([np.fromstring(line, sep=' ') for line in stdout.splitlines()])
