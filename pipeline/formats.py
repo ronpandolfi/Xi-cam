@@ -630,6 +630,7 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
+# currently not necessary, but could be used in future for non-standardized hdf formats
 @register_h5class
 class GeneralAPSH5image(fabioimage):
     """
