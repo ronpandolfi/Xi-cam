@@ -386,6 +386,8 @@ class rawimage(fabioimage):
 @register_h5class
 class ALS733H5image(fabioimage):
 
+    extensions = ['h5']
+
     def _readheader(self, f):
         fname = f.name  # get filename from file object
         with h5py.File(fname, 'r') as h:
