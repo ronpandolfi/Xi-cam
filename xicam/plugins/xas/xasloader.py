@@ -59,6 +59,11 @@ class XASSpectra(object):
         self.scans = [scan[limit:] for scan in self.scans]
 
 
+    def treat(self):
+        self.normalize()
+        self.pre_edge()
+        self.lowcut()
+
 XASclasses=[]
 def register_xasclass(cls):
     global XASclasses
@@ -89,11 +94,6 @@ class BL632Spectra(XASSpectra):
 
     def scan(self, N):
         return self.scans[N]
-
-    def treat(self):
-        self.normalize()
-        self.pre_edge()
-        self.lowcut()
 
 @register_xasclass
 class BL6311Spectra(XASSpectra):
@@ -130,13 +130,6 @@ class BL6311Spectra(XASSpectra):
 
     def scan(self, N, scan_rng=0, unstacked=pd.DataFrame(np.array([]))):
         return self.rawdata.iloc[N*self.num_bins:(N+1)*self.num_bins, :].copy()
-
-
-    def treat(self):
-        """Preparing Scan (normalization by I0)"""
-        self.normalize()
-        self.pre_edge()
-        self.lowcut()
 
 @register_xasclass
 class BL11012Spectra(BL6311Spectra):
