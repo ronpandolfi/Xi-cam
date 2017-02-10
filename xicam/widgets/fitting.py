@@ -6,11 +6,11 @@ from pyqtgraph import parametertree as pt
 from astropy.modeling import models, Fittable1DModel, Parameter, fitting
 
 
-class FitWidget(pt.ParameterTree):
+class FitWidget(pt.parameterTypes.GroupParameter):
     sigRangeChanged = Signal()
     def __init__(self,plotwidget):
-        super(FitWidget, self).__init__()
-        self.plotwidget=plotwidget
+        super(FitWidget, self).__init__(name='Fitting',type='group')
+        self._plotwidget=plotwidget
 
         self.rangemin = 0
         self.rangemax = 0
@@ -23,9 +23,12 @@ class FitWidget(pt.ParameterTree):
 
         self.changeModel(None, models.Lorentz1D)
 
+    @property
+    def plotwidget(self):
+        return self._plotwidget() if callable(self._plotwidget) else self._plotwidget
+
     @Slot(object,object)
     def changeModel(self,sender,model):
-        self.clear()
         self.modelParam = ModelParameter(model, self)
         modeltypeparam = pt.Parameter.create(name='Model', type='list', values=usefulmodels,value=model)
         rangeminparam = pt.Parameter.create(name='Range min.', type='float', value=self.rangemin)
@@ -35,21 +38,23 @@ class FitWidget(pt.ParameterTree):
         modeltypeparam.sigValueChanged.connect(self.changeModel)
         self.sigRangeChanged.connect(self.updateROI)
         self.rangeROI.sigRegionChangeFinished.connect(self.updateRange)
-        self.param = pt.Parameter(name = 'Fitting', type = 'group', children=[modeltypeparam,
-                                                                              rangeminparam,
-                                                                              rangemaxparam,
-                                                                              showrangeparam,
-                                                                              self.modelParam])
-        self.param.param('Range min.').sigValueChanged.connect(self.sigRangeChanged)
-        self.param.param('Range max.').sigValueChanged.connect(self.sigRangeChanged)
-        self.param.param('Show range').sigValueChanged.connect(self.sigRangeChanged)
-        self.setParameters(self.param,showTop=False)
+
+        self.clearChildren()
+        self.addChildren([modeltypeparam,
+                          rangeminparam,
+                          rangemaxparam,
+                          showrangeparam,
+                          self.modelParam])
+
+        self.param('Range min.').sigValueChanged.connect(self.sigRangeChanged)
+        self.param('Range max.').sigValueChanged.connect(self.sigRangeChanged)
+        self.param('Show range').sigValueChanged.connect(self.sigRangeChanged)
 
 
     def updateROI(self):
-        self.rangemin = self.param.param('Range min.').value()
-        self.rangemax = self.param.param('Range max.').value()
-        self.showrange = self.param.param('Show range').value()
+        self.rangemin = self.param('Range min.').value()
+        self.rangemax = self.param('Range max.').value()
+        self.showrange = self.param('Show range').value()
 
         self.rangeROI.sigRegionChangeFinished.disconnect(self.updateRange)
         self.rangeROI.setRegion((self.rangemin, self.rangemax))
@@ -60,8 +65,8 @@ class FitWidget(pt.ParameterTree):
     def updateRange(self):
         self.rangemin, self.rangemax = self.rangeROI.getRegion()
 
-        self.param.param('Range min.').setValue(self.rangemin,blockSignal=self.sigRangeChanged)
-        self.param.param('Range max.').setValue(self.rangemax,blockSignal=self.sigRangeChanged)
+        self.param('Range min.').setValue(self.rangemin,blockSignal=self.sigRangeChanged)
+        self.param('Range max.').setValue(self.rangemax,blockSignal=self.sigRangeChanged)
 
 
 
@@ -98,7 +103,7 @@ class ModelParameter(pt.Parameter):
                 self.parentTree.plotwidget.removeItem(item.display_text)
                 continue
             x,y = item.getData()
-            limits = self.parentTree.param.param('Range min.').value(),self.parentTree.param.param('Range max.').value()
+            limits = self.parentTree.param('Range min.').value(),self.parentTree.param('Range max.').value()
             y=y[np.logical_and(limits[0]<x,x<limits[1])]
             x=x[np.logical_and(limits[0]<x,x<limits[1])]
             inputs = dict((param.opts['name'],param.value()) for param in self.param('Inputs').children())
@@ -166,7 +171,9 @@ if __name__ == '__main__':
     p.show()
 
     fitter = FitWidget(p)
-    win.setCentralWidget(fitter)
+    tree = pt.ParameterTree()
+    tree.setParameters(fitter,showTop=False)
+    win.setCentralWidget(tree)
     win.setWindowTitle('Fitting')
     win.show()
 

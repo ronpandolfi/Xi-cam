@@ -5,13 +5,10 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from larch import Interpreter
-from larch_plugins.math.mathutils import index_of
-from larch_plugins.xafs import pre_edge
-
 import xasloader
 from xicam.widgets.NDTimelinePlotWidget import XASTimelineWidget
-
+from xicam.widgets import fitting
+from PySide.QtGui import *
 
 def runtest():
     EZTest.bottomwidget.clear()
@@ -25,7 +22,7 @@ def openfiles(filepaths):
             EZTest.plot((t,(np.array(scan.Energy), np.array(scan.I_norm))))
 
 
-
+XASplot = XASTimelineWidget()
 
 EZTest=base.EZplugin(name='XAS',
                      toolbuttons=[('xicam/gui/icons_34.png',runtest)],
@@ -33,4 +30,5 @@ EZTest=base.EZplugin(name='XAS',
                                  {'name':'Pre-edge Max','value':30,'type':'int'}],
                      openfileshandler=openfiles,
                      centerwidget=None,
-                     bottomwidget=XASTimelineWidget)
+                     bottomwidget=XASplot,
+                     panels=[(fitting.FitWidget(XASplot.stackplot.plotWidget),QFileIconProvider().icon(QFileIconProvider.File))])
