@@ -2,14 +2,13 @@
 \label{ch:installation}
 
 Instructions will go here for installing \verb|slacx| using 
-the Python pacakage installer \verb|pip|,
+the Python package installer \verb|pip|,
 as soon as the \verb|slacx| package is prepared for that.
 Currently, installation from \verb|pip| is not implemented.
 Users looking to install \verb|slacx| from source
 should build a virtual environment (optional),
 install the dependencies listed in section~\ref{subsec:dependencies},
 and invoke the \verb|main.py| module in the \verb|slacx| top-level directory.
-Soon, this will be better.
 
 
 \chapter{system setup}
@@ -17,50 +16,26 @@ Soon, this will be better.
 \lstset{language=Bash}
 
 Successful building of \verb|slacx| depends on a few trusty, stable packages.
-Developers should take care to favor a stable and cross-platform utility
-over a fancier option, in order to keep installation of \verb|slacx| fast and easy.
-This section walks through some of the finer points 
-of setting up a computer to develop code for \verb|slacx| 
-or run \verb|slacx| from source.
-
 
 \section{system dependencies}
-
-The packages described in this section 
-may already be prepared on your operating system.
-If you have already used \verb|pip| to install packages before,
-you can probably skip this section entirely
-and move on to section~\ref{subsec:virtualenv}.
-
 
 \subsection{pip, setuptools, and wheel}
 
 \verb|pip| is a Python package manager
 (acronym: \verb|pip| Installs Python). 
-There are other ways to install packages, but for now
-this documentation will cover the usage of \verb|pip|.
 \verb|setuptools| is a Python library that supports
-many of the operations performed in this section.
+many of the setup operations that follow.
 \verb|wheel| is a package distribution and installation library 
-supporting the \verb|wheel| distribution standard.
+supporting the wheel distribution standard. 
 Users will typically want to install these together.
 
 \verb|pip|, \verb|setuptools|, and \verb|wheel| are installed by default 
 on many Linux distributions and OSX, but should be upgraded.
-Enterprise Linux (e.g. RHEL, CentOS, SL, OL) are the exception.
-Enterprise Linux users should skip ahead 
-to section~\ref{subsec:setup_rhel}.
-For other Linux distributions (Fedora, Ubuntu, etc.)
+This may not be true for some Enterprise Linux (e.g. RHEL, CentOS, SL, OL) machines.
+Enterprise Linux users may want to see section~\ref{subsec:setup_rhel}.
+For most mainstream Linux distributions (Fedora, Ubuntu, etc.)
 it is suggested that the user employ the system's package manager 
-(skip ahead to section~\ref{subsec:setup_non-enterprise}),
-though the user may choose instead 
-to use \verb|pip| to upgrade itself, as shown below.
-
-Perform the upgrade by typing:
-\begin{lstlisting}
-pip install -U pip setuptools
-\end{lstlisting}
-
+(skip ahead to section~\ref{subsec:setup_non-enterprise}).
 
 \subsection{pip, wheel, and setuptools for non-Enterprise Linux}
 \label{subsec:setup_non-enterprise}
@@ -91,6 +66,10 @@ and submitting a pull request.
     \end{lstlisting}
 \end{itemize}
 
+Once pip is installed, it can be used to upgrade itself by typing:
+\begin{lstlisting}
+pip install -U pip setuptools
+\end{lstlisting}
 
 \subsection{pip, wheel, and setuptools for Enterprise Linux}
 \label{subsec:setup_rhel}
@@ -239,7 +218,7 @@ export ~/.bashrc
 \end{lstlisting}
 %stopzone
 
-Now, try again in install/upgrade \verb|setuptools| and \verb|wheel|,
+Now, try again to install/upgrade \verb|setuptools| and \verb|wheel|,
 but this time use \verb|ldsudo|.
 If it doesn't work, ask your sysadmin for help.
 Once these are done, some additional steps are needed
@@ -347,38 +326,33 @@ once the virtual environment is turned off by calling \verb|deactivate|.
 
 After installing the system packages and starting a virtual environment (above),
 the installation of the necessary Python packages should be easy.
-Ensure the virtual environment is active
-(you should see the name of the virtual environment 
-in parentheses to the left of the command prompt),
-then install each of these packages by \verb|pip install <packagename>|.
-Some of these may take a few minutes to install (\verb|scipy| for example).
-Be patient, make some coffee, \verb|pip| will probably eventually finish.
+Install each of these packages by \verb|pip install <packagename>|.
+Some of these may take a few minutes to install.
 
-NOTE: If you are installing \verb|slacx| 
-from a wheel-compatible distribution, 
-the dependencies will be handled automatically,
-so there is no need to do this.
+\begin{itemize}
+\item \verb|PySide|: Python \verb|Qt| bindings library: 
+    Some Linux distributions may need to go through section~\ref{subsubsec:pyside_linux} above
+    before this installs nicely.
+\item \verb|QDarkStyle|: A dark stylesheet for the Qt GUI.
+\item \verb|PyYAML|: Python library for YAML serialization language 
+\end{itemize}
+
+\verb|slacx| is not very useful, though, without the modules that are used to operate on data.
+You may want to install some of the libraries that are used commonly in \verb|slacx| operations:
 
 \begin{itemize}
 \item \verb|numpy|: Python numerical computation library
 \item \verb|scipy|: Python scientific math library
-\item \verb|PySide|: Python \verb|Qt| bindings library: 
-    Some Linux distributions may need to go through section~\ref{subsubsec:pyside_linux} above
-    before this installs nicely.
-\item \verb|fabio|: Fable I/O library, parses image files from common CCD array detectors devices
-\item \verb|pyFAI|: Fast Azimuthal Integration library for reducing image data
-\item \verb|h5py|: Library for manipulating files of the fast-readable hdf5 format
-%\item \verb|PyOpenGL|: Python bindings for OpenGL graphics library
-%\item \verb|PyOpenCL|: Python bindings for the OpenCL parallel computing framework
-%\item \verb|PyYAML|: Python library for YAML serialization language 
-%\item \verb|qtconsole|: A terminal for executing python code including inline Qt figures
-\item \verb|PyQtGraph|: Scientific visualization library built on PyQt4/PySide
 \item \verb|matplotlib|: Highly versatile plotting library 
-\item \verb|lxml|: XML and HTML parsing library 
-\item \verb|QDarkStyle|: A dark stylesheet for the Qt GUI- your eyes will be happier
+\item \verb|PyQtGraph|: Scientific visualization library built on PyQt4/PySide
 \item \verb|pillow|: A replacement for the outdated Python Imaging Library (PIL)
-\item \verb|pypif|: A replacement for the outdated Python Imaging Library (PIL)
-\item \verb|citrination-client|: A replacement for the outdated Python Imaging Library (PIL)
+\item \verb|tifffile|: Library for reading data from .tif image files 
+\item \verb|fabio|: Fable I/O library, parses image files from common CCD array detectors devices
+\item \verb|pyFAI|: Fast Azimuthal Integration library for manipulating and reducing image data 
+\item \verb|h5py|: Library for manipulating files of the fast-readable hdf5 format
+\item \verb|pypif|: Tools for packaging data in the PIF (physical information file) format 
+\item \verb|citrination_client|: A client for communicating with a Citrination materials database 
+\item \verb|tzlocal|: Tools for interpreting time data relative to the local time zone
 \end{itemize}
 
 

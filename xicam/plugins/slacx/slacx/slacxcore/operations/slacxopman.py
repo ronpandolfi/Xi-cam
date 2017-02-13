@@ -10,20 +10,22 @@ class OpManager(TreeModel):
     Class for managing operations.
     Should be able to add operations to the tree 
     and remove selected operations from the tree.
-    Tree is displayed in operation builder ui.
     """
 
     def __init__(self,**kwargs):
         super(OpManager,self).__init__()
-        #self._cat_list = ops.cat_list 
-        self._op_list = [op[1] for op in ops.op_list] 
-        print 'loading cats: {}'.format(ops.cat_list)
+        self._cat_list = ops.cat_list 
+        self._op_list = [cat_op[1] for cat_op in ops.op_list]
         self.load_cats(ops.cat_list) 
-        print 'loading ops: {}'.format(ops.op_list)
         self.load_ops(ops.op_list)
 
     # TODO: Add Operations to enable and disable Operations
     # TODO: Write a UI for enabling and disabling Operations
+
+    def save_config(self):
+        for k in self._cat_list + self.list_ops():
+            ops.op_load_flags[k] = True 
+        ops.save_cfg(ops.op_load_flags,ops.cfg_file)
 
     def load_cats(self,cat_list):
         for cat in cat_list:
@@ -90,15 +92,15 @@ class OpManager(TreeModel):
         #### BUILD OPERATIONS TREE
         # Tree will consist of nodes indicating categories,
         # with subcategories or Operations as children.
-        for op in op_list:
-            cats = op[0]
+        for cat_op in op_list:
+            cats = cat_op[0]
             for cat in cats:
                 parent = QtCore.QModelIndex()
                 for subcat in cat.split('.'):
                     # get index of subcat
                     idx = self.idx_of_cat(subcat,parent)
                     parent = idx
-                self.add_op(op[1],idx)
+                self.add_op(cat_op[1],idx)
 
     def add_op(self,op,parent):
         """add op to the tree under QModelIndex parent"""
@@ -112,9 +114,12 @@ class OpManager(TreeModel):
         self.get_item(parent).children.insert(ins_row,op_treeitem)
         self.endInsertRows()
 
-    # remove an Operation from the tree? 
-    #def remove_op(self,removal_indx):
-    #    pass
+    # remove an Operation from the tree
+    def remove_op(self,removal_indx):
+        # check if need to clear out any empty cats
+        # remove op from self._op_list
+        # set ops.op_load_flags so this op remains disabled at next startup 
+        pass
 
     def list_ops(self):
         return [op.__name__ for op in self._op_list]

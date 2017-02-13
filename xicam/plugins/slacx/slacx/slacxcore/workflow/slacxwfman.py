@@ -3,10 +3,9 @@ import time
 import traceback
 from collections import OrderedDict
 import copy
+from functools import partial
 
 from PySide import QtCore
-from functools import partial
-import dask.threaded
 import yaml
 
 from ..treemodel import TreeModel
@@ -16,23 +15,24 @@ from ..operations.slacxop import Operation, Batch, Realtime
 from ..operations.optools import InputLocator#, OutputContainer
 from .. import slacxtools
 
-
 class WfManager(TreeModel):
     """
-    Class for managing a Workflow built from slacx Operations.
+    Tree-like data structure for managing a Workflow built from slacx Operations.
     """
 
     wfdone = QtCore.Signal()
 
+    @QtCore.Slot(str,Operation)
+    def updateOperation(self,tag,op):
+        self.update_op(tag,op)
+
     # TODO: Make appref a required init arg
+    # TODO: kwarg for num threads?
     def __init__(self,**kwargs):
         super(WfManager,self).__init__()
-        if 'logmethod' in kwargs:
-            self.logmethod = kwargs['logmethod']
-        else:
-            self.logmethod = None
         if 'wfl' in kwargs:
             self.load_from_file( kwargs['wfl'] )
+        # reference to app for helping thread control
         if 'app' in kwargs:
             self.appref = kwargs['app']
         else:
@@ -40,10 +40,9 @@ class WfManager(TreeModel):
         self._wf_dict = {}       
         # Flags to assist in thread control
         self._running = False
-        #self._n_threads = QtCore.QThread.idealThreadCount()
         self._n_threads = 1
         self._wf_threads = dict.fromkeys(range(self._n_threads)) 
-        self.write_log('Slacx workflow manager started, working with {} threads'.format(self._n_threads))
+        #self._n_threads = QtCore.QThread.idealThreadCount()
 
     def write_log(self,msg):
         if self.logmethod:
@@ -459,7 +458,7 @@ class WfManager(TreeModel):
                 postlst = [itm for itm in lst if not itm in itms_run and not isinstance(itm.data,Batch)] 
                 if any(postlst):
                     poststk.append(postlst)
-            if any(poststk):
+            if any(poststk) and self.is_running():
                 msg = '\n----\n post-batch execution stack: '
                 for to_run in poststk:
                     msg = msg + '\n{}'.format( [itm.tag() for itm in to_run] ) 
@@ -600,11 +599,6 @@ class WfManager(TreeModel):
             #    self.update_op(itm.tag(),op)
         self.wait_for_thread(thd)
         self.write_log('SERIAL EXECUTION FINISHED in thread {}'.format(thd))
-
-    @QtCore.Slot(str,Operation)
-    def updateOperation(self,tag,op):
-        #print 'updating op for {}'.format(tag)
-        self.update_op(tag,op)
 
     def finish_thread(self,th_idx):
         self.write_log('finished execution in thread {}.'.format(th_idx))

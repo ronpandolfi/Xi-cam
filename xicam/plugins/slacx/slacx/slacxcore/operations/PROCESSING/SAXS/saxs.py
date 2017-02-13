@@ -10,10 +10,10 @@ try:
 except ImportError:
     import pickle
 
-from ..slacxop import Operation
-from .. import optools
+from ...slacxop import Operation
+from ... import optools
 
-reference_loc = join('slacx','slacxcore','operations','dmz','references','polydispersity_guess_references.pickle')
+reference_loc = join('slacx','slacxcore','operations','DMZ','references','polydispersity_guess_references.pickle')
 global references
 references = {}
 
@@ -56,12 +56,63 @@ class GenerateSphericalDiffractionQ(Operation):
         self.input_type['qmin'] = optools.float_type
         self.input_type['qmax'] = optools.float_type
         self.input_type['qstep'] = optools.float_type
-        self.categories = ['SAXS']
+        # defaults
+        self.inputs['qmin'] = 0.02
+        self.inputs['qmax'] = 0.8
+        self.inputs['qstep'] = 0.005
 
     def run(self):
+        q = gen_q_vector(self.inputs['qmin'], self.inputs['qmax'], self.inputs['qstep'])
         self.outputs['I'] = \
-            generate_spherical_diffraction(self.inputs['q_vector'], self.inputs['intensity_at_zero_q'],
+            generate_spherical_diffraction(q, self.inputs['intensity_at_zero_q'],
                                            self.inputs['r0'], self.inputs['sigma_r_over_r0'])
+
+class GenerateSphericalDiffractionX(Operation):
+    """Generate a SAXS diffraction pattern for spherical nanoparticles.
+
+    Uses independent variable x = r0 * q."""
+
+    def __init__(self):
+        input_names = ['sigma_r_over_r0', 'intensity_at_zero_x', 'xmin', 'xmax', 'xstep']
+        output_names = ['x', 'I']
+        super(GenerateSphericalDiffractionX, self).__init__(input_names, output_names)
+        self.input_doc['sigma_r_over_r0'] = 'width of distribution in r divided by r0'
+        self.input_doc['intensity_at_zero_x'] = 'intensity at x = 0'
+        self.input_doc['xmin'] = 'lower bound of x range of interest'
+        self.input_doc['xmax'] = 'upper bound of x range of interest'
+        self.input_doc['xstep'] = 'step size in x range of interest'
+        self.input_src['sigma_r_over_r0'] = optools.wf_input
+        self.input_src['intensity_at_zero_q'] = optools.wf_input
+        self.input_src['xmin'] = optools.user_input
+        self.input_src['xmax'] = optools.user_input
+        self.input_src['xstep'] = optools.user_input
+        self.input_type['xmin'] = optools.float_type
+        self.input_type['xmax'] = optools.float_type
+        self.input_type['xstep'] = optools.float_type
+        self.output_doc['x'] = '1d ndarray; scaled wave vector values'
+        self.output_doc['I'] = '1d ndarray; intensity values'
+        # source & type
+        self.input_src['sigma_r_over_r0'] = optools.user_input
+        self.input_src['intensity_at_zero_x'] = optools.user_input
+        self.input_src['xmin'] = optools.user_input
+        self.input_src['xmax'] = optools.user_input
+        self.input_src['xstep'] = optools.user_input
+        self.input_type['sigma_r_over_r0'] = optools.float_type
+        self.input_type['intensity_at_zero_x'] = optools.float_type
+        self.input_type['xmin'] = optools.float_type
+        self.input_type['xmax'] = optools.float_type
+        self.input_type['xstep'] = optools.float_type
+        # defaults
+        self.inputs['xmin'] = 0.5
+        self.inputs['xmax'] = 20
+        self.inputs['xstep'] = 0.005
+        self.categories = ['1D DATA PROCESSING.GENERATE SAXS PATTERNS']
+
+    def run(self):
+        self.outputs['x'] = gen_q_vector(self.inputs['xmin'], self.inputs['xmax'], self.inputs['xstep'])
+        self.outputs['I'] = \
+            generate_spherical_diffraction(self.outputs['x'], self.inputs['intensity_at_zero_x'],
+                                           1., self.inputs['sigma_r_over_r0'])
 
 class GenerateSphericalDiffraction(Operation):
     """Generate a SAXS diffraction pattern for spherical nanoparticles.
@@ -166,7 +217,12 @@ class GenerateReferences(Operation):
         self.input_type['factormin'] = optools.float_type
         self.input_type['factormax'] = optools.float_type
         self.input_type['factorstep'] = optools.float_type
-        self.categories = ['SAXS']
+        self.inputs['xmin'] = 0.02
+        self.inputs['xmax'] = 50
+        self.inputs['xstep'] = 0.02
+        self.inputs['factormin'] = 1.
+        self.inputs['factormax'] = 35.
+        self.inputs['factorstep'] = 0.2
 
     def run(self):
         x = gen_q_vector(self.inputs['xmin'], self.inputs['xmax'], self.inputs['xstep'])
@@ -196,7 +252,6 @@ class OverwriteReferences(Operation):
             pass
         dump_references(self.inputs['references'])
 
-
 class FetchReferences(Operation):
     """Fetch previously generated and stored metrics used for guessing diffraction pattern properties.
 
@@ -217,59 +272,6 @@ class FetchReferences(Operation):
         except:
             print "No reference file was found at the appropriate location."
 
-'''
-class GuessPolydispersityWeighted(Operation):
-    """Guess the polydispersity of spherical diffraction pattern.
-
-    Assumes the data have already been background subtracted, smoothed, and otherwise cleaned."""
-
-    def __init__(self):
-        input_names = ['q','I','dI']
-        output_names = ['fractional_variation','first_dip_q']
-        super(GuessPolydispersityWeighted, self).__init__(input_names, output_names)
-        # Documentation
-        self.input_doc['q'] = '1d ndarray; wave vector values'
-        self.input_doc['I'] = '1d ndarray; intensity values'
-        self.input_doc['dI'] = '1d ndarray; error estimate of intensity values'
-        self.output_doc['fractional_variation'] = 'normal distribution sigma divided by mean size'
-        self.output_doc['qFirstDip'] = 'location in q of the first dip'
-        # Source and type
-        self.input_src['q'] = optools.wf_input
-        self.input_src['I'] = optools.wf_input
-        self.input_src['dI'] = optools.wf_input
-        self.categories = ['SAXS']
-
-    def run(self):
-        q, I, dI = self.inputs['q'], self.inputs['I'], self.inputs['dI']
-        fractional_variation, qFirstDip, _, _, _, _, _ = guess_polydispersity(q, I, dI)
-        self.outputs['fractional_variation'], self.outputs['first_dip_q'] = fractional_variation, qFirstDip
-
-class GuessSize(Operation):
-        """Guess the mean size of spherical diffraction pattern.
-
-        Assumes the data have already been background subtracted, smoothed, and otherwise cleaned.
-
-        Requires foreknowledge of the fractional variation in size."""
-
-        def __init__(self):
-            input_names = ['fractional_variation', 'first_dip_q']
-            output_names = ['mean_size']
-            super(GuessSize, self).__init__(input_names, output_names)
-            # Documentation
-            self.input_doc['fractional_variation'] = 'normal distribution sigma divided by mean size'
-            self.input_doc['first_dip_q'] = 'location in q of the first dip'
-            self.output_doc['mean_size'] = 'mean size of particles'
-            # Source and type
-            self.input_src['fractional_variation'] = optools.wf_input
-            self.input_src['first_dip_q'] = optools.wf_input
-            self.categories = ['SAXS']
-
-        def run(self):
-            fractional_variation, first_dip_q = self.outputs['fractional_variation'], self.outputs['first_dip_q']
-            mean_size = guess_size(fractional_variation, first_dip_q)
-            self.outputs['mean_size'] = mean_size
-'''
-
 class GuessProperties(Operation):
     """Guess the polydispersity, mean size, and amplitude of spherical diffraction pattern.
 
@@ -282,21 +284,25 @@ class GuessProperties(Operation):
         # Documentation
         self.input_doc['q'] = '1d ndarray; wave vector values'
         self.input_doc['I'] = '1d ndarray; intensity values'
-        self.input_doc['dI'] = '1d ndarray; error estimate of intensity values; use default value if none exists'
+        self.input_doc['dI'] = '1d ndarray; error estimate of intensity values; input None if no dI exists'
         self.output_doc['fractional_variation'] = 'normal distribution sigma divided by mean size'
         self.output_doc['mean_size'] = 'mean size of particles'
         self.output_doc['amplitude_at_zero'] = 'projected scattering amplitude at q=0'
+        self.output_doc['qFirstDip'] = 'estimated location in q of the first dip'
+        self.output_doc['heightFirstDip'] = 'estimated intensity at the minimum of the first dip'
+        #self.output_doc['sigmaScaledFirstDip'] = ''
+        self.output_doc['heightAtZero'] = 'estimated intensity at q = 0'
+        self.output_doc['dips'] = 'boolean vector, True where a candidate local minimum is'
+        self.output_doc['shoulders'] = 'boolean vector, True where a candidate local maximum is'
         # Source and type
         self.input_src['q'] = optools.wf_input
         self.input_src['I'] = optools.wf_input
         self.input_src['dI'] = optools.wf_input
-        # defaults
-        self.inputs['dI'] = np.zeros(1, dtype=float)
-        self.categories = ['SAXS']
 
     def run(self):
         q, I, dI = self.inputs['q'], self.inputs['I'], self.inputs['dI']
-        fractional_variation, qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, dips, shoulders = guess_polydispersity(q, I, dI)
+        fractional_variation, qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, dips, shoulders = \
+            guess_polydispersity(q, I, dI)
         self.outputs['qFirstDip'] = qFirstDip
         self.outputs['heightFirstDip'] = heightFirstDip
         self.outputs['sigmaScaledFirstDip'] = sigmaScaledFirstDip
@@ -306,16 +312,43 @@ class GuessProperties(Operation):
         mean_size = guess_size(fractional_variation, qFirstDip)
         amplitude_at_zero = polydispersity_metric_heightAtZero(qFirstDip, q, I, dI)
         #dips, shoulders = choose_dips_and_shoulders1(q, I, dI)
+        amplitude_at_zero, mean_size, fractional_variation = refine_guess(q, I, amplitude_at_zero, mean_size, fractional_variation, qFirstDip, heightFirstDip)
         self.outputs['fractional_variation'], self.outputs['mean_size'], self.outputs['amplitude_at_zero'] = \
             fractional_variation, mean_size, amplitude_at_zero
 
+
+def refine_guess(q, I, I0, r0, frac, q1, I1):
+    Imodel = generate_spherical_diffraction(q, I0, r0, frac)
+    I_adjustment = I.sum() / Imodel.sum()
+    new_I0 = I0 * I_adjustment
+    Imodel *= I_adjustment
+    first_dip_index = np.where(local_minima_detector(Imodel))[0][0]
+    model_q1 = q[first_dip_index]
+    model_I1 = I[first_dip_index]
+    try:
+        references = load_references()
+    except:
+        print no_reference_message
+    x = references['factorVals']
+    y1 = references['heightFirstDip']/references['heightAtZero']
+    y2 = references['xFirstDip']
+    if (x[1:] > x[:-1]).all():
+        print "we good to go"
+    else:
+        print "we gonna need another way to get there"
+    new_frac = interp(I1/new_I0, y1, x)
+    Imodel = generate_spherical_diffraction(q, new_I0, r0, new_frac)
+    # want new r0
+    new_x0 = interp(new_frac, x, y2)
+    new_r0 = new_x0/q1
+    return new_I0, new_r0, new_frac
 
 class OptimizeSphericalDiffractionFit(Operation):
     """From an initial guess, optimize r0, I0, and fractional_variation."""
 
     def __init__(self):
-        input_names = ['q', 'I', 'amplitude_at_zero', 'mean_size', 'fractional_variation']
-        output_names = ['amplitude_at_zero', 'mean_size', 'fractional_variation']
+        input_names = ['q', 'I', 'amplitude_at_zero', 'mean_size', 'fractional_variation','noise_term_allowed']
+        output_names = ['amplitude_at_zero', 'mean_size', 'fractional_variation','noise_floor']
         super(OptimizeSphericalDiffractionFit, self).__init__(input_names, output_names)
         # Documentation
         self.input_doc['q'] = '1d ndarray; wave vector values'
@@ -323,63 +356,71 @@ class OptimizeSphericalDiffractionFit(Operation):
         self.input_doc['amplitude_at_zero'] = 'estimate of intensity at q=0'
         self.input_doc['mean_size'] = 'estimate of mean particle size'
         self.input_doc['fractional_variation'] = 'estimate of normal distribution sigma divided by mean size'
+        self.input_doc['noise_term_allowed'] = 'allow a fitted noise floor?'
         self.output_doc['fractional_variation'] = 'normal distribution sigma divided by mean size'
         self.output_doc['mean_size'] = 'mean particle size'
         self.output_doc['amplitude_at_zero'] = 'projected intensity at q=0'
+        self.output_doc['noise_floor'] = 'an arbitrary constant additive accounting for noise and undersubtraction'
         # Source and type
         self.input_src['q'] = optools.wf_input
         self.input_src['I'] = optools.wf_input
         self.input_src['amplitude_at_zero'] = optools.wf_input
         self.input_src['mean_size'] = optools.wf_input
         self.input_src['fractional_variation'] = optools.wf_input
+        self.input_src['noise_term_allowed'] = optools.user_input
         self.input_type['amplitude_at_zero'] = optools.float_type
         self.input_type['mean_size'] = optools.float_type
         self.input_type['fractional_variation'] = optools.float_type
-        self.categories = ['SAXS']
+        self.input_type['noise_term_allowed'] = optools.bool_type
+        self.inputs['noise_term_allowed'] = True
 
     def run(self):
         q, I = self.inputs['q'], self.inputs['I']
         I0_in, r0_in, frac_in = self.inputs['amplitude_at_zero'], self.inputs['mean_size'], self.inputs['fractional_variation']
-        popt, pcov = curve_fit(generate_spherical_diffraction, q, I, bounds=([I0_in*0.5, r0_in*0.5, frac_in*0.1], [I0_in/0.5, r0_in/0.5, frac_in/0.1]))
+        if self.inputs['noise_term_allowed']:
+            noise_floor = guess_noise_floor(q, I, r0_in)
+            #noise_floor = guess_noise_floor(q, I, I0_in, r0_in, frac_in)
+            print "initial guess for noise floor is", noise_floor
+            popt, pcov = \
+                curve_fit(generate_spherical_diffraction_plus_floor, q, I,
+                          bounds=([I0_in*0.5, r0_in*0.5, frac_in*0.5, noise_floor*0.5],
+                                  [I0_in/0.5, r0_in/0.5, frac_in/0.5, noise_floor/0.5]))
+            self.outputs['noise_floor'] = popt[3]
+            print "final guess for noise floor is", self.outputs['noise_floor']
+        else:
+            self.outputs['noise_floor'] = 0.
+            popt, pcov = \
+                curve_fit(generate_spherical_diffraction, q, I, bounds=([I0_in*0.5, r0_in*0.5, frac_in*0.1],
+                                                                        [I0_in/0.5, r0_in/0.5, frac_in/0.1]))
         self.outputs['amplitude_at_zero'] = popt[0]
         self.outputs['mean_size'] = popt[1]
         self.outputs['fractional_variation'] = popt[2]
 
 
-class OptimizeSphericalDiffractionFit2(Operation):
-    """From an initial guess, optimize r0, I0, and fractional_variation."""
+def guess_noise_floor(q, I, r0):
+    qmin = q[0]
+    qmax = q[-1]
+    # we want q >> q1, ideally
+    # the first dip is at 4.5 <~ x <~ 6, where x = q * r0.  We use pessimistic/strict option.
+    qscale1 = 6/r0
+    # and we know the worst signal to noise is at high q
+    # so check the last tenth
+    qscale2 = qmin + 0.9 * (qmax - qmin)
+    if qscale2 < (qscale1 * 2): # just a sanity check, no real function
+        print "Your data do not appear to be sampled to high q.  This is probably not a problem."
+    selection = (q > qscale2)
+    if selection.sum() < 10: # making sure there's a decent number of points in the sample
+        print "Your data do not appear to be particularly well sampled.  This might be a problem."
+        selection = np.zeros(q.size)
+        selection[-10:] = True
+    #noise = np.var(I[selection])
+    noise = np.mean(I[selection])
+    return noise
 
-    def __init__(self):
-        input_names = ['q', 'I', 'amplitude_at_zero', 'mean_size', 'fractional_variation']
-        output_names = ['amplitude_at_zero', 'mean_size', 'fractional_variation']
-        super(OptimizeSphericalDiffractionFit2, self).__init__(input_names, output_names)
-        # Documentation
-        self.input_doc['q'] = '1d ndarray; wave vector values'
-        self.input_doc['I'] = '1d ndarray; intensity values'
-        self.input_doc['amplitude_at_zero'] = 'estimate of intensity at q=0'
-        self.input_doc['mean_size'] = 'estimate of mean particle size'
-        self.input_doc['fractional_variation'] = 'estimate of normal distribution sigma divided by mean size'
-        self.output_doc['fractional_variation'] = 'normal distribution sigma divided by mean size'
-        self.output_doc['mean_size'] = 'mean particle size'
-        self.output_doc['amplitude_at_zero'] = 'projected intensity at q=0'
-        # Source and type
-        self.input_src['q'] = optools.wf_input
-        self.input_src['I'] = optools.wf_input
-        self.input_src['amplitude_at_zero'] = optools.wf_input
-        self.input_src['mean_size'] = optools.wf_input
-        self.input_src['fractional_variation'] = optools.wf_input
-        self.input_type['amplitude_at_zero'] = optools.float_type
-        self.input_type['mean_size'] = optools.float_type
-        self.input_type['fractional_variation'] = optools.float_type
-        self.categories = ['SAXS']
-
-    def run(self):
-        q, I = self.inputs['q'], self.inputs['I']
-        I0_in, r0_in, frac_in = self.inputs['amplitude_at_zero'], self.inputs['mean_size'], self.inputs['fractional_variation']
-        popt, pcov = curve_fit(generate_spherical_diffraction, q, I, bounds=([I0_in*0.5, r0_in*0.5, frac_in*0.1], [I0_in/0.5, r0_in/0.5, frac_in/0.1]))
-        self.outputs['amplitude_at_zero'] = popt[0]
-        self.outputs['mean_size'] = popt[1]
-        self.outputs['fractional_variation'] = popt[2]
+def guess_noise_floor2(q, I, I0, r0, frac):
+    Imodel = generate_spherical_diffraction(q, I0, r0, frac)
+    noise = np.mean(I - Imodel)
+    return noise
 
 def generate_references(x, factorVals):
     #y0 = fullFunction(x)
@@ -425,9 +466,9 @@ def dump_references(references):
 
 # Functions about algebraic solutions
 
-def arbitrary_order_solution(order, x, y, dy=np.zeros(1)):
+def arbitrary_order_solution(order, x, y, dy=None):
     '''Solves for a polynomial "fit" of arbitrary order.'''
-    if not dy.any():
+    if dy is None:
         dy = np.ones(y.shape, dtype=float)
     # Formulate the equation to be solved for polynomial coefficients
     matrix, vector = make_poly_matrices(x, y, dy, order)
@@ -495,10 +536,10 @@ def make_poly_matrices(x, y, error, order):
     matrix = (dummy(x) ** index_block * dummy(error)).sum(axis=0)
     return matrix, vector
 
-def power_law_solution(x, y, dy=np.zeros(1)):
+def power_law_solution(x, y, dy=None):
     '''Solves for a power law by solving for a linear fit in log-log space.'''
     # Note that if dy is zeros, logdy will also be zeros, triggering default behavior in arbitrary_order_solution also.
-    if not dy.any():
+    if dy is None:
         dy = np.ones(y.shape, dtype=float)
     logx = np.log(x)
     logy = np.log(y)
@@ -521,6 +562,10 @@ def gen_q_vector(qmin, qmax, qstep):
 def generate_spherical_diffraction(q, i0, r0, poly):
     x = q * r0
     i = i0 * blur(x, poly) * 9.
+    return i
+
+def generate_spherical_diffraction_plus_floor(q, i0, r0, poly, noise):
+    i = generate_spherical_diffraction(q, i0, r0, poly) + noise
     return i
 
 def fullFunction(x):
@@ -563,9 +608,9 @@ def blur(x, factor):
 
 # Funtions specifically about detecting SAXS properties
 
-def guess_polydispersity(q, I, dI=np.zeros(1)):
+def guess_polydispersity(q, I, dI=None):
 #    global references
-    if not dI.any():
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     dips, shoulders = choose_dips_and_shoulders(q, I, dI)
     qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero = take_polydispersity_metrics(q, I, dI)
@@ -581,8 +626,33 @@ def guess_polydispersity(q, I, dI=np.zeros(1)):
     fractional_variation, _, best_xy = guess_nearest_point_on_nonmonotonic_trace_normalized([x0, y0], [x, y], factor)
     return fractional_variation, qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, dips, shoulders
 
-def take_polydispersity_metrics(x, y, dy=np.zeros(1)):
-    if not dy.any():
+def refine_guess(q, I, I0, r0, frac, q1, I1):
+    Imodel = generate_spherical_diffraction(q, I0, r0, frac)
+    I_adjustment = I.sum() / Imodel.sum()
+    new_I0 = I0 * I_adjustment
+    #Imodel *= I_adjustment
+    #first_dip_index = np.where(local_minima_detector(Imodel))[0][0]
+    #model_q1 = q[first_dip_index]
+    #model_I1 = I[first_dip_index]
+    try:
+        references = load_references()
+    except:
+        print no_reference_message
+    x = references['factorVals']
+    y1 = references['heightFirstDip']/references['heightAtZero']
+    y2 = references['xFirstDip']
+    if ~(x[1:] > x[:-1]).all():
+        print '''The factorVals entry in the guesser's reference file is not strictly increasing.
+        This is a serious problem likely to result in horrible crashes and/or incorrect results.'''
+    new_frac = float(interp(I1/new_I0, y1, x))
+    #Imodel = generate_spherical_diffraction(q, new_I0, r0, new_frac)
+    # want new r0
+    new_x0 = interp(new_frac, x, y2)
+    new_r0 = float(new_x0/q1)
+    return new_I0, new_r0, new_frac
+
+def take_polydispersity_metrics(x, y, dy=None):
+    if dy is None:
         dy = np.ones(y.shape)
     dips, shoulders = choose_dips_and_shoulders(x, y, dy)
     xFirstDip, heightFirstDip, scaledQuadCoefficients = first_dip(x, y, dips, dy)
@@ -590,9 +660,9 @@ def take_polydispersity_metrics(x, y, dy=np.zeros(1)):
     heightAtZero = polydispersity_metric_heightAtZero(xFirstDip, x, y, dy)
     return xFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero
 
-def choose_dips_and_shoulders(q, I, dI=np.zeros(1)):
+def choose_dips_and_shoulders(q, I, dI=None):
     '''Find the location of dips (low points) and shoulders (high points).'''
-    if not dI.any():
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     dips = local_minima_detector(I)
     shoulders = local_maxima_detector(I)
@@ -651,8 +721,8 @@ def polydispersity_metric_heightFirstDip(scaledQuadCoefficients, xdip):
     ydip = polynomial_value(scaledQuadCoefficients, xdip) * (xdip**-4)
     return ydip
 
-def polydispersity_metric_heightAtZero(qFirstDip, q, I, dI=np.zeros(1)):
-    if not dI.any():
+def polydispersity_metric_heightAtZero(qFirstDip, q, I, dI=None):
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     qlim = max(q[6], (qFirstDip - q[0])/2.)
     if qlim > 0.75*qFirstDip:
@@ -662,9 +732,9 @@ def polydispersity_metric_heightAtZero(qFirstDip, q, I, dI=np.zeros(1)):
     heightAtZero = coefficients[0]
     return heightAtZero
 
-def polydispersity_metric_qFirstDip(q, I, dips, dI=np.zeros(1)):
+def polydispersity_metric_qFirstDip(q, I, dips, dI=None):
     '''Finds the location in *q* of the first dip.'''
-    if not dI.any():
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     pad = 3
     firstDipIndex = np.where(dips)[0][0]
@@ -675,8 +745,8 @@ def polydispersity_metric_qFirstDip(q, I, dips, dI=np.zeros(1)):
     xFirstDip = quadratic_extremum(scaledQuadCoefficients)
     return xFirstDip, scaledQuadCoefficients
 
-def polydispersity_metric_sigmaScaledFirstDip(q, I, dips, shoulders, qFirstDip, heightFirstDip, dI=np.zeros(1)):
-    if not dI.any():
+def polydispersity_metric_sigmaScaledFirstDip(q, I, dips, shoulders, qFirstDip, heightFirstDip, dI=None):
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     scaled_I = I * q ** 4
     scaled_dI = dI * q ** 4
@@ -818,7 +888,11 @@ def test():
         #xFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero = take_polydispersity_metrics(q, I)
         fractional_variation, qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, dips, shoulders = guess_polydispersity(q, I)
         mean_size = guess_size(fractional_variation, qFirstDip)
-        plot_dos(q, I, qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, fractional_variation, mean_size)
+        stats_1 = [qFirstDip, heightFirstDip, sigmaScaledFirstDip, heightAtZero, fractional_variation, mean_size]
+        # TODO: fit and then...
+        stats_2 = [heightAtZero, fractional_variation, mean_size]
+        plot_dos(q, I, stats_1)
+        #plot_tres(q, I, stats_1, stats_2)
 
         plt.title(ii)
 
@@ -843,41 +917,70 @@ def plot_one(x, y, lo1, hi1, lo2, hi2, x0, y0, coefficients1, coefficients2):
     return fig, ax
 
 
-def plot_dos(q, I, q1, I1, sigmaScaledFirstDip, I0, poly, size):
+def plot_dos(q, I, l_m):
+    # l_m a list of six properties measured from the curve
+    q1, I1, sigmaScaledFirstDip, I0, poly, size = l_m
     from matplotlib import pyplot as plt
     fig, ax = plt.subplots(1)
     ax.plot(q, I, ls='-', marker='None', color='k', lw=2)
     ax.plot(q1, I1, ls='None', marker='x', color='r', lw=1)
     selection = (q < q1*0.3)
     n = selection.sum()
-    ax.plot(q[selection], np.ones(n)*I0, ls='-', marker='None', color='b', lw=1)
+    #ax.plot(q[selection], np.ones(n)*I0, ls='-', marker='None', color='b', lw=1)
     modelI = generate_spherical_diffraction(q, I0, size, poly)
     ax.plot(q, modelI, ls='-', marker='None', color='r', lw=1)
     ax.set_xscale('log')
     ax.set_yscale('log')
     return fig, ax
 
+def plot_tres(q, I, l_m, l_f):
+    # l_m a list of six properties measured from the curve
+    # l_f a list of three properties fitted to the curve
+    q1, I1, sigmaScaledFirstDip, I0, poly, size = l_m
+    from matplotlib import pyplot as plt
+    fig, ax = plt.subplots(1)
+    ax.plot(q, I, ls='-', marker='None', color='k', lw=2)
+    ax.plot(q1, I1, ls='None', marker='x', color='r', lw=1)
+    selection = (q < q1*0.3)
+    n = selection.sum()
+    #ax.plot(q[selection], np.ones(n)*I0, ls='-', marker='None', color='b', lw=1)
+    modelI = generate_spherical_diffraction(q, I0, size, poly)
+    ax.plot(q, modelI, ls='-', marker='None', color='r', lw=1)
+    I0_f, poly_f, size_f = l_f
+    fitI = generate_spherical_diffraction(q, I0_f, size_f, poly_f)
+    ax.plot(q, fitI, ls='-', marker='None', color='g', lw=1)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    return fig, ax
 
-def first_dip(q, I, dips, dI=np.zeros(1)):
-    if not dI.any():
+
+def first_dip(q, I, dips, dI=None):
+    if dI is None:
         dI = np.ones(I.shape, dtype=float)
     # if the first two "dips" are very close together, they are both marking the first dip
     # because I can't eliminate all spurious extrema with such a simple test
     dip_locs = np.where(dips)[0]
-    q1, q2, q3 = q[dip_locs[:3]]
-    mult = 4
-    smult = 1.5
-    # q1, q2 close compared to q2, q3 and compared to 0, q1
-    if ((q2 - q1)*mult < (q3 - q2)) & ((q2 - q1)*mult < q1):
-        case = 'two'
-        scale = 0.5 * q3
-    # (q2 - q1)*1.5 approximately equal to q1
-    elif ((q2 - q1)*1.5*smult > q1) & ((q2 - q1)*1.5 < q1*smult):
-        case = 'one'
-        scale = 0.5 * q2
-    else:
-        case = 'mystery'
+    # Catch the case of operation on noiseless data with few local minima
+    if dip_locs.size < 3:
+        case = 'smooth as butter'
+        q1 = q[dip_locs[0]]
         scale = q1
+    # Real data cases
+    else:
+        q1, q2, q3 = q[dip_locs[:3]]
+        mult = 4
+        smult = 1.5
+        # q1, q2 close compared to q2, q3 and compared to 0, q1
+        if ((q2 - q1)*mult < (q3 - q2)) & ((q2 - q1)*mult < q1):
+            case = 'two'
+            scale = 0.5 * q3
+        # (q2 - q1)*1.5 approximately equal to q1
+        elif ((q2 - q1)*1.5*smult > q1) & ((q2 - q1)*1.5 < q1*smult):
+            case = 'one'
+            scale = 0.5 * q2
+        else:
+            case = 'mystery'
+            scale = q1
 #    print "Detected case: %s." % case
     if case == 'two':
         minq = q1 - scale*0.1
@@ -898,18 +1001,6 @@ def first_dip(q, I, dips, dI=np.zeros(1)):
     Ibest = polynomial_value(coefficients, qbest)
     return qbest, Ibest, coefficients
 
-
-'''
-def guess_nearest_point_on_single_monotonic_trace(x0, x, y):
-    ybest = interp(x0, x, y)
-    return ybest
-
-def guess_nearest_point_on_dual_monotonic_trace(x0, y0, x, y, variable):
-    vbestx = guess_nearest_point_on_single_monotonic_trace(x0, x, variable)
-    vbesty = guess_nearest_point_on_single_monotonic_trace(y0, y, variable)
-    vbest = 0.5*(vbestx + vbesty)
-    return vbest
-'''
 
 def guess_nearest_point_on_nonmonotonic_trace_normalized(loclist, tracelist, coordinate):
     '''Finds the nearest point to location *loclist* on a trace *tracelist*.

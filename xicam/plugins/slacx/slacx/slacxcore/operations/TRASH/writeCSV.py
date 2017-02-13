@@ -201,36 +201,18 @@ class SelectClosestTemperatureBackgroundFromHeader(Operation):
         self.outputs['background_I'] = I
 
 
-class WriteCSV_q_I(Operation):
-    """Write q and I to a csv-formatted file."""
-
-    def __init__(self):
-        input_names = ['q','I','image_location']
-        output_names = ['csv_location']
-        super(WriteCSV_q_I, self).__init__(input_names, output_names)
-        # docstrings
-        self.input_doc['q'] = "1d ndarray; independent variable"
-        self.input_doc['I'] = "1d ndarray; dependent variable; same shape as *q*"
-        self.input_doc['image_location'] = "string path to "
-        # source & type
-        self.input_src['q'] = optools.wf_input
-        self.input_src['I'] = optools.wf_input
-        self.input_src['image_location'] = optools.wf_input
-        self.input_type['image_location'] = optools.str_type
-        self.categories = ['OUTPUT.CSV']
-
-    def run(self):
-        csv_location = replace_extension(self.inputs['image_location'], '.csv')
-        write_csv_q_I(self.inputs['q'], self.inputs['I'], csv_location)
-        self.outputs['csv_location'] = csv_location
 
 class WriteCSV_q_I_dI(Operation):
-    """Write q, I, and dI to a csv-formatted file."""
+    """Write q, I, and (if available) dI to a csv-formatted file."""
 
     def __init__(self):
         input_names = ['q','I','dI','image_location']
         output_names = ['csv_location']
         super(WriteCSV_q_I_dI, self).__init__(input_names, output_names)
+        # docstrings
+        self.input_doc['q'] = "1d ndarray; independent variable"
+        self.input_doc['I'] = "1d ndarray; dependent variable; same shape as *q*"
+        self.input_doc['dI'] = "1d ndarray; error estimate of *I*; same shape as *I*; if unavailable, use *None*"
         # source & type
         self.input_src['q'] = optools.wf_input
         self.input_src['I'] = optools.wf_input
@@ -241,7 +223,7 @@ class WriteCSV_q_I_dI(Operation):
 
     def run(self):
         csv_location = replace_extension(self.inputs['image_location'], '.csv')
-        write_csv_q_I_dI(self.inputs['q'], self.inputs['I'], self.inputs['dI'], csv_location)
+        write_csv_q_I_maybe_dI(self.inputs['q'], self.inputs['I'], self.inputs['dI'], csv_location)
         self.outputs['csv_location'] = csv_location
 
 
@@ -290,18 +272,18 @@ class FindUnprocessed(Operation):
         self.outputs['unprocessed'] = find_unprocessed(self.inputs['directory'])
 
 
-def write_csv_q_I(q, I, nameloc):
-    datablock = np.zeros((q.size,2),dtype=float)
+def write_csv_q_I_maybe_dI(q, I, dI, nameloc):
+    if dI is None:
+        datablock = np.zeros((q.size,2),dtype=float)
+        top_line = 'q, I'
+    else:
+        datablock = np.zeros((q.size,3),dtype=float)
+        datablock[:,2] = dI
+        top_line = 'q, I, dI'
     datablock[:,0] = q
     datablock[:,1] = I
-    np.savetxt(nameloc, datablock, delimiter=',', newline=linesep, header='q, I')
+    np.savetxt(nameloc, datablock, delimiter=',', newline=linesep, header=top_line)
 
-def write_csv_q_I_dI(q, I, dI, nameloc):
-    datablock = np.zeros((q.size,3),dtype=float)
-    datablock[:,0] = q
-    datablock[:,1] = I
-    datablock[:,2] = dI
-    np.savetxt(nameloc, datablock, delimiter=',', newline=linesep, header='q, I')
 
 
 def find_by_extension(directory, extension):
@@ -353,7 +335,7 @@ def read_csv_q_I_maybe_dI(nameloc):
     try:
         dI = np.loadtxt(nameloc, dtype=float, delimiter=',', skiprows=1, usecols=(2,))
     except IndexError:
-        dI = np.zeros(1, dtype=float)
+        dI = None
     return q, I, dI
 
 
@@ -367,4 +349,3 @@ def find_unprocessed(directory):
             missing_csv.append(ii)
     return missing_csv
 
-#TODO: remove print statement from first_dip

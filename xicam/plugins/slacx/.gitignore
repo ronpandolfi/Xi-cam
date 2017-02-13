@@ -6,6 +6,7 @@ include
 share
 images
 pip-selfcheck.json
+scratch
 *.pyc
 *.swp
 *.swo

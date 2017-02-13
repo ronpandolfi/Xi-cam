@@ -3,22 +3,23 @@ import numpy as np
 from ..slacxop import Operation
 from .. import optools
 
-class SavitzkyGolayWeighted(Operation):
-    """
-    Apply a Savitzky-Golay fit (polynomial fit approximation) to y(x) data.
-    Requires error bars on y, which are used to weight the data during fitting.
-    """
 
+
+class SavitzkyGolay(Operation):
+    """Applies a Savitzky-Golay (polynomial fit approximation) filter to 1d data.
+
+    Uses error bars on intensity if available.  Set *dy* to *None* otherwise.
+    """
     def __init__(self):
         input_names = ['x', 'y', 'dy', 'order', 'base']
-        output_names = ['y_smooth']
-        super(SavitzkyGolayWeighted, self).__init__(input_names, output_names)
-        self.input_doc['x'] = '1d array; independent variable'
-        self.input_doc['y'] = '1d array; dependent variable, same shape as x'
-        self.input_doc['dy'] = '1d array; error estimate in y, same shape as y'
+        output_names = ['smoothdata']
+        super(SavitzkyGolay, self).__init__(input_names, output_names)
+        self.input_doc['x'] = '1d ndarray; independent variable'
+        self.input_doc['y'] = '1d ndarray; dependent variable, same shape as *x*'
+        self.input_doc['dy'] = '1d ndarray; error estimate in *y*, same shape as *y*; if unavailable, set to *None*'
         self.input_doc['order'] = 'integer order of polynomial approximation (zero to five)'
-        self.input_doc['base'] = '-1, 0, or positive integer'
-        self.output_doc['y_smooth'] = '1d array of smoothed (fit) y values'
+        self.input_doc['base'] = '-1, 0, or positive integer; see class docs'
+        self.output_doc['smoothdata'] = 'smoothed 1d ndarray'
         # source & type
         self.input_src['x'] = optools.wf_input
         self.input_src['y'] = optools.wf_input
@@ -27,98 +28,66 @@ class SavitzkyGolayWeighted(Operation):
         self.input_src['base'] = optools.user_input
         self.input_type['order'] = optools.int_type
         self.input_type['base'] = optools.int_type
-        self.categories = ['PROCESSING']
+        # defaults
+        #self.inputs['dy'] = None
+        self.categories = ['1D DATA PROCESSING.SMOOTHING']
 
     def run(self):
-        self.outputs['y_smooth'] = savitzky_golay(self.inputs['x'], self.inputs['y'], 
-        self.inputs['order'], self.inputs['base'], self.inputs['dy'])
+        self.outputs['smoothdata'] = savitzky_golay(self.inputs['x'], self.inputs['y'], self.inputs['order'], self.inputs['base'], self.inputs['dy'])
 
-class SavitzkyGolayUnweighted(Operation):
-    """
-    Apply a Savitzky-Golay fit (polynomial fit approximation) to y(x) data.
-    Does not require error estimates for y: input data are equally weighted.
-    """
-    def __init__(self):
-        input_names = ['x', 'y', 'order', 'base']
-        output_names = ['y_smooth']
-        super(SavitzkyGolayUnweighted, self).__init__(input_names, output_names)
-        self.input_doc['x'] = '1d array; independent variable'
-        self.input_doc['y'] = '1d array; dependent variable, same shape as x'
-        self.input_doc['order'] = 'integer order of polynomial approximation (zero to five)'
-        self.input_doc['base'] = '-1, 0, or positive integer'
-        self.output_doc['y_smooth'] = '1d array of smoothed (fit) y values'
-        # source & type
-        self.input_src['x'] = optools.wf_input
-        self.input_src['y'] = optools.wf_input
-        self.input_src['order'] = optools.user_input
-        self.input_src['base'] = optools.user_input
-        self.input_type['order'] = optools.int_type
-        self.input_type['base'] = optools.int_type
-        self.categories = ['PROCESSING']
 
-    def run(self):
-        self.outputs['y_smooth'] = savitzky_golay(self.inputs['x'], self.inputs['y'], 
-        self.inputs['order'], self.inputs['base'])
 
-class MovingAverageUnweighted(Operation):
-    """
-    Applies rectangular moving average to 1d data.
-    No error estimate used.
-    """
+class RectangularSmooth(Operation):
+    """Applies rectangular (moving average) smoothing filter to 1d data.
+
+    User-specified error estimate used to weight points.  Set *dy* to *None* if unavailable."""
 
     def __init__(self):
-        input_names = ['x', 'window_size', 'window_shape']
-        output_names = ['x_smooth']
-        super(MovingAverageUnweighted, self).__init__(input_names, output_names)
-        self.input_doc['x'] = '1d array'
-        self.input_doc['window_size'] = 'odd integer: number of data points to include in averaging window'
-        self.input_doc['window_shape'] = str('shape of the window to use in weighting the moving average. '
-            + 'Must be either "square" or "triangle".')
-        self.output_doc['x_smooth'] = '1d array: moving average of x'
+        input_names = ['data', 'error', 'm']
+        output_names = ['smoothdata']
+        super(RectangularSmooth, self).__init__(input_names, output_names)
+        self.input_doc['data'] = '1d ndarray'
+        self.input_doc['error'] = '1d ndarray, same shape as data; if unavailable, set to *None*'
+        self.input_doc['m'] = 'odd integer number of data points to average locally'
+        self.output_doc['smoothdata'] = 'smoothed 1d ndarray'
         # source & type
-        self.input_src['x'] = optools.wf_input
-        self.input_src['window_size'] = optools.user_input
-        self.input_type['window_size'] = optools.int_type
-        self.inputs['window_size'] = 3
-        self.input_src['window_shape'] = optools.user_input
-        self.input_type['window_shape'] = optools.str_type
-        self.inputs['window_shape'] = 'square' 
-        self.categories = ['PROCESSING']
+        self.input_src['data'] = optools.wf_input
+        self.input_src['error'] = optools.wf_input
+        self.input_src['m'] = optools.user_input
+        self.input_type['m'] = optools.int_type
+        self.categories = ['1D DATA PROCESSING.SMOOTHING']
 
     def run(self):
-        self.outputs['x_smooth'] = moving_average(self.inputs['x'], self.inputs['window_size'], self.inputs['window_shape'])
+        self.outputs['smoothdata'] = moving_average(self.inputs['data'], self.inputs['m'], 'square',
+                                                    self.inputs['error'])
 
-class MovingAverageWeighted(Operation):
-    """
-    Applies rectangular moving average to 1d data.
-    Data error estimate is used to weight the moving average.
-    """
+
+class TriangularSmooth(Operation):
+    """Applies triangular-weighted (moving average) smoothing filter to 1d data.
+
+    User-specified error estimate used to weight points.  Set *dy* to *None* if unavailable."""
 
     def __init__(self):
-        input_names = ['x', 'dx', 'window_size', 'window_shape']
-        output_names = ['x_smooth']
-        super(MovingAverageWeighted, self).__init__(input_names, output_names)
-        self.input_doc['x'] = '1d array'
-        self.input_doc['dx'] = '1d array, same shape as x'
-        self.input_doc['window_size'] = 'odd integer: number of data points to include in averaging window'
-        self.input_doc['window_shape'] = str('shape of the window to use in weighting the moving average. '
-            + 'Must be either "square" or "triangle".')
-        self.output_doc['x_smooth'] = '1d array: moving weighted average of x'
+        input_names = ['data', 'error', 'm']
+        output_names = ['smoothdata']
+        super(TriangularSmooth, self).__init__(input_names, output_names)
+        self.input_doc['data'] = '1d ndarray'
+        self.input_doc['error'] = '1d ndarray, same shape as data; if unavailable, set to *None*'
+        self.input_doc['m'] = 'odd integer number of data points to average locally'
+        self.output_doc['smoothdata'] = 'smoothed 1d ndarray'
         # source & type
-        self.input_src['x'] = optools.wf_input
-        self.input_src['dx'] = optools.wf_input
-        self.input_src['window_size'] = optools.user_input
-        self.input_type['window_size'] = optools.int_type
-        self.inputs['window_size'] = 3
-        self.input_src['window_shape'] = optools.user_input
-        self.input_type['window_shape'] = optools.str_type
-        self.inputs['window_shape'] = 'square' 
-        self.categories = ['PROCESSING']
+        self.input_src['data'] = optools.wf_input
+        self.input_src['error'] = optools.wf_input
+        self.input_src['m'] = optools.user_input
+        self.input_type['m'] = optools.int_type
+        self.categories = ['1D DATA PROCESSING.SMOOTHING']
 
     def run(self):
-        self.outputs['x_smooth'] = moving_average(self.inputs['x'], self.inputs['window_size'], self.inputs['window_shape'], self.inputs['dx'])
+        self.outputs['smoothdata'] = moving_average(self.inputs['data'], self.inputs['m'], 'triangle',
+                                                    self.inputs['error'])
 
-def moving_average(data, m, shape, error=np.zeros(1)):
+
+def moving_average(data, m, shape, error=None):
     n = int(m)/2
     if (m != (2*n+1)):
         raise ValueError('Argument *m* should be an odd integer.')
@@ -130,7 +99,7 @@ def moving_average(data, m, shape, error=np.zeros(1)):
         shape_weight = triangular_weighting(n)
     else:
         raise ValueError('Argument *shape* should be either "square" or "triangle".')
-    if error.any():
+    if error is not None:
         error_weight = specified_error_weights(error)
     else:
         error_weight = no_specified_error_weights(data)
@@ -143,6 +112,7 @@ def moving_average(data, m, shape, error=np.zeros(1)):
         weights[:-ii] += (shape_weight[ii] * error_weight[ii:])
     mean = sum / weights
     return mean
+
 
 def triangular_weighting(n):
     weights = (n + 1 - np.arange(0, int(n + 1), dtype=float))/float(n + 1)
@@ -160,8 +130,9 @@ def specified_error_weights(error):
     weights = error**-2
     return weights
 
-def savitzky_golay(x, y, order, base, dy=np.zeros(1)):
-    if not dy.any():
+
+def savitzky_golay(x, y, order, base, dy=None):
+    if dy is None:
         dy = np.ones(y.shape, dtype=float)
     m = choose_m(order, base) # Order, base checked here; number of fit points chosen
     order = int(order)
@@ -177,6 +148,7 @@ def savitzky_golay(x, y, order, base, dy=np.zeros(1)):
         # Find chosen approximation
         smoothed[ii] = polynomial(x[ii], coefficients)
     return smoothed
+
 
 def choose_start_and_end(m, base, ii, size):
     n = (int(m)/2) + 1
@@ -195,6 +167,7 @@ def choose_start_and_end(m, base, ii, size):
             start = size - 1 - m
             end = size - 1
     return start, end
+
 
 def choose_m(order, base):
     '''Choose a number of points to use for SG fit.
@@ -228,6 +201,7 @@ def choose_m(order, base):
         m = 2*(order + base) + 1
     return m
 
+
 def polynomial(x, coefficients):
     '''Evaluate a polynomial with given coefficients at location x.
 
@@ -243,15 +217,18 @@ def polynomial(x, coefficients):
     value = ((x**powers) * coefficients).sum()
     return value
 
+
 def vertical(array1d):
     '''Turn 1d array into 2d vertical vector.'''
     array1d = array1d.reshape((array1d.size, 1))
     return array1d
 
+
 def horizontal(array1d):
     '''Turn 1d array into 2d horizontal vector.'''
     array1d = array1d.reshape((1, array1d.size))
     return array1d
+
 
 def dummy(array1d):
     '''Turn 1d array into dummy-index vector for 2d matrix computation.
@@ -259,6 +236,7 @@ def dummy(array1d):
     Sum over the dummy index by taking *object.sum(axis=0)*.'''
     array1d = array1d.reshape((array1d.size, 1 , 1))
     return array1d
+
 
 def make_poly_matrices(x, y, error, order):
     '''Make the matrices necessary to solve a polynomial fit of order *order*.
@@ -280,4 +258,176 @@ def make_poly_matrices(x, y, error, order):
     matrix = (dummy(x) ** index_block * dummy(error)).sum(axis=0)
     return matrix, vector
 
+
+
+
+'''
+Time testing code here
+
+import time
+n = 11
+x = np.random.rand(n)
+y = np.random.rand(n)
+error = np.random.rand(n)
+order = 5
+matrix, vector = make_poly_matrices(x, y, error, order)
+
+
+
+
+t0 = time.time()
+
+t1 = time.time()
+dt = t1 - t0
+print "Elapsed time: %f seconds." % dt
+
+
+
+#rectangular_unweighted_smooth_1(data, m) # data.size = 1024.  m = 3: 0.008655 s / 0.000416 s.  m = 5: 0.000369 s.  m = 7: 0.000319 s.
+#rectangular_unweighted_smooth_2(data, m) # m = 3: 0.008419 s / 0.000274 s.  m = 5: 0.000292 s.  m = 7: 0.000324 s.
+
+#solve_poly_1(matrix, vector) # (n, o) = (11, 5) 0.022688 s
+#solve_poly_2(matrix, vector) # (n, o) = (11, 5) 0.010989 s
+#solve_poly_3(matrix, vector) # (n, o) = (11, 5) 0.008370 s
+
+'''
+
+# Below this point: rejected & unused functions
+
+
+def solve_poly_1(matrix, vector):
+    '''
+    Solve a set of linear equations MC = V for C.
+
+    :param matrix: 2d array of dimensions (n, n), n some integer, M in equation
+    :param vector: 2d array of dimensions (1, n), V in equation
+    :return coefficients: 2d array of dimensions (1, n), C in equation
+    '''
+    matrix_inv = np.linalg.pinv(matrix)
+    coefficients = np.matmul(matrix_inv, vector)
+    return coefficients
+
+
+def solve_poly_2(matrix, vector):
+    '''
+    Solve a set of linear equations MC = V for C.
+
+    :param matrix: 2d array of dimensions (n, n), n some integer, M in equation
+    :param vector: 2d array of dimensions (1, n), V in equation
+    :return coefficients: 2d array of dimensions (1, n), C in equation
+    '''
+    matrix_inv = np.linalg.inv(matrix)
+    coefficients = np.matmul(matrix_inv, vector)
+    return coefficients
+
+
+def solve_poly_3(matrix, vector):
+    '''
+    Solve a set of linear equations MC = V for C.
+
+    :param matrix: 2d array of dimensions (n, n), n some integer, M in equation
+    :param vector: 2d array of dimensions (1, n), V in equation
+    :return coefficients: 2d array of dimensions (1, n), C in equation
+    '''
+    coefficients = np.linalg.solve(matrix, vector)
+    return coefficients
+
+
+def rectangular_unweighted_smooth_1(data, m):
+    n = int(m)/2
+    if (m != (2*n+1)):
+        raise ValueError('Argument *m* should be an odd integer.')
+    stacked_data, stacked_mask = shift_stack(data, n, n)
+    smoothed = masked_mean_2d_axis_0(stacked_data, stacked_mask)
+    return smoothed
+
+
+def masked_mean_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the mean of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return mean: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least one valid element;
+    otherwise the mean along axis 0 is not defined.
+    Returns *mean*, the mean of *y2d* along axis 0.
+    '''
+    sum = (y2d * mask2d).sum(axis=0)
+    num_elements = mask2d.sum(axis=0)
+    mean = sum / num_elements
+    return mean
+
+
+def masked_variance_2d_axis_0(y2d, mask2d):
+    '''
+    Takes the variance of masked data along axis 0.
+
+    :param y2d: 2d numpy float array
+    :param mask2d: 2d numpy bool array
+    :return variance: 1d numpy float array
+
+    *y2d* is data; *mask2d* is its corresponding mask
+    with values *True* for legitimate data, *False* otherwise.
+    Assumes that each column of *y2d* has at least two valid elements;
+    otherwise the variance along axis 0 is not defined.
+    Returns *variance*, the variance of *y2d* along axis 0.
+    '''
+    mean = masked_mean_2d_axis_0(y2d, mask2d)
+    difference = (y2d - mean) * mask2d
+    num_elements = mask2d.sum(axis=0)
+    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
+    return variance
+
+
+def shift_stack(y, n1, n2):
+    '''
+    Creates a stack of index-shifted versions of y.
+
+    :param y: 1d numpy float array
+    :param n1: int
+    :param n2: int
+    :return local_neighborhood: 2d numpy float array
+    :return element_exists: 2d numpy bool array
+
+    Creates shifted versions of the input *y*,
+    with shifts up to and including *n1* spaces downward in index
+    and up to and including *n2* spaces upwards.
+    The shifted versions are stacked together as *local_neighborhood*, like this
+    (shown for a *y* of length 16 and *n1 = 4*, *n2 = 2*)
+    [4 5 6 7 ... 15 __ __ __ __]
+    [3 4 5 6 ... 14 15 __ __ __]
+    [2 3 4 5 ... 13 14 15 __ __]
+    [1 2 3 4 ... 12 13 14 15 __]
+    [0 1 2 3 ... 11 12 13 14 15]
+    [_ 0 1 2 ... 10 11 12 13 14]
+    [_ _ 0 1 ...  9 10 11 12 13]
+    with a corresponding mask array, *element_exists*,
+    indicating whether an element holds information or not, like this
+    [1 1 1 1 ...  1  0  0  0  0]
+    [1 1 1 1 ...  1  1  0  0  0]
+    [1 1 1 1 ...  1  1  1  0  0]
+    [1 1 1 1 ...  1  1  1  1  0]
+    [1 1 1 1 ...  1  1  1  1  1]
+    [0 1 1 1 ...  1  1  1  1  1]
+    [0 0 1 1 ...  1  1  1  1  1]
+    '''
+    local_neighborhood = np.zeros(((n1 + n2 + 1), y.size), dtype=float)
+    element_exists = np.zeros(((n1 + n2 + 1), y.size), dtype=bool)
+    for ii in range(n1 + n2 + 1):
+        # ii ranges from 0 to n1 + n2; jj ranges from -n1 to n2
+        jj = ii - n1
+        if jj < 0:
+            local_neighborhood[ii, :jj] = y[-jj:]
+            element_exists[ii, :jj] = True
+        elif jj == 0:
+            local_neighborhood[ii, :] = y[:]
+            element_exists[ii, :] = True
+        else:
+            local_neighborhood[ii, jj:] = y[:-jj]
+            element_exists[ii, jj:] = True
+    return local_neighborhood, element_exists
 

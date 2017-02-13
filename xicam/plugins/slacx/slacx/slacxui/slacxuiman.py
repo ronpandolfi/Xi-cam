@@ -3,7 +3,6 @@ import time
 from functools import partial
 
 from PySide import QtGui, QtCore, QtUiTools
-import numpy as np
 
 from . import uitools
 from .wfuiman import WfUiManager
