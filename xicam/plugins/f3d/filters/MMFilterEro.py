@@ -1,8 +1,8 @@
 
-class BilateralFilter:
+class MMFilterEro:
 
     def __init__(self):
-        self.name = 'BilateralFilter'
+        self.name = 'MMFilterEro'
         self.index = -1
 
         # load clattr from RunnablePOCLFilter

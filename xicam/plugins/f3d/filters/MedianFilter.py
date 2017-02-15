@@ -1,32 +1,28 @@
-from pyopencl import Program
-from pyopencl import Kernel
 import collections
-import JOCLFilter
+import POCLFilter
 import time
 import pyopencl as cl
 import pkg_resources as pkg
+import numpy as np
 
 class MedianFilter:
-
-    # program = Program()
-    # kernel = Kernel()
 
     def __init__(self):
         self.name = 'MedianFilter'
         self.index = -1
 
-        # load clattr from RunnableJOCLFilter
+        # load clattr from RunnablePOCLFilter
         self.clattr = None
-        self.atts = None #load attributes from RunnableJOCLFilter
+        self.atts = None #load attributes from RunnablePOCLFilter
 
     def toJSONString(self):
         result = "{ \"Name\" : \"" + self.getName() + "\", " + "\" }"
         return result
 
     def getInfo(self):
-        info = JOCLFilter.FilterInfo()
+        info = POCLFilter.POCLFilter.FilterInfo()
         info.name = self.getName()
-        info.memtype = JOCLFilter.Type.Byte
+        info.memtype = POCLFilter.POCLFilter.Type.Byte
         info.overlapX = info.overlapY = info.overlapZ = 0
         return info
 
@@ -36,14 +32,15 @@ class MedianFilter:
     def loadKernel(self):
         # median_comperror = ""
         try:
-            filename = "xicam/plugins/f3d/OpenCL/MedianFilter.cl"
+            filename = "OpenCL/MedianFilter.cl"
             program = cl.Program(self.clattr.context, pkg.resource_string(__name__, filename)).build()
         except Exception as e:
             raise e
+
             # other stuff to log errors
 
-        kernel = cl.Kernel(program, "MedianFilter")
-        return kernel
+        self.kernel = cl.Kernel(program, "MedianFilter")
+        return True
 
     def runFilter(self):
         start_time = time.time()
@@ -56,7 +53,39 @@ class MedianFilter:
 
         globalSize = [0, 0]
         localSize = [0, 0]
+        self.clattr.computeWorkingGroupSize(localSize, globalSize, [self.atts.width, self.atts.height, 1])
 
         try:
-            cl.enqueue_copyself.clattr.queue
+
+            # TODO: does loading happen here or in a clattr function?
+            # copy data to accelerator
+            # self.clattr.queue.enqueue_copy(self.clattr.queue, self.clattr.inputBuffer, )
+
+            # set up parameters
+            self.kernel.set_args(self.clattr.inputBuffer, self.clattr.outputBuffer, np.int32(self.atts.width),
+                                           np.int32(self.atts.height), np.int32(self.clattr.maxSliceCount),
+                                            np.int32(mid))
+
+            # execute kernel
+            cl.enqueue_nd_range_kernel(self.clattr.queue, self.kernel, globalSize, localSize)
+
+        except Exception as e:
+            raise e
+
+        # write results
+        cl.enqueue_copy(self.clattr.queue, self.clattr.inputBuffer, self.clattr.outputBuffer)
+        self.clattr.queue.finish()
+        return True
+
+    def releaseKernel(self):
+        pass
+
+
+    def setAttributes(self, CLAttributes, atts, idx):
+        self.clattr = CLAttributes
+        self.index = idx
+        self.atts = atts
+
+
+
 

@@ -3,17 +3,21 @@ from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
 from xicam.widgets.customwidgets import F3DButtonGroup, DeviceWidget
-from xicam.threads import Worker
+from xicam.threads import Worker, RunnableMethod
 from pipeline.loader import StackImage
 from pipeline import msg
 from functools import partial
+from ClAttributes import ClAttributes
+from filters import POCLFilter
 import f3d_viewers
 import os
 import pyqtgraph as pg
 import filtermanager as fm
 import pyopencl as cl
+import numpy as np
 import importer
 import Queue
+import time
 
 
 class plugin(base.plugin):
@@ -116,6 +120,8 @@ class plugin(base.plugin):
         self.threadWorker.pool.setExpiryTimeout(1)
 
         self.filter_images = {}
+        self.startIndex = 0
+        self.stacks = []
 
         self.sigFilterAdded.connect(self.manager.updateFilterMasks)
         self.build_function_menu(self.addfunctionmenu, importer.filters, self.manager.addFilter)
@@ -268,14 +274,20 @@ class plugin(base.plugin):
 
     def run(self):
         # corresponds to F3DImageProcessing_JOCL_.java.run() (?)
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Running pipeline for {}'.format(name), timeout=0)
 
         pipeline = self.manager.getPipeline()
+        pipeline_dict = self.manager.getPipelineDict()
+        self.startIndex = 0
 
         # print status output
+        self.log.local_console.clear()
         devices_tmp = self.rightwidget.chosen_devices
         devices_tmp.reverse(); pipeline.reverse()
-        for filter in pipeline:
-            self.log.log2local("{}".format(filter))
+        for item in pipeline:
+            filter = item.filter
+            self.log.log2local("{}".format(filter.name))
         self.log.log2local("Pipeline to be processed:")
         for device in devices_tmp:
             self.log.log2local("{}".format(device.name))
@@ -284,35 +296,172 @@ class plugin(base.plugin):
         self.leftwidget.setCurrentWidget(self.log)
 
         # execute filters. Create one thread per device
+        print '1'
+        self.current = self.currentWidget()
         runnables = []
+        self.counter = 0
         for i in range(len(self.rightwidget.chosen_devices)):
-            clattr = None # instantiate ClAttributes class here
-            runnables.append(fm.RunnableJOCLFilter(self.manager.run, clattr))
+
+            #initalize args
             device = self.rightwidget.chosen_devices[i]
-            runnables[i].setAttributes(rank=i, device=device, context=self.contexts[device],
-                                        overlapAmount=0, atts=self.createAttributes(),
-                                       index=self.rightwidget.chosen_devices.index(device))
+            context = self.contexts[device]
+            overlapAmount = 0
+            atts = POCLFilter.FilteringAttributes()
+            index = self.rightwidget.chosen_devices.index(device)
+            clattr = ClAttributes(context, device, cl.CommandQueue(context, device),
+                                              None, None, None)
+            clattr.setMaxSliceCount(self.current.rawdata[:10])
+            method_kwargs = {'pipeline': pipeline, 'device': device, 'context': context, 'overlapAmount': overlapAmount,
+                             'attributes': atts, 'index': index, 'clattr': clattr}
+            # runnables.append(RunnableMethod(method=self.doFilter, method_kwargs=method_kwargs,
+            #                                 finished_slot=self.waitForThreads))
+            runnables.append(RunnableMethod(method=self.dummy,
+                                            callback_slot=self.waitForThreads))
+
+            # runnables.append(RunnableMethod(method=self.dummy))
 
         # necessary?
         # # if only one device is available then skip thread creation and execute
         # if len(runnables) == 1:
         #     runnables[0]()
 
+        print '2'
+
+        self.stop = len(runnables)
         for i in range(len(runnables)):
             self.threadWorker.queue.put(runnables[i])
 
+        print '3'
+
         # run worker
+        if not self.threadWorker.isRunning():
+            self.threadWorker.run()
+
+        #
+        # print '5'
+        #
+        # # all threads now finished, so reconstruct final image
+        # self.stacks = sorted(self.stacks) #sort by starting slice
+        #
+        # image = self.stacks[0].stack
+        # for stack in self.stacks[1:]:
+        #     image = np.append(image, stack.stack, axis=0)
+        #
+        # # for now, only show previews
+        # # for i in range(image.shape[0]):
+        # for i in range(10):
+        #     self.current.addPreview(np.rot90(image[i],1), pipeline_dict, 0) #slice no goes here eventually)
+
+    @QtCore.Slot()
+    def dummy(self,):
+        print 'herehere'
+        return 'it connects'
+
+    def waitForThreads(self, success):
+        print 'success!!!!'
+        print success
+
+        # self.counter += 1
+        # if self.counter == self.stop:
+        #     self.threadWorker.stop()
+
+
+    def doFilter(self, pipeline, device, context, overlapAmount, attributes, index, clattr):
+
+        print 'it gets here'
+
+        maxOverlap = 0
+        for item in pipeline:
+            filter = item.filter
+            maxOverlap = max(maxOverlap, filter.getInfo().overlapZ)
+
+        print 'hey1'
+
+        #currentWidget is F3dviewer type
+        maxSliceCount = clattr.maxSliceCount
+        clattr.initializeData(self.current.rawdata, attributes, overlapAmount, maxSliceCount)
+
+        print 'hey2'
+
+        for item in pipeline:
+            filter = item.filter
+            if filter.getInfo().useTempBuffer:
+                clattr.outputTmpBuffer = cl.Buffer(clattr.context, cl.mem_flags.READ_WRITE,
+                                                   clattr.inputBuffer.size)
+                break
+
+        print 'hey3'
+
+        stackRange = [0, 0]
+        while self.getNextRange(stackRange, maxSliceCount):
+            attributes.sliceStart = stackRange[0]
+            attributes.sliceEnd = stackRange[1]
+            clattr.loadNextData(self.current.rawdata, attributes, stackRange[0], stackRange[1], maxOverlap)
+            maxSliceCount = stackRange[1] - stackRange[0]
+
+            pipelineTime = time.time()
+
+            for i in range(len(pipeline)):
+                filter = pipeline[i].clone()
+                filter.setAttributes(clattr, attributes, index)
+                if not filter.loadKernel():
+                    raise Exception('Failure to load kernel for: {}'.format(filter.getName()))
+                filterTime = time.time()
+                if not filter.runFilter():
+                    raise Exception('Failure to run kernel for: {}'.format(filter.getName()))
+
+                filterTime = time.time() - filterTime
+                pipelineTime += filterTime
+
+                if i < len(pipeline) - 1:
+                    clattr.swapBuffers()
+                filter.releaseKernel()
+
+            # save output of image after pipeline execution to get final result
+            image = clattr.writeNextData(attributes, stackRange[0], stackRange[1], maxOverlap)
+            self.addResultStack(stackRange[0], stackRange[1], image, device.name, pipelineTime)
+
+        clattr.inputBuffer.release()
+        clattr.outputBuffer.release()
+        if clattr.outputTmpBuffer is not None:
+            clattr.outputTmpBuffer.release() #  careful of seg fault if it's already released. How to check?
+
+        return True
+
+
+    def addResultStack(self, startRange, endRange, image, name, pipelineTime):
+        slices = self.currentWidget().rawdata.shape[0]
+        sr = StackRange()
+        sr.startRange = startRange
+        sr.endRange = endRange
+        sr.stack = image
+        sr.name = name
+        sr.time = pipelineTime
+
+        self.stacks.append(sr)
+
+        #show progress somehow with slices varaible as compared to image size
+
+
+    def getNextRange(self, range, sliceCount):
+        endIndex = 10
+        # endIndex = self.current.rawdata.shape[0]
+        if self.startIndex >=endIndex:
+            return False
+
+        range[0] = self.startIndex
+        range[1] = self.startIndex + sliceCount
+        if range[1] >= endIndex:
+            range[1] = endIndex
+
+        self.startIndex = range[1]
+        return True
+
+
 
     def preview(self):
         pass
 
-    def createAttributes(self):
-
-        fixed_func = type('FilteringAttributes', (), {'intermediateSteps': self.rightwidget.use_intermediate,
-                                                    'chooseConstantDevices': False,
-                                                    'inputDeviceLength': self.rightwidget.maxNumDevices,
-                                                    'maxSliceCount': None,
-                                                    'overlap': None})
 
     def build_function_menu(self, menu, filter_data, actionslot):
         """
@@ -324,7 +473,7 @@ class plugin(base.plugin):
             Menu object to populate with filter names
         functiondata : dict
             Dictionary with function information. See importer.filters.yml
-        actionslot : QtCore.Slot
+        actionslot : QtCore.Slot,
             slot where the function action triggered signal should be connected
         """
 
@@ -365,13 +514,13 @@ class plugin(base.plugin):
         self.devices = []
         if len(devices_tmp) == 1:
             self.devices = devices_tmp[0]
-            self.contexts[devices_tmp[0]] = (cl.Context(devices_tmp[0]))
+            self.contexts[devices_tmp[0][0]] = (cl.Context(devices_tmp[0]))
         else:
             for i in range(len(devices_tmp)):
                 # devices = devices_tmp[i] + devices_tmp[i + 1]
                 self.devices += devices_tmp[i]
                 try:
-                    self.contexts[devices_tmp[i]] = (cl.Context(devices_tmp[i]))
+                    self.contexts[devices_tmp[i][0]] = cl.Context(devices_tmp[i])
                 except RuntimeError as e:
                     self.log.log2local("ERROR: There was a problem detecting drivers. Please verify the installation" +
                                        " of your graphics device\'s drivers.")
@@ -508,4 +657,27 @@ class F3DOptionsWidget(QtGui.QWidget):
             if self.device_widgets[name].checkbox.isChecked(): device_names.append(name)
 
         return [device for device in self.devices if device.name in device_names]
+
+class StackRange:
+
+    def __init__(self):
+        self.processTime = 0
+        self.startRange = 0
+        self.endRange = 0
+        self.name = ""
+        self.stack = None
+
+    def __lt__(self, sr):
+        # ascending
+        return self.startRange - sr.startRange < 0
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif type(self) != type(other):
+            return False
+        else:
+            return self.startRange==other.startRange and self.endRange==other.endRange
+
+
 

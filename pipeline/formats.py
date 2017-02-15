@@ -551,7 +551,7 @@ class DXchangeH5image(fabioimage):
     """
     extensions=['h5']
 
-    def __init__(self, data=None , header=None):
+    def __init__(self, data=None , header=None, use8bit=False):
         super(DXchangeH5image, self).__init__(data=data, header=header)
         self.currentframe = 0
         self.header = None
@@ -640,8 +640,9 @@ class TiffStack(object):
     Class for stacking several individual tiffs and viewing as a 3D image in an pyqtgraph ImageView
     """
 
-    def __init__(self, paths, header=None):
+    def __init__(self, paths, header=None, uchar8=False):
         super(TiffStack, self).__init__()
+        self.uchar8 = uchar8
         if isinstance(paths, list):
             self.frames = paths
         elif os.path.isdir(paths):
@@ -649,6 +650,8 @@ class TiffStack(object):
         self.currentframe = 0
         self.header= header
         self.rawdata = np.stack([self.getframe(frame) for frame in range(len(self.frames))])
+        if self.uchar8:
+            self.rawdata = scale_to_uint8(self.rawdata)
 
         self._readheader()
 
@@ -659,6 +662,8 @@ class TiffStack(object):
 
     def getframe(self, frame=0):
         self.data = tifffile.imread(self.frames[frame], memmap=True)
+        if self.uchar8:
+            self.data = scale_to_uint8(self.data)
         return self.data
 
     def _readheader(self):
@@ -677,13 +682,18 @@ class CondensedTiffStack(object):
     """
     Class for 3D tiffs to view in pyqtgraph ImageView - very similar to TiffStack class
     """
-    def __init__(self, path, header=None):
+    def __init__(self, path, header=None, uchar8=False):
         super(CondensedTiffStack, self).__init__()
 
+        self.uchar8 = uchar8
         self.rawdata = tifffile.imread(path, memmap=True)
+        if self.uchar8:
+            self.rawdata = scale_to_uint8(self.rawdata)
+
         self.frames = range(self.rawdata.shape[0])
         self.header = header
         self._readheader()
+
 
     @property
     def classname(self):
@@ -713,6 +723,21 @@ class H5ReadError(IOError):
     Exception class raised when checking for the specific schema/structure of an HDF5 file.
     """
     pass
+
+def scale_to_uint8(data):
+    """
+    Custom function to scale data to 8-bit uchar for F3D plugin
+    """
+    if type(data) is not np.ndarray:
+        data = np.array(data)
+
+    a = float(255)/(float(np.max(data)) - float(np.min(data)))
+    b = (float(255)*float(np.min(data)))/(float(np.min(data)) - float(np.max(data)))
+
+    data = a*data + b
+    return (data).astype(np.uint8)
+
+
 
 
 # # Testing

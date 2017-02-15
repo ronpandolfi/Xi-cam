@@ -1,8 +1,8 @@
 
-class BilateralFilter:
+class FFTFilter:
 
     def __init__(self):
-        self.name = 'BilateralFilter'
+        self.name = 'FFTFilter'
         self.index = -1
 
         # load clattr from RunnablePOCLFilter

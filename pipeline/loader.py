@@ -860,7 +860,7 @@ class StackImage(object):
 
     ndim = 3
 
-    def __init__(self, filepath=None, data=None):
+    def __init__(self, filepath=None, data=None, uchar8=False):
         super(StackImage, self).__init__()
         self._rawdata = None
         self.filepath = filepath
@@ -869,9 +869,9 @@ class StackImage(object):
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
+                self.fabimage = TiffStack(filepath, uchar8=uchar8)
             elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-                self.fabimage = CondensedTiffStack(filepath)
+                self.fabimage = CondensedTiffStack(filepath, uchar8=uchar8)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:

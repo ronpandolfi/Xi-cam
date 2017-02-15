@@ -15,7 +15,8 @@ class F3DViewer(QtGui.QWidget):
         self.tabs.addTab('Preview')
         self.tabs.setShape(QtGui.QTabBar.TriangularSouth)
 
-        self.data = StackImage(filepath=files)
+        self.data = StackImage(filepath=files, uchar8=True)
+        self.rawdata = self.data.fabimage.rawdata
         self.imageviewer = StackViewer(self.data)
         self.imageviewer.setMinimumHeight(100)
         self.imageviewer.setMinimumWidth(20)
@@ -35,6 +36,9 @@ class F3DViewer(QtGui.QWidget):
 
         self.tabs.currentChanged.connect(self.viewer.setCurrentIndex)
         self.viewer.currentChanged.connect(self.tabs.setCurrentIndex)
+
+    def addPreview(self, image, pipeline, slice_no):
+        self.previews.addPreview(image, pipeline, slice_no)
 
 
 
