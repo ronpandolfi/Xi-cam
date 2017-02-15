@@ -6,10 +6,10 @@ from pyqtgraph import parametertree as pt
 from astropy.modeling import models, Fittable1DModel, Parameter, fitting
 
 
-class FitWidget(pt.parameterTypes.GroupParameter):
+class FitParameter(pt.parameterTypes.GroupParameter):
     sigRangeChanged = Signal()
     def __init__(self,plotwidget):
-        super(FitWidget, self).__init__(name='Fitting',type='group')
+        super(FitParameter, self).__init__(name='Fitting', type='group')
         self._plotwidget=plotwidget
 
         self.rangemin = 0
@@ -60,6 +60,7 @@ class FitWidget(pt.parameterTypes.GroupParameter):
         self.rangeROI.setRegion((self.rangemin, self.rangemax))
         self.rangeROI.setVisible(self.showrange)
         self.rangeROI.sigRegionChangeFinished.connect(self.updateRange)
+        self.plotwidget.addItem(self.rangeROI)
 
 
     def updateRange(self):
@@ -170,7 +171,7 @@ if __name__ == '__main__':
     p.plot(range,models.Gaussian1D.evaluate(range,10,30,5),pen={'color':'r','width':2})
     p.show()
 
-    fitter = FitWidget(p)
+    fitter = FitParameter(p)
     tree = pt.ParameterTree()
     tree.setParameters(fitter,showTop=False)
     win.setCentralWidget(tree)

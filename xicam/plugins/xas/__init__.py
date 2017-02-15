@@ -27,8 +27,8 @@ XASplot = XASTimelineWidget()
 EZTest=base.EZplugin(name='XAS',
                      toolbuttons=[('xicam/gui/icons_34.png',runtest)],
                      parameters=[{'name':'Pre-edge Min','value':10,'type':'int'},
-                                 {'name':'Pre-edge Max','value':30,'type':'int'}],
+                                 {'name':'Pre-edge Max','value':30,'type':'int'},
+                                 fitting.FitParameter(XASplot.stackplot.plotWidget)],
                      openfileshandler=openfiles,
                      centerwidget=None,
-                     bottomwidget=XASplot,
-                     panels=[(fitting.FitWidget(XASplot.stackplot.plotWidget),QFileIconProvider().icon(QFileIconProvider.File))])
+                     bottomwidget=XASplot)
