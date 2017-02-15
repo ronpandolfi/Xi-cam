@@ -280,6 +280,7 @@ class inOutViewer(QtGui.QWidget, ):
 
             scatteringHolder.setFixedHeight(300)
             sideWidgetFormat.addWidget(scatteringHolder)
+            self.configparams.child('Browse mask image').sigActivated.connect(self.setBrowse)
 
         centerButton = QtGui.QPushButton("Center camera location")
         runButton = QtGui.QPushButton("Run RMC processing")
@@ -298,7 +299,6 @@ class inOutViewer(QtGui.QWidget, ):
         runButton.clicked.connect(self.runRMC)
         stopButton.clicked.connect(self.stop_threads)
 
-        self.configparams.child('Browse mask image').sigActivated.connect(self.setBrowse)
         # self.configparams.param('Mask image').setReadonly()
 
         # tab headings for main widget
