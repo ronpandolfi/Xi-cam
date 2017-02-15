@@ -1,4 +1,5 @@
 import numpy as np  # Import important packages
+from scipy import fftpack
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import glob
@@ -174,7 +175,8 @@ class fftView(QtGui.QTabWidget):
         Returns absolute value of 2-D FFT of image. Assumes 2-D image
         """
 
-        return np.log(np.fft.fftshift(np.abs(np.fft.fft2(img)**2)) + 1e-10)
+        # return np.log(np.fft.fftshift(np.abs(np.fft.fft2(img)**2)) + 1e-10)
+        return np.log(fftpack.fftshift(np.abs(fftpack.fft2(img)**2)) + 1e-10)
 
 
     def open_from_rmcView(self, image_list):
@@ -236,6 +238,7 @@ class rmcView(QtGui.QTabWidget):
             sizemax = max(map(np.shape, data))[0]
 
             view = TimelineView(sizemax)
+            # view.ui.histogram.hide()
             view.setImage(data)
 
             scale = calcscale(view)  # Sets up the scale
