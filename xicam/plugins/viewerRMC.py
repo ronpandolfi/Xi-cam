@@ -16,6 +16,10 @@ import multiprocessing
 import Queue
 import glob
 
+# TODO: Remove LUT bar from RMC Timeline (its binary anyways)
+# TODO: Check mask behavior
+
+
 # drag/drop taken from tomography plugin
 import platform
 op_sys = platform.system()
@@ -47,7 +51,7 @@ class plugin(base.plugin):
         Additional keyword arguments. Not really used
     """
 
-    name = "ViewerRMC"
+    name = "HipRMC"
 
     #center widget is something, rightwidget is none, and leftwidget inherits the default from parent base.plugin
     def __init__(self, *args, **kwargs):
