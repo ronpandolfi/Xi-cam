@@ -80,11 +80,9 @@ class ClAttributes(object):
         """
 
         dims = image.shape
-        # atts.width = dims[0]
-        # atts.height = dims[1]
-        # atts.slices = dims[2]
-        atts.width = dims[1]
-        atts.height = dims[2]
+
+        atts.width = dims[2]
+        atts.height = dims[1]
         atts.slices = dims[0]
         atts.sliceStart = -1
         atts.sliceEnd = -1
@@ -108,16 +106,21 @@ class ClAttributes(object):
         minIndex = max(0, startRange - overlap)
         maxIndex = min(atts.slices, endRange + overlap)
 
-        cl.enqueue_copy(self.queue, self.inputBuffer, image[minIndex:maxIndex,:,:])
+        im = image[minIndex:maxIndex, :, :]
+        dim = im.shape
+        im = np.reshape(im, dim[0]*dim[1]*dim[2])
+
+        cl.enqueue_copy(self.queue, self.inputBuffer, im)
         return True
 
     def writeNextData(self, atts, startRange, endRange, overlap):
         # startIndex = 0 if startRange==0 else overlap
         length = endRange - startRange
-        # size = atts.height*atts.width*length # for 8bit images?
-        output = np.empty(length*atts.width*atts.height).astype(np.int8)
+        # output = np.empty((length,atts.height, atts.width)).astype(np.uint8)
+        output = np.empty(length*atts.width*atts.height).astype(np.uint8)
         cl.enqueue_copy(self.queue, output, self.outputBuffer)
-        output = output.reshape(length, atts.width, atts.height)
+        output = output.reshape(length, atts.height, atts.width)
+        # output = output.transpose()
         # image = np.append(image, output, axis=0)
         # return image
         return output

@@ -40,5 +40,10 @@ class F3DViewer(QtGui.QWidget):
     def addPreview(self, image, pipeline, slice_no):
         self.previews.addPreview(image, pipeline, slice_no)
 
+    def changeToPreview(self):
+        index = self.viewer.indexOf(self.previews)
+        self.viewer.setCurrentIndex(index)
+        self.tabs.setCurrentIndex(index)
+
 
 

@@ -2,7 +2,7 @@ from xicam.plugins import base
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 from xicam.plugins.tomography.viewers import RunConsole
-from xicam.widgets.customwidgets import F3DButtonGroup, DeviceWidget
+from xicam.widgets.customwidgets import F3DButtonGroup, DeviceWidget, sliceDialog
 from xicam.threads import Worker, RunnableMethod
 from pipeline.loader import StackImage
 from pipeline import msg
@@ -121,7 +121,6 @@ class plugin(base.plugin):
 
         self.filter_images = {}
         self.startIndex = 0
-        self.stacks = []
 
         self.sigFilterAdded.connect(self.manager.updateFilterMasks)
         self.build_function_menu(self.addfunctionmenu, importer.filters, self.manager.addFilter)
@@ -179,6 +178,7 @@ class plugin(base.plugin):
 
         files = [os.path.join(file, path) for path in os.listdir(file) if path.endswith('.tif') or path.endswith('.tiff')]
         widget = f3d_viewers.F3DViewer(files=files)
+        # widget = f3d_viewers.F3DViewer(files=self.sort_by_number(files))
 
         # check if file is already in filter_images, and load if it is not
         if not file in self.filter_images.iterkeys():
@@ -189,6 +189,16 @@ class plugin(base.plugin):
         self.centerwidget.setCurrentWidget(widget)
         msg.showMessage('Done.', timeout=10)
 
+    def sort_by_number(self, lst):
+        tmp = {}
+        output = []
+        for item in lst:
+            tmp[int(item.split('/')[-1].split('.')[0])] = item
+        tmp.keys().sort()
+        for val in tmp.itervalues():
+            output.append(val)
+
+        return output
 
     ## TODO: have separate readers for masks? maybe just have all open images be available as masks
 
@@ -272,14 +282,15 @@ class plugin(base.plugin):
 
         self.centerwidget.widget(index).deleteLater()
 
-    def run(self):
-        # corresponds to F3DImageProcessing_JOCL_.java.run() (?)
-        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
-        msg.showMessage('Running pipeline for {}'.format(name), timeout=0)
+    def check_pipeline(self, pipeline):
 
-        pipeline = self.manager.getPipeline()
-        pipeline_dict = self.manager.getPipelineDict()
-        self.startIndex = 0
+        if len(pipeline) < 1:
+            QtGui.QMessageBox.critical(None, 'Error', 'Please add at least one filter to pipeline.')
+            return False
+        else:
+            return True
+
+    def show_pipeline_on_log(self, pipeline):
 
         # print status output
         self.log.local_console.clear()
@@ -295,11 +306,27 @@ class plugin(base.plugin):
         del devices_tmp; pipeline.reverse()
         self.leftwidget.setCurrentWidget(self.log)
 
+    def run(self):
+
+        pipeline = self.manager.getPipeline()
+        self.pipeline_dict = self.manager.getPipelineDict()
+        self.startIndex = 0
+
+        if not self.check_pipeline(pipeline):
+            return
+
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Running pipeline for {}'.format(name), timeout=0)
+        self.show_pipeline_on_log(pipeline=pipeline)
+
         # execute filters. Create one thread per device
-        print '1'
         self.current = self.currentWidget()
         runnables = []
         self.counter = 0
+        self.stacks = []
+
+        self.current_data = self.current.rawdata
+
         for i in range(len(self.rightwidget.chosen_devices)):
 
             #initalize args
@@ -310,78 +337,128 @@ class plugin(base.plugin):
             index = self.rightwidget.chosen_devices.index(device)
             clattr = ClAttributes(context, device, cl.CommandQueue(context, device),
                                               None, None, None)
-            clattr.setMaxSliceCount(self.current.rawdata[:10])
+            clattr.setMaxSliceCount(self.current_data)
             method_kwargs = {'pipeline': pipeline, 'device': device, 'context': context, 'overlapAmount': overlapAmount,
                              'attributes': atts, 'index': index, 'clattr': clattr}
-            # runnables.append(RunnableMethod(method=self.doFilter, method_kwargs=method_kwargs,
-            #                                 finished_slot=self.waitForThreads))
-            runnables.append(RunnableMethod(method=self.dummy,
-                                            callback_slot=self.waitForThreads))
-
-            # runnables.append(RunnableMethod(method=self.dummy))
-
-        # necessary?
-        # # if only one device is available then skip thread creation and execute
-        # if len(runnables) == 1:
-        #     runnables[0]()
-
-        print '2'
+            runnables.append(RunnableMethod(method=self.doFilter, method_kwargs=method_kwargs,
+                                            finished_slot=self.waitForFull))
 
         self.stop = len(runnables)
         for i in range(len(runnables)):
             self.threadWorker.queue.put(runnables[i])
 
-        print '3'
+        # run worker
+        if not self.threadWorker.isRunning():
+            self.threadWorker.start()
+
+    def preview(self):
+
+        pipeline = self.manager.getPipeline()
+        self.pipeline_dict = self.manager.getPipelineDict()
+        self.startIndex = 0
+
+        if not self.check_pipeline(pipeline):
+            return
+
+        mid = self.currentWidget().rawdata.shape[0]/2
+        max = self.currentWidget().rawdata.shape[0]-1
+
+        dialog = sliceDialog(parent=None, val1=mid, val2=mid + 10, maximum=max)
+        try:
+            value = dialog.value
+
+            if value is None:
+                return
+        except AttributeError:
+            return
+
+
+
+        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
+        msg.showMessage('Running pipeline for {}'.format(name), timeout=0)
+        self.show_pipeline_on_log(pipeline=pipeline)
+
+        # execute filters. Create one thread per device
+        self.current = self.currentWidget()
+        runnables = []
+        self.counter = 0
+        self.stacks = []
+
+        # self.current_data = self.current.rawdata[:10,:,:]
+        self.current_data = self.current.rawdata[value[0]:value[1] ,:,:]
+
+
+        for i in range(len(self.rightwidget.chosen_devices)):
+
+            #initalize args
+            device = self.rightwidget.chosen_devices[i]
+            context = self.contexts[device]
+            overlapAmount = 0
+            atts = POCLFilter.FilteringAttributes()
+            index = self.rightwidget.chosen_devices.index(device)
+            clattr = ClAttributes(context, device, cl.CommandQueue(context, device),
+                                              None, None, None)
+            clattr.setMaxSliceCount(self.current_data)
+            method_kwargs = {'pipeline': pipeline, 'device': device, 'context': context, 'overlapAmount': overlapAmount,
+                             'attributes': atts, 'index': index, 'clattr': clattr}
+            runnables.append(RunnableMethod(method=self.doFilter, method_kwargs=method_kwargs,
+                                            finished_slot=self.waitForPreview))
+
+        self.stop = len(runnables)
+        for i in range(len(runnables)):
+            self.threadWorker.queue.put(runnables[i])
 
         # run worker
         if not self.threadWorker.isRunning():
-            self.threadWorker.run()
+            self.threadWorker.start()
 
-        #
-        # print '5'
-        #
-        # # all threads now finished, so reconstruct final image
-        # self.stacks = sorted(self.stacks) #sort by starting slice
-        #
-        # image = self.stacks[0].stack
-        # for stack in self.stacks[1:]:
-        #     image = np.append(image, stack.stack, axis=0)
-        #
-        # # for now, only show previews
-        # # for i in range(image.shape[0]):
-        # for i in range(10):
-        #     self.current.addPreview(np.rot90(image[i],1), pipeline_dict, 0) #slice no goes here eventually)
+    def showPreviewImages(self):
+
+        # all threads now finished, so reconstruct final image
+        self.stacks = sorted(self.stacks) #sort by starting slice
+
+        image = self.stacks[0].stack
+        print self.stacks[0].startRange
+        print self.stacks[0].endRange
+        for stack in self.stacks[1:]:
+            image = np.append(image, stack.stack, axis=0)
+
+        for i in range(image.shape[0]):
+            self.current.addPreview(np.rot90(image[i],1), self.pipeline_dict, 0) #slice no goes here eventually)
+            # self.current.addPreview(image[i], self.pipeline_dict, 0) #slice no goes here eventually)
+            self.current.previews.imageview.setLevels(0,255)
+
+        self.current.changeToPreview()
+
+    def saveImages(self):
+        pass
 
     @QtCore.Slot()
-    def dummy(self,):
-        print 'herehere'
-        return 'it connects'
+    def waitForFull(self):
 
-    def waitForThreads(self, success):
-        print 'success!!!!'
-        print success
+        self.counter += 1
+        if self.counter == self.stop:
+            self.threadWorker.stop()
+            self.saveImages()
 
-        # self.counter += 1
-        # if self.counter == self.stop:
-        #     self.threadWorker.stop()
+    @QtCore.Slot()
+    def waitForPreview(self):
+        self.counter += 1
+        if self.counter == self.stop:
+            self.threadWorker.stop()
+            self.showPreviewImages()
 
 
     def doFilter(self, pipeline, device, context, overlapAmount, attributes, index, clattr):
-
-        print 'it gets here'
 
         maxOverlap = 0
         for item in pipeline:
             filter = item.filter
             maxOverlap = max(maxOverlap, filter.getInfo().overlapZ)
 
-        print 'hey1'
-
         #currentWidget is F3dviewer type
         maxSliceCount = clattr.maxSliceCount
-        clattr.initializeData(self.current.rawdata, attributes, overlapAmount, maxSliceCount)
-
-        print 'hey2'
+        clattr.initializeData(self.current_data, attributes, overlapAmount, maxSliceCount)
 
         for item in pipeline:
             filter = item.filter
@@ -390,13 +467,11 @@ class plugin(base.plugin):
                                                    clattr.inputBuffer.size)
                 break
 
-        print 'hey3'
-
         stackRange = [0, 0]
         while self.getNextRange(stackRange, maxSliceCount):
             attributes.sliceStart = stackRange[0]
             attributes.sliceEnd = stackRange[1]
-            clattr.loadNextData(self.current.rawdata, attributes, stackRange[0], stackRange[1], maxOverlap)
+            clattr.loadNextData(self.current_data, attributes, stackRange[0], stackRange[1], maxOverlap)
             maxSliceCount = stackRange[1] - stackRange[0]
 
             pipelineTime = time.time()
@@ -426,8 +501,6 @@ class plugin(base.plugin):
         if clattr.outputTmpBuffer is not None:
             clattr.outputTmpBuffer.release() #  careful of seg fault if it's already released. How to check?
 
-        return True
-
 
     def addResultStack(self, startRange, endRange, image, name, pipelineTime):
         slices = self.currentWidget().rawdata.shape[0]
@@ -444,8 +517,7 @@ class plugin(base.plugin):
 
 
     def getNextRange(self, range, sliceCount):
-        endIndex = 10
-        # endIndex = self.current.rawdata.shape[0]
+        endIndex = self.current_data.shape[0]
         if self.startIndex >=endIndex:
             return False
 
@@ -458,9 +530,6 @@ class plugin(base.plugin):
         return True
 
 
-
-    def preview(self):
-        pass
 
 
     def build_function_menu(self, menu, filter_data, actionslot):
