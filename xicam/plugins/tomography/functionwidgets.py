@@ -1000,8 +1000,10 @@ class FunctionManager(fw.FeatureManager):
         data_dict = OrderedDict()
 
         data_dict['tomo'] = datawidget.getsino(slc=slc)
-        if datawidget.data.flats: data_dict['flats'] = datawidget.getflats(slc=slc)
-        if datawidget.data.darks: data_dict['dark'] = datawidget.getdarks(slc=slc)
+        if datawidget.data.flats is not None:
+            data_dict['flats'] = datawidget.getflats(slc=slc)
+        if datawidget.data.darks is not None:
+            data_dict['dark'] = datawidget.getdarks(slc=slc)
 
         try:
             if slc is not None and slc[0].start is not None:
