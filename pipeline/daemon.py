@@ -1,12 +1,13 @@
 import os
 import time
-import process
 from PySide import QtCore
 import multiprocessing
 from xicam import debugtools
+import numpy as np
+from xicam import threads
+import glob
 
-
-class daemon(QtCore.QThread):
+class daemon(QtCore.QRunnable):
     """
     This starts a daemon running as a QThread which watches a directory for new files and sends them to process.py
     Processing is done in separate Processes, splitting tasks between each core. Files that already exist can also
@@ -15,13 +16,17 @@ class daemon(QtCore.QThread):
 
 
     num_cores = multiprocessing.cpu_count()
-    def __init__(self, path, experiment, procold=False):
+    def __init__(self, path, filter, newcallback, procold=False):
         super(daemon, self).__init__()
+        self._priority = 0
         self.procold = procold
-        self.experiment = experiment
         self.path = path
         self.exiting = False
         self.childfiles = set(os.listdir(path))
+        self.newcallback = newcallback
+        self.filter = filter
+        threads.add_to_queue(self)
+
 
 
     def run(self):
@@ -31,7 +36,7 @@ class daemon(QtCore.QThread):
 
         try:
             while not self.exiting:
-                time.sleep(.1)
+                time.sleep(1)
                 self.checkdirectory()  # Force update; should not have to do this -.-
         except KeyboardInterrupt:
             pass
@@ -44,15 +49,14 @@ class daemon(QtCore.QThread):
         self.exiting = True
         self.wait()
 
-    @debugtools.timeit
     def processfiles(self, path, files):
         """
         distribute new files to cores for processing. Ignores .nxs.
         """
+        print files
 
-        files = [f for f in files if not os.path.splitext(f)[1] == '.hdf']
+        files = [f for f in files] # match here
         if files:
-            print os.path.splitext(path)[1]
 
             jobs = []
             p = None
@@ -60,7 +64,7 @@ class daemon(QtCore.QThread):
             files = list(chunks(files, self.num_cores))
 
             for i in range(self.num_cores):
-                p = multiprocessing.Process(target=process.process, args=(path, files[i], self.experiment))
+                p = multiprocessing.Process(target=self.newcallback, args=(path, files[i]))
                 jobs.append(p)
                 p.start()
 
@@ -73,10 +77,10 @@ class daemon(QtCore.QThread):
         """
         Checks a directory for new files, comparing what files are there now vs. before
         """
-        updatedchildren = set(os.listdir(self.path))
+        updatedchildren = set(glob.glob(os.path.join(self.path,self.filter)))
         newchildren = updatedchildren - self.childfiles
         self.childfiles = updatedchildren
-        self.processfiles(self.path, list(newchildren))
+        if newchildren: self.processfiles(self.path, list(newchildren))
 
 
 
@@ -84,8 +88,8 @@ def chunks(l, n):
     """
     Yield successive n chunks from l.
     """
-    chunksize = int(len(l) / n)
-    for i in xrange(0, n, 1):
+    chunksize = int(np.ceil(float(len(l)) / n))
+    for i in xrange(n):
         yield l[i * chunksize:(i + 1) * chunksize]
 
 
