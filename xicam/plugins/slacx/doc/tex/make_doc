@@ -1,6 +1,0 @@
-#!/bin/bash
-
-pdflatex top.tex
-mv top.pdf ../manual.pdf
-
-
