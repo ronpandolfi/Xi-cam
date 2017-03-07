@@ -1175,6 +1175,11 @@ class diffimage2(object):
         if t is np.ndarray:
             return self.displaydata
 
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            msg.logMessage('Conflict with newstyle pyqtgraph imageview; see line 669',level=msg.ERROR)
+        return self
+
     def __getitem__(self, item):
         return self.displaydata[item]
 
