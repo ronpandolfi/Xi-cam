@@ -19,4 +19,4 @@ EZTest=base.EZplugin(name='HiTp',
                                  {'name':'Pre-edge Max','value':30,'type':'int'}],
                      openfileshandler=openfiles,
                      centerwidget=None,
-                     bottomwidget=XASTimelineWidget)
+                     bottomwidget=None)
