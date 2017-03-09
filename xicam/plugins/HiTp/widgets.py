@@ -2,6 +2,8 @@ import pyqtgraph as pg
 from PySide.QtGui import *
 from PySide.QtCore import *
 
+import numpy as np
+
 class WaferView(pg.ImageView):
     sigPlot = Signal(object) # emits 2-d cake array
     def __init__(self):
@@ -9,6 +11,12 @@ class WaferView(pg.ImageView):
 
     def mousePressEvent(self,event):
         print event.pos()
+        #get cake data from file
+        #...
+        #emit cake data
+        cake = np.zeros((10,10))
+        self.sigPlot.emit(cake)
+
 
 class LocalView(QTabWidget):
     def __init__(self):
