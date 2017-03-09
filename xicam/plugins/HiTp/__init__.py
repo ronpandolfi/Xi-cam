@@ -7,12 +7,30 @@ import numpy as np
 
 
 def runtest():
-    EZTest.bottomwidget.clear()
+    #EZTest.bottomwidget.clear()
+    pass
 
 def openfiles(filepaths):
-    # handle new file
+    '''
+
+    Parameters
+    ----------
+    filepaths : list
+        list of filepaths
+
+    '''
+
+    # TODO: should this line be moved?
+    HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
+
+    for filepath in filepaths:
+        print filepath
+        csvpath='?'
+        HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
+        # handle new file
+
+    #Example of how to get parameter values
     #print HiTpPlugin.parameters.param('ddetect_dist_pix').value()
-    pass
 
 HiTpPlugin=base.EZplugin(name='HiTp',
                      toolbuttons=[],#('xicam/gui/icons_34.png',runtest)
