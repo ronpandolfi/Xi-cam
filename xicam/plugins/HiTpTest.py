@@ -10,7 +10,7 @@ import numpy as np
 import subprocess
 import xicam.RmcView as rmc
 
-dd
+
 class plugin(base.plugin):
     name = "HiTpWAXS"
 
