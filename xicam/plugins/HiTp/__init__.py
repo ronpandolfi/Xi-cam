@@ -1,5 +1,5 @@
 from .. import base
-
+import widgets
 
 
 import numpy as np
@@ -18,5 +18,5 @@ EZTest=base.EZplugin(name='HiTp',
                      parameters=[{'name':'Pre-edge Min','value':10,'type':'int'},
                                  {'name':'Pre-edge Max','value':30,'type':'int'}],
                      openfileshandler=openfiles,
-                     centerwidget=None,
-                     bottomwidget=None)
+                     centerwidget=widgets.WaferView,
+                     bottomwidget=widgets.LocalView)
