@@ -125,8 +125,9 @@ class RunnableMethod(QtCore.QRunnable):
             if value is None:
                 value = False
             try:
-                self.emit(self._callback_slot, value)
+                if self._callback_slot: self.emit(self._callback_slot, value)
             except RuntimeError:
+                print 'this did not run'
                 msg.logMessage(('Runnable method tried to return value, but signal was already disconnected.'),
                                msg.WARNING)
                 if self.lock is not None: self.lock.unlock()

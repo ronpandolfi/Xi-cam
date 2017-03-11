@@ -12,6 +12,7 @@ __status__ = "Beta"
 
 import numpy as np
 import pyqtgraph as pg
+import explorer
 from PySide import QtGui, QtCore
 
 
@@ -117,6 +118,48 @@ class ImageView(pg.ImageView):
                                              u"   <span style=''>y= </span>,   <span style=''>I= </span>")
         except AttributeError:
             pass
+
+class dataDialog(QtGui.QDialog):
+
+    """
+    Subclass of QDialog to allow for inputs
+    """
+
+    def __init__(self, parent=None, msg=None):
+        super(dataDialog, self).__init__(parent)
+
+        # text at top of box
+        text = QtGui.QLabel(msg)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(text)
+        layout.addSpacing(5)
+
+        # dialog for searching through files
+        dialog = explorer.MultipleFileExplorer(self)
+        layout.addWidget(dialog)
+
+        horiz_layout = QtGui.QHBoxLayout()
+        # horiz_layout.setContentsMargins(0,0,0,0)
+
+        # ok and cancel buttons for user interaction
+        button_box = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+
+        # file name viewer
+        file_label = QtGui.QLabel("File name: ")
+        file_name = QtGui.QLineEdit()
+        file_name.setReadOnly(True)
+        file_name.setSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
+
+        horiz_layout.addWidget(file_label)
+        horiz_layout.addWidget(file_name)
+        horiz_layout.addWidget(button_box)
+
+        layout.addSpacing(5)
+        layout.addLayout(horiz_layout)
+        self.setLayout(layout)
+        self.exec_()
+
+
 
 class sliceDialog(QtGui.QDialog):
 

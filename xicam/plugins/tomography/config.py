@@ -10,6 +10,7 @@ __status__ = "Beta"
 
 
 import os
+import numpy as np
 import inspect
 from collections import OrderedDict
 import yaml
@@ -51,6 +52,8 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
 # Load dictionary with function parameters to be retrieved from metadatas
 with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
+with open('yaml/tomography/aps_function_defaults.yml','r') as stream:
+    aps_defaults = yaml.load(stream)
 
 # Load dictionary for astra recon functions
 with open('yaml/tomography/function_defaults.yml','r') as stream:
@@ -119,18 +122,7 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
                                        level=40)
         elif f.func_name == 'Reader': #dataset specific read values
-            f.params.child('start_sinogram').setLimits([0, shape[2]])
-            f.params.child('end_sinogram').setLimits([0, shape[2]])
-            f.params.child('step_sinogram').setLimits([0, shape[2]+1])
-            f.params.child('start_projection').setLimits([0, shape[0]])
-            f.params.child('end_projection').setLimits([0, shape[0]])
-            f.params.child('step_projection').setLimits([0, shape[0]+1])
-            f.params.child('end_sinogram').setValue(shape[2])
-            f.params.child('end_sinogram').setDefault(shape[2])
-            f.params.child('end_projection').setValue(shape[0])
-            f.params.child('end_projection').setDefault(shape[0])
-            f.params.child('sinograms_per_chunk').setValue(cpu_count()*5)
-            f.params.child('sinograms_per_chunk').setDefault(cpu_count()*5)
+            set_reader_defaults(f, shape, cpu_count())
 
         elif f.func_name == 'Write': #dataset specific write values
             data_folders = {'bl832data-raw':'bl832data-scratch', 'data-raw':'data-scratch'}
@@ -153,6 +145,93 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
         if f.input_functions:
             set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
 
+def set_aps_defaults(mdata, funcwidget_list, path, shape):
+    """
+    Set defaults for ALS Beamline 8.3.2 from dataset metadata
+
+    Parameters
+    ----------
+    mdata : dict
+        dataset metadata
+    funcwidget_list : list of FunctionWidgets
+        list of FunctionWidgets exposed in the UI workflow pipeline
+    path: str
+        path to dataset
+    shape: tuple
+        tuple containing dataset shape
+    """
+    from psutil import cpu_count
+    for f in funcwidget_list:
+        if f is None:
+            continue
+        if aps_defaults and f.subfunc_name in aps_defaults:
+            for p in f.params.children():
+                if p.name() in aps_defaults[f.subfunc_name]:
+                    try:
+                        v = mdata[aps_defaults[f.subfunc_name][p.name()]['name']]
+                        t = PARAM_TYPES[aps_defaults[f.subfunc_name][p.name()]['type']]
+                        v = t(v) if t is not int else t(
+                            float(v))  # String literals for ints should not have 0's
+                        if 'conversion' in aps_defaults[f.subfunc_name][p.name()]:
+                            v *= aps_defaults[f.subfunc_name][p.name()]['conversion']
+                        p.setDefault(v)
+                        p.setValue(v)
+                    except KeyError as e:
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
+                                       level=40)
+        elif f.func_name == 'Reader':  # dataset specific read values
+            set_reader_defaults(f, shape, cpu_count())
+
+        elif f.func_name == 'Padding':
+            pad = int(np.ceil((shape[2] * np.sqrt(2) - shape[2]) / 2))
+            f.params.child('npad').setValue(pad)
+            f.params.child('npad').setDefault(pad)
+        elif f.func_name == 'Crop':
+            pad = int(np.ceil((shape[2] * np.sqrt(2) - shape[2]) / 2))
+            f.params.child('p11').setValue(pad)
+            f.params.child('p11').setDefault(pad)
+            f.params.child('p12').setValue(pad)
+            f.params.child('p12').setDefault(pad)
+            f.params.child('p21').setValue(pad)
+            f.params.child('p21').setDefault(pad)
+            f.params.child('p22').setValue(pad)
+            f.params.child('p22').setDefault(pad)
+
+        elif f.func_name == 'Write':  # dataset specific write values
+            data_folders = {'bl832data-raw': 'bl832data-scratch', 'data-raw': 'data-scratch'}
+            file_name = path.split("/")[-1].split(".")[0]
+            working_dir = path.split(file_name)[0]
+            for key in data_folders.keys():
+                if key in working_dir:
+                    user = working_dir.split('/' + key)[-1].split('/')[1]
+                    mount = working_dir.split(key)[0]
+                    working_dir = os.path.join(mount, data_folders[key], user)
+            outname = os.path.join(working_dir, *2 * ('RECON_' + file_name,))
+            f.params.child('parent folder').setValue(working_dir)
+            f.params.child('parent folder').setDefault(working_dir)
+            f.params.child('folder name').setValue('RECON_' + file_name)
+            f.params.child('folder name').setDefault('RECON_' + file_name)
+            f.params.child('file name').setValue('RECON_' + file_name)
+            f.params.child('file name').setDefault('RECON_' + file_name)
+            f.params.child('fname').setValue(outname)
+            f.params.child('fname').setDefault(outname)
+        if f.input_functions:
+            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
+
+
+def set_reader_defaults(reader_widget, shape, cpu):
+    reader_widget.params.child('start_sinogram').setLimits([0, shape[2]])
+    reader_widget.params.child('end_sinogram').setLimits([0, shape[2]])
+    reader_widget.params.child('step_sinogram').setLimits([0, shape[2] + 1])
+    reader_widget.params.child('start_projection').setLimits([0, shape[0]])
+    reader_widget.params.child('end_projection').setLimits([0, shape[0]])
+    reader_widget.params.child('step_projection').setLimits([0, shape[0] + 1])
+    reader_widget.params.child('end_sinogram').setValue(shape[2])
+    reader_widget.params.child('end_sinogram').setDefault(shape[2])
+    reader_widget.params.child('end_projection').setValue(shape[0])
+    reader_widget.params.child('end_projection').setDefault(shape[0])
+    reader_widget.params.child('sinograms_per_chunk').setValue(cpu * 5)
+    reader_widget.params.child('sinograms_per_chunk').setDefault(cpu * 5)
 
 
 def extract_pipeline_dict(funwidget_list):
@@ -177,8 +256,6 @@ def extract_pipeline_dict(funwidget_list):
     count = 1
     for f in funwidget_list:
         # a bunch of special cases for the write function
-        if 'Reader' in f.name:
-            continue
         func_name = str(count) + ". " + f.func_name
         if "Write" in f.func_name:
             write_dict = OrderedDict()

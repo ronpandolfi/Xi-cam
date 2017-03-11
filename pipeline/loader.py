@@ -133,14 +133,8 @@ def loadparas(path):
 
         elif extension in ['.tif', '.img', '.tiff']:
             fimg = fabio.open(path)
-            try:
-                frame = int(re.search('\d+(?=.tif)', path).group(0))
-                paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
-                textheader = scanparas(paraspath, frame)
-            except AttributeError:
-                textheader = dict()
+            return fimg.header
 
-            return merge_dicts(fimg.header, textheader)
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
@@ -844,6 +838,7 @@ class StackImage(object):
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
+        # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
             if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
@@ -1179,6 +1174,11 @@ class diffimage2(object):
     def view(self, t):
         if t is np.ndarray:
             return self.displaydata
+
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            msg.logMessage('Conflict with newstyle pyqtgraph imageview; see line 669',level=msg.ERROR)
+        return self
 
     def __getitem__(self, item):
         return self.displaydata[item]
