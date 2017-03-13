@@ -1636,6 +1636,10 @@ class FunctionManager(fw.FeatureManager):
 
         self.removeAllFeatures()
         for func, subfuncs in pipeline.iteritems():
+            try:
+                func = func.split(". ")[1]
+            except IndexError:
+                func = func
             for subfunc in subfuncs:
                 funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
                 for param, value in subfuncs[subfunc].iteritems():
