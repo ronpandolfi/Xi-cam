@@ -78,11 +78,12 @@ class nexusimage(fabioimage):
         if self._h5 is None:
             # Check header for unique attributes
             self._h5 = h5py.File(self.filename, 'r')
+            self.rawdata = self._h5['entry']['data']['data']
             self.readheader(f)
 
-            self.frames = range(self._dgroup.shape[0])
+            self.frames = range(self.rawdata.shape[0])
 
-        dfrm = self._dgroup[self.frames[frame]]
+        dfrm = self.rawdata[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm
 
@@ -118,7 +119,7 @@ class nexusimage(fabioimage):
         #not really useful at this point
         if self._h5 is not None:
             self.header=dict(self._h5.attrs)
-            self.header.update(**self._dgroup.attrs)
+            self.header.update(**self.rawdata.attrs)
 
     # def read(self, f, frame=None):
     #     self.filename = f
@@ -216,7 +217,7 @@ class nexusimage(fabioimage):
             s.append((start, stop, step))
 
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
+            _arr = self.rawdata[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
                 arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
@@ -228,7 +229,7 @@ class nexusimage(fabioimage):
         return self.nframes
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[self.frames[frame]]
+        self.data = self.rawdata[self.frames[frame]]
         return self.data
 
     def next(self):
