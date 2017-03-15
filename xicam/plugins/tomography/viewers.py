@@ -10,7 +10,7 @@ from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
 from xicam.widgets.roiwidgets import ROImageOverlay
-from xicam.widgets.imageviewers import StackViewer
+from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
 
 
@@ -84,6 +84,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection View')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram View')
+        self.viewmode.addTab('Flats')
+        self.viewmode.addTab('Darks')
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
@@ -104,6 +106,7 @@ class TomoViewer(QtGui.QWidget):
                 self.data = self.loaddata(paths, raw=True)
             else:
                 self.data = self.loaddata(paths)
+
 
         if self.data.flats is None and self.data.darks is None:
             import fabio
@@ -126,11 +129,21 @@ class TomoViewer(QtGui.QWidget):
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
+        self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
+
+
+        self.flatViewer = ArrayViewer(self.data.flats, flipAxes=True, parent=self)
+        if self.data.fabimage.flat_frames: self.flatViewer.connectImageToName(self.data.fabimage.flat_frames)
+        self.viewstack.addWidget(self.flatViewer)
+
+        self.darkViewer = ArrayViewer(data=self.data.darks, flipAxes=True, parent=self)
+        if self.data.fabimage.dark_frames: self.darkViewer.connectImageToName(self.data.fabimage.dark_frames)
+        self.viewstack.addWidget(self.darkViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.previewViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
@@ -400,6 +413,9 @@ class TomoViewer(QtGui.QWidget):
         """
         self.viewstack.setCurrentWidget(self.projectionViewer)
         self.projectionViewer.addROIselection()
+
+
+
 
 class MBIRViewer(QtGui.QWidget):
 

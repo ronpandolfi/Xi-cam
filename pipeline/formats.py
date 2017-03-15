@@ -108,6 +108,10 @@ class nexusimage(fabioimage):
         self._flats = None
         self._darks = None
 
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -164,6 +168,18 @@ class nexusimage(fabioimage):
     #                 return self._check_if_dataset(h5object[key], lower_key)
     #         except AttributeError:
     #             pass
+
+    @property
+    def proj_frames(self):
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        return self._dark_frames
 
     @property
     def flats(self):
@@ -484,6 +500,10 @@ class ALS832H5image(fabioimage):
         self._flats = None
         self._darks = None
 
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -538,6 +558,37 @@ class ALS832H5image(fabioimage):
                 raise H5ReadError('Unable to find dataset group')
         else:
             raise H5ReadError('Unable to find dataset group')
+
+    @property
+    def proj_frames(self):
+        if self._proj_frames is None:
+            self._proj_frames = {}
+            for i in range(len(self.frames)):
+                self._proj_frames[i] = self.frames[i]
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        if self._flat_frames is None:
+            self._flat_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'bak' in key:
+                    self._flat_frames[counter] = key
+                    counter +=1
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        if self._dark_frames is None:
+            self._dark_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'drk' in key:
+                    self._dark_frames[counter] = key
+                    counter +=1
+        return self._dark_frames
+
 
     @property
     def flats(self):
