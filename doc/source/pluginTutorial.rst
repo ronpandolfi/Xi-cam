@@ -10,7 +10,7 @@ knowledge of Python and Qt. In this tutorial we demonstrate implementing a plugi
 The HipRMC binary accepts a single argument: an input parameter file. HipRMC outputs by writing images to disk.
 This plugin mediates these exchanges and displays the results.
 
-Xi-cam assumes that any module/package in the xicam/plugins directory is a `plugin`. All Xi-cam plugins must define a
+**Xi-cam assumes that any module or package in the xicam/plugins directory is a `plugin`.** All Xi-cam plugins must define a
 `plugin` class which inherits `xicam.plugins.base.plugin` and has attributes defining the locations of its widgets.
 The following attributes are optionally inserted into the Xi-cam interface layout:
 
@@ -29,7 +29,8 @@ HipRMC example.
 Plugin creation
 ---------------
 
-Our first step is to create the plugin subclass which defines necessary plugin attributes:
+Our first step is to create the plugin subclass which defines necessary plugin attributes. Again, this file must be
+created in the directory xicam/plugins to be detected as a plugin:
 
 .. code-block:: python
 
