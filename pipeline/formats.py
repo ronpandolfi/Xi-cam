@@ -531,7 +531,7 @@ class ALS832H5image(fabioimage):
 
             # Check header for unique attributes
             try:
-                self._h5 = h5py.File(self.filename, 'r')
+                self._h5 = h5py.File(self.filename, 'r+')
                 self._dgroup = self._finddatagroup(self._h5)
                 self.readheader(f)
                 if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
@@ -544,6 +544,9 @@ class ALS832H5image(fabioimage):
         self.currentframe = frame
         self.data = dfrm[0]
         return self
+
+    def change_dataset_attribute(self, key, value):
+        self._dgroup.attrs.modify(key, value)
 
     def _finddatagroup(self, h5object):
         keys = h5object.keys()
@@ -667,6 +670,7 @@ class ALS832H5image(fabioimage):
     def getframe(self, frame=0):
         self.data = self._dgroup[self.frames[frame]][0]
         return self.data
+
 
     def next(self):
         if self.currentframe < self.__len__() - 1:

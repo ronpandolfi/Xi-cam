@@ -730,6 +730,7 @@ class ProjectionViewer(QtGui.QWidget):
     """
 
     sigCenterChanged = QtCore.Signal(float)
+    sigCORChanged = QtCore.Signal(bool)
 
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
@@ -749,6 +750,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
+
         # roi to select region of interest
         self.selection_roi = None
 
@@ -756,6 +758,26 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
+        self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+
+        self.cor_box = QtGui.QStackedWidget(self)
+        self.cor_box.addWidget(self.auto_cor_widget)
+        self.cor_box.addWidget(self.cor_widget)
+
+        self.cor_button_holder = QtGui.QGroupBox(parent = self)
+        h = QtGui.QHBoxLayout()
+        manual_cor_button = QtGui.QRadioButton('Manually input center of rotation')
+        manual_cor_button.clicked.connect(self.manualCOR)
+        auto_cor_button = QtGui.QRadioButton('Auto-detect center of rotation')
+        auto_cor_button.clicked.connect(self.autoCOR)
+        auto_cor_button.setChecked(True)
+        write_cor = QtGui.QPushButton('Write COR to metadata')
+        write_cor.clicked.connect(self.writeCOR)
+        h.addWidget(auto_cor_button)
+        h.addWidget(manual_cor_button)
+        h.addWidget(write_cor)
+        self.cor_button_holder.setLayout(h)
+
         clabel = QtGui.QLabel('Rotation Center:')
         olabel = QtGui.QLabel('Offset:')
         self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
@@ -808,15 +830,19 @@ class ProjectionViewer(QtGui.QWidget):
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
         spinBox.setFixedWidth(spinBox.width())
-        v = QtGui.QVBoxLayout(self.cor_widget)
-        v.addLayout(h1)
-        v.addLayout(h2)
-        v.addWidget(slider)
+        v2 = QtGui.QVBoxLayout(self.cor_widget)
+        v2.addLayout(h1)
+        v2.addLayout(h2)
+        v2.addWidget(slider)
 
         l = QtGui.QGridLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(self.cor_widget)
-        l.addWidget(self.stackViewer)
+        cor_holder = QtGui.QSplitter()
+        cor_holder.setOrientation(QtCore.Qt.Vertical)
+        cor_holder.addWidget(self.cor_box)
+        cor_holder.addWidget(self.stackViewer)
+        l.addWidget(self.cor_button_holder)
+        l.addWidget(cor_holder)
         l.addWidget(self.mbir_viewer)
         self.hideMBIR()
         # self.mbir_viewer.hide()
@@ -837,6 +863,22 @@ class ProjectionViewer(QtGui.QWidget):
 
         self.bounds = None
         # self.normalize(True)
+
+    def writeCOR(self):
+        cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',
+                                           'Write COR value to file',self.data.shape[1]/2)
+        if cor[1]:
+            self.data.fabimage.change_dataset_attribute('center', cor[0])
+
+
+    def manualCOR(self):
+        self.cor_box.setCurrentWidget(self.cor_widget)
+        self.sigCORChanged.emit(False)
+
+    def autoCOR(self):
+        self.cor_box.setCurrentWidget(self.auto_cor_widget)
+        self.sigCORChanged.emit(True)
+
 
 
     def changeOverlayProj(self, idx):
@@ -869,7 +911,8 @@ class ProjectionViewer(QtGui.QWidget):
         Hides the center detection widget and corresponding histogram
         """
         self.normalize(False)
-        self.cor_widget.hide()
+        self.cor_box.hide()
+        self.cor_button_holder.hide()
         self.roi_histogram.hide()
         self.imgoverlay_roi.setVisible(False)
 
@@ -878,12 +921,14 @@ class ProjectionViewer(QtGui.QWidget):
         Shows the center detection widget and corresponding histogram
         """
         # self.normalize(True)
-        self.cor_widget.show()
+        self.cor_box.show()
+        self.cor_button_holder.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
 
     def showMBIR(self):
         self.mbir_viewer.show()
+        self.cor_button_holder.hide()
         # self.hideCenterDetection()
         self.stackViewer.hide()
 
@@ -1430,7 +1475,6 @@ class ArrayDeque(deque):
 
     def transpose(self, ax):
         return self
-
 
 # Testing
 if __name__ == '__main__':

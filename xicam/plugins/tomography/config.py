@@ -114,6 +114,9 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         v = mdata[als832defaults[f.subfunc_name][p.name()]['name']]
                         t = PARAM_TYPES[als832defaults[f.subfunc_name][p.name()]['type']]
                         v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
+                        print v
+                        print p.name()
+                        print "==="
                         if 'conversion' in als832defaults[f.subfunc_name][p.name()]:
                             v *= als832defaults[f.subfunc_name][p.name()]['conversion']
                         p.setDefault(v)

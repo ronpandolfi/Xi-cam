@@ -159,6 +159,7 @@ class TomographyPlugin(base.plugin):
         widget = TomoViewer(paths=paths)
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.wireupCenterSelection(self.manager.recon_function)
+        widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 
@@ -306,7 +307,8 @@ class TomographyPlugin(base.plugin):
                         path = widget.path, shape=widget.data.shape)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
-                rfunc.params.child('center').setValue(widget.data.shape[1]/2)
+                if not rfunc.params.child('center').value():
+                    rfunc.params.child('center').setValue(widget.data.shape[1]/2)
                 rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
 
 

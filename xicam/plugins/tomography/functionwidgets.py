@@ -19,6 +19,7 @@ from copy import deepcopy
 from functools import partial
 from modpkgs import yamlmod
 import numpy as np
+import pyqtgraph as pg
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
@@ -862,6 +863,20 @@ class FunctionManager(fw.FeatureManager):
         except AttributeError:
             ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
+
+    def updateCORChoice(self, boolean):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                feature.input_functions['center'].enabled = boolean
+
+    #
+    # if parameter in self.input_functions:  # Check to see if parameter already has input function
+    #     if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
+    #         raise AttributeError('Input function already exists')  # skip if the input function already exists
+    #     self.removeInputFunction(parameter)  # Remove it if it will be replaced
+    # self.input_functions[parameter] = functionwidget
+    # self.addSubFeature(functionwidget)
+    # functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
 
     def updateParameters(self):
         """
@@ -1923,3 +1938,73 @@ def map_loc(slc, loc):
         loc[0] = 0
 
     return np.ndarray.tolist(loc)
+
+class CORSelectionWidget(QtGui.QWidget):
+
+    cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+
+    def __init__(self, subname='Phase Correlation', parent=None):
+        super(CORSelectionWidget, self).__init__(parent=parent)
+
+        self.layout = QtGui.QVBoxLayout()
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params, showTop=False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.method_box = QtGui.QComboBox()
+        self.method_box.currentIndexChanged.connect(self.changeFunction)
+        for item in self.cor_detection_funcs:
+            self.method_box.addItem(item)
+
+        label = QtGui.QLabel('COR detection function: ')
+        method_layout = QtGui.QHBoxLayout()
+        method_layout.addWidget(label)
+        method_layout.addWidget(self.method_box)
+
+        self.layout.addLayout(method_layout)
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)
+
+
+    def changeFunction(self, index):
+        subname = self.method_box.itemText(index)
+        self.layout.removeWidget(self.param_tree)
+
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params,showTop = False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)
+
+
+
+
+
+# self.cor_method_box = QtGui.QComboBox()
+# self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+# for item in self.cor_detection_funcs:
+#     self.cor_method_box.addItem(item)
+# cor_method_label = QtGui.QLabel('COR detection function: ')
+# cor_method_layout = QtGui.QHBoxLayout()
+# cor_method_layout.addWidget(cor_method_label)
+# cor_method_layout.addWidget(self.cor_method_box)
