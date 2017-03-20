@@ -1428,6 +1428,9 @@ class ArrayDeque(deque):
         else:
             return super(ArrayDeque, self).__getitem__(item)
 
+    def transpose(self, ax):
+        return self
+
 
 # Testing
 if __name__ == '__main__':

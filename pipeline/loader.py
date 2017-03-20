@@ -826,6 +826,9 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
+    def transpose(self, ax): # transposing is handled internally
+        return self
+
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
             img = self._getimage(j)[::level, ::level].transpose()
