@@ -157,9 +157,15 @@ class TomographyPlugin(base.plugin):
 
 
         widget = TomoViewer(paths=paths)
+
+        # connect signals
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.wireupCenterSelection(self.manager.recon_function)
         widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
+        widget.projectionViewer.auto_cor_widget.sigCORFuncChanged.connect(self.manager.updateCORFunc)
+        self.manager.sigCORDetectChanged.connect(widget.projectionViewer.updateCORChoice)
+        self.manager.updateCORFunc("Phase Correlation", widget.projectionViewer.auto_cor_widget)
+
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
 

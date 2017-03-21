@@ -37,7 +37,7 @@ Polar Mean Filter:
     - dark
 Vo:
 - name: ind
-  type: int
+  type: str
 - name: smin
   suffix: px
   type: int
@@ -140,10 +140,10 @@ Phase Correlation:
   type: float
 Nelder-Mead:
 - name: ind
-  type: int
+  type: str
 - name: init
   suffix: px
-  type: float
+  type: str
 - name: tol
   suffix: px
   type: float

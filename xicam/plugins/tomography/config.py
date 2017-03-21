@@ -114,9 +114,6 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         v = mdata[als832defaults[f.subfunc_name][p.name()]['name']]
                         t = PARAM_TYPES[als832defaults[f.subfunc_name][p.name()]['type']]
                         v = t(v) if t is not int else t(float(v))  # String literals for ints should not have 0's
-                        print v
-                        print p.name()
-                        print "==="
                         if 'conversion' in als832defaults[f.subfunc_name][p.name()]:
                             v *= als832defaults[f.subfunc_name][p.name()]['conversion']
                         p.setDefault(v)
@@ -297,7 +294,8 @@ def extract_runnable_dict(funwidget_list):
     dict
         dictionary specifying the workflow pipeline and important parameters
     """
-    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'}}
+    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'},
+                        'find_center': {'tomo': 'tomo', 'theta': 'theta'}, 'find_center_vo': {'tomo': 'tomo'}}
 
     d = OrderedDict()
     func_dict = OrderedDict(); subfuncs = OrderedDict()
@@ -340,7 +338,7 @@ def extract_runnable_dict(funwidget_list):
                         subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
                             else '{}=\'{}\','.format(key, val)
                     for cor_func in center_functions.iterkeys():
-                        if ipf._function.func_name in cor_func:
+                        if ipf._function.func_name == cor_func:
                             for k, v in center_functions[cor_func].iteritems():
                                 subfunc += "{}={},".format(k, v)
                     subfunc += ")"

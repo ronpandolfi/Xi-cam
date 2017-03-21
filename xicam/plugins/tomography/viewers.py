@@ -766,15 +766,15 @@ class ProjectionViewer(QtGui.QWidget):
 
         self.cor_button_holder = QtGui.QGroupBox(parent = self)
         h = QtGui.QHBoxLayout()
-        manual_cor_button = QtGui.QRadioButton('Manually input center of rotation')
-        manual_cor_button.clicked.connect(self.manualCOR)
-        auto_cor_button = QtGui.QRadioButton('Auto-detect center of rotation')
-        auto_cor_button.clicked.connect(self.autoCOR)
-        auto_cor_button.setChecked(True)
+        self.manual_cor_button = QtGui.QRadioButton('Manually input center of rotation')
+        self.manual_cor_button.clicked.connect(self.manualCOR)
+        self.auto_cor_button = QtGui.QRadioButton('Auto-detect center of rotation')
+        self.auto_cor_button.clicked.connect(self.autoCOR)
+        self.auto_cor_button.setChecked(True)
         write_cor = QtGui.QPushButton('Write COR to metadata')
         write_cor.clicked.connect(self.writeCOR)
-        h.addWidget(auto_cor_button)
-        h.addWidget(manual_cor_button)
+        h.addWidget(self.auto_cor_button)
+        h.addWidget(self.manual_cor_button)
         h.addWidget(write_cor)
         self.cor_button_holder.setLayout(h)
 
@@ -863,6 +863,14 @@ class ProjectionViewer(QtGui.QWidget):
 
         self.bounds = None
         # self.normalize(True)
+
+    def updateCORChoice(self, boolean):
+        if boolean:
+            self.cor_box.setCurrentWidget(self.auto_cor_widget)
+            self.auto_cor_button.setChecked(True)
+        else:
+            self.cor_box.setCurrentWidget(self.cor_widget)
+            self.manual_cor_button.setChecked(True)
 
     def writeCOR(self):
         cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',

@@ -156,6 +156,12 @@ class FunctionWidget(fw.FeatureWidget):
         self.defaults = config.function_defaults['Other']
         self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
 
+        self.expand()
+
+    # make it so function widgets never collapse
+    def collapse(self):
+        pass
+
     @property
     def enabled(self):
         """
@@ -375,9 +381,6 @@ class TomoPyReconFunctionWidget(FunctionWidget):
                 if key in [p.name() for p in self.params.children()]:
                     self.params.child(key).setValue(val)
                     self.params.child(key).setDefault(val)
-
-
-
 
     @property
     def partial(self):
@@ -789,6 +792,7 @@ class FunctionManager(fw.FeatureManager):
 
     sigTestRange = QtCore.Signal(str, object, dict)
     sigPipelineChanged = QtCore.Signal()
+    sigCORDetectChanged = QtCore.Signal(bool)
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
 
@@ -827,6 +831,7 @@ class FunctionManager(fw.FeatureManager):
             else:
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
+            func_widget.input_functions['center'].previewButton.clicked.connect(self.CORChoiceUpdated)
             self.sigPipelineChanged.emit()
         elif function == 'Reader':
             func_widget = ReadFunctionWidget(function, subfunction, package)
@@ -869,6 +874,34 @@ class FunctionManager(fw.FeatureManager):
             if 'center' in feature.input_functions:
                 feature.input_functions['center'].enabled = boolean
 
+    def updateCORFunc(self, func, widget):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                feature.removeInputFunction('center')
+                feature.addCenterDetectFunction("Center Detection", func, package=reconpkg.packages['tomopy'])
+                self.cor_func = feature.input_functions['center']
+                self.cor_widget = widget
+                for child in widget.params.children():
+                    child.sigValueChanged.connect(self.updateCORPipeline)
+                for child in self.cor_func.params.children():
+                    child.sigValueChanged.connect(self.updateCORWidget)
+
+
+    # slot for connecting cor widget and pipeline cor
+    def updateCORPipeline(self, param):
+        child = self.cor_func.params.child(param.name())
+        child.setValue(param.value())
+
+    # slot for connecting cor widget and pipeline cor
+    def updateCORWidget(self, param):
+        child = self.cor_widget.params.child(param.name())
+        child.setValue(param.value())
+
+
+    def CORChoiceUpdated(self):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                self.sigCORDetectChanged.emit(feature.input_functions['center'].enabled)
     #
     # if parameter in self.input_functions:  # Check to see if parameter already has input function
     #     if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
@@ -979,8 +1012,9 @@ class FunctionManager(fw.FeatureManager):
                                                          FunctionManager.center_func_slc[ipf.subfunc_name]))
                         else:
                             args.append(datawidget.getsino())
-                        if ipf.subfunc_name == 'Nelder Mead':
-                            ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
+                        if ipf.subfunc_name == 'Nelder-Mead':
+                            args.append(function.input_functions['theta'].partial())
+                            # ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
                         center = ipf.partial(*args)
 
                     # extract theta values
@@ -1942,6 +1976,7 @@ def map_loc(slc, loc):
 class CORSelectionWidget(QtGui.QWidget):
 
     cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+    sigCORFuncChanged = QtCore.Signal(str, QtGui.QWidget)
 
     def __init__(self, subname='Phase Correlation', parent=None):
         super(CORSelectionWidget, self).__init__(parent=parent)
@@ -1965,6 +2000,7 @@ class CORSelectionWidget(QtGui.QWidget):
         self.method_box.currentIndexChanged.connect(self.changeFunction)
         for item in self.cor_detection_funcs:
             self.method_box.addItem(item)
+        self.method_box.currentIndexChanged.connect(self.corFuncChanged)
 
         label = QtGui.QLabel('COR detection function: ')
         method_layout = QtGui.QHBoxLayout()
@@ -1975,6 +2011,8 @@ class CORSelectionWidget(QtGui.QWidget):
         self.layout.addWidget(self.param_tree)
         self.setLayout(self.layout)
 
+    def corFuncChanged(self, index):
+        self.sigCORFuncChanged.emit(self.cor_detection_funcs[index], self)
 
     def changeFunction(self, index):
         subname = self.method_box.itemText(index)
