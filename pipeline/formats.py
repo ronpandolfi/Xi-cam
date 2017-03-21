@@ -78,11 +78,12 @@ class nexusimage(fabioimage):
         if self._h5 is None:
             # Check header for unique attributes
             self._h5 = h5py.File(self.filename, 'r')
+            self.rawdata = self._h5['entry']['data']['data']
             self.readheader(f)
 
-            self.frames = range(self._dgroup.shape[0])
+            self.frames = range(self.rawdata.shape[0])
 
-        dfrm = self._dgroup[self.frames[frame]]
+        dfrm = self.rawdata[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm
 
@@ -107,6 +108,10 @@ class nexusimage(fabioimage):
         self._flats = None
         self._darks = None
 
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -118,7 +123,7 @@ class nexusimage(fabioimage):
         #not really useful at this point
         if self._h5 is not None:
             self.header=dict(self._h5.attrs)
-            self.header.update(**self._dgroup.attrs)
+            self.header.update(**self.rawdata.attrs)
 
     # def read(self, f, frame=None):
     #     self.filename = f
@@ -163,6 +168,18 @@ class nexusimage(fabioimage):
     #                 return self._check_if_dataset(h5object[key], lower_key)
     #         except AttributeError:
     #             pass
+
+    @property
+    def proj_frames(self):
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        return self._dark_frames
 
     @property
     def flats(self):
@@ -216,7 +233,7 @@ class nexusimage(fabioimage):
             s.append((start, stop, step))
 
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
+            _arr = self.rawdata[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
                 arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
@@ -228,7 +245,7 @@ class nexusimage(fabioimage):
         return self.nframes
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[self.frames[frame]]
+        self.data = self.rawdata[self.frames[frame]]
         return self.data
 
     def next(self):
@@ -323,6 +340,7 @@ class rawimage(fabioimage):
         return self
 
 
+@register_fabioclass
 # @register_fabioclass
 # class H5image(fabioimage):
 #     """
@@ -384,6 +402,8 @@ class rawimage(fabioimage):
 
 @register_h5class
 class ALS733H5image(fabioimage):
+
+    extensions = ['h5']
 
     def _readheader(self, f):
         fname = f.name  # get filename from file object
@@ -480,6 +500,10 @@ class ALS832H5image(fabioimage):
         self._flats = None
         self._darks = None
 
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -507,7 +531,7 @@ class ALS832H5image(fabioimage):
 
             # Check header for unique attributes
             try:
-                self._h5 = h5py.File(self.filename, 'r')
+                self._h5 = h5py.File(self.filename, 'r+')
                 self._dgroup = self._finddatagroup(self._h5)
                 self.readheader(f)
                 if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
@@ -520,6 +544,9 @@ class ALS832H5image(fabioimage):
         self.currentframe = frame
         self.data = dfrm[0]
         return self
+
+    def change_dataset_attribute(self, key, value):
+        self._dgroup.attrs.modify(key, value)
 
     def _finddatagroup(self, h5object):
         keys = h5object.keys()
@@ -534,6 +561,37 @@ class ALS832H5image(fabioimage):
                 raise H5ReadError('Unable to find dataset group')
         else:
             raise H5ReadError('Unable to find dataset group')
+
+    @property
+    def proj_frames(self):
+        if self._proj_frames is None:
+            self._proj_frames = {}
+            for i in range(len(self.frames)):
+                self._proj_frames[i] = self.frames[i]
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        if self._flat_frames is None:
+            self._flat_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'bak' in key:
+                    self._flat_frames[counter] = key
+                    counter +=1
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        if self._dark_frames is None:
+            self._dark_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'drk' in key:
+                    self._dark_frames[counter] = key
+                    counter +=1
+        return self._dark_frames
+
 
     @property
     def flats(self):
@@ -612,6 +670,7 @@ class ALS832H5image(fabioimage):
     def getframe(self, frame=0):
         self.data = self._dgroup[self.frames[frame]][0]
         return self.data
+
 
     def next(self):
         if self.currentframe < self.__len__() - 1:
@@ -889,7 +948,10 @@ class TiffStack(object):
         elif os.path.isdir(paths):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
-        self.header = header
+        self.header= header
+        self.rawdata = np.stack([self.getframe(frame) for frame in range(len(self.frames))])
+
+        self._readheader()
 
     def __len__(self):
         return len(self.frames)
@@ -897,6 +959,49 @@ class TiffStack(object):
     def getframe(self, frame=0):
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
+
+    def close(self):
+        pass
+
+class CondensedTiffStack(object):
+    """
+    Class for 3D tiffs to view in pyqtgraph ImageView - very similar to TiffStack class
+    """
+    def __init__(self, path, header=None):
+        super(CondensedTiffStack, self).__init__()
+
+        self.rawdata = tifffile.imread(path, memmap=True)
+        self.frames = range(self.rawdata.shape[0])
+        self.header = header
+        self._readheader()
+
+    @property
+    def classname(self):
+        return 'CondensedTiffStack'
+
+    def __len__(self):
+        return len(self.frames)
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def getframe(self, frame=0):
+        return self.rawdata[frame]
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
 
     def close(self):
         pass
@@ -951,6 +1056,19 @@ class H5ReadError(IOError):
     pass
 
 
+# # Testing
+# if __name__ == '__main__':
+#     from matplotlib.pyplot import imshow, show
+#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+#     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+#     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+#     # arr = data.__getitem__(slc)
+#     arr = data.getsinogram(100)
+#     # print sorted(data.frames, reverse=True)
+#     # print data.darks.shape
+#     # print data.flats.shape
+#     imshow(arr, cmap='gray')
+#     show()
 def tests():
     print fabio.open('/media/winHDD/hparks/aps_example.h5').data
 

@@ -54,3 +54,7 @@ Crop:
     name: dxelements
     type: int
     conversion: 0.4
+Gridrec:
+  center:
+    name: center
+    type: float

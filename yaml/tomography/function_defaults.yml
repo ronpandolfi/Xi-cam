@@ -45,6 +45,17 @@ Tomopy:
     ncore:
       default: None
       type: int
+  Vo:
+    ind:
+      default: None
+      type: int
+  Nelder-Mead:
+    ind:
+      default: None
+      type: int
+    init:
+      default: None
+      type: float
 Astra:
   BP:
     ncore:

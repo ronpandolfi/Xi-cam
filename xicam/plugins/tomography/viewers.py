@@ -10,7 +10,7 @@ from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
 from xicam.widgets.roiwidgets import ROImageOverlay
-from xicam.widgets.imageviewers import StackViewer
+from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
 
 
@@ -84,6 +84,8 @@ class TomoViewer(QtGui.QWidget):
         self.viewmode = QtGui.QTabBar(self)
         self.viewmode.addTab('Projection View')  # TODO: Add icons!
         self.viewmode.addTab('Sinogram View')
+        self.viewmode.addTab('Flats')
+        self.viewmode.addTab('Darks')
         self.viewmode.addTab('Slice Preview')
         self.viewmode.addTab('3D Preview')
         self.viewmode.setShape(QtGui.QTabBar.TriangularSouth)
@@ -100,7 +102,11 @@ class TomoViewer(QtGui.QWidget):
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
-            self.data = self.loaddata(paths)
+            if paths.endswith('.tif') or paths.endswith('.tiff'):
+                self.data = self.loaddata(paths, raw=True)
+            else:
+                self.data = self.loaddata(paths)
+
 
         if self.data.flats is None and self.data.darks is None:
             import fabio
@@ -116,20 +122,28 @@ class TomoViewer(QtGui.QWidget):
 
                     del flats, darks
                 except IOError:
-                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded. Cannot perform \
-                                                              reconstructions on this data set')
+                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded.')
             else:
-                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided. Cannot perform \
-                                                          reconstructions on this data set')
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided.')
 
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
+        self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
 
         self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
+
+
+        self.flatViewer = ArrayViewer(self.data.flats, flipAxes=True, parent=self)
+        if self.data.fabimage.flat_frames: self.flatViewer.connectImageToName(self.data.fabimage.flat_frames)
+        self.viewstack.addWidget(self.flatViewer)
+
+        self.darkViewer = ArrayViewer(data=self.data.darks, flipAxes=True, parent=self)
+        if self.data.fabimage.dark_frames: self.darkViewer.connectImageToName(self.data.fabimage.dark_frames)
+        self.viewstack.addWidget(self.darkViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
         self.previewViewer.sigSetDefaults.connect(self.sigSetDefaults.emit)
@@ -399,6 +413,9 @@ class TomoViewer(QtGui.QWidget):
         """
         self.viewstack.setCurrentWidget(self.projectionViewer)
         self.projectionViewer.addROIselection()
+
+
+
 
 class MBIRViewer(QtGui.QWidget):
 
@@ -713,6 +730,7 @@ class ProjectionViewer(QtGui.QWidget):
     """
 
     sigCenterChanged = QtCore.Signal(float)
+    sigCORChanged = QtCore.Signal(bool)
 
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
@@ -732,6 +750,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
+
         # roi to select region of interest
         self.selection_roi = None
 
@@ -739,6 +758,26 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
+        self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+
+        self.cor_box = QtGui.QStackedWidget(self)
+        self.cor_box.addWidget(self.auto_cor_widget)
+        self.cor_box.addWidget(self.cor_widget)
+
+        self.cor_button_holder = QtGui.QGroupBox(parent = self)
+        h = QtGui.QHBoxLayout()
+        self.manual_cor_button = QtGui.QRadioButton('Manually input center of rotation')
+        self.manual_cor_button.clicked.connect(self.manualCOR)
+        self.auto_cor_button = QtGui.QRadioButton('Auto-detect center of rotation')
+        self.auto_cor_button.clicked.connect(self.autoCOR)
+        self.auto_cor_button.setChecked(True)
+        write_cor = QtGui.QPushButton('Write COR to metadata')
+        write_cor.clicked.connect(self.writeCOR)
+        h.addWidget(self.auto_cor_button)
+        h.addWidget(self.manual_cor_button)
+        h.addWidget(write_cor)
+        self.cor_button_holder.setLayout(h)
+
         clabel = QtGui.QLabel('Rotation Center:')
         olabel = QtGui.QLabel('Offset:')
         self.centerBox = QtGui.QDoubleSpinBox(parent=self.cor_widget) #QtGui.QLabel(parent=self.cor_widget)
@@ -791,15 +830,19 @@ class ProjectionViewer(QtGui.QWidget):
         h2.addWidget(self.normCheckBox)
         h2.addStretch(1)
         spinBox.setFixedWidth(spinBox.width())
-        v = QtGui.QVBoxLayout(self.cor_widget)
-        v.addLayout(h1)
-        v.addLayout(h2)
-        v.addWidget(slider)
+        v2 = QtGui.QVBoxLayout(self.cor_widget)
+        v2.addLayout(h1)
+        v2.addLayout(h2)
+        v2.addWidget(slider)
 
         l = QtGui.QGridLayout(self)
         l.setContentsMargins(0, 0, 0, 0)
-        l.addWidget(self.cor_widget)
-        l.addWidget(self.stackViewer)
+        cor_holder = QtGui.QSplitter()
+        cor_holder.setOrientation(QtCore.Qt.Vertical)
+        cor_holder.addWidget(self.cor_box)
+        cor_holder.addWidget(self.stackViewer)
+        l.addWidget(self.cor_button_holder)
+        l.addWidget(cor_holder)
         l.addWidget(self.mbir_viewer)
         self.hideMBIR()
         # self.mbir_viewer.hide()
@@ -820,6 +863,30 @@ class ProjectionViewer(QtGui.QWidget):
 
         self.bounds = None
         # self.normalize(True)
+
+    def updateCORChoice(self, boolean):
+        if boolean:
+            self.cor_box.setCurrentWidget(self.auto_cor_widget)
+            self.auto_cor_button.setChecked(True)
+        else:
+            self.cor_box.setCurrentWidget(self.cor_widget)
+            self.manual_cor_button.setChecked(True)
+
+    def writeCOR(self):
+        cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',
+                                           'Write COR value to file',self.data.shape[1]/2)
+        if cor[1]:
+            self.data.fabimage.change_dataset_attribute('center', cor[0])
+
+
+    def manualCOR(self):
+        self.cor_box.setCurrentWidget(self.cor_widget)
+        self.sigCORChanged.emit(False)
+
+    def autoCOR(self):
+        self.cor_box.setCurrentWidget(self.auto_cor_widget)
+        self.sigCORChanged.emit(True)
+
 
 
     def changeOverlayProj(self, idx):
@@ -852,7 +919,8 @@ class ProjectionViewer(QtGui.QWidget):
         Hides the center detection widget and corresponding histogram
         """
         self.normalize(False)
-        self.cor_widget.hide()
+        self.cor_box.hide()
+        self.cor_button_holder.hide()
         self.roi_histogram.hide()
         self.imgoverlay_roi.setVisible(False)
 
@@ -861,12 +929,14 @@ class ProjectionViewer(QtGui.QWidget):
         Shows the center detection widget and corresponding histogram
         """
         # self.normalize(True)
-        self.cor_widget.show()
+        self.cor_box.show()
+        self.cor_button_holder.show()
         self.roi_histogram.show()
         self.imgoverlay_roi.setVisible(True)
 
     def showMBIR(self):
         self.mbir_viewer.show()
+        self.cor_button_holder.hide()
         # self.hideCenterDetection()
         self.stackViewer.hide()
 
@@ -1411,6 +1481,8 @@ class ArrayDeque(deque):
         else:
             return super(ArrayDeque, self).__getitem__(item)
 
+    def transpose(self, ax):
+        return self
 
 # Testing
 if __name__ == '__main__':
