@@ -987,7 +987,8 @@ class ProjectionViewer(QtGui.QWidget):
         """
         Adds/ removes a rectangular ROI to select a region of interest for reconstruction. Not implemented yet
         """
-        if self.selection_roi: del self.selection_roi
+        if self.selection_roi:
+            self.stackViewer.view.removeItem(self.selection_roi)
 
         self.selection_roi = pg.ROI([0, 0], [100, 100])
         self.stackViewer.view.addItem(self.selection_roi)
