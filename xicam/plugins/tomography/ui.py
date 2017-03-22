@@ -336,7 +336,7 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionRun_3DPreview)
         self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
-        # self.addAction(self.actionROI)
+        self.addAction(self.actionROI)
         # self.addAction(toolbuttonMaskingAction)
 
 

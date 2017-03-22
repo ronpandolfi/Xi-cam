@@ -226,12 +226,18 @@ def set_reader_defaults(reader_widget, shape, cpu):
     reader_widget.params.child('start_projection').setLimits([0, shape[0]])
     reader_widget.params.child('end_projection').setLimits([0, shape[0]])
     reader_widget.params.child('step_projection').setLimits([0, shape[0] + 1])
+    reader_widget.params.child('start_width').setLimits([0, shape[1]])
+    reader_widget.params.child('end_width').setLimits([0, shape[1]])
+
     reader_widget.params.child('end_sinogram').setValue(shape[2])
     reader_widget.params.child('end_sinogram').setDefault(shape[2])
     reader_widget.params.child('end_projection').setValue(shape[0])
     reader_widget.params.child('end_projection').setDefault(shape[0])
+    reader_widget.params.child('end_width').setValue(shape[1])
+    reader_widget.params.child('end_width').setDefault(shape[1])
     reader_widget.params.child('sinograms_per_chunk').setValue(cpu * 5)
     reader_widget.params.child('sinograms_per_chunk').setDefault(cpu * 5)
+
 
 
 def extract_pipeline_dict(funwidget_list):

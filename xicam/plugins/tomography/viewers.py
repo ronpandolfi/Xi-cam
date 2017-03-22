@@ -731,6 +731,7 @@ class ProjectionViewer(QtGui.QWidget):
 
     sigCenterChanged = QtCore.Signal(float)
     sigCORChanged = QtCore.Signal(bool)
+    sigROIWidgetChanged = QtCore.Signal(pg.ROI)
 
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
@@ -986,11 +987,14 @@ class ProjectionViewer(QtGui.QWidget):
         """
         Adds/ removes a rectangular ROI to select a region of interest for reconstruction. Not implemented yet
         """
+        if self.selection_roi: del self.selection_roi
 
-        self.selection_roi = pg.ROI([0, 0], [10, 10])
+        self.selection_roi = pg.ROI([0, 0], [100, 100])
         self.stackViewer.view.addItem(self.selection_roi)
         self.selection_roi.addScaleHandle([1, 1], [0, 0])
         self.selection_roi.addScaleHandle([0, 0], [1, 1])
+        self.sigROIWidgetChanged.emit(self.selection_roi)
+
 
     def normalize(self, val):
         """

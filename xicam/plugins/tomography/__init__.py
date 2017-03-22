@@ -163,6 +163,7 @@ class TomographyPlugin(base.plugin):
         widget.wireupCenterSelection(self.manager.recon_function)
         widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
         widget.projectionViewer.auto_cor_widget.sigCORFuncChanged.connect(self.manager.updateCORFunc)
+        widget.projectionViewer.sigROIWidgetChanged.connect(self.manager.connectReaderROI)
         self.manager.sigCORDetectChanged.connect(widget.projectionViewer.updateCORChoice)
         self.manager.updateCORFunc("Phase Correlation", widget.projectionViewer.auto_cor_widget)
 
@@ -521,7 +522,7 @@ class TomographyPlugin(base.plugin):
 
         # this step takes quite a bit, think of running a thread
         initializer = self.centerwidget.widget(self.currentWidget()).getsino(slc)
-        self.manager.updateParameters()
+        self.manager.updateParupdateParameters()
         callback = partial(self.centerwidget.widget(self.currentWidget()).add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
         # self.foldPreviewStack(partial_stack, initializer, callback, err_message)
@@ -652,18 +653,21 @@ class TomographyPlugin(base.plugin):
         proj = None
         sino = None
         chunk = None
+        width = None
         for f in self.manager.features:
             if 'Reader' in f.name:
                 proj = f.projections
                 sino = f.sinograms
                 chunk = f.chunk
+                width = f.width
 
         if (not proj and not sino and not chunk) or (not proj[1] and not sino[1] and not chunk):
             sino = (0, currentWidget.data.shape[2], 1)
             proj = (0, currentWidget.data.shape[0], 1)
             chunk = cpu_count()*5
+            width = (None, None, None)
 
-        args = (currentWidget, run_state, proj, sino, chunk, cpu_count())
+        args = (currentWidget, run_state, proj, sino, chunk, width, cpu_count())
 
         self.manager.recon_queue.put([recon_iter, args])
 

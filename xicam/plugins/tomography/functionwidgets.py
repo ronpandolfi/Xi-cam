@@ -576,6 +576,10 @@ class ReadFunctionWidget(FunctionWidget):
     def chunk(self):
         return self.params.child('sinograms_per_chunk').value()
 
+    @property
+    def width(self):
+        return (self.params.child('start_width').value(), self.params.child('end_width').value(), None)
+
 
 class WriteFunctionWidget(FunctionWidget):
     """
@@ -918,6 +922,27 @@ class FunctionManager(fw.FeatureManager):
         for function in self.features:
             function.updateParamsDict()
 
+    def connectReaderROI(self, roi_widget):
+        roi_widget.sigRegionChanged.connect(self.adjustReaderParams)
+
+    def adjustReaderParams(self, roi_widget):
+        for feature in self.features:
+            if 'Reader' in feature.name:
+                pos = roi_widget.pos()
+                size = roi_widget.size()
+                x1 = int(pos[0]) if pos[0]>0 else 0
+                x2 = int(pos[0]+size[0]) if pos[0]+size[0]<feature.params.child('end_width').defaultValue() else \
+                        feature.params.child('end_width').defaultValue()
+                y1 = int(pos[1]) if pos[1]>0 else 0
+                y2 = int(pos[1]+size[1]) if pos[1]+size[1]<feature.params.child('end_sinogram').defaultValue() else \
+                        feature.params.child('end_sinogram').defaultValue()
+
+                feature.params.child('start_width').setValue(x1)
+                feature.params.child('end_width').setValue(x2)
+                feature.params.child('start_sinogram').setValue(y1)
+                feature.params.child('end_sinogram').setValue(y2)
+
+
     def lockParams(self, boolean):
         """
         Locks all parameters for the current function list
@@ -944,9 +969,16 @@ class FunctionManager(fw.FeatureManager):
             Parameter dictionary of the function give
         """
 
-        if 'Padding' in name and param_dict['axis'] == 2:
+        if 'Reader' in name:
+            for feature in self.features:
+                if 'Reader' in feature.name:
+                    n = int(feature.params.child('start_width').value())
+                    dummy = self.cor_offset
+                    self.cor_offset = lambda x: dummy(x) - n
+        elif 'Padding' in name and param_dict['axis'] == 2:
             n = param_dict['npad']
-            self.cor_offset = lambda x: x + n
+            dummy = self.cor_offset
+            self.cor_offset = lambda x: dummy(x) + n
         elif 'Downsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
             self.cor_scale = lambda x: x / 2 ** s
@@ -1136,7 +1168,7 @@ class FunctionManager(fw.FeatureManager):
         return fpartial
 
 
-    def updatePartial(self, function, name, data_dict, param_dict):
+    def updatePartial(self, function, name, data_dict, param_dict, slc=None):
         """
         Updates the given function partial's keywords - the functools.partial object is the first element of func_tuple
 
@@ -1172,7 +1204,8 @@ class FunctionManager(fw.FeatureManager):
         if name in ('Padding', 'Downsample', 'Upsample'):
             self.setCenterCorrection(name, function.keywords)
         if 'Reconstruction' in name:
-            function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center']))
+            slc_offset = 0 if (not slc or not slc[2].start) else slc[2].start
+            function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center'])) - slc_offset
             self.resetCenterCorrection()
         return function, write
 
@@ -1271,7 +1304,7 @@ class FunctionManager(fw.FeatureManager):
 
 
 
-    def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, ncore = None):
+    def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, width, ncore = None):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
@@ -1335,7 +1368,7 @@ class FunctionManager(fw.FeatureManager):
 
         # save function pipeline as runnable
         path = datawidget.path
-        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, path, ncore)
+        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
         try:
             with open(python_file, 'w') as py:
                 py.write(runnable)
@@ -1362,7 +1395,7 @@ class FunctionManager(fw.FeatureManager):
             start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
             end = end if end < sino[1] else sino[1]
 
-            slc = (slice(*proj), slice(start, end, sino[2]), slice(None, None, None))
+            slc = (slice(*proj), slice(start, end, sino[2]), slice(*width))
 
 
             # load data dictionary
@@ -1379,7 +1412,7 @@ class FunctionManager(fw.FeatureManager):
 
                 yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
                                                                                               start, end, total_sino)
-                function, write = self.updatePartial(function, name, data_dict, params_dict[name])
+                function, write = self.updatePartial(function, name, data_dict, params_dict[name], slc)
                 data_dict[write] = function()
 
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
@@ -1707,7 +1740,7 @@ class FunctionManager(fw.FeatureManager):
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
 
-    def extractPipelineRunnable(self, run_state, params, proj, sino, sino_p_chunk, path, ncore=None):
+    def extractPipelineRunnable(self, run_state, params, proj, sino, sino_p_chunk, width, path, ncore=None):
         """
         Saves the function pipeline as a runnable (Python) file.
 
@@ -1739,9 +1772,11 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t# choose which projections and sinograms go into the reconstruction:\n"
         signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
         signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
+        signature += "\twidth_start = {}; width_end = {}; width_step = 1\n".format(width[0], width[1])
         signature += "\tsino_p_chunk = {2} # chunk size of data during reconstruction\n\n".format(proj, sino, sino_p_chunk)
         signature += "\tproj = (proj_start, proj_end, proj_step)\n"
-        signature += "\tsino = (sino_start, sino_end, sino_step)\n\n"
+        signature += "\tsino = (sino_start, sino_end, sino_step)\n"
+        signature += "\twidth = (width_start, width_end, width_step)\n\n"
         signature += "\twrite_start = sino[0]\n"
         signature += "\tnchunk = ((sino[1]-sino[0]) // sino[2] - 1) // sino_p_chunk +1\n"
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
@@ -1756,7 +1791,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tfor i in range(nchunk):\n"
         signature += "\t\tstart, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]\n"
         signature += "\t\tend = end if end < sino[1] else sino[1]\n\n"
-        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(None, None, None))\n"
+        signature += "\t\tslc = (slice(*proj), slice(start,end,sino[2]), slice(*width))\n"
 
         signature += "\t\tdata_dict = loadDataDict(data, mdata, theta, center, slc)\n"
         signature += "\t\tdata_dict['start'] = write_start\n"
@@ -1775,7 +1810,7 @@ class FunctionManager(fw.FeatureManager):
             signature += "'{}', start, end, total_sino)\n ".format('{}'.format(func))
             signature += "\t\tparams = {}\n".format(param_dict)
             signature += "\t\tkwargs, write, cor_offset, cor_scale = updateKeywords('{}', params, data_dict,".format(func)
-            signature += " cor_offset, cor_scale)\n"
+            signature += " cor_offset, cor_scale, width)\n"
             signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
             signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
             signature += "\t\tprint "" #white space \n\n"
@@ -1821,9 +1856,9 @@ class FunctionManager(fw.FeatureManager):
         signature += "\treturn cor_offset, cor_scale\n\n"
 
         signature += "# performs COR correction\n"
-        signature += "def correctCenter(center, cor_offset, cor_scale):\n"
-        signature += "\tif cor_scale<0:\n\t\treturn float(int(center * 2 ** cor_scale)) + cor_offset\n"
-        signature += "\telse:\n\t\treturn (center * 2 ** cor_scale) + cor_offset\n\n"
+        signature += "def correctCenter(center, cor_offset, cor_scale, width):\n"
+        signature += "\tif cor_scale<0:\n\t\treturn float(int(center * 2 ** cor_scale)) + cor_offset - width[0]\n"
+        signature += "\telse:\n\t\treturn (center * 2 ** cor_scale) + cor_offset - width[0]\n\n"
 
 
         signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
@@ -1844,7 +1879,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\tdata_dict['theta'] = theta\n\tdata_dict['center'] = center\n\n"
         signature += "\treturn data_dict\n\n"
 
-        signature += "def updateKeywords(function, param_dict, data_dict, cor_offset, cor_scale):\n"
+        signature += "def updateKeywords(function, param_dict, data_dict, cor_offset, cor_scale, width):\n"
         signature += "\twrite = 'tomo'\n"
         signature += "\tfor key, val in param_dict.iteritems():\n"
         signature += "\t\tif val in data_dict.iterkeys():\n"
@@ -1855,7 +1890,7 @@ class FunctionManager(fw.FeatureManager):
         signature += "\t\tif item in function:\n "
         signature += "\t\t\tcor_offset, cor_scale = setCenterCorrection(function, param_dict, cor_offset, cor_scale)\n"
         signature += "\tif 'recon' in function:\n"
-        signature += "\t\tparam_dict['center'] = correctCenter(param_dict['center'], cor_offset, cor_scale)\n"
+        signature += "\t\tparam_dict['center'] = correctCenter(param_dict['center'], cor_offset, cor_scale, width)\n"
         signature += "\t\tcor_offset, cor_scale = resetCenterCorrection(cor_offset, cor_scale)\n"
         signature += "\treturn param_dict, write, cor_offset, cor_scale\n\n\n"
 
