@@ -77,7 +77,7 @@ class nexusimage(fabioimage):
             frame = 0
         if self._h5 is None:
             # Check header for unique attributes
-            self._h5 = h5py.File(self.filename, 'r')
+            self._h5 = h5py.File(self.filename, 'r+')
             self.rawdata = self._h5['entry']['data']['data']
             self.readheader(f)
 
@@ -115,6 +115,9 @@ class nexusimage(fabioimage):
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
+
+    def change_dataset_attribute(self, key, value):
+        self.rawdata.attrs.modify(key, value)
 
     def __exit__(self, *arg, **kwarg):
         self.close()
