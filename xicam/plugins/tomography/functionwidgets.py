@@ -845,7 +845,29 @@ class FunctionManager(fw.FeatureManager):
             func_widget = FunctionWidget(function, subfunction, package)
         func_widget.sigTestRange.connect(self.testParameterRange)
         self.addFeature(func_widget)
+
+        if function == 'Padding' or function  == 'Crop':
+            self.connectCropPad()
+
         return func_widget
+
+    def connectCropPad(self):
+        names = [func.name for func in self.features]
+        if 'Padding' in names and 'Crop' in names:
+            for feature in self.features:
+                if feature.func_name == 'Padding': pad = feature
+                elif feature. func_name == 'Crop': crop = feature
+
+            pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p11').setValue(x.value()))
+            pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p12').setValue(x.value()))
+            pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p21').setValue(x.value()))
+            pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p22').setValue(x.value()))
+
+            children = [crop.params.child('p11'), crop.params.child('p21'), crop.params.child('p12'), crop.params.child('p22')]
+            for p in children:
+                for p_other in [param for param in children if param != p]:
+                    p.sigValueChanged.connect(lambda x=p: p_other.setValue(x.value()))
+                p.sigValueChanged.connect(lambda x: pad.params.child('npad').setValue(x.value()))
 
     def addInputFunction(self, funcwidget, parameter, function, subfunction, package, **kwargs):
         """
