@@ -28,47 +28,39 @@ def register_fabioclass(cls):
     return cls
 
 
+h5classes = list()
+
+def register_h5class(cls):
+    global h5classes
+    h5classes.append(cls)
+    return cls
+
 @register_fabioclass
-class EdfImage(edfimage.EdfImage):
-    extensions = ['.edf']
+class hdf5image(fabioimage):
+    extensions = ['.hdf','.h5','.hdf5']
 
-    def read(self, f, frame=None):
-        return super(EdfImage, self).read(f, frame)
-
-    def _readheader(self, f):
-        super(EdfImage, self)._readheader(f)
-        f = f.name.replace('.edf', '.txt')
-        if os.path.isfile(f):
-            self.header.update(self.scanparas(f))
+    # A proxy class which defers to specific hdf5 schema classes
+    def read(self, filename, frame=None):
+        for h5cls in h5classes:
+            if hasattr(h5cls,'validate'): # check which class preferably based on the validate staticmethod
+                try:
+                    h5cls.validate(filename, frame)
+                except Exception as ex:
+                    continue
+            try: # if there isn't one, try to read with this class
+                return hdf5image._instantiate_read(h5cls,filename,frame)
+            except Exception as ex:
+                continue
 
     @staticmethod
-    def scanparas(path):
-        if not os.path.isfile(path):
-            return dict()
+    def _instantiate_read(cls,filename,frame):
+        fabh5 = cls()
+        fabh5.filename = filename
+        return fabh5.read(filename, frame)
 
-        with open(path, 'r') as f:
-            lines = f.readlines()
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'hdf5'))
 
-        paras = OrderedDict()
-
-        # The 7.3.3 txt format is messy, with keyless values, and extra whitespaces
-
-        keylesslines = 0
-        for line in lines:
-            cells = filter(None, re.split('[=:]+', line))
-
-            key = cells[0].strip()
-
-            if cells.__len__() == 2:
-                cells[1] = cells[1].split('/')[0]
-                paras[key] = cells[1].strip()
-            elif cells.__len__() == 1:
-                keylesslines += 1
-                paras['Keyless value #' + str(keylesslines)] = key
-
-        return paras
-
-@register_fabioclass
+@register_h5class
 class nexusimage(fabioimage):
     extensions = ['.hdf']
 
@@ -78,11 +70,206 @@ class nexusimage(fabioimage):
         if hasattr(nxroot, 'entry'):
             if hasattr(nxroot.entry, 'data'):
                 if hasattr(nxroot.entry.data,'data'):
-                    self.data = nxroot.entry.data.data
+                    self._dgroup = nxroot.entry.data.data
+
+        self.filename = f
+        if frame is None:
+            frame = 0
+        if self._h5 is None:
+            # Check header for unique attributes
+            self._h5 = h5py.File(self.filename, 'r+')
+            self.rawdata = self._h5['entry']['data']['data']
+            self.readheader(f)
+
+            self.frames = range(self.rawdata.shape[0])
+
+        dfrm = self.rawdata[self.frames[frame]]
+        self.currentframe = frame
+        self.data = dfrm
+
+
 
         return self
 
-fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'nexus'))
+    @staticmethod
+    def validate(f, frame=None):
+        nxroot = nx.nxload(f)
+        assert hasattr(nxroot, 'entry')
+        assert hasattr(nxroot.entry, 'data')
+        assert hasattr(nxroot.entry.data, 'data')
+
+    def __init__(self, data=None , header=None):
+        super(nexusimage, self).__init__(data=data, header=header)
+        self.frames = None
+        self.currentframe = 0
+        self.header = None
+        self._h5 = None
+        self._dgroup = None
+        self._flats = None
+        self._darks = None
+
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
+    # Context manager for "with" statement compatibility
+    def __enter__(self, *arg, **kwarg):
+        return self
+
+    def change_dataset_attribute(self, key, value):
+        self.rawdata.attrs.modify(key, value)
+
+    def __exit__(self, *arg, **kwarg):
+        self.close()
+
+    def _readheader(self, f):
+        #not really useful at this point
+        if self._h5 is not None:
+            self.header=dict(self._h5.attrs)
+            self.header.update(**self.rawdata.attrs)
+
+    # def read(self, f, frame=None):
+    #     self.filename = f
+    #     if frame is None:
+    #         frame = 0
+    #     if self._h5 is None:
+    #
+    #         # Check header for unique attributes
+    #         self._h5 = h5py.File(self.filename, 'r')
+    #         self._dgroup = self._finddatagroup(self._h5)
+    #         self.readheader(f)
+    #
+    #         self.frames = range(self._dgroup.shape[0])
+    #         # self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+    #
+    #     dfrm = self._dgroup[self.frames[frame]]
+    #     self.currentframe = frame
+    #     self.data = dfrm
+    #     return self
+    #
+    # def _finddatagroup(self, h5object):
+    #     keys = h5object.keys()
+    #     for key in keys:
+    #         try:
+    #             data, data_key = self._check_if_dataset(h5object, key)
+    #             break
+    #         except TypeError:
+    #             pass
+    #
+    #     try:
+    #         return data[data_key]
+    #     except NameError:
+    #         raise H5ReadError('Unable to find dataset group')
+    #
+    # def _check_if_dataset(self, h5object, key):
+    #     #recursively find dataset in h5 tree structure
+    #     if isinstance(h5object[key], h5py.Dataset):
+    #         return h5object, key
+    #     else:
+    #         try:
+    #             for lower_key in h5object[key].keys():
+    #                 return self._check_if_dataset(h5object[key], lower_key)
+    #         except AttributeError:
+    #             pass
+
+    @property
+    def proj_frames(self):
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        return self._dark_frames
+
+    @property
+    def flats(self):
+        return self._flats
+
+    @property
+    def darks(self):
+        return self._darks
+
+    def flatindices(self):
+        nproj = len(self)
+        return [0, nproj - 1]
+
+    @property
+    def nframes(self):
+        return len(self.frames)
+
+    @nframes.setter
+    def nframes(self, n):
+        pass
+
+    # def getsinogram(self, idx=None):
+    #     if idx is None: idx = self.data.shape[0]//2
+    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
+    #                                                               range(self.nframes))])
+    #     return self.sinogram
+
+    def __getitem__(self, item):
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item, )
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                    start = item[n].start if item[n].start is not None else 0
+                    step = item[n].step if item[n].step is not None else 1
+                    stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and isinstance(item[n], int):
+                    if item[n] < 0:
+                        start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                    else:
+                        start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self.rawdata[self.frames[i]][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+    def __len__(self):
+        return self.nframes
+
+    def getframe(self, frame=0):
+        self.data = self.rawdata[self.frames[frame]]
+        return self.data
+
+    def next(self):
+        if self.currentframe < self.__len__() - 1:
+            self.currentframe += 1
+        else:
+            raise StopIteration
+        return self.getframe(self.currentframe)
+
+    def previous(self):
+        if self.currentframe > 0:
+            self.currentframe -= 1
+            return self.getframe(self.currentframe)
+        else:
+            raise StopIteration
+
+    def close(self):
+        self._h5.close()
+
+
+
 
 
 @register_fabioclass
@@ -157,71 +344,68 @@ class rawimage(fabioimage):
 
 
 @register_fabioclass
-class H5image(fabioimage):
-    """
-    HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
-    To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
-    subclass and include 'H5image' somewhere in its name.
-    """
-
-    # This does not really work because fabio creates the instance of the class with not connection to the filename
-    # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
-    # def __new__(cls, *args, **kwargs):
-    #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    #                        if 'h5' in image[0] and image[0] != 'H5image']
-    #     for image_class in h5image_classes:
-    #         try:
-    #             print 'Testing class ', image_class[0]
-    #             obj = image_class[1](*args, **kwargs)
-    #             # obj.read(obj.filename)
-    #             print 'Success!'
-    #         except Exception:
-    #             continue
-    #         else:
-    #             cls = image_class[1]
-    #             break
-    #     else:
-    #         raise RuntimeError('H5 format not recognized')
-    #     return super(H5image, cls).__new__(cls)
-    #  can call super.__new__ or simply return the instance (obj) and bypass init
-    extensions = ['h5']
-
-    def read(self, filename, frame=None):
-        h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-                           if 'H5image' in image[0] and image[0] != 'H5image']
-
-        # this block ensures that the Dxchange class is the last one checked, as it breaks the following loop if
-        # the image does not match this class
-        for image_class in h5image_classes:
-            if 'DXchangeH5image' in str(image_class):
-                dxchange_class = image_class
-        h5image_classes.remove(dxchange_class)
-        h5image_classes.append(dxchange_class)
-
-        for image_class in h5image_classes:
-            try:
-                obj = image_class[1](self.data, self.header)
-                obj.read(filename)
-            except H5ReadError:
-                # Skip exception and try the next H5 image class
-                continue
-            else:
-                # If not error was thrown break out of loop
-                break
-        else:
-            # If for loop finished without breaking raise ReadError
-            raise H5ReadError('H5 format not recognized')
-        return obj  # return the successfully read object
-
-
-# Register H5image class to fabioimages
-fabio.openimage.H5 = H5image
-fabioutils.FILETYPES['h5'] = ['h5']
-fabio.openimage.MAGIC_NUMBERS.append(tuple([b"\x89\x48\x44\x46", 'h5']))
+# @register_fabioclass
+# class H5image(fabioimage):
+#     """
+#     HDF5 Fabio Image class (hack?) to allow for different internal HDF5 structures.
+#     To create a fabimage for another HDF5 structure simply define the class in this module like any other fabimage
+#     subclass and include 'H5image' somewhere in its name.
+#     """
+#
+#     # This does not really work because fabio creates the instance of the class with not connection to the filename
+#     # and only after instantiation does it call read. Therefore any bypasses at __new__ seem to be futile
+#     # def __new__(cls, *args, **kwargs):
+#     #     h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+#     #                        if 'h5' in image[0] and image[0] != 'H5image']
+#     #     for image_class in h5image_classes:
+#     #         try:
+#     #             print 'Testing class ', image_class[0]
+#     #             obj = image_class[1](*args, **kwargs)
+#     #             # obj.read(obj.filename)
+#     #             print 'Success!'
+#     #         except Exception:
+#     #             continue
+#     #         else:
+#     #             cls = image_class[1]
+#     #             break
+#     #     else:
+#     #         raise RuntimeError('H5 format not recognized')
+#     #     return super(H5image, cls).__new__(cls)
+#     #  can call super.__new__ or simply return the instance (obj) and bypass init
+#     extensions = ['h5']
+#
+#     def read(self, filename, frame=None):
+#         h5image_classes = [image for image in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+#                            if 'H5image' in image[0] and image[0] != 'H5image']
+#
+#         # this block ensures that the Dxchange class is the last one checked, as it breaks the following loop if
+#         # the image does not match this class
+#         for image_class in h5image_classes:
+#             if 'DXchangeH5image' in str(image_class):
+#                 dxchange_class = image_class
+#         h5image_classes.remove(dxchange_class)
+#         h5image_classes.append(dxchange_class)
+#
+#         for image_class in h5image_classes:
+#             try:
+#                 obj = image_class[1](self.data, self.header)
+#                 obj.read(filename)
+#             except H5ReadError:
+#                 # Skip exception and try the next H5 image class
+#                 continue
+#             else:
+#                 # If not error was thrown break out of loop
+#                 break
+#         else:
+#             # If for loop finished without breaking raise ReadError
+#             raise H5ReadError('H5 format not recognized')
+#         return obj  # return the successfully read object
 
 
-@register_fabioclass
+
+@register_h5class
 class ALS733H5image(fabioimage):
+
     extensions = ['h5']
 
     def _readheader(self, f):
@@ -302,8 +486,7 @@ class ALS733H5image(fabioimage):
         except AttributeError:
             return False
 
-
-@register_fabioclass
+@register_h5class
 class ALS832H5image(fabioimage):
     """
     Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
@@ -320,6 +503,10 @@ class ALS832H5image(fabioimage):
         self._flats = None
         self._darks = None
 
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -332,6 +519,13 @@ class ALS832H5image(fabioimage):
             self.header = dict(self._h5.attrs)
             self.header.update(**self._dgroup.attrs)
 
+    @staticmethod
+    def validate(f, frame=None):
+        h5 = h5py.File(f, 'r')
+        header = dict(h5.attrs)
+        assert header['facility'] == 'als'
+        assert header['end_station'] == 'bl832'
+
     def read(self, f, frame=None):
         self.filename = f
         if frame is None:
@@ -340,7 +534,7 @@ class ALS832H5image(fabioimage):
 
             # Check header for unique attributes
             try:
-                self._h5 = h5py.File(self.filename, 'r')
+                self._h5 = h5py.File(self.filename, 'r+')
                 self._dgroup = self._finddatagroup(self._h5)
                 self.readheader(f)
                 if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
@@ -353,6 +547,9 @@ class ALS832H5image(fabioimage):
         self.currentframe = frame
         self.data = dfrm[0]
         return self
+
+    def change_dataset_attribute(self, key, value):
+        self._dgroup.attrs.modify(key, value)
 
     def _finddatagroup(self, h5object):
         keys = h5object.keys()
@@ -367,6 +564,37 @@ class ALS832H5image(fabioimage):
                 raise H5ReadError('Unable to find dataset group')
         else:
             raise H5ReadError('Unable to find dataset group')
+
+    @property
+    def proj_frames(self):
+        if self._proj_frames is None:
+            self._proj_frames = {}
+            for i in range(len(self.frames)):
+                self._proj_frames[i] = self.frames[i]
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        if self._flat_frames is None:
+            self._flat_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'bak' in key:
+                    self._flat_frames[counter] = key
+                    counter +=1
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        if self._dark_frames is None:
+            self._dark_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'drk' in key:
+                    self._dark_frames[counter] = key
+                    counter +=1
+        return self._dark_frames
+
 
     @property
     def flats(self):
@@ -446,6 +674,7 @@ class ALS832H5image(fabioimage):
         self.data = self._dgroup[self.frames[frame]][0]
         return self.data
 
+
     def next(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
@@ -463,13 +692,12 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
-
-@register_fabioclass
+# currently not necessary, but could be used in future for non-standardized hdf formats
+@register_h5class
 class GeneralAPSH5image(fabioimage):
     """
     Fabio Image class for arbitrary APS H5 structure
     """
-    extensions=['h5']
     def __init__(self, data=None , header=None):
         super(GeneralAPSH5image, self).__init__(data=data, header=header)
         self.frames = None
@@ -621,12 +849,11 @@ class GeneralAPSH5image(fabioimage):
     def close(self):
         self._h5.close()
 
-@register_fabioclass
+@register_h5class
 class DXchangeH5image(fabioimage):
     """
     Fabio Image class for Data-Exchange HDF5 Datasets
     """
-    extensions = ['h5']
 
     def __init__(self, data=None, header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)
@@ -724,7 +951,10 @@ class TiffStack(object):
         elif os.path.isdir(paths):
             self.frames = sorted(glob.glob(os.path.join(paths, '*.tiff')))
         self.currentframe = 0
-        self.header = header
+        self.header= header
+        self.rawdata = np.stack([self.getframe(frame) for frame in range(len(self.frames))])
+
+        self._readheader()
 
     def __len__(self):
         return len(self.frames)
@@ -733,8 +963,93 @@ class TiffStack(object):
         self.data = tifffile.imread(self.frames[frame], memmap=True)
         return self.data
 
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
+
     def close(self):
         pass
+
+class CondensedTiffStack(object):
+    """
+    Class for 3D tiffs to view in pyqtgraph ImageView - very similar to TiffStack class
+    """
+    def __init__(self, path, header=None):
+        super(CondensedTiffStack, self).__init__()
+
+        self.rawdata = tifffile.imread(path, memmap=True)
+        self.frames = range(self.rawdata.shape[0])
+        self.header = header
+        self._readheader()
+
+    @property
+    def classname(self):
+        return 'CondensedTiffStack'
+
+    def __len__(self):
+        return len(self.frames)
+
+    def _readheader(self):
+        #not really useful at this point
+        if not self.header:
+            self.header = {}
+            self.header['shape'] = self.rawdata.shape
+
+    def getframe(self, frame=0):
+        return self.rawdata[frame]
+
+    def __getitem__(self, item):
+        return self.rawdata[item]
+
+    def close(self):
+        pass
+
+
+@register_fabioclass
+class EdfImage(edfimage.EdfImage):
+    extensions = ['.edf']
+
+    def read(self, f, frame=None):
+        return super(EdfImage, self).read(f, frame)
+
+    def _readheader(self, f):
+        super(EdfImage, self)._readheader(f)
+        f = f.name.replace('.edf', '.txt')
+        if os.path.isfile(f):
+            self.header.update(self.scanparas(f))
+
+    @staticmethod
+    def scanparas(path):
+        if not os.path.isfile(path):
+            return dict()
+
+        with open(path, 'r') as f:
+            lines = f.readlines()
+
+        paras = OrderedDict()
+
+        # The 7.3.3 txt format is messy, with keyless values, and extra whitespaces
+
+        keylesslines = 0
+        for line in lines:
+            cells = filter(None, re.split('[=:]+', line))
+
+            key = cells[0].strip()
+
+            if cells.__len__() == 2:
+                cells[1] = cells[1].split('/')[0]
+                paras[key] = cells[1].strip()
+            elif cells.__len__() == 1:
+                keylesslines += 1
+                paras['Keyless value #' + str(keylesslines)] = key
+
+        return paras
+
 
 
 class H5ReadError(IOError):
@@ -744,16 +1059,21 @@ class H5ReadError(IOError):
     pass
 
 
-    # # Testing
-    # if __name__ == '__main__':
-    #     from matplotlib.pyplot import imshow, show
-    #     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
-    #     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
-    #     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-    #     # arr = data.__getitem__(slc)
-    #     arr = data.getsinogram(100)
-    #     # print sorted(data.frames, reverse=True)
-    #     # print data.darks.shape
-    #     # print data.flats.shape
-    #     imshow(arr, cmap='gray')
-    #     show()
+# # Testing
+# if __name__ == '__main__':
+#     from matplotlib.pyplot import imshow, show
+#     data = fabio.open('/home/lbluque/TestDatasetsLocal/dleucopodia.h5') #20160218_133234_Gyroid_inject_LFPonly.h5')
+#     # arr = data[-1,:,:] #.getsinogramchunk(slice(0, 512, 1), slice(1000, 1500, 1))
+#     slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
+#     # arr = data.__getitem__(slc)
+#     arr = data.getsinogram(100)
+#     # print sorted(data.frames, reverse=True)
+#     # print data.darks.shape
+#     # print data.flats.shape
+#     imshow(arr, cmap='gray')
+#     show()
+def tests():
+    print fabio.open('/media/winHDD/hparks/aps_example.h5').data
+
+if __name__ == '__main__':
+    tests()

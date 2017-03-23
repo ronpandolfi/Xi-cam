@@ -157,9 +157,28 @@ class TomographyPlugin(base.plugin):
 
 
         widget = TomoViewer(paths=paths)
+
+        # connect signals
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.wireupCenterSelection(self.manager.recon_function)
+        widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
+        widget.projectionViewer.auto_cor_widget.sigCORFuncChanged.connect(self.manager.updateCORFunc)
+        self.manager.sigCORDetectChanged.connect(widget.projectionViewer.updateCORChoice)
+        self.manager.updateCORFunc("Phase Correlation", widget.projectionViewer.auto_cor_widget)
+
         self.centerwidget.addTab(widget, os.path.basename(paths))
+        self.centerwidget.setCurrentWidget(widget)
+
+    def opendirectory(self, files, operation=None):
+        msg.showMessage('Loading directory...', timeout=10)
+        self.activate()
+        if type(files) is list:
+            files = files[0]
+
+        widget = TomoViewer(paths=files)
+        widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
+        widget.wireupCenterSelection(self.manager.recon_function)
+        self.centerwidget.addTab(widget, os.path.basename(files))
         self.centerwidget.setCurrentWidget(widget)
 
     # def currentWidget(self):
@@ -185,7 +204,6 @@ class TomographyPlugin(base.plugin):
         """
         Slot to recieve centerwidgets currentchanged signal when a new tab is selected
         """
-
         try:
             self.setPipelineValues()
             self.manager.updateParameters()
@@ -278,7 +296,6 @@ class TomographyPlugin(base.plugin):
         Sets up the metadata table and default values in configuration parameters and functions based on the selected
         dataset
         """
-
         widget =  self.centerwidget.widget(self.currentWidget())
         if widget is not None:
             self.ui.property_table.setData(widget.data.header.items())
@@ -289,13 +306,15 @@ class TomographyPlugin(base.plugin):
             if widget.data.fabimage.classname == 'ALS832H5image':
                 config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)
-            elif widget.data.fabimage.classname == 'GeneralAPSH5image':
+            # if widget.data.fabimage.classname == 'GeneralAPSH5image':
+            else:
                 self.manager.setPipelineFromYAML(config.load_pipeline(APS_PIPELINE_YAML))
                 config.set_aps_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)
             recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
             for rfunc in recon_funcs:
-                rfunc.params.child('center').setValue(widget.data.shape[1]/2)
+                if not rfunc.params.child('center').value():
+                    rfunc.params.child('center').setValue(widget.data.shape[1]/2)
                 rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
 
 
@@ -480,7 +499,7 @@ class TomographyPlugin(base.plugin):
 
 
 
-    def run3DPreview(self, partial_stack, stack_dict, data_dict):
+    def run3DPreview(self, partial_stack, stack_dict, data_dict, prange=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
@@ -492,6 +511,10 @@ class TomographyPlugin(base.plugin):
         stack_dict : dict
             Dictionary describing the workflow pipeline being run. This is displayed to the left of the preview image in
             the viewer.TomoViewer.previewViewer
+        data_dict: dict
+            Dictionary of data to be reconstructed
+        prange: list
+            list of values to be iterated over in reconstruction preview. Not used in 3D previews
         """
 
         slc = (slice(None), slice(None, None, 8), slice(None, None, 8))

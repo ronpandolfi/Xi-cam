@@ -722,7 +722,7 @@ class structure(form):
             self.LatticeC = VectorParameter(name='C', value=(0, 0, 30))
             self.LatticeChoice = pTypes.ListParameter(name='Type', type='list',
                                                       values=["Custom...", "Simple Cubic", "Body Centered Cubic",
-                                                              'Face Centered Cubic', 'Hexagonal'])
+                                                              'Face Centered Cubic', 'Hexagonal Planar'])
             self.Repetition = IntVectorParameter(name='Repetition', value=(2, 2, 2), type=int,step=1)
             self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
             self.Lattice = hideableGroupParameter(name='Lattice', children=[self.LatticeChoice,
