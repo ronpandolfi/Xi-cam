@@ -16,7 +16,11 @@ from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
+from collections import deque
+import xicam.widgets.featurewidgets as fw
+from xicam.widgets.customwidgets import DataTreeWidget
 import reconpkg
+import os
 import viewers
 
 
@@ -100,11 +104,14 @@ class UIform(object):
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
+        self.queue = ReconManager()
+
+
         icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
         icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
-        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
+        icon_queue = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_63.png"))
+        self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue),(self.property_table, icon_properties)]
 
-        #
         # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
         #
         # configtree = pt.ParameterTree()
@@ -364,3 +371,97 @@ class Toolbar(QtGui.QToolBar):
         self.actionCenter.toggled.connect(center)
         self.actionMBIR.toggled.connect(mbir)
         self.actionROI.triggered.connect(roiselection)
+
+class ReconManager(QtGui.QSplitter):
+
+    sigReconDeleted = QtCore.Signal(int)
+    sigReconSwapped = QtCore.Signal(int, int)
+
+    def __init__(self, *args, **kwargs):
+
+        super(ReconManager, self).__init__(*args, **kwargs)
+        queue_ui = QUiLoader().load('xicam/gui/tomographyqueue.ui')
+        # self.data_lst = deque(maxlen=40)
+        self.queue_form = QtGui.QStackedWidget()
+        queue_ui.functionsList.setAlignment(QtCore.Qt.AlignBottom)
+        queue_ui.moveDownButton.setToolTip('Move selected job down in queue')
+        queue_ui.moveUpButton.setToolTip('Move selected job up in queue')
+        self.queue = fw.FeatureManager(queue_ui.functionsList, self.queue_form)
+        queue_ui.moveDownButton.clicked.connect(self.moveDown)
+        queue_ui.moveUpButton.clicked.connect(self.moveUp)
+
+        self.setOrientation(QtCore.Qt.Vertical)
+        self.addWidget(self.queue_form)
+        self.addWidget(queue_ui)
+
+
+    def addRecon(self, args):
+        """
+        Parameters
+        ----------
+        args: 7-tuple
+            Tuple with args for a reconstruction. They are:
+            1). datawidget: Datawidget containing data
+            2). tuple: function pipeline, and reconstruction params (like theta, COR)
+            3). type: projections to reconstruct
+            4). tuple: sinograms to reconstruct
+            5). int: sinograms per reconstruction iteration
+            6). tuple: width dimensions for reconstruction
+            7). int: cpus available
+        """
+
+        name = os.path.basename(args[0].path)
+        widget = fw.FeatureWidget(name, checkable=False)
+        widget.previewButton.hide()
+        widget.line.hide()
+        widget.sigDelete.connect(self.reconDeleted)
+
+        form = DataTreeWidget()
+        data = args[1][3][0]
+        form.setData(data, hideRoot=True)
+        form.header().hide()
+        form.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        form.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+
+        widget.form = form
+
+        self.queue_form.addWidget(form)
+        self.queue.addFeature(widget)
+
+
+    def removeRecon(self, idx):
+        feature = self.queue.features[idx]
+        self.queue.removeFeature(feature)
+
+    def reconDeleted(self, funcwidget):
+
+        idx = self.queue.features.index(funcwidget)
+        self.sigReconDeleted.emit(idx)
+
+    def swapRecon(self):
+        pass
+        #called when features in self.queue are swapped, to change order of jobs in actual recon queue
+
+    def moveUp(self):
+        idx1 = self.queue.features.index(self.queue.selectedFeature)
+        idx2 = self.queue.features.index(self.queue.nextFeature)
+        self.queue.swapFeatures(self.queue.selectedFeature, self.queue.nextFeature)
+
+        self.sigReconSwapped.emit(idx1, idx2)
+
+    def moveDown(self):
+        idx1 = self.queue.features.index(self.queue.selectedFeature)
+        idx2 = self.queue.features.index(self.queue.previousFeature)
+        self.queue.swapFeatures(self.queue.selectedFeature, self.queue.previousFeature)
+
+        self.sigReconSwapped.emit(idx1, idx2)
+
+
+
+
+
+
+
+
+
+

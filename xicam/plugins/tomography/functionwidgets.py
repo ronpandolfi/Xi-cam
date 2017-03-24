@@ -14,7 +14,7 @@ __status__ = "Beta"
 import inspect
 import time
 import os
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from copy import deepcopy
 from functools import partial
 from modpkgs import yamlmod
@@ -25,7 +25,6 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
 import reconpkg
 import ui
-import Queue
 from xicam.widgets import featurewidgets as fw
 
 
@@ -809,7 +808,23 @@ class FunctionManager(fw.FeatureManager):
         self.recon_function = None
 
         # queue for reconstructions
-        self.recon_queue = Queue.Queue()
+        self.recon_queue = deque()
+
+
+    def swapQueue(self, idx1, idx2):
+        idx1 -= 1
+        idx2 -= 1
+
+        tmp = self.recon_queue[idx1]
+        self.recon_queue[idx1] = self.recon_queue[idx2]
+        self.recon_queue[idx2] = tmp
+        del(tmp)
+
+    def delQueueJob(self, idx):
+        idx -= 1
+
+        job = self.recon_queue[idx]
+        self.recon_queue.remove(job)
 
 
     # TODO fix this astra check raise error if package not available
@@ -1074,7 +1089,6 @@ class FunctionManager(fw.FeatureManager):
                     # extract theta values
                     if 'theta' in param:
                         theta = ipf.partial()
-
 
         extract = (config.extract_pipeline_dict(self.features), config.extract_runnable_dict(self.features))
         return [lst, theta, center, extract]
@@ -2095,11 +2109,20 @@ class CORSelectionWidget(QtGui.QWidget):
 
 
 
-# self.cor_method_box = QtGui.QComboBox()
-# self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
-# for item in self.cor_detection_funcs:
-#     self.cor_method_box.addItem(item)
-# cor_method_label = QtGui.QLabel('COR detection function: ')
-# cor_method_layout = QtGui.QHBoxLayout()
-# cor_method_layout.addWidget(cor_method_label)
-# cor_method_layout.addWidget(self.cor_method_box)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

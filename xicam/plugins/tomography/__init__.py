@@ -98,6 +98,11 @@ class TomographyPlugin(base.plugin):
         self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
         self.manager.sigPipelineChanged.connect(self.reconnectTabs)
 
+        # queue for recon jobs
+        self.queue_widget = self.ui.queue
+        self.queue_widget.sigReconSwapped.connect(self.manager.swapQueue)
+        self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
+
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
@@ -220,14 +225,6 @@ class TomographyPlugin(base.plugin):
         for idx in range(self.centerwidget.count()):
             self.centerwidget.widget(idx).wireupCenterSelection(self.manager.recon_function)
             self.centerwidget.widget(idx).sigSetDefaults.connect(self.manager.setPipelineFromDict)
-
-
-    def freeRecon(self):
-        """
-        Frees plugin to run reconstruction and run next in queue when job is canceled
-        """
-        self.recon_running = False
-        self.runReconstruction()
 
     def loadPipeline(self):
         """
@@ -615,6 +612,15 @@ class TomographyPlugin(base.plugin):
 
 
 
+    def freeRecon(self):
+        """
+        Frees plugin to run reconstruction and run next in queue when job is canceled
+        """
+        msg.showMessage("Reconstruction interrupted.", timeout=0)
+        self.bottomwidget.log2local('---------- RECONSTRUCTION INTERRUPTED ----------')
+        self.queue_widget.removeRecon(0)
+        self.recon_running = False
+        self.runReconstruction()
 
 
     def loadFullReconstruction(self):
@@ -637,18 +643,9 @@ class TomographyPlugin(base.plugin):
         self.manager.updateParameters()
 
         run_state = self.manager.saveState(currentWidget)
-
-
-
         recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
                             interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
-        # pstart = self.ui.config_params.child('Start Projection').value()
-        # pend = self.ui.config_params.child('End Projection').value()
-        # pstep = self.ui.config_params.child('Step Projection').value()
-        # sstart = self.ui.config_params.child('Start Sinogram').value()
-        # send = self.ui.config_params.child('End Sinogram').value()
-        # sstep =  self.ui.config_params.child('Step Sinogram').value()
 
         proj = None
         sino = None
@@ -669,7 +666,8 @@ class TomographyPlugin(base.plugin):
 
         args = (currentWidget, run_state, proj, sino, chunk, width, cpu_count())
 
-        self.manager.recon_queue.put([recon_iter, args])
+        self.manager.recon_queue.append([recon_iter, args])
+        self.queue_widget.addRecon(args)
 
         if self.recon_running:
             name = self.centerwidget.tabText(self.centerwidget.currentIndex())
@@ -682,9 +680,10 @@ class TomographyPlugin(base.plugin):
         Takes reconstruction job from self.manager.recon_queue and runs it on background thread. Saves function
         pipeline as python runnable after reconstruction is finished.
         """
-        if (not self.manager.recon_queue.empty()) and (not self.recon_running):
+        if (not len(self.manager.recon_queue)==0) and (not self.recon_running):
             self.recon_running = True
-            recon_job = self.manager.recon_queue.get()
+            self.queue_widget.queue.features[0].closeButton.hide()
+            recon_job = self.manager.recon_queue.popleft()
             args = recon_job[1]
             name = self.centerwidget.tabText(self.centerwidget.indexOf(args[0]))
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
@@ -701,6 +700,7 @@ class TomographyPlugin(base.plugin):
 
         msg.showMessage('Reconstruction complete.', timeout=10)
 
+        self.queue_widget.removeRecon(0)
         self.recon_running = False
         self.runReconstruction()
 
