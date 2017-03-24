@@ -14,7 +14,7 @@ __status__ = "Beta"
 import inspect
 import time
 import os
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
 from modpkgs import yamlmod
@@ -807,24 +807,6 @@ class FunctionManager(fw.FeatureManager):
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
 
-        # queue for reconstructions
-        self.recon_queue = deque()
-
-
-    def swapQueue(self, idx1, idx2):
-        idx1 -= 1
-        idx2 -= 1
-
-        tmp = self.recon_queue[idx1]
-        self.recon_queue[idx1] = self.recon_queue[idx2]
-        self.recon_queue[idx2] = tmp
-        del(tmp)
-
-    def delQueueJob(self, idx):
-        idx -= 1
-
-        job = self.recon_queue[idx]
-        self.recon_queue.remove(job)
 
 
     # TODO fix this astra check raise error if package not available

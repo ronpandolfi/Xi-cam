@@ -100,8 +100,8 @@ class TomographyPlugin(base.plugin):
 
         # queue for recon jobs
         self.queue_widget = self.ui.queue
-        self.queue_widget.sigReconSwapped.connect(self.manager.swapQueue)
-        self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
+        # self.queue_widget.sigReconSwapped.connect(self.manager.swapQueue)
+        # self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
 
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -666,7 +666,7 @@ class TomographyPlugin(base.plugin):
 
         args = (currentWidget, run_state, proj, sino, chunk, width, cpu_count())
 
-        self.manager.recon_queue.append([recon_iter, args])
+        self.queue_widget.recon_queue.append([recon_iter, args])
         self.queue_widget.addRecon(args)
 
         if self.recon_running:
@@ -677,13 +677,13 @@ class TomographyPlugin(base.plugin):
 
     def runReconstruction(self):
         """
-        Takes reconstruction job from self.manager.recon_queue and runs it on background thread. Saves function
+        Takes reconstruction job from self.queue_widget.recon_queue and runs it on background thread. Saves function
         pipeline as python runnable after reconstruction is finished.
         """
-        if (not len(self.manager.recon_queue)==0) and (not self.recon_running):
+        if (not len(self.queue_widget.recon_queue)==0) and (not self.recon_running):
             self.recon_running = True
-            self.queue_widget.queue.features[0].closeButton.hide()
-            recon_job = self.manager.recon_queue.popleft()
+            self.queue_widget.manager.features[0].closeButton.hide()
+            recon_job = self.queue_widget.recon_queue.popleft()
             args = recon_job[1]
             name = self.centerwidget.tabText(self.centerwidget.indexOf(args[0]))
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)

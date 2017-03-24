@@ -383,16 +383,8 @@ class ReconManager(QtGui.QSplitter):
     queue: featurewidgets.FeatureManager
         widget to hold featurewidgets representing reconstruction jobs
 
-    Signals
-    -------
-    signReconDeleted(int)
-        Emitted when user deletes recon job sitting on queue. Emits index of job.
-    sigReconSwapped(int, int)
-        Emitted when user tries to change order of jobs on queue. Emits indices of the two to be switched
     """
 
-    sigReconDeleted = QtCore.Signal(int)
-    sigReconSwapped = QtCore.Signal(int, int)
 
     def __init__(self, *args, **kwargs):
 
@@ -402,13 +394,51 @@ class ReconManager(QtGui.QSplitter):
         queue_ui.functionsList.setAlignment(QtCore.Qt.AlignBottom)
         queue_ui.moveDownButton.setToolTip('Move selected job down in queue')
         queue_ui.moveUpButton.setToolTip('Move selected job up in queue')
-        self.queue = fw.FeatureManager(queue_ui.functionsList, self.queue_form, blank_form='Click items below to see reconstruction jobs on queue.')
+        self.manager = fw.FeatureManager(queue_ui.functionsList, self.queue_form, blank_form='Click items below to see reconstruction jobs on queue.')
         queue_ui.moveDownButton.clicked.connect(self.moveDown)
         queue_ui.moveUpButton.clicked.connect(self.moveUp)
 
         self.setOrientation(QtCore.Qt.Vertical)
         self.addWidget(self.queue_form)
         self.addWidget(queue_ui)
+
+        # queue for reconstructions
+        self.recon_queue = deque()
+
+    def swapQueue(self, idx1, idx2):
+        """
+        Function to swap jobs sitting in queue
+
+        Parameters
+        ----------
+        idx1: int
+            index of first job
+        idx2: int
+            index of second job
+        """
+
+        idx1 -= 1
+        idx2 -= 1
+
+        tmp = self.recon_queue[idx1]
+        self.recon_queue[idx1] = self.recon_queue[idx2]
+        self.recon_queue[idx2] = tmp
+        del(tmp)
+
+    def delQueueJob(self, idx):
+        """
+        Function to delete job on queue.
+
+        Parameters
+        ----------
+        idx: int
+            index of job to delete
+        """
+
+        idx -= 1
+
+        job = self.recon_queue[idx]
+        self.recon_queue.remove(job)
 
 
     def addRecon(self, args):
@@ -442,7 +472,7 @@ class ReconManager(QtGui.QSplitter):
         widget.form = form
 
         self.queue_form.addWidget(form)
-        self.queue.addFeature(widget)
+        self.manager.addFeature(widget)
 
 
     def removeRecon(self, idx):
@@ -456,8 +486,8 @@ class ReconManager(QtGui.QSplitter):
 
         """
 
-        feature = self.queue.features[idx]
-        self.queue.removeFeature(feature)
+        feature = self.manager.features[idx]
+        self.manager.removeFeature(feature)
 
     def reconDeleted(self, funcwidget):
         """
@@ -467,42 +497,37 @@ class ReconManager(QtGui.QSplitter):
         ----------
         funcwidget: featurewidgets.FunctionWidget
             functionwidget to be deleted
-
-        Signals
-        -------
-        sigReconDeleted(idx)
-            Emits index of job to be deleted
         """
 
-        idx = self.queue.features.index(funcwidget)
-        self.sigReconDeleted.emit(idx)
+        idx = self.manager.features.index(funcwidget)
+        self.delQueueJob(idx)
 
     def moveUp(self):
         """
         Slot to connect to user swapping recon job and job above it
         """
 
-        idx1 = self.queue.features.index(self.queue.selectedFeature)
-        idx2 = self.queue.features.index(self.queue.nextFeature)
+        idx1 = self.manager.features.index(self.manager.selectedFeature)
+        idx2 = self.manager.features.index(self.manager.nextFeature)
 
         if idx1 == 0 or idx2 == 0:
             return
         else:
-            self.queue.swapFeatures(self.queue.selectedFeature, self.queue.nextFeature)
-            self.sigReconSwapped.emit(idx1, idx2)
+            self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature)
+            self.swapQueue(idx1, idx2)
 
     def moveDown(self):
         """
         Slot to connect to user swapping recon job and job below it
         """
-        idx1 = self.queue.features.index(self.queue.selectedFeature)
-        idx2 = self.queue.features.index(self.queue.previousFeature)
+        idx1 = self.manager.features.index(self.manager.selectedFeature)
+        idx2 = self.manager.features.index(self.manager.previousFeature)
 
         if idx1 == 0 or idx2 == 0:
             return
         else:
-            self.queue.swapFeatures(self.queue.selectedFeature, self.queue.previousFeature)
-            self.sigReconSwapped.emit(idx1, idx2)
+            self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature)
+            self.swapQueue(idx1, idx2)
 
 
 
