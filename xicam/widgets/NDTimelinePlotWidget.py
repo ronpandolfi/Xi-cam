@@ -93,7 +93,7 @@ class timelineWaterfallPlot(pg.ImageView):
 
 class TimelinePlot(QtGui.QTabWidget):
     def __init__(self,frameaxes={'label':'Time','units':'s'},
-                      xaxes={'label':'q (Å⁻¹)'}):
+                      xaxes={'label':u'q (Å⁻¹)'}):
         super(TimelinePlot, self).__init__()
         self.waterfall = timelineWaterfallPlot(frameaxes,xaxes)
         self.lineplot = timelineLinePlot(frameaxes,xaxes)
