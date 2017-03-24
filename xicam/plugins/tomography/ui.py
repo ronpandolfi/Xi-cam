@@ -373,6 +373,23 @@ class Toolbar(QtGui.QToolBar):
         self.actionROI.triggered.connect(roiselection)
 
 class ReconManager(QtGui.QSplitter):
+    """
+    Widget to show reconstruction queue on leftwidget tab
+
+    Attributes
+    ----------
+    queue_form: QtTui.QStackedWidget
+        widget to show dictionary representation of pipeline for each reconstruction in queue
+    queue: featurewidgets.FeatureManager
+        widget to hold featurewidgets representing reconstruction jobs
+
+    Signals
+    -------
+    signReconDeleted(int)
+        Emitted when user deletes recon job sitting on queue. Emits index of job.
+    sigReconSwapped(int, int)
+        Emitted when user tries to change order of jobs on queue. Emits indices of the two to be switched
+    """
 
     sigReconDeleted = QtCore.Signal(int)
     sigReconSwapped = QtCore.Signal(int, int)
@@ -429,19 +446,42 @@ class ReconManager(QtGui.QSplitter):
 
 
     def removeRecon(self, idx):
+        """
+        Function to remove job from queue
+
+        Parameters
+        ----------
+        idx: int
+            index of job to be removed
+
+        """
+
         feature = self.queue.features[idx]
         self.queue.removeFeature(feature)
 
     def reconDeleted(self, funcwidget):
+        """
+        Slot to connect to user deleting job on queue
+
+        Parameters
+        ----------
+        funcwidget: featurewidgets.FunctionWidget
+            functionwidget to be deleted
+
+        Signals
+        -------
+        sigReconDeleted(idx)
+            Emits index of job to be deleted
+        """
 
         idx = self.queue.features.index(funcwidget)
         self.sigReconDeleted.emit(idx)
 
-    def swapRecon(self):
-        pass
-        #called when features in self.queue are swapped, to change order of jobs in actual recon queue
-
     def moveUp(self):
+        """
+        Slot to connect to user swapping recon job and job above it
+        """
+
         idx1 = self.queue.features.index(self.queue.selectedFeature)
         idx2 = self.queue.features.index(self.queue.nextFeature)
 
@@ -452,6 +492,9 @@ class ReconManager(QtGui.QSplitter):
             self.sigReconSwapped.emit(idx1, idx2)
 
     def moveDown(self):
+        """
+        Slot to connect to user swapping recon job and job below it
+        """
         idx1 = self.queue.features.index(self.queue.selectedFeature)
         idx2 = self.queue.features.index(self.queue.previousFeature)
 
