@@ -381,12 +381,11 @@ class ReconManager(QtGui.QSplitter):
 
         super(ReconManager, self).__init__(*args, **kwargs)
         queue_ui = QUiLoader().load('xicam/gui/tomographyqueue.ui')
-        # self.data_lst = deque(maxlen=40)
         self.queue_form = QtGui.QStackedWidget()
         queue_ui.functionsList.setAlignment(QtCore.Qt.AlignBottom)
         queue_ui.moveDownButton.setToolTip('Move selected job down in queue')
         queue_ui.moveUpButton.setToolTip('Move selected job up in queue')
-        self.queue = fw.FeatureManager(queue_ui.functionsList, self.queue_form)
+        self.queue = fw.FeatureManager(queue_ui.functionsList, self.queue_form, blank_form='Click items below to see reconstruction jobs on queue.')
         queue_ui.moveDownButton.clicked.connect(self.moveDown)
         queue_ui.moveUpButton.clicked.connect(self.moveUp)
 
@@ -445,16 +444,22 @@ class ReconManager(QtGui.QSplitter):
     def moveUp(self):
         idx1 = self.queue.features.index(self.queue.selectedFeature)
         idx2 = self.queue.features.index(self.queue.nextFeature)
-        self.queue.swapFeatures(self.queue.selectedFeature, self.queue.nextFeature)
 
-        self.sigReconSwapped.emit(idx1, idx2)
+        if idx1 == 0 or idx2 == 0:
+            return
+        else:
+            self.queue.swapFeatures(self.queue.selectedFeature, self.queue.nextFeature)
+            self.sigReconSwapped.emit(idx1, idx2)
 
     def moveDown(self):
         idx1 = self.queue.features.index(self.queue.selectedFeature)
         idx2 = self.queue.features.index(self.queue.previousFeature)
-        self.queue.swapFeatures(self.queue.selectedFeature, self.queue.previousFeature)
 
-        self.sigReconSwapped.emit(idx1, idx2)
+        if idx1 == 0 or idx2 == 0:
+            return
+        else:
+            self.queue.swapFeatures(self.queue.selectedFeature, self.queue.previousFeature)
+            self.sigReconSwapped.emit(idx1, idx2)
 
 
 
