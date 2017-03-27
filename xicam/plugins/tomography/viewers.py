@@ -166,12 +166,19 @@ class TomoViewer(QtGui.QWidget):
 
     def openFlats(self):
 
-        import fabio
         flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select flats for this dataset: ")
+        path = flat_dialog[0]
 
-        if flat_dialog[0]:
+        if path.endswith('.tif') or path.endswith('.tiff'):
+            import tifffile
+            flats = tifffile.imread(path)
+            self.data.flats = flats
+            self.flatViewer.setData(self.data.flats, flipAxes=True)
+            self.flatViewer.label.hide()
+        elif path:
+            import fabio
             try:
-                flats = fabio.open(flat_dialog[0])
+                flats = fabio.open(path)
                 self.data.flats = np.stack([np.squeeze(np.copy(flats._dgroup[frame])) for frame in flats.frames])
                 self.flatViewer.setData(self.data.flats, flipAxes=True)
                 self.flatViewer.label.hide()
@@ -183,12 +190,19 @@ class TomoViewer(QtGui.QWidget):
 
     def openDarks(self):
 
-        import fabio
         dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select darks for this dataset: ")
+        path = dark_dialog[0]
 
-        if dark_dialog[0]:
+        if path.endswith('.tif') or path.endswith('.tiff'):
+            import tifffile
+            darks = tifffile.imread(path)
+            self.data.darks = darks
+            self.darkViewer.setData(self.data.darks, flipAxes=True)
+            self.darkViewer.label.hide()
+        elif path:
+            import fabio
             try:
-                darks = fabio.open(dark_dialog[0])
+                darks = fabio.open(path)
                 self.data.darks = np.stack([np.squeeze(np.copy(darks._dgroup[frame])) for frame in darks.frames])
                 self.darkViewer.setData(self.data.darks, flipAxes=True)
                 self.darkViewer.label.hide()
