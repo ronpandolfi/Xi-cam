@@ -461,6 +461,7 @@ class TomographyPlugin(base.plugin):
                     msg.showMessage(message, timeout=0)
                     if value[0] == value[1]:
                         self.preview_slices = value[1]
+                        self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
                         self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
                     else:
                         self.preview_slices = [value[0],value[1]]
@@ -553,7 +554,6 @@ class TomographyPlugin(base.plugin):
             parameter range tests to create the class with the parameter to be run and send it to a background thread.
             See FunctionManager.testParameterRange for more details
         """
-
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
