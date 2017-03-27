@@ -208,7 +208,7 @@ class TomoViewer(QtGui.QWidget):
                 self.darkViewer.label.hide()
                 del darks
             except IOError:
-                QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
+                QtGui.QMessageBox.warning(self, 'Warning', 'Darks not loaded.')
 
 
     @staticmethod
