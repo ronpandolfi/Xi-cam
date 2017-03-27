@@ -19,6 +19,7 @@ op_sys = platform.system()
 
 import os
 import time
+import numpy as np
 from functools import partial
 from PySide import QtGui, QtCore
 from collections import OrderedDict
@@ -111,7 +112,7 @@ class TomographyPlugin(base.plugin):
         # Connect toolbar signals and ui button signals
         self.toolbar.connectTriggers(self.slicePreviewAction, self.multiSlicePreviewAction, self.preview3DAction,
                                             self.loadFullReconstruction, self.manualCenter,  self.roiSelection,
-                                            self.mbir)
+                                            self.mbir, self.openFlats, self.openDarks)
 
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
@@ -197,7 +198,15 @@ class TomographyPlugin(base.plugin):
     #     except AttributeError:
     #         return None
 
+    def openFlats(self):
 
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+        currentWidget.openFlats()
+
+    def openDarks(self):
+
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+        currentWidget.openDarks()
 
     def currentWidget(self):
 

@@ -96,9 +96,6 @@ class TomoViewer(QtGui.QWidget):
         self.preview_holder = []
         self.prange = []
 
-
-
-
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
@@ -106,26 +103,6 @@ class TomoViewer(QtGui.QWidget):
                 self.data = self.loaddata(paths, raw=True)
             else:
                 self.data = self.loaddata(paths)
-
-
-        if self.data.flats is None and self.data.darks is None:
-            import fabio
-            flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
-            dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
-
-            if flat_dialog[0] and dark_dialog[0]:
-                try:
-                    flats = fabio.open(flat_dialog[0])
-                    darks = fabio.open(dark_dialog[0])
-                    self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
-                    self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
-
-                    del flats, darks
-                except IOError:
-                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded.')
-            else:
-                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided.')
-
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
@@ -186,6 +163,39 @@ class TomoViewer(QtGui.QWidget):
                 lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
+
+    def openFlats(self):
+
+        import fabio
+        flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select flats for this dataset: ")
+
+        if flat_dialog[0]:
+            try:
+                flats = fabio.open(flat_dialog[0])
+                self.data.flats = np.stack([np.squeeze(np.copy(flats._dgroup[frame])) for frame in flats.frames])
+                self.flatViewer.setData(self.data.flats, flipAxes=True)
+                self.flatViewer.label.hide()
+                del flats
+            except IOError:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
+
+
+
+    def openDarks(self):
+
+        import fabio
+        dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select darks for this dataset: ")
+
+        if dark_dialog[0]:
+            try:
+                darks = fabio.open(dark_dialog[0])
+                self.data.darks = np.stack([np.squeeze(np.copy(darks._dgroup[frame])) for frame in darks.frames])
+                self.darkViewer.setData(self.data.darks, flipAxes=True)
+                self.darkViewer.label.hide()
+                del darks
+            except IOError:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
+
 
     @staticmethod
     def loaddata(paths, raw=True):

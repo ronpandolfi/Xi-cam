@@ -328,12 +328,26 @@ class Toolbar(QtGui.QToolBar):
         toolbuttonMaskingAction = QtGui.QWidgetAction(self)
         toolbuttonMaskingAction.setDefaultWidget(toolbuttonMasking)
 
-        # TODO working on ROI Selection TOOL
         self.actionROI = QtGui.QAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionROI.setIcon(icon)
         self.actionROI.setToolTip('Select region of interest')
+
+
+        self.openButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.openButton.setIcon(icon)
+        self.openButton.setToolTip('Open flats/darks')
+        openMenu = QtGui.QMenu()
+        self.openFlats = QtGui.QAction('Open flats', openMenu)
+        self.openDarks = QtGui.QAction('Open darks', openMenu)
+        openMenu.addActions([self.openFlats, self.openDarks])
+
+        self.openButton.setMenu(openMenu)
+        self.openButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.openButton.setArrowType(QtCore.Qt.NoArrow)
 
         self.setIconSize(QtCore.QSize(32, 32))
 
@@ -344,10 +358,13 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
         self.addAction(self.actionROI)
+        self.addWidget(self.openButton)
+
         # self.addAction(toolbuttonMaskingAction)
 
 
-    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir):
+    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir,
+                        openflats, opendarks):
 
         """
         Connect toolbar action signals to give slots
@@ -371,6 +388,8 @@ class Toolbar(QtGui.QToolBar):
         self.actionCenter.toggled.connect(center)
         self.actionMBIR.toggled.connect(mbir)
         self.actionROI.triggered.connect(roiselection)
+        self.openFlats.triggered.connect(openflats)
+        self.openDarks.triggered.connect(opendarks)
 
 class ReconManager(QtGui.QSplitter):
     """
