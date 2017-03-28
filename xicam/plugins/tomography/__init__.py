@@ -529,7 +529,7 @@ class TomographyPlugin(base.plugin):
 
         # this step takes quite a bit, think of running a thread
         initializer = self.centerwidget.widget(self.currentWidget()).getsino(slc)
-        self.manager.updateParupdateParameters()
+        self.manager.updateParameters()
         callback = partial(self.centerwidget.widget(self.currentWidget()).add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
         # self.foldPreviewStack(partial_stack, initializer, callback, err_message)
