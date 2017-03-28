@@ -23,8 +23,11 @@ import subprocess
 import xicam.RmcView as rmc
 from xicam import threads
 from modpkgs import guiinvoker
+from PIL import Image
+from pyswarm import pso
 
 from PySide import QtGui, QtCore
+from xicam import debugtools
 
 from pipeline.spacegroups import spacegroupwidget
 from xicam import config
@@ -35,6 +38,14 @@ from astropy.modeling import models, fitting
 from astropy.modeling import Fittable2DModel, Parameter
 from xicam import ROI
 from pipeline import integration, center_approx
+
+from pyevolve import G1DList
+from pyevolve import GSimpleGA
+from pyevolve import Selectors
+from pyevolve import Statistics
+from pyevolve import DBAdapters
+import pyevolve
+
 
 class plugin(base.plugin):
     name = "CDSAXS"
@@ -96,14 +107,14 @@ class plugin(base.plugin):
         widget = widgets.OOMTabItem(itemclass=CDSAXSWidget, src=files, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
-        '''
-        Phi_min, Phi_max, Phi_step = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param['test', 'Phi_step']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRaw,method_args=(Phi_min, Phi_max, Phi_step))
-        threads.add_to_queue(fitrunnable)
-        '''
+
 
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
+
+        Phi_min, Phi_max, Phi_step = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param['test', 'Phi_step']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRaw,method_args=(Phi_min, Phi_max, Phi_step))
+        threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
         for tab in [self.centerwidget.widget(i) for i in range(self.centerwidget.count())]:
@@ -146,7 +157,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         # build arc cut mask
         #center = center_approx.center_approx(loader.loadimage(self.src[0]))
         center = [552, 225]
-        maxR, minR = 200, 0
+        maxR, minR = 250, 0
         nb_pixel = maxR - minR
         maxChi, minChi = 93, 87
         #maxChi, minChi = 30, 0
@@ -166,7 +177,16 @@ class CDSAXSWidget(QtGui.QTabWidget):
         #cutmask = np.fliplr(cut.getArrayRegion(np.ones_like(loader.loadimage(self.src[0])))) # load first frame and get cutmask
         #cutmask = (cut.getArrayRegion(np.ones((1000,1000)))).T
 
+        i = 0
+
         for file in self.src:
+            '''
+            im = Image.fromarray(loader.loadimage(file))
+            plt.imshow(im)
+            plt.savefig('img%.3d_2.png'%i)
+            plt.close()
+            i += 1
+            '''
             #img = np.transpose(loader.loadimage(file))
             img = np.rot90(loader.loadimage(file), 1)
             #a_mask = np.ma.array(img, mask = cutmask)
@@ -192,12 +212,20 @@ class CDSAXSWidget(QtGui.QTabWidget):
         #1D cut from experimental data
         pixel_size, sample_detector_distance, wavelength = 172 * 10 **-6, 5., 0.09184
         self.QxyiData = self.generate_carto(profiles, nb_pixel, Phi_min, Phi_step, pixel_size, sample_detector_distance, wavelength, center[0])
+        np.save('qxyi_cxro.npy', self.QxyiData)
 
         #interpolation
         sampling_size = (400, 400)
         #img = self.inter_carto(self.QxyiData)
         self.img, qk_shift= self.interpolation(self.QxyiData, sampling_size)
 
+        #cut_mask = np.zeros(np.shape(self.img))
+        #cut_mask[~np.isnan(self.img)] = 1
+
+        #np.resize(cut_mask, (79,79))
+
+        #plt.imshow(cut_mask)
+        #plt.show()
         '''
         plt.imshow(self.img)
         plt.show()
@@ -264,49 +292,75 @@ class CDSAXSWidget(QtGui.QTabWidget):
         print(len(ind))
         self.q = []
         self.Qxexp = []
+        self.Qxfit = []
         self.Q__Z = []
+        self.Q__Z1 = []
         self.Position = []
+        self.maxres = 0
         #self.phiMax = np.radians(30)
-        self.imageshape = (600, 600)
+        self.imageshape = (500, 500)
 
         for i in range(0, len(ind),1):
-            self.q.append((4 * np.pi / wavelength) * np.sin(np.tan(((ind[i] * 500 / 400) * nb_pixel / 500) * (pixel_size / sample_detector_distance))))
+            self.q.append((4 * np.pi / wavelength) * np.sin(np.arctan((((ind[i] * 500 / 400) * nb_pixel / 500) * (pixel_size / sample_detector_distance)))))
             self.Position.append(int(np.floor(i / (2 * np.pi / (0.5 * self.imageshape[0])))))
             self.get_exp_values(self.QxyiData, self.q[i])
+            print('tan', np.tan(((ind[i] * 500 / 400) * nb_pixel / 500)))
             print(self.q[i])
-            print(self.Position[i])
+            #print(self.Position[i])
             #self.Qxexp.append(np.sum(np.nan_to_num(self.img[ind[i] - 3 : ind[i] + 3 , : ]), axis = 0))
             #self.Qxexp.append(np.nan_to_num(self.img[ind[i], :]))
 
-        H, LL = 20, 30
-        Beta = np.array([95, 92, 93, 94, 95])
-        self.Qxfit = self.SL_model(H, LL, Beta)
-
+        self.update_profile_ini()
         '''
         for i in range(0, len(self.Qxexp), 1):
+            plt.plot(self.Qxexp[i])
+            #plt.plot(self.Qxfit[i])
+            plt.yscale('log')
+            plt.show()
+
+            #self.Qxexp[i], self.Qxfit[i] = self.resize_yset(self.Qxexp[i], self.Qxfit[i])
             #plt.plot(self.Qxexp[i])
-            plt.plot(self.Qxfit[i])
+            #plt.plot(self.Qxfit[i])
             #plt.yscale('log')
             #plt.show()
-
-            self.Qxexp[i], self.Qxfit[i] = self.resize_yset(self.Qxexp[i], self.Qxfit[i])
-            #plt.plot(self.Qxexp[i])
-            plt.plot(self.Qxfit[i])
-            #plt.yscale('log')
-            plt.show()
         '''
+
+
+
+        phi_max, phi_min = 45, -45
+
+        #Definition of the fitting mask
+        center_1 = [38, 0]
+        maxR_1, minR_1 = 80, 0
+        nb_pixel_1 = maxR_1 - minR_1
+        maxChi_1, minChi_1 = 90 + 0.5 * phi_max, 90 + 0.5 * phi_min
+        Chi_sym = max(abs(0.5 * phi_max), abs(0.5 * phi_min))
+        maxChi_sym, minChi_sym = 90 + Chi_sym, 90 - Chi_sym
+
+        x, y = np.indices((79,79))
+        x_1_1, y_1_1 = x - center_1[0], y - center_1[1]
+        r_1 = np.sqrt(x_1_1 ** 2 + y_1_1 ** 2)
+        theta_1 = np.degrees(np.arctan2(y_1_1,x_1_1))
+        rmincut_1, rmaxcut_1 =(r_1>minR_1), (r_1<maxR_1)
+        thetamincut_1, thetamaxcut_1=(theta_1>minChi_1), (theta_1<maxChi_1)
+        thetamincut_sym, thetamaxcut_sym = (theta_1 > minChi_sym), (theta_1 < maxChi_sym)
+        self.cutmask = (rmincut_1*rmaxcut_1*thetamincut_1*thetamaxcut_1).T
+        self.cutmask_sym = (rmincut_1 * rmaxcut_1 * thetamincut_sym * thetamaxcut_sym).T
+
+
+        self.SL_model(100, 40, np.array([95]))
 
 
     def generate_carto(self, profiles, nb_pixel, Phi_min, Phi_step, pixel_size, sample_detector_distance, wavelength, center_x):
         nv = np.zeros([np.shape(profiles)[1],4], dtype=np.float32)
         QxyiData = np.zeros([np.shape(profiles)[1],4], dtype=np.float32)
-        for i in range(np.shape(profiles)[0]):
+        for i in range(0, np.shape(profiles)[0], 1):
             phi = np.radians(Phi_min + i * Phi_step)
             q = [0] * np.shape(profiles)[1]
             qx = [0] * np.shape(profiles)[1]
             qz = [0] * np.shape(profiles)[1]
-            for j in range(np.shape(profiles)[1]):
-                q[j] = (4 * np.pi / wavelength) * np.sin(np.tan(j * nb_pixel / np.shape(profiles)[1] * pixel_size / sample_detector_distance))
+            for j in range(0, np.shape(profiles)[1], 1):
+                q[j] = (4 * np.pi / wavelength) * np.sin(np.arctan(j * nb_pixel / np.shape(profiles)[1] * pixel_size / sample_detector_distance))
                 qx[j] = q[j] * np.cos(phi)
                 qz[j] = q[j] * np.sin(phi)
             nv[:, 0] = qx
@@ -361,7 +415,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         return img
 
 
-    def interpolation(self, qxyi, sampling_size=(500, 500)):
+    def interpolation(self, qxyi, sampling_size=(400, 400)):
         roi_loc = (sampling_size[0] / 2., sampling_size[1] / 2.)
         roi_size = 400
         img = np.zeros((roi_size, roi_size))
@@ -377,8 +431,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
         selected_idx = []
         assert qj.size == qk.size, 'uncorrect size for q{x,y} index vector'
         for i in xrange(qj.size):
-            #if -qk[i] / 2 < qj[i] and qj[i] <= roi_loc[0] + roi_size and roi_loc[1] - roi_size < qk[i] and qk[i] <= \roi_loc[1] + roi_size:
-            selected_idx.append(i)
+            if -qk[i] / 2 < qj[i] and qj[i] <= roi_loc[0] + roi_size and roi_loc[1] - roi_size < qk[i] and qk[i] <= roi_loc[1] + roi_size :
+                selected_idx.append(i)
 
 
         qj_shifted = qj[selected_idx] - qj[selected_idx].min()
@@ -405,8 +459,11 @@ class CDSAXSWidget(QtGui.QTabWidget):
         interpolator = LinearNDInterpolator(interp_from, img[interp_from])
 
         cpt = 0
+
+
         for p in to_fill:
             img[p[0], p[1]] += interpolator(p[0], p[1])
+
         '''
         for p in to_fill:
             if abs((p[1] - origin) / 2) >= (p[0]):
@@ -423,6 +480,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         return img, qk_shift
 
     def get_exp_values(self,qxyi, cut_val):
+        print(cut_val)
         delta = 0.002
         dtype = [('qx', np.float32), ('qy', np.float32), ('i', np.float32)]
         Sqxyi = []
@@ -441,11 +499,180 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         return SQi['i'][idx]
 
-    def fitting_test(self, H, LL, Beta1):
+    def fitting_test(self, H = 10, LL = 20, Beta1 = 2):
+        '''
+        ts = time.time()
+
+        Beta2, Beta3, Beta4, Beta5 = Beta1, Beta1, Beta1, Beta1
+        #Beta = np.array([Beta1])
+
+        Beta = np.array([Beta1, Beta2, Beta3, Beta4, Beta5])
+
+        initiale_value = []
+        initiale_value.append(int(H))
+        initiale_value.append(int(LL))
+
+        for i in Beta:
+            initiale_value.append(int(i))
+
+        print(initiale_value)
+
+        lower_bnds, upper_bnds = [], []
+        for i in initiale_value:
+            lower_bnds.append(int(i - 10))
+            upper_bnds.append(int(i + 10))
+
+        print(lower_bnds, upper_bnds)
+
+        phi_min = -45
+        phi_max = 45
+
+        #Definition of the fitting mask
+        center_1 = [39, 0]
+        maxR_1, minR_1 = 80, 0
+        nb_pixel_1 = maxR_1 - minR_1
+        maxChi_1, minChi_1 = 90 + 0.5 * phi_max, 90 + 0.5 * phi_min
+        Chi_sym = max(abs(0.5 * phi_max), abs(0.5 * phi_min))
+        maxChi_sym, minChi_sym = 90 + Chi_sym, 90 - Chi_sym
+
+        x, y = np.indices((79,79))
+        x_1_1, y_1_1 = x - center_1[0], y - center_1[1]
+        r_1 = np.sqrt(x_1_1 ** 2 + y_1_1 ** 2)
+        theta_1 = np.degrees(np.arctan2(y_1_1,x_1_1))
+        rmincut_1, rmaxcut_1 =(r_1>minR_1), (r_1<maxR_1)
+        thetamincut_1, thetamaxcut_1=(theta_1>minChi_1), (theta_1<maxChi_1)
+        thetamincut_sym, thetamaxcut_sym = (theta_1 > minChi_sym), (theta_1 < maxChi_sym)
+        self.cutmask = (rmincut_1*rmaxcut_1*thetamincut_1*thetamaxcut_1).T
+        self.cutmask_sym = (rmincut_1 * rmaxcut_1 * thetamincut_sym * thetamaxcut_sym).T
+
+
+        self.residual(initiale_value)
+        self.update_right_widget()
+
+        xopt, fopt = pso(self.residual, lower_bnds, upper_bnds)
+
+        #opt = minimize(self.residual, initiale_value, bounds=bndes, method='L-BFGS-B', options={'disp': True, 'eps': (1, 1, 0.3), 'ftol': 1e-9})
+
+
+        te = time.time()
+        print(te - ts)
+
+        print(xopt, fopt)
+
+        self.residual(xopt)
+
+        #print(opt.message)
+        '''
+
+        ts = time.time()
+
+        Beta2, Beta3, Beta4, Beta5 = Beta1, Beta1, Beta1, Beta1
+        # Beta = np.array([Beta1])
+
+        Beta = np.array([Beta1, Beta2, Beta3, Beta4, Beta5])
+
+        initiale_value = []
+        initiale_value.append(int(H))
+        initiale_value.append(int(LL))
+
+        for i in Beta:
+            initiale_value.append(int(i))
+
+        #print(initiale_value)
+
+        lower_bnds, upper_bnds = [], []
+        for i in initiale_value:
+            lower_bnds.append(int(i - 10))
+            upper_bnds.append(int(i + 10))
+
+        #print(lower_bnds, upper_bnds)
+
+        phi_min = -45
+        phi_max = 45
+
+        # Definition of the fitting mask
+        center_1 = [39, 0]
+        maxR_1, minR_1 = 80, 0
+        nb_pixel_1 = maxR_1 - minR_1
+        maxChi_1, minChi_1 = 90 + 0.5 * phi_max, 90 + 0.5 * phi_min
+        Chi_sym = max(abs(0.5 * phi_max), abs(0.5 * phi_min))
+        maxChi_sym, minChi_sym = 90 + Chi_sym, 90 - Chi_sym
+
+        x, y = np.indices((79, 79))
+        x_1_1, y_1_1 = x - center_1[0], y - center_1[1]
+        r_1 = np.sqrt(x_1_1 ** 2 + y_1_1 ** 2)
+        theta_1 = np.degrees(np.arctan2(y_1_1, x_1_1))
+        rmincut_1, rmaxcut_1 = (r_1 > minR_1), (r_1 < maxR_1)
+        thetamincut_1, thetamaxcut_1 = (theta_1 > minChi_1), (theta_1 < maxChi_1)
+        thetamincut_sym, thetamaxcut_sym = (theta_1 > minChi_sym), (theta_1 < maxChi_sym)
+        self.cutmask = (rmincut_1 * rmaxcut_1 * thetamincut_1 * thetamaxcut_1).T
+        self.cutmask_sym = (rmincut_1 * rmaxcut_1 * thetamincut_sym * thetamaxcut_sym).T
+
+        self.residual(initiale_value)
+        self.update_right_widget()
+
+
+        #pyevolve.logEnable()
+        genome = G1DList.G1DList(7)
+        genome.setParams(rangemin=0, rangemax=1000)
+        genome.evaluator.set(self.residual)
+
+        ga = GSimpleGA.GSimpleGA(genome)
+        ga.selector.set(Selectors.GRouletteWheel)
+        ga.setGenerations(30)
+
+        #ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
+
+        #sqlite_adapter = DBAdapters.DBSQLite(identify="ex1", resetDB=True)
+        #ga.setDBAdapter(sqlite_adapter)
+        ga.stepCallback.set(self.evolve_callback)
+
+        ga.evolve()
+
+        print ga.bestIndividual()
+        best = ga.bestIndividual()
+        print(best.genomeList, best.score)
+
+
+        self.residual(best.genomeList, 'True')
+        self.update_model()
+        self.modelParameter = 5 + 0.02 * best.genomeList[0], 20 + 0.04 * best.genomeList[1], 70 + 0.04 * \
+                              best.genomeList[2], best.score
+        self.update_right_widget()
+
+        #xopt, fopt = pso(self.residual, lower_bnds, upper_bnds)
+
+        # opt = minimize(self.residual, initiale_value, bounds=bndes, method='L-BFGS-B', options={'disp': True, 'eps': (1, 1, 0.3), 'ftol': 1e-9})
+
+
+        te = time.time()
+        print(te - ts)
+
+        #print(xopt, fopt)
+
+        #self.residual(xopt)
+
+        # print(opt.message)
+
+    def evolve_callback(self, ga_engine):
+        generation = ga_engine.getCurrentGeneration()
+        if generation % 1 == 0:
+            print "Current generation: %d" % (generation,)
+            best = ga_engine.bestIndividual()
+            self.residual(best.genomeList, 'True')
+
+            #print(best.score, best.genomeList)
+            #self.update_profile('True')
+            self.update_model()
+            self.modelParameter = 5 + 0.02 * best.genomeList[0], 20 + 0.04 * best.genomeList[1], 70 + 0.04 * best.genomeList[2], best.score
+            self.update_right_widget()
+
+    '''
+    def fitting_test(self, H = 10, LL = 20, Beta1 = 2):
         Beta2, Beta3, Beta4, Beta5 = Beta1, Beta1, Beta1, Beta1
         Beta = np.array([Beta1, Beta2, Beta3, Beta4, Beta5])
 
-        '''
+
         model = MultiPyramidModel(self.Position, self.phiMax, self.imageshape, H=H, LL=LL, Beta1=Beta1, Beta2=Beta2, Beta3=Beta3, Beta4=Beta4, Beta5=Beta5, parent=self)
         fitter = fitting.LevMarLSQFitter()
 
@@ -468,10 +695,9 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         result = fitter(model, Qz, order, I)
         print result
-        '''
-        H, LL = 20, 30
-        Beta = np.array([95,92,93,94,95])
-        #Beta = np.array([95])
+
+        #Beta = np.array([95,92,93,94,95])
+        Beta = np.array([Beta1])
 
         initiale_value = []
         initiale_value.append(int(H))
@@ -485,7 +711,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         bndes = []
         for i in initiale_value:
-            bndes.append((int(i - 10), int(i + 10)))
+            bndes.append((int(i - 20), int(i + 20)))
         print(bndes)
 
         self.residual(initiale_value)
@@ -499,7 +725,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         #self.Qxexp1, self.Qxexp2, self.Qxexp3 = self.get_exp_values(self.qxyi)
         self.update_right_widget()
 
-        opt = minimize(self.residual, initiale_value, bounds=bndes, method='L-BFGS-B')
+        opt = minimize(self.residual, initiale_value, bounds=bndes, method='L-BFGS-B', options={'disp': True, 'eps': (1, 1, 0.3), 'ftol': 1e-9})
 
         # opt = minimize(self.residual, initiale_value, bounds=bndes, method='L-BFGS-B',
                         #options={'disp': True, 'eps': (1, 1, 1, 1, 1, 1, 1), 'ftol': 1e-3})
@@ -509,6 +735,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         print(opt.x)
         print(opt.message)
+    '''
 
     def update_model(self):
         self.sigDrawModel.emit(self)
@@ -529,7 +756,16 @@ class CDSAXSWidget(QtGui.QTabWidget):
         # guiinvoker.invoke_in_main_thread(self.CDModelWidget.order6.setData, np.log(self.Qxfit3))
     '''
 
-    def update_profile(self):
+    def update_profile_ini(self):
+        for order in range(0, len(self.Qxexp), 1):
+            self.Qxexp[order] -= min(self.Qxexp[order])
+            self.Qxexp[order] /= max(self.Qxexp[order])
+            self.Qxexp[order] += order + 1
+
+            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.Q__Z[order], np.log(self.Qxexp[order]))
+
+
+    def update_profile(self, plot = 'False'):
         for order in range(0, len(self.Qxexp), 1):
             self.Qxexp[order] -= min(self.Qxexp[order])
             self.Qxexp[order] /= max(self.Qxexp[order])
@@ -539,35 +775,46 @@ class CDSAXSWidget(QtGui.QTabWidget):
             self.Qxfit[order] /= max(self.Qxfit[order])
             self.Qxfit[order] += order + 1
 
-            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.Q__Z[order], np.log(self.Qxexp[order]))
-            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders1[order].setData, self.Q__Z1[order], np.log(self.Qxfit[order]))
 
-    def residual(self, p, plot_mode=False):
-        H = p[0]
-        LL = p[1]
+            if plot == 'True':
+                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.Q__Z[order], np.log(self.Qxexp[order]))
+                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders1[order].setData, self.Q__Z1[order], np.log(self.Qxfit[order]))
+
+    #@debugtools.timeit
+    def residual(self, p, test = 'False', plot_mode=False):
+        H = 5 + 0.02 * p[0]
+        LL = 20 + 0.04 * p[1]
         Beta = []
         for i in range(2, len(p), 1):
-            Beta.append(p[i])
+            Beta.append(70 + 0.04 * p[i])
+
+        #print(H, LL, Beta)
 
         Beta = np.array(Beta)
-        print(p)
+
         self.Qxfit = self.SL_model(H, LL, Beta)
 
         for i in range(0, len(self.Qxexp), 1):
             self.Qxexp[i], self.Qxfit[i] = self.resize_iset(self.Qxexp[i], self.Qxfit[i])
 
-        self.update_profile()
-        self.update_right_widget()
+        self.update_profile(test)
+        #self.update_model()
+
 
         res = 0
         res_min = 1000
-        for i in range(0, len(self.Qxexp), 1):
-            res = res + np.sqrt((sum(abs(self.Qxfit[i] - self.Qxexp[i]))/ sum(self.Qxexp[i])**2))
 
-        self.modelParameter = H, LL, Beta[0], res
-        self.update_model()
-        self.update_profile()
-        self.update_right_widget()
+        for i in range(0, len(self.Qxexp), 1):
+            res += np.sqrt(sum((self.Qxfit[i] - self.Qxexp[i])**2) / sum((self.Qxexp[i])**2))
+
+        #self.modelParameter = H, LL, Beta[0], 1 / res
+        #self.update_right_widget()
+
+        #self.update_profile()
+        #self.update_right_widget()
+        #self.modelParameter = H, LL, Beta[0], 1/res
+        #self.update_model()
+
 
         '''
         #Plot only better res
@@ -578,16 +825,17 @@ class CDSAXSWidget(QtGui.QTabWidget):
             self.update_profile()
             self.update_right_widget()
         '''
+        self.maxres = max(self.maxres, 1/res)
+        return 1/res
 
-        return res
-
+    #@debugtools.timeit
     def SL_model(self, H, LL, Beta, plot_mode=False):
         pitch, nbligne = 100, 1
         I = []
         I = self.Fitlignes(pitch, Beta, LL, H, nbligne)
 
         # Fitting qx cut
-        Tailleimagex = 600
+        Tailleimagex = 500
         self.Qxfit = []
         self.Q__Z1 = []
         pixel = []
@@ -611,13 +859,14 @@ class CDSAXSWidget(QtGui.QTabWidget):
     def Fitlignes(self, pitch, Beta, LL, H, nbligne, Taille_image=(600, 600)):
         # assert pitch >= Largeurligne+2*H*abs(np.tan(beta)), 'uncorrect desription of lines'
 
-        Obj = self.multipyramid(H, LL, Beta, 600, 600)
+        Obj = self.multipyramid(H, LL, Beta, 500, 500)
         #Obj = self.multipyramid(H, LL, 90 + np.degrees(Beta1),90 + np.degrees(Beta2), 90 + np.degrees(Beta3), 90 + np.degrees(Beta4), 90 + np.degrees(Beta5), 600, 600)
         Obj_plot = np.rot90(Obj,3)
-        self.modelImage = Obj_plot[250 : 350, 450 : 600]
+        self.modelImage = Obj_plot[150 : 350, 350 : 500]
 
         #I = np.random.poisson(abs(fftshift(fftn(np.rot90(Obj,3)))) ** 2)
         I = (abs(fftshift(fftn(np.rot90(Obj,3)))) ** 2)
+
         '''
         Dynamic = I.max()
         II = np.zeros(I.shape, dtype='float64')
@@ -626,30 +875,6 @@ class CDSAXSWidget(QtGui.QTabWidget):
         III = np.int64((II >= 1) * II)
         '''
         return I
-
-
-    def pyramid(self, w, h, a, nx, ny):
-        if nx % 2 == 1:
-            nx = nx + 1
-
-        # compute half and mirror it later
-        n2 = nx / 2
-        w2 = w / 2
-
-        # setup arrays
-        img = np.zeros((ny, n2))
-        y, x = np.mgrid[0:ny, 0:n2]
-
-        # equation of line for side of trapezium
-        a = np.deg2rad(a)
-        A = np.sin(np.pi - a)
-        B = -np.cos(np.pi - a)
-        C = - A * w2
-
-        # calculate distance from line
-        d = A * x + B * y + C
-        img[np.logical_and(d < 0, y < h)] = 1
-        return np.hstack((np.fliplr(img), img))
 
     def multipyramid(self, h, w, a, nx, ny):
         if nx % 2 == 1:
@@ -685,14 +910,40 @@ class CDSAXSWidget(QtGui.QTabWidget):
         return np.hstack((np.fliplr(img), img))
 
     # Function doing the 1D cut along qx of the simulated signal along Position1, Position2, Position3
-    def Qxcut(self, I, Position, qx, Taille_image=(600, 600), phimax=np.radians(27)):
+    def Qxcut(self, I, Position, qx, Taille_image=(500, 500), phimax=np.radians(27)):
         roisizex, roisizey = np.int(1 / (2 * np.pi) * Taille_image[0]), np.int(1 / (2 * np.pi) * Taille_image[1])
-        phimin = np.radians(45)
-        phimax = np.radians(45)
+        phimin = np.radians(-90)
+        phimax = np.radians(90)
         phi = max(phimin, phimax)
         center_x, center_y = Taille_image[0] / 2, Taille_image[1] / 2
         originx, originy = 0, (roisizey / 2) - 0.5
+
+        Iroi= np.zeros([roisizex + 1, roisizey + 1])
+
+        Iroi = I[center_x : center_x + roisizex, center_y + 1 - roisizey / 2 : center_y + roisizey + 1 - roisizey / 2]
+
+        '''
+        for i in range(0, roisizex, 1):
+            for j in range(1, roisizey + 1, 1):
+                Iroi[i, j] = (I[i + center_x, j + center_y - roisizey / 2])
+        '''
+
+        Iroi1 = Iroi * self.cutmask
+        Iroi *= self.cutmask_sym
+        I1 = np.sum(Iroi[int(Position) - 1:int(Position) + 1, :], axis=0)
+        I2 = np.sum(Iroi1[int(Position) - 1:int(Position) + 1, :], axis=0)
+
+        '''
+        plt.imshow(np.log(Iroi + 0.0001))
+        plt.show()
+
+        plt.imshow(np.log(Iroi1 + 0.0001))
+        plt.show()
+        '''
+
+        '''
         Iroi, Iroi1 = np.zeros([roisizex+1, roisizey +1]), np.zeros([roisizex+1, roisizey +1])
+
         for i in range(0, roisizex , 1):
             for j in range(1, roisizey +1 , 1):
                 if (np.tan(phi) * (originx - i) / 2) <= (originy - j) and (np.tan(phi) * (originx - i) / 2) <= -(
@@ -705,8 +956,11 @@ class CDSAXSWidget(QtGui.QTabWidget):
                         np.tan(phimin) * (originx - i) / 2) >= -(originy - j):
                     Iroi1[i, j] = (I[i + center_x, j + center_y - roisizey / 2])
 
+        Iroi *= self.cut_mask
+
         I1 = np.sum(Iroi[int(Position) - 1:int(Position) + 1, :], axis=0)
         I2 = np.sum(Iroi1[int(Position) - 1:int(Position) + 1, :], axis=0)
+        '''
 
         if len(np.where(I1!= 0)[0]) == 0:
             if len(np.where(I2 != 0)[0]) == 0:
