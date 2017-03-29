@@ -33,6 +33,19 @@ def initplugins(placeholders):
             msg.logMessage("Plugin loading aborted: "+modname,msg.CRITICAL)
             continue
 
+    # Now, for all directories rooted here, check if they have an 'interfaces' module.
+    # This allows plugins to live in directories that are not Python modules,
+    # by putting the base.plugin class somewhere in the 'interfaces' subdirectory.
+    # Added by LAP so that the paws root directory can avoid having __init__.py.
+    pgin_dirs = os.walk(__path__[0]).next()[1]
+    for pgin_dir in pgin_dirs:
+        pgin_subdirs = os.walk(__path__[0]+'/'+pgin_dir).next()[1]
+        if 'interfaces' in pgin_subdirs:
+            test_pkgs = pkgutil.iter_modules([__path__[0]+'/'+pgin_dir+'/interfaces'])
+            for imp, modnm, ispkg in test_pkgs:
+                mod = safeimporter.import_module('.'+pgin_dir+'.interfaces.'+modnm,'xicam.plugins')
+                if mod:
+                    modules.append(mod)
 
     for module in modules:
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
