@@ -798,8 +798,7 @@ class dimgViewer(QtGui.QWidget):
         else:  # If the mask is completed
 
             # Get the region of the image that was selected; unforunately the region is trimmed
-            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.transformdata), self.imageitem,
-                                                     returnMappedCoords=True)  # levels=(0, arr.max()
+            maskedarea = self.maskROI.getArrayRegion(np.ones_like(self.dimg.transformdata), self.imageitem)  # levels=(0, arr.max()
             # print maskedarea.shape
 
             # Decide how much to left and top pad based on the ROI bounding rectangle
@@ -1219,6 +1218,7 @@ class integrationsubwidget(pg.PlotWidget):
 
         self.iscleared = True
         self.requestkey = 0
+        self.hasrun=False
 
 
     def replot(self, dimg, rois, imageitem):
@@ -1230,9 +1230,6 @@ class integrationsubwidget(pg.PlotWidget):
             self.applyintegration(self.integrationfunction,dimg,rois,data,mask,imageitem)
         except ValueError:
             msg.logMessage('Maybe the roi was too far away?',msg.DEBUG)
-
-    def replotcallback(self,*args,**kwargs):
-        self.sigPlotResult.emit(*args, **kwargs)
 
     def applyintegration(self,integrationfunction,dimg,rois,data,mask,imageitem):
         self.requestkey += 1
@@ -1252,9 +1249,10 @@ class integrationsubwidget(pg.PlotWidget):
         #                                                                None, self.requestkey, qvrt, qpar),
         #                           callback=self.replotcallback)
 
-        self.replotcallback(integrationfunction(
-        data, mask, dimg.experiment.getAI().getPyFAI(), None, None, self.requestkey, qvrt, qpar),
-                                          )
+
+        # threads.method(callback_slot=self.plotresult)(self.test)('test')
+        args = data, mask, dimg.experiment.getAI().getPyFAI(), None, None, self.requestkey, qvrt, qpar
+
 
         # replot roi integration
         for roi in rois:
@@ -1269,16 +1267,16 @@ class integrationsubwidget(pg.PlotWidget):
                 # xglobals.pool.apply_async(integrationfunction,
                 #                           args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
                 #                           callback=self.replotcallback)
-                runnable = threads.RunnableMethod(integrationfunction, method_args=(
-                data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
-                                                  callback_slot=self.replotcallback)
-                threads.add_to_queue(runnable)
+                args=data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar
+
+        threads.method(callback_slot=self.plotresult)(integrationfunction)(*args)
+
     def movPosLine(self, q,qx,qz,dimg=None):
         pass #raise NotImplementedError
 
-    def plotresult(self, result):
+    def plotresult(self, x, y, color, requestkey): #x, y, color, requestkey
+        # print 'RESULT:',x, y, color, requestkey #x, y, color, requestkey, QtCore.QThread.currentThread()
 
-        (x, y, color,requestkey) = result
         if requestkey == self.requestkey:
             if not self.iscleared:
                 self.plotItem.clear()
@@ -1287,20 +1285,17 @@ class integrationsubwidget(pg.PlotWidget):
             if color is None:
                 color = [255, 255, 255]
             y[y<=0]=1.E-9
-            curve = self.plotItem.plot(x, y, pen=pg.mkPen(color=color))
+            curve = self.plotItem.plot(np.array(x), np.array(y), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))
 
             self.plotItem.update()
 
 
 class qintegrationwidget(integrationsubwidget):
-
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.qintegrate)
 
     def __init__(self):
         super(qintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q,qx,qz,dimg=None):
         self.posLine.setPos(q)
@@ -1308,53 +1303,41 @@ class qintegrationwidget(integrationsubwidget):
 
 
 class chiintegrationwidget(integrationsubwidget):
-
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.chiintegratepyFAI)
 
     def __init__(self):
         super(chiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qz,qx)))
         self.posLine.show()
 
 class xintegrationwidget(integrationsubwidget):
-
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.xintegrate)
 
     def __init__(self):
         super(xintegrationwidget, self).__init__(axislabel=u'q<sub>x</sub> (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(qx)
         self.posLine.show()
 
 class zintegrationwidget(integrationsubwidget):
-
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.zintegrate)
 
     def __init__(self):
         super(zintegrationwidget, self).__init__(axislabel=u'q<sub>z</sub> (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(qz)
         self.posLine.show()
 
 class cakexintegrationwidget(integrationsubwidget):
-
     iscake = True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.cakexintegrate)
 
     def __init__(self):
         super(cakexintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qx,qz)))
@@ -1363,12 +1346,10 @@ class cakexintegrationwidget(integrationsubwidget):
 class cakezintegrationwidget(integrationsubwidget):
 
     iscake = True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.cakezintegrate)
 
     def __init__(self):
         super(cakezintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(q)
@@ -1377,12 +1358,10 @@ class cakezintegrationwidget(integrationsubwidget):
 class remeshqintegrationwidget(integrationsubwidget):
 
     isremesh=True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.remeshqintegrate)
 
     def __init__(self):
         super(remeshqintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q,qx,qz,dimg=None):
         self.posLine.setPos(q)
@@ -1391,12 +1370,10 @@ class remeshqintegrationwidget(integrationsubwidget):
 class remeshchiintegrationwidget(integrationsubwidget):
 
     isremesh=True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.remeshchiintegrate)
 
     def __init__(self):
         super(remeshchiintegrationwidget, self).__init__(axislabel=u'χ (Degrees)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx, qz, dimg=None):
         self.posLine.setPos(np.rad2deg(np.arctan2(qz, qx)))
@@ -1405,12 +1382,10 @@ class remeshchiintegrationwidget(integrationsubwidget):
 class remeshxintegrationwidget(integrationsubwidget):
 
     isremesh=True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.remeshxintegrate)
 
     def __init__(self):
         super(remeshxintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx,qz,dimg=None):
         self.posLine.setPos(qx)
@@ -1419,12 +1394,10 @@ class remeshxintegrationwidget(integrationsubwidget):
 class remeshzintegrationwidget(integrationsubwidget):
 
     isremesh=True
-    sigPlotResult = QtCore.Signal(object)
     integrationfunction = staticmethod(integration.remeshzintegrate)
 
     def __init__(self):
         super(remeshzintegrationwidget, self).__init__(axislabel=u'q (\u212B\u207B\u00B9)')
-        self.sigPlotResult.connect(self.plotresult)
 
     def movPosLine(self,q, qx,qz,dimg=None):
         self.posLine.setPos(qz)
