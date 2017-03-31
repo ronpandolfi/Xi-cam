@@ -835,11 +835,18 @@ class dimgViewer(QtGui.QWidget):
         print 'threshold:',threshold
 
         if ok and threshold:
-            mask = self.dimg.rawdata>threshold
+            kernelsize, ok = QtGui.QInputDialog.getInt(self, 'Neighborhood size', 'Neighborhood size (binary closing kernel size):', 2, 0,
+                                                      10000000)
+            if ok and kernelsize:
+                mask = self.dimg.rawdata>threshold
 
-            morphology.binary_closing(mask,morphology.generate_binary_structure(2,2),output=mask) # write-back to mask
+                y,x = np.ogrid[-kernelsize:kernelsize+1,-kernelsize:kernelsize+1]
+                kernel = x**2+y**2 <=kernelsize**2
 
-            config.activeExperiment.addtomask(mask)
+                morphology.binary_closing(mask,kernel,output=mask) # write-back to mask
+
+                config.activeExperiment.mask=mask
+                self.maskoverlay()
 
 
     def maskoverlay(self):
