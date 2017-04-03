@@ -60,6 +60,214 @@ class hdf5image(fabioimage):
 
 fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x89\x48\x44\x46", 'hdf5'))
 
+
+@register_h5class
+class ALS832H5image(fabioimage):
+    """
+    Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
+    """
+    extensions = ['h5']
+
+    def __init__(self, data=None, header=None):
+        super(ALS832H5image, self).__init__(data=data, header=header)
+        self.frames = None
+        self.currentframe = 0
+        self.header = None
+        self._h5 = None
+        self._dgroup = None
+        self._flats = None
+        self._darks = None
+
+        self._proj_frames = None
+        self._flat_frames = None
+        self._dark_frames = None
+
+    # Context manager for "with" statement compatibility
+    def __enter__(self, *arg, **kwarg):
+        return self
+
+    def __exit__(self, *arg, **kwarg):
+        self.close()
+
+    def _readheader(self, f):
+        if self._h5 is not None:
+            self.header = dict(self._h5.attrs)
+            self.header.update(**self._dgroup.attrs)
+
+    @staticmethod
+    def validate(f, frame=None):
+        h5 = h5py.File(f, 'r')
+        header = dict(h5.attrs)
+        assert header['facility'] == 'als'
+        assert header['end_station'] == 'bl832'
+
+    def read(self, f, frame=None):
+        self.filename = f
+        if frame is None:
+            frame = 0
+        if self._h5 is None:
+
+            # Check header for unique attributes
+            try:
+                self._h5 = h5py.File(self.filename, 'r+')
+                self._dgroup = self._finddatagroup(self._h5)
+                self.readheader(f)
+                if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
+                    raise H5ReadError
+            except KeyError:
+                raise H5ReadError
+
+            self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+        dfrm = self._dgroup[self.frames[frame]]
+        self.currentframe = frame
+        self.data = dfrm[0]
+        return self
+
+    def change_dataset_attribute(self, key, value):
+        self._dgroup.attrs.modify(key, value)
+
+    def _finddatagroup(self, h5object):
+        keys = h5object.keys()
+        if len(keys) == 1:
+            if isinstance(h5object[keys[0]], h5py.Group):
+                group_keys = h5object[keys[0]].keys()
+                if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
+                    return h5object[keys[0]]
+                else:
+                    return self._finddatagroup(h5object[keys[0]])
+            else:
+                raise H5ReadError('Unable to find dataset group')
+        else:
+            raise H5ReadError('Unable to find dataset group')
+
+    @property
+    def proj_frames(self):
+        if self._proj_frames is None:
+            self._proj_frames = {}
+            for i in range(len(self.frames)):
+                self._proj_frames[i] = self.frames[i]
+        return self._proj_frames
+
+    @property
+    def flat_frames(self):
+        if self._flat_frames is None:
+            self._flat_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'bak' in key:
+                    self._flat_frames[counter] = key
+                    counter +=1
+        return self._flat_frames
+
+    @property
+    def dark_frames(self):
+        if self._dark_frames is None:
+            self._dark_frames = {}
+            counter = 0
+            for key in self._dgroup.keys():
+                if 'drk' in key:
+                    self._dark_frames[counter] = key
+                    counter +=1
+        return self._dark_frames
+
+
+    @property
+    def flats(self):
+        if self._flats is None:
+            self._flats = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'bak' in key])
+        return self._flats
+
+    @property
+    def darks(self):
+        if self._darks is None:
+            self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
+        return self._darks
+
+    def flatindices(self):
+        i0 = int(self.header['i0cycle'])
+        nproj = len(self)
+        if i0 > 0:
+            indices = list(range(0, nproj, i0))
+            if indices[-1] != nproj - 1:
+                indices.append(nproj - 1)
+        elif i0 == 0:
+            indices = [0, nproj - 1]
+        return indices
+
+    @property
+    def nframes(self):
+        return len(self.frames)
+
+    @nframes.setter
+    def nframes(self, n):
+        pass
+
+    # def getsinogram(self, idx=None):
+    #     if idx is None: idx = self.data.shape[0]//2
+    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
+    #                                                               range(self.nframes))])
+    #     return self.sinogram
+
+    def __getitem__(self, item):
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item,)
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and isinstance(item[n], int):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self._dgroup[self.frames[i]][0, slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+    def __len__(self):
+        return self.nframes
+
+    def getframe(self, frame=0):
+        self.data = self._dgroup[self.frames[frame]][0]
+        return self.data
+
+
+    def next(self):
+        if self.currentframe < self.__len__() - 1:
+            self.currentframe += 1
+        else:
+            raise StopIteration
+        return self.getframe(self.currentframe)
+
+    def previous(self):
+        if self.currentframe > 0:
+            self.currentframe -= 1
+            return self.getframe(self.currentframe)
+        else:
+            raise StopIteration
+
+    def close(self):
+        self._h5.close()
+
+
 @register_h5class
 class nexusimage(fabioimage):
     extensions = ['.hdf']
@@ -485,212 +693,6 @@ class ALS733H5image(fabioimage):
                 return u'high' in ddet.keys() and u'low' in ddet.keys()
         except AttributeError:
             return False
-
-@register_h5class
-class ALS832H5image(fabioimage):
-    """
-    Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
-    """
-    extensions = ['h5']
-
-    def __init__(self, data=None, header=None):
-        super(ALS832H5image, self).__init__(data=data, header=header)
-        self.frames = None
-        self.currentframe = 0
-        self.header = None
-        self._h5 = None
-        self._dgroup = None
-        self._flats = None
-        self._darks = None
-
-        self._proj_frames = None
-        self._flat_frames = None
-        self._dark_frames = None
-
-    # Context manager for "with" statement compatibility
-    def __enter__(self, *arg, **kwarg):
-        return self
-
-    def __exit__(self, *arg, **kwarg):
-        self.close()
-
-    def _readheader(self, f):
-        if self._h5 is not None:
-            self.header = dict(self._h5.attrs)
-            self.header.update(**self._dgroup.attrs)
-
-    @staticmethod
-    def validate(f, frame=None):
-        h5 = h5py.File(f, 'r')
-        header = dict(h5.attrs)
-        assert header['facility'] == 'als'
-        assert header['end_station'] == 'bl832'
-
-    def read(self, f, frame=None):
-        self.filename = f
-        if frame is None:
-            frame = 0
-        if self._h5 is None:
-
-            # Check header for unique attributes
-            try:
-                self._h5 = h5py.File(self.filename, 'r+')
-                self._dgroup = self._finddatagroup(self._h5)
-                self.readheader(f)
-                if self.header['facility'] != 'als' or self.header['end_station'] != 'bl832':
-                    raise H5ReadError
-            except KeyError:
-                raise H5ReadError
-
-            self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
-        dfrm = self._dgroup[self.frames[frame]]
-        self.currentframe = frame
-        self.data = dfrm[0]
-        return self
-
-    def change_dataset_attribute(self, key, value):
-        self._dgroup.attrs.modify(key, value)
-
-    def _finddatagroup(self, h5object):
-        keys = h5object.keys()
-        if len(keys) == 1:
-            if isinstance(h5object[keys[0]], h5py.Group):
-                group_keys = h5object[keys[0]].keys()
-                if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
-                    return h5object[keys[0]]
-                else:
-                    return self._finddatagroup(h5object[keys[0]])
-            else:
-                raise H5ReadError('Unable to find dataset group')
-        else:
-            raise H5ReadError('Unable to find dataset group')
-
-    @property
-    def proj_frames(self):
-        if self._proj_frames is None:
-            self._proj_frames = {}
-            for i in range(len(self.frames)):
-                self._proj_frames[i] = self.frames[i]
-        return self._proj_frames
-
-    @property
-    def flat_frames(self):
-        if self._flat_frames is None:
-            self._flat_frames = {}
-            counter = 0
-            for key in self._dgroup.keys():
-                if 'bak' in key:
-                    self._flat_frames[counter] = key
-                    counter +=1
-        return self._flat_frames
-
-    @property
-    def dark_frames(self):
-        if self._dark_frames is None:
-            self._dark_frames = {}
-            counter = 0
-            for key in self._dgroup.keys():
-                if 'drk' in key:
-                    self._dark_frames[counter] = key
-                    counter +=1
-        return self._dark_frames
-
-
-    @property
-    def flats(self):
-        if self._flats is None:
-            self._flats = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'bak' in key])
-        return self._flats
-
-    @property
-    def darks(self):
-        if self._darks is None:
-            self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
-        return self._darks
-
-    def flatindices(self):
-        i0 = int(self.header['i0cycle'])
-        nproj = len(self)
-        if i0 > 0:
-            indices = list(range(0, nproj, i0))
-            if indices[-1] != nproj - 1:
-                indices.append(nproj - 1)
-        elif i0 == 0:
-            indices = [0, nproj - 1]
-        return indices
-
-    @property
-    def nframes(self):
-        return len(self.frames)
-
-    @nframes.setter
-    def nframes(self, n):
-        pass
-
-    # def getsinogram(self, idx=None):
-    #     if idx is None: idx = self.data.shape[0]//2
-    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
-    #                                                               range(self.nframes))])
-    #     return self.sinogram
-
-    def __getitem__(self, item):
-        s = []
-        if not isinstance(item, tuple) and not isinstance(item, list):
-            item = (item,)
-        for n in range(3):
-            if n == 0:
-                stop = len(self)
-            elif n == 1:
-                stop = self.data.shape[0]
-            elif n == 2:
-                stop = self.data.shape[1]
-            if n < len(item) and isinstance(item[n], slice):
-                start = item[n].start if item[n].start is not None else 0
-                step = item[n].step if item[n].step is not None else 1
-                stop = item[n].stop if item[n].stop is not None else stop
-            elif n < len(item) and isinstance(item[n], int):
-                if item[n] < 0:
-                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
-                else:
-                    start, stop, step = item[n], item[n] + 1, 1
-            else:
-                start, step = 0, 1
-
-            s.append((start, stop, step))
-
-        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            _arr = self._dgroup[self.frames[i]][0, slice(*s[1]), slice(*s[2])]
-            if n == 0:  # allocate array
-                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
-            arr[n] = _arr
-        if arr.shape[0] == 1:
-            arr = arr[0]
-        return np.squeeze(arr)
-
-    def __len__(self):
-        return self.nframes
-
-    def getframe(self, frame=0):
-        self.data = self._dgroup[self.frames[frame]][0]
-        return self.data
-
-
-    def next(self):
-        if self.currentframe < self.__len__() - 1:
-            self.currentframe += 1
-        else:
-            raise StopIteration
-        return self.getframe(self.currentframe)
-
-    def previous(self):
-        if self.currentframe > 0:
-            self.currentframe -= 1
-            return self.getframe(self.currentframe)
-        else:
-            raise StopIteration
-
-    def close(self):
-        self._h5.close()
 
 # currently not necessary, but could be used in future for non-standardized hdf formats
 @register_h5class
