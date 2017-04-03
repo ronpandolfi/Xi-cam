@@ -106,11 +106,15 @@ class UIform(object):
 
         self.queue = ReconManager()
 
+        logwidget = QtGui.QStackedWidget()
+        logwidget.addWidget(self.bottomwidget)
 
         icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
         icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
         icon_queue = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_63.png"))
-        self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue),(self.property_table, icon_properties)]
+        icon_log = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_64.png"))
+        self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue), (logwidget, icon_log),
+                          (self.property_table, icon_properties)]
 
         # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
         #

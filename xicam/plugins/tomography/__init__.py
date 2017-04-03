@@ -83,7 +83,9 @@ class TomographyPlugin(base.plugin):
         self.toolbar = self.ui.toolbar
         self.leftmodes = self.ui.leftmodes
         self.rightwidget = None
-        self.bottomwidget = self.ui.bottomwidget
+        self.bottom = self.ui.bottomwidget
+        # self.bottomwidget = self.ui.bottomwidget
+        # self.bottomwidget.hide()
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
@@ -119,7 +121,7 @@ class TomographyPlugin(base.plugin):
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
                                 self.clearPipeline)
         self.manager.sigTestRange.connect(self.slicePreviewAction)
-        self.bottomwidget.local_cancelButton.clicked.connect(self.freeRecon)
+        self.bottom.local_cancelButton.clicked.connect(self.freeRecon)
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
         super(TomographyPlugin, self).__init__(placeholders, *args, **kwargs)
@@ -602,10 +604,10 @@ class TomographyPlugin(base.plugin):
 
         name = self.centerwidget.tabText(self.centerwidget.currentIndex())
         msg.showMessage('Computing reconstruction for {}...'.format(name),timeout = 0)
-        self.bottomwidget.local_console.clear()
+        self.bottom.local_console.clear()
         self.manager.updateParameters()
-        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                    interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
+                                    interrupt_signal=self.bottom.local_cancelButton.clicked,
                                     finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
         #
         # pstart = self.ui.config_params.child('Start Projection').value()
@@ -626,7 +628,7 @@ class TomographyPlugin(base.plugin):
         Frees plugin to run reconstruction and run next in queue when job is canceled
         """
         msg.showMessage("Reconstruction interrupted.", timeout=0)
-        self.bottomwidget.log2local('---------- RECONSTRUCTION INTERRUPTED ----------')
+        self.bottom.log2local('---------- RECONSTRUCTION INTERRUPTED ----------')
         self.queue_widget.removeRecon(0)
         self.recon_running = False
         self.runReconstruction()
@@ -652,8 +654,8 @@ class TomographyPlugin(base.plugin):
         self.manager.updateParameters()
 
         run_state = self.manager.saveState(currentWidget)
-        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                            interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
+                            interrupt_signal=self.bottom.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
 
         proj = None
