@@ -761,7 +761,7 @@ class ProjectionViewer(QtGui.QWidget):
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
-
+        self.setMinimumHeight(700)
 
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
@@ -784,8 +784,10 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
-        self.cor_widget.setMinimumHeight(50)
         self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+        self.cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.auto_cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.cor_widget.setMinimumHeight(50)
         self.auto_cor_widget.setMinimumHeight(50)
 
         self.cor_box = QtGui.QStackedWidget(self)
@@ -835,11 +837,11 @@ class ProjectionViewer(QtGui.QWidget):
         plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
         #TODO data shape seems to be on larger than the return from slicing it with [:-1]
-        spinBox.setRange(0, data.shape[0])
+        spinBox.setRange(0, data.shape[0]-1)
         slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
-        slider.setRange(0, data.shape[0])
-        spinBox.setValue(data.shape[0])
-        slider.setValue(data.shape[0])
+        slider.setRange(0, data.shape[0]-1)
+        spinBox.setValue(data.shape[0]-1)
+        slider.setValue(data.shape[0]-1)
         flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
         flipCheckBox.setChecked(True)
         constrainYCheckBox = QtGui.QCheckBox('Constrain Y', parent=self.cor_widget)
