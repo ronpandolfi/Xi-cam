@@ -784,7 +784,9 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
+        self.cor_widget.setMinimumHeight(50)
         self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+        self.auto_cor_widget.setMinimumHeight(50)
 
         self.cor_box = QtGui.QStackedWidget(self)
         self.cor_box.addWidget(self.auto_cor_widget)
