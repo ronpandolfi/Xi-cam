@@ -761,7 +761,7 @@ class ProjectionViewer(QtGui.QWidget):
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
-        self.setMinimumHeight(700)
+        self.setMinimumHeight(400)
 
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
@@ -1038,6 +1038,7 @@ class ProjectionViewer(QtGui.QWidget):
         val : bool
             Boolean specifying to normalize image
         """
+        # self.roi_histogram.setLevels(0,1)
         if val and not self.normalized:
             self.flat = np.median(self.data.flats, axis=0).transpose()
             self.dark = np.median(self.data.darks, axis=0).transpose()
@@ -1064,10 +1065,14 @@ class ProjectionViewer(QtGui.QWidget):
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
+            self.roi_histogram.setLevels(-1,1) # lazy solution, could be improved with some sampling methods
             self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
             self.stackViewer.resetImage()
             self.imgoverlay_roi.resetImage()
+            min, max = self.stackViewer.quickMinMax(self.imgoverlay_roi.imageItem.image)
+            self.roi_histogram.setLevels(min, max)
+            self.normalized = False
             self.normalized = False
             self.normCheckBox.setChecked(False)
 
@@ -1161,7 +1166,6 @@ class PreviewViewer(QtGui.QSplitter):
 
         self.imageview = ImageView(self)
         self.imageview.ui.roiBtn.setParent(None)
-        self.imageview.ui.roiBtn.setParent(None)
         self.imageview.ui.menuBtn.setParent(None)
 
         self.view_label = QtGui.QLabel(self)
@@ -1173,13 +1177,14 @@ class PreviewViewer(QtGui.QSplitter):
         self.imageview.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
-        self.addWidget(panel)
-        self.addWidget(self.imageview)
+        # self.addWidget(panel)
+        # self.addWidget(self.imageview)
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
+
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
