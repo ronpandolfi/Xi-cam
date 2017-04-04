@@ -157,8 +157,9 @@ class TomoViewer(QtGui.QWidget):
             center_param = recon_function.params.child('center')
             # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
             # manual center widget, but this limits the center options to a resolution of 0.5
-            # self.projectionViewer.sigCenterChanged.connect(
-            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.sigCenterChanged.connect(
+                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.centerBox.valueChanged.connect(lambda x: center_param.setValue(x))
             self.projectionViewer.setCenterButton.clicked.connect(
                 lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
@@ -824,6 +825,9 @@ class ProjectionViewer(QtGui.QWidget):
         h1.addWidget(self.setCenterButton)
         h1.addWidget(olabel)
         h1.addWidget(originBox)
+
+        # hide center button since cor updates automatically in pipeline
+        self.setCenterButton.hide()
 
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
