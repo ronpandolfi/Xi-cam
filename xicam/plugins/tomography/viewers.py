@@ -394,6 +394,11 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
         hist = self.preview3DViewer.volumeviewer.getHistogram()
+
+        # disable auto scale
+        preview_hist = self.preview3DViewer.volumeviewer.HistogramLUTWidget
+        preview_hist.vb.enableAutoRange(preview_hist.vb.YAxis, False)
+
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
@@ -773,6 +778,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+        self.roi_histogram.vb.enableAutoRange(self.roi_histogram.vb.YAxis, False) #disable autoscaling for histogram
         self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
@@ -1227,6 +1233,11 @@ class PreviewViewer(QtGui.QSplitter):
         self.functionform.addWidget(functree)
         levels = False if len(self.data) > 1 else True
         self.imageview.setImage(self.previews, autoRange=False, autoLevels=levels, autoHistogramRange=False)
+
+        # disable autoscaling for histogram
+        hist = self.imageview.getHistogramWidget()
+        hist.vb.enableAutoRange(hist.vb.YAxis, False)
+
         self.functionform.setCurrentWidget(functree)
 
     def removePreview(self):
