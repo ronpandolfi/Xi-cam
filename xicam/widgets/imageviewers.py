@@ -10,7 +10,7 @@ __status__ = "Beta"
 
 
 from PySide import QtGui, QtCore
-from xicam.widgets.customwidgets import ImageView
+from xicam.widgets.customwidgets import ImageView, histDialogButton
 import numpy as np
 
 
@@ -32,6 +32,10 @@ class StackViewer(ImageView):
         if data is not None:
             self.setData(data)
 
+        # push button for setting the max/min values of a histogram widget
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.getHistogramWidget())
+
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(view_label)
@@ -39,8 +43,9 @@ class StackViewer(ImageView):
         l.addStretch(1)
         w = QtGui.QWidget()
         w.setLayout(l)
-        self.ui.gridLayout.addWidget(view_label, 1, 1, 1, 1)
-        self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
+        self.ui.gridLayout.addWidget(self.setButton, 1, 1, 1, 2)
+        self.ui.gridLayout.addWidget(view_label, 2, 1, 1, 1)
+        self.ui.gridLayout.addWidget(self.view_spinBox, 2, 2, 1, 1)
         self.ui.menuBtn.setParent(None)
         self.ui.roiBtn.setParent(None)
 
@@ -48,7 +53,7 @@ class StackViewer(ImageView):
         self.view_spinBox.valueChanged.connect(self.setCurrentIndex)
 
         self.label = QtGui.QLabel(parent=self)
-        self.ui.gridLayout.addWidget(self.label, 1, 0, 1, 1)
+        self.ui.gridLayout.addWidget(self.label, 2, 0, 1, 1)
 
     def setData(self, data):
         self.data = data
@@ -98,6 +103,10 @@ class ArrayViewer(StackViewer):
         if data is not None:
             self.setData(data, flipAxes=flipAxes)
 
+        # push button for setting the max/min values of a histogram widget
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.getHistogramWidget())
+
         l = QtGui.QHBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         l.addWidget(view_label)
@@ -105,8 +114,9 @@ class ArrayViewer(StackViewer):
         l.addStretch(1)
         w = QtGui.QWidget()
         w.setLayout(l)
-        self.ui.gridLayout.addWidget(view_label, 1, 1, 1, 1)
-        self.ui.gridLayout.addWidget(self.view_spinBox, 1, 2, 1, 1)
+        self.ui.gridLayout.addWidget(self.setButton, 1, 1, 1, 2)
+        self.ui.gridLayout.addWidget(view_label, 2, 1, 1, 1)
+        self.ui.gridLayout.addWidget(self.view_spinBox, 2, 2, 1, 1)
         self.ui.menuBtn.setParent(None)
         self.ui.roiBtn.setParent(None)
 
@@ -114,7 +124,7 @@ class ArrayViewer(StackViewer):
         self.view_spinBox.valueChanged.connect(self.setCurrentIndex)
 
         self.label = QtGui.QLabel(parent=self)
-        self.ui.gridLayout.addWidget(self.label, 1, 0, 1, 1)
+        self.ui.gridLayout.addWidget(self.label, 2, 0, 1, 1)
 
     def flipAxes(self, arr):
         toReturn = np.empty((arr.shape[0], arr.shape[2], arr.shape[1]))

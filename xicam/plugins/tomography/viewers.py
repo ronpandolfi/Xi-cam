@@ -8,7 +8,7 @@ from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
-from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
+from xicam.widgets.customwidgets import DataTreeWidget, ImageView, histDialogButton
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
@@ -766,7 +766,7 @@ class ProjectionViewer(QtGui.QWidget):
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
-        self.setMinimumHeight(400)
+        self.setMinimumHeight(200)
 
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
@@ -813,6 +813,11 @@ class ProjectionViewer(QtGui.QWidget):
         h.addWidget(self.manual_cor_button)
         h.addWidget(write_cor)
         self.cor_button_holder.setLayout(h)
+
+        # push button for overlay widget's histogram range selection
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.roi_histogram)
+        self.stackViewer.ui.gridLayout.addWidget(self.setButton, 1, 3, 1, 2)
 
         clabel = QtGui.QLabel('Rotation Center:')
         olabel = QtGui.QLabel('Offset:')
@@ -961,6 +966,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_box.hide()
         self.cor_button_holder.hide()
         self.roi_histogram.hide()
+        self.setButton.hide()
         self.imgoverlay_roi.setVisible(False)
 
     def showCenterDetection(self):
@@ -971,6 +977,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_box.show()
         self.cor_button_holder.show()
         self.roi_histogram.show()
+        self.setButton.show()
         self.imgoverlay_roi.setVisible(True)
 
     def showMBIR(self):
@@ -1178,9 +1185,13 @@ class PreviewViewer(QtGui.QSplitter):
         self.view_label.setText('No: ')
         self.view_number = QtGui.QSpinBox(self)
         self.view_number.setReadOnly(True)
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.imageview.getHistogramWidget())
+
         self.view_number.setMaximum(5000) # Large enough number
-        self.imageview.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
-        self.imageview.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.setButton, 1, 1, 1, 2)
+        self.imageview.ui.gridLayout.addWidget(self.view_label, 2, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.view_number, 2, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
         # self.addWidget(panel)
