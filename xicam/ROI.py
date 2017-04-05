@@ -66,11 +66,11 @@ class LinearRegionItem(pg.LinearRegionItem):
         if self.orientation is pg.LinearRegionItem.Horizontal:
             regionbounds = self.getRegion()
 
-            cut[:, regionbounds[0]:regionbounds[1]] = 1
+            cut[:, int(regionbounds[0]):int(regionbounds[1])] = 1
         elif self.orientation is pg.LinearRegionItem.Vertical:
             regionbounds = self.getRegion()
 
-            cut[regionbounds[0]:regionbounds[1], :] = 1
+            cut[int(regionbounds[0]):int(regionbounds[1]), :] = 1
 
 
         return (cut * data).T
