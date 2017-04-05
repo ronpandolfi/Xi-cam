@@ -246,7 +246,7 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qx = AI.qArray(data.shape[::-1])[AI.getFit2D()['centerY'],:]/10
+    qx = AI.qArray(data.shape[::-1])[int(AI.getFit2D()['centerY']),:]/10
     qx[:qx.argmin()]*=-1
 
     return qx.tolist(), xprofile.tolist(), color, requestkey
@@ -276,7 +276,7 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qz = AI.qArray(data.shape[::-1])[:,AI.getFit2D()['centerX']]/10
+    qz = AI.qArray(data.shape[::-1])[:,int(AI.getFit2D()['centerX'])]/10
     qz[:qz.argmin()]*=-1
 
     return qz.tolist(), xprofile.tolist(), color, requestkey
