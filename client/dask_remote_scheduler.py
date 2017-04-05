@@ -6,6 +6,15 @@ from distributed import Scheduler, Worker, Executor
 import paramiko
 import select
 
+try:
+    import logging
+    logging.getLogger("paramiko.transport").disabled = True
+    logging.getLogger("distributed.client").disabled = True
+    logging.getLogger("distributed.scheduler").disabled = True
+    logging.getLogger("distributed.comm.tcp").disabled = True
+except:
+    pass
+
 import getpass
 import os
 import socket
@@ -18,7 +27,7 @@ try:
 except ImportError:
     import socketserver as SocketServer
 
-g_verbose = True
+g_verbose = False
 
 
 def verbose(s):

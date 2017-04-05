@@ -184,24 +184,31 @@ class HipGISAXSPlugin(base.plugin):
 
     def runDask(self):
         import client.dask_active_executor
-
         if client.dask_active_executor.active_executor is None:
             #warning message
             return
 
-        ae = client.dask_active_executor.active_executor.executor
+        ae = client.dask_active_executor.active_executor
 
-        def hipgisaxs_func(yaml_str):
-          import subprocess
-          import time
-          timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
-          filename = os.path.join(os.path.expanduser('~'),"test_remote.yml")
+        def hipgisaxs_func(yaml_str, script_prefix):
+          try:
+            import subprocess
+            import time
+            timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
+            filename = os.path.join(os.path.expanduser('~'),"test_remote.yml")
+            script = os.path.join(script_prefix,"rungisaxs.sh")
 
-          with open(filename, 'w') as outfile:
-             outfile.write(yaml_str)
+            with open(filename, 'w') as outfile:
+               outfile.write(yaml_str)
 
-          a = subprocess.check_output(["srun", "--job-name=hipgisaxs", "--nodes=1", "--ntasks=1", "--ntasks-per-node=1", "--time=00:30:00", "/bin/bash", "/users/course79/rungisaxs.sh", filename])
-          return a
+ 
+            #a = subprocess.check_output(["srun", "--job-name=hipgisaxs", "--nodes=1", "--ntasks=1", "--ntasks-per-node=1", "--time=00:30:00", "/bin/bash", "/users/course79/rungisaxs.sh", filename])
+            a = subprocess.check_output(["/bin/bash", script, filename])
+            return a
+          except Exception as e:
+            return repr(e)
+
+          return None
 
         self.writeyaml()
 
@@ -209,7 +216,7 @@ class HipGISAXSPlugin(base.plugin):
           fx_str = outfile.read()
 
         msg.showMessage('Submitting job to remote executor...')
-        future_tag = ae.submit(hipgisaxs_func, fx_str, pure=False)
+        future_tag = ae.executor.executor.submit(hipgisaxs_func, fx_str, ae.prefix_path, pure=False)
         msg.showMessage('Job received. Submitting to queue...')
 
         import time
