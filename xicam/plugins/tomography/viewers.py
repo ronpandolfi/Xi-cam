@@ -1238,8 +1238,8 @@ class PreviewViewer(QtGui.QSplitter):
         functree.setData(funcdata, hideRoot=True)
         functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         functree.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
-        functree.setColumnWidth(0, 130)
-        functree.setColumnWidth(1, 245)
+        functree.setColumnWidth(0, 140)
+        functree.setColumnWidth(1, 235)
 
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
@@ -1313,7 +1313,7 @@ class Preview3DViewer(QtGui.QSplitter):
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         self.pipelinetree = DataTreeWidget()
-        self.pipelinetree.setHeaderHidden(True)
+        self.pipelinetree.setHeaderHidden(False)
         self.pipelinetree.clear()
 
         self.setPipelineButton = QtGui.QToolButton(self)
@@ -1331,6 +1331,7 @@ class Preview3DViewer(QtGui.QSplitter):
         h.addWidget(self.setPipelineButton)
         ly.addLayout(h)
         panel = QtGui.QWidget(self)
+        panel.resize(400, 480)
         panel.setLayout(ly)
 
         self.volumeviewer = VolumeViewer()
@@ -1342,6 +1343,11 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.setPipelineButton.clicked.connect(lambda: self.sigSetDefaults.emit(self.data))
         self.setPipelineButton.hide()
+
+        self.resize(800, 480)
+
+        # self.pipelinetree.setColumnWidth(0, 140)
+        # self.pipelinetree.setColumnWidth(1, 235)
 
     def setPreview(self, recon, funcdata):
         """
@@ -1357,6 +1363,8 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.pipelinetree.setData(funcdata, hideRoot=True)
         self.data = funcdata
+        self.pipelinetree.setColumnWidth(0, 130)
+        self.pipelinetree.setColumnWidth(1, 245)
         self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
         self.setPipelineButton.show()

@@ -89,6 +89,7 @@ class TomographyPlugin(base.plugin):
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
 
+
         # Keep a timer for reconstructions
         self.recon_start_time = 0
 
@@ -125,6 +126,8 @@ class TomographyPlugin(base.plugin):
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
         super(TomographyPlugin, self).__init__(placeholders, *args, **kwargs)
+
+        self.leftwidget.resize(300, 480)
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
