@@ -98,10 +98,10 @@ def include_OpenGL():
 getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name),name)
 
 buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL',
-                             'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
-                             'pyqtgraph','distutils','IPython','numpy'],
+                             'OpenGL.platform','zmq.utils','pygments.styles','idna',
+                             'pyqtgraph','distutils','IPython','numpy','cryptography','paramiko','tornado','distributed','cffi'],
                 'includes': ['PIL', 'PySide.QtXml','PySide.QtNetwork','PySide.QtWebKit','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
-                             'pygments.lexers.python','ipykernel.datapub','distributed',
+                             'pygments.lexers.python','ipykernel.datapub',
                              'cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto',
                              'numpy.core._methods','numpy.lib.format'
                              ],  # ,'scipy.sparse.csgraph._validation'

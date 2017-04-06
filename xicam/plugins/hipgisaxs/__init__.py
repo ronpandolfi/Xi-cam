@@ -15,6 +15,26 @@ from xicam import clientmanager as cmanager
 from xicam import plugins
 from xicam.plugins import base
 
+################# MONKEYPATCH CRYPTOGRAPHY ###########################
+from cryptography.hazmat import backends
+print 'backends:',backends._available_backends_list
+
+try:
+    from cryptography.hazmat.backends.commoncrypto.backend import backend as be_cc
+except ImportError:
+    be_cc = None
+
+try:
+    from cryptography.hazmat.backends.openssl.backend import backend as be_ossl
+except ImportError:
+    be_ossl = None
+
+backends._available_backends_list = [
+    be for be in (be_cc, be_ossl) if be is not None
+]
+print 'backends:',backends._available_backends_list
+################# MONKEYPATCH CRYPTOGRAPHY ###########################
+
 
 class HipGISAXSPlugin(base.plugin):
     name = 'HipGISAXS'
@@ -232,6 +252,10 @@ class HipGISAXSPlugin(base.plugin):
         result = future_tag.result()
         out = np.array([np.fromstring(line, sep=' ') for line in result.splitlines()])
         msg.logMessage(("result = ", out),msg.DEBUG)
+
+        # modifications to exterior packages required:
+        # msgpack\fallback.py: Added line at 538: if type(key) is list: key = key[0]
+        # distributed\protocol.py:
 
         plugins.plugins['Viewer'].instance.opendata(out)
 
