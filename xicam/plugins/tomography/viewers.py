@@ -1173,6 +1173,7 @@ class PreviewViewer(QtGui.QSplitter):
         h.addWidget(self.deleteButton)
         ly.addLayout(h)
         panel = QtGui.QWidget(self)
+        panel.resize(375,480)
         panel.setLayout(ly)
         self.setPipelineButton.hide()
         self.deleteButton.hide()
@@ -1194,8 +1195,8 @@ class PreviewViewer(QtGui.QSplitter):
         self.imageview.ui.gridLayout.addWidget(self.view_number, 2, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
-        # self.addWidget(panel)
-        # self.addWidget(self.imageview)
+        self.addWidget(panel)
+        self.addWidget(self.imageview)
 
         self.imageview.sigDeletePressed.connect(self.removePreview)
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
@@ -1232,10 +1233,13 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
-        functree.setHeaderHidden(True)
+        functree.setHeaderHidden(False)
+        functree.setHeaderLabels(['Function', 'Params'])
         functree.setData(funcdata, hideRoot=True)
         functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         functree.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+        functree.setColumnWidth(0, 130)
+        functree.setColumnWidth(1, 245)
 
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
