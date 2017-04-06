@@ -336,6 +336,88 @@ class FunctionWidget(fw.FeatureWidget):
         if test.exec_():
             self.sigTestRange.emit(self, param.name(), test.selectedRange())
 
+class AnglesFunctionWidget(FunctionWidget):
+
+    def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
+        super(AnglesFunctionWidget, self).__init__(name, subname, package, input_functions=input_functions,
+                                                   checkable=checkable, closeable=closeable, parent=parent)
+        self.name = name
+        if name != subname:
+            self.name += ' (' + subname + ')'
+
+        self.func_name = name
+        self.subfunc_name = subname
+        self.input_functions = {}
+        self.param_dict = {}
+        self._function = getattr(package, config.names[self.subfunc_name][0])
+
+        #perhaps unnecessary
+        self.package = package.__name__
+
+        # TODO have the children kwarg be passed to __init__
+        self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
+
+        self.form = ParameterTree(showHeader=False)
+        self.form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.form.customContextMenuRequested.connect(self.paramMenuRequested)
+        self.form.setParameters(self.params, showTop=True)
+
+        # Initialize parameter dictionary with keys and default values
+        self.updateParamsDict()
+        argspec = inspect.getargspec(self._function)
+        default_argnum = len(argspec[3])
+        self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
+        for key, val in self.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        # Create a list of argument names (this will most generally be the data passed to the function)
+        self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
+
+        self.parammenu = QtGui.QMenu()
+        action = QtGui.QAction('Test Parameter Range', self)
+        action.triggered.connect(self.testParamTriggered)
+        self.parammenu.addAction(action)
+
+        self.previewButton.customContextMenuRequested.connect(self.menuRequested)
+        self.menu = QtGui.QMenu()
+
+        if input_functions is not None:
+            for param, ipf in input_functions.iteritems():
+                self.addInputFunction(param, ipf)
+
+        # wire up param changed signals
+        for param in self.params.children():
+            param.sigValueChanged.connect(self.paramChanged)
+
+        # change on/off icons
+        icon = QtGui.QIcon()
+        if checkable:
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_51.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+            self.previewButton.setCheckable(True)
+        else:
+            icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_45.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.previewButton.setCheckable(False)
+            self.previewButton.setChecked(True)
+
+        self.previewButton.setIcon(icon)
+        self.previewButton.setFlat(True)
+        self.previewButton.setChecked(True)
+        self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+        self.expand()
+
+    @property
+    def updated_param_dict(self):
+
+        param_dict = {}
+        param_dict['ang1'] = float(self.param_dict['ang1'] + self.param_dict['range'])
+        param_dict['ang2'] = float(self.param_dict['ang1'])
+        param_dict['nang'] = self.param_dict['nang']
+
+        return param_dict
 
 class TomoPyReconFunctionWidget(FunctionWidget):
     """
@@ -355,7 +437,7 @@ class TomoPyReconFunctionWidget(FunctionWidget):
     def __init__(self, name, subname, package):
 
         self.packagename = package.__name__
-        self.input_functions = {'theta': FunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
+        self.input_functions = {'theta': AnglesFunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
                                                   package=reconpkg.packages['tomopy'], checkable=False),
                                 'center': FunctionWidget('Center Detection', 'Phase Correlation', closeable=True,
                                                   package=reconpkg.packages['tomopy'])}

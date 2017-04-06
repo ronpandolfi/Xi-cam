@@ -63,8 +63,8 @@
         Projection Angles:
           Projection Angles:
             Parameters:
-              ang1: 270
-              ang2: 90
+              ang1: 90
+              range: 180
 10. Crop:
   Crop:
     Parameters:
