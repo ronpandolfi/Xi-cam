@@ -17,6 +17,7 @@ from pipeline import variation
 from xicam import threads
 from pipeline import msg
 from scipy.ndimage import morphology
+from pyFAI import calibrant
 
 class OOMTabItem(QtGui.QWidget):
     sigLoaded = QtCore.Signal()
@@ -183,6 +184,10 @@ class dimgViewer(QtGui.QWidget):
         # Add a placeholder image item for the mask to the viewbox
         self.maskimage = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.maskimage)
+
+        # Add a placeholder image item for the calibration to the viewbox
+        self.calibrantoverlay = pg.ImageItem(opacity=.25)
+        self.viewbox.addItem(self.calibrantoverlay)
 
         # import ROI
         # self.arc=ROI.ArcROI((620.,29.),500.)
@@ -566,6 +571,19 @@ class dimgViewer(QtGui.QWidget):
             # print item
             if issubclass(type(item), ROI.ArcROI):
                 item.setPos(center)
+
+    def simulatecalibrant(self, calibrantkey):
+        ai = config.activeExperiment.getAI()
+        c = calibrant.ALL_CALIBRANTS[calibrantkey]
+        c.set_wavelength(ai.wavelength)
+        fakecalibrationimg = c.fake_calibration_image(ai, shape=self.dimg.displaydata.shape[::-1], Imax=255, U=0, V=0, W=0.00001).T
+
+        self.maskimage.setImage(
+            )
+
+        self.calibrantoverlay.setImage(np.dstack((np.ones_like(fakecalibrationimg), fakecalibrationimg, np.zeros_like(fakecalibrationimg), fakecalibrationimg)).astype(np.float),
+            opacity=.5)
+        self.maskimage.setLevels([0, 1])
 
     @debugtools.timeit
     def calibrate(self, algorithm, calibrant):

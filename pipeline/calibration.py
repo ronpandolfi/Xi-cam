@@ -60,7 +60,17 @@ def fourierAutocorrelation(dimg, calibrantkey):
             # print peak
             break
 
-    calibrant1stpeak = calibrant.ALL_CALIBRANTS[calibrantkey].dSpacing[0]
+    yield 85
+    N = 1
+    # guess which order is the first
+    stds=[np.std((peaks[:,0]/(np.arange(len(peaks))+i))[:4]) for i in range(1,5)]
+    if min(stds)<5: # threshold accepting peak as higher N
+        N=np.argmin(stds)+1 # index of the first detected peak
+
+    msg.logMessage(('Using peak #',N,' for calibration...'))
+    yield 90
+
+    calibrant1stpeak = calibrant.ALL_CALIBRANTS[calibrantkey].dSpacing[N-1]
 
     # Calculate sample to detector distance for lowest q peak
     tth = 2 * np.arcsin(0.5 * config.activeExperiment.getvalue('Wavelength') / calibrant1stpeak / 1.e-10)
