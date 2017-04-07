@@ -81,7 +81,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline','yaml':'yaml'},
+    package_dir={'xicam':'xicam','xicamlauncher':'xicamlauncher','pipeline':'pipeline'},
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
