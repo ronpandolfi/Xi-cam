@@ -425,7 +425,7 @@ class diffimage():
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1029,7 +1029,7 @@ class diffimage2(object):
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1326,6 +1326,7 @@ class multifilediffimage2(diffimage2):
 
     @property
     def currentframe(self):
+        if self._currentframe is None: return 0
         return self._currentframe
 
     @currentframe.setter

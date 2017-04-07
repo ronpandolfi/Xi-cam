@@ -114,8 +114,8 @@ class FunctionWidget(fw.FeatureWidget):
         self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
         for key, val in self.param_dict.iteritems():
             if key in [p.name() for p in self.params.children()]:
-                self.params.child(key).setValue(val)
-                self.params.child(key).setDefault(val)
+                self.params.param(key).setValue(val)
+                self.params.param(key).setDefault(val)
 
         # Create a list of argument names (this will most generally be the data passed to the function)
         self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
@@ -1591,7 +1591,7 @@ class FunctionManager(fw.FeatureManager):
                     funcWidget.enabled = False
                 if 'Parameters' in subfuncs[subfunc]:
                     for param, value in subfuncs[subfunc]['Parameters'].iteritems():
-                        child = funcWidget.params.child(param)
+                        child = funcWidget.params.param(param)
                         child.setValue(value)
                         if setdefaults:
                             child.setDefault(value)

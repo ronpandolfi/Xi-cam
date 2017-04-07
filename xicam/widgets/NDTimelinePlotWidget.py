@@ -74,7 +74,7 @@ class timelineWaterfallPlot(pg.ImageView):
     def __init__(self, *args, **kwargs):
         self.axesItem = pg.PlotItem()
         self.axesItem.setLabel('top', "Time", units='s')
-        self.axesItem.setLabel('left', 'q (Å⁻¹)')
+        self.axesItem.setLabel('left', u'q (Å⁻¹)')
         self.axesItem.axes['left']['item'].setZValue(10)
         self.axesItem.axes['top']['item'].setZValue(10)
         self.axesItem.showAxis('bottom', False)

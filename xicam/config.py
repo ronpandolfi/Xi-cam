@@ -9,6 +9,7 @@ import yaml
 from pipeline import pathtools
 import os
 from pipeline import msg
+from pipeline import detectors
 
 
 class settingstracker(object):
@@ -69,6 +70,7 @@ class PyFAIGeometry(pyFAI.geometry.Geometry):
                 param_dict['tiltPlanRotation']]
 
 
+
 class experiment(Parameter):
     def __init__(self, path=None):
 
@@ -77,7 +79,7 @@ class experiment(Parameter):
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
-                      {'name': 'Detector', 'type': 'str', 'value': 'Unknown'},
+                      {'name': 'Detector', 'type': 'list', 'values':detectors.ALL_DETECTORS},
                       {'name': 'Pixel Size X', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
                       {'name': 'Pixel Size Y', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
@@ -98,14 +100,11 @@ class experiment(Parameter):
             super(experiment, self).__init__(name='Experiment Properties', type='group', children=config)
 
             # Wire up the energy and wavelength parameters to fire events on change (so they always match)
-            EnergyParam = self.param('Energy')
-            WavelengthParam = self.param('Wavelength')
-            EnergyParam.sigValueChanged.connect(self.EnergyChanged)
-            WavelengthParam.sigValueChanged.connect(self.WavelengthChanged)
+            self.param('Energy').sigValueChanged.connect(self.EnergyChanged)
+            self.param('Wavelength').sigValueChanged.connect(self.WavelengthChanged)
+            self.param('Detector').sigValueChanged.connect(self.DetectorChanged)
 
             # Add tilt style dialog
-            tilt = self.param('Detector Tilt')
-            rot = self.param('Detector Rotation')
             self.tiltStyleMenu = QtGui.QMenu()
             grp = QtGui.QActionGroup(self)
             self.fit2dstyle = QtGui.QAction('Use Fit2D style rot/tilt', self.tiltStyleMenu)
@@ -139,7 +138,6 @@ class experiment(Parameter):
     # Make the mask accessible as a property
     @property
     def mask(self):
-        """I'm the 'mask' property."""
         return self._mask
 
     @mask.setter
@@ -165,6 +163,10 @@ class experiment(Parameter):
         #     edf.write('mask.edf')
         # except Exception:
         #     pass
+
+    def DetectorChanged(self):
+        self.param('Pixel Size X').setValue(self.getDetector().get_pixel1())
+        self.param('Pixel Size Y').setValue(self.getDetector().get_pixel2())
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match
@@ -263,9 +265,7 @@ class experiment(Parameter):
         # return geo
 
     def getDetector(self):
-        key = self.getvalue('Detector')
-        if key in pyFAI.detectors.ALL_DETECTORS:
-            return pyFAI.detectors.ALL_DETECTORS[self.getvalue('Detector')]()
+        return self.getvalue('Detector')()
 
     def edit(self):
         pass

@@ -68,6 +68,7 @@ class vector(QtGui.QWidget):
         self.value2.setMinimum(-1000)
         self.value2.setMaximum(1000)
         self.value2.setSingleStep(1)
+        self.value2.setProperty("value", 0.0)
         self.value2.setObjectName(_fromUtf8("value2"))
         self.horizontalLayout.addWidget(self.value2)
         self.UnitCellVec1Comma2 = QtGui.QLabel(self)
@@ -76,6 +77,7 @@ class vector(QtGui.QWidget):
         self.value3.setMinimum(-1000)
         self.value3.setMaximum(1000)
         self.value3.setSingleStep(1)
+        self.value3.setProperty("value", 0.0)
         self.value3.setObjectName(_fromUtf8("value3"))
         self.horizontalLayout.addWidget(self.value3)
         self.UnitCellVec1RightParenthesis3D = QtGui.QLabel(self)
@@ -87,6 +89,8 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1Comma1.setText(",")
         self.UnitCellVec1Comma2.setText(",")
         self.UnitCellVec1RightParenthesis3D.setText(")")
+
+        self.setValue([0,0,0])
 
         self.value1.valueChanged.connect(self.sigValueChanged)
         self.value2.valueChanged.connect(self.sigValueChanged)
@@ -103,6 +107,7 @@ class vector(QtGui.QWidget):
         return self.value1.value(), self.value2.value(), self.value3.value()
 
     def setValue(self, v):
+        if v is None: return
         self.value1.setValue(v[0])
         self.value2.setValue(v[1])
         self.value3.setValue(v[2])
@@ -1035,14 +1040,13 @@ class VectorParameterItem(pTypes.WidgetParameterItem):
         value = opts.get('value', None)
         if value is not None:
             w.setValue(value)
+        else:
+            w.setValue([0,0,0])
 
         self.value = w.value
         self.setValue = w.setValue
 
         return w
-
-    def valueChanged(self, *args, **kwargs):
-        super(VectorParameterItem, self).valueChanged(*args, **kwargs)
 
 class IntVectorParameterItem(VectorParameterItem):
     def makeWidget(self):
@@ -1082,7 +1086,7 @@ class ScalableGroup(hideableGroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
 
     def addNew(self):
-        self.addChild(dict(name="Point %d" % (len(self.childs) + 1), type='Vector', removable=True, renamable=True))
+        self.addChild(dict(name="Point %d" % (len(self.childs) + 1), type='Vector', removable=True, renamable=True, value=[0,0,0]))
 
     def toArray(self):
         return [list(child.value()) for child in self.children()]
