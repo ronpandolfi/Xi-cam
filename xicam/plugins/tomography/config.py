@@ -20,7 +20,7 @@ from modpkgs import yamlmod
 PARAM_TYPES = {'int': int, 'float': float}
 
 # Load yaml with names of all available functions in pipeline
-with open('yaml/tomography/functions.yml','r') as stream:
+with open('xicam/yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
 # Load parameter data for available functions
@@ -32,11 +32,11 @@ parameter_files = ('tomopy_function_parameters.yml',
 parameters = {}
 
 for file in parameter_files:
-    with open('yaml/tomography/'+file ,'r') as stream:
+    with open('xicam/yaml/tomography/'+file ,'r') as stream:
         parameters.update(yaml.load(stream))
 
 # Load dictionary with pipeline names and function names
-with open('yaml/tomography/function_names.yml','r') as stream:
+with open('xicam/yaml/tomography/function_names.yml','r') as stream:
     names=yaml.load(stream)
 
 # Add reconstruction methods to function name dictionary, but include the package the method is in
@@ -50,13 +50,13 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
     names[algorithm] = ['recon','mbir']
 
 # Load dictionary with function parameters to be retrieved from metadatas
-with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
-with open('yaml/tomography/aps_function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/aps_function_defaults.yml','r') as stream:
     aps_defaults = yaml.load(stream)
 
 # Load dictionary for astra recon functions
-with open('yaml/tomography/function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/function_defaults.yml','r') as stream:
     function_defaults=yaml.load(stream)
 
 
