@@ -280,7 +280,7 @@ class Toolbar(QtGui.QToolBar):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
         self.actionCenter.setIcon(icon)
-        self.actionCenter.setToolTip('Overlay center of rotation detection')
+        self.actionCenter.setToolTip('Center of rotation detection')
         self.toolbuttonCenter = QtGui.QToolButton(parent=self)
         self.toolbuttonCenter.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.actionCenter.setDefaultWidget(self.toolbuttonCenter)

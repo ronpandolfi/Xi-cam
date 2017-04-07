@@ -75,7 +75,7 @@ class Login(QtGui.QDialog):
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
-
+        print 'Gui:\t\t\t', QtGui.QApplication.instance().thread()
         QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
         import plugins

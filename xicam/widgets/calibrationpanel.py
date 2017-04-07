@@ -18,7 +18,7 @@ class calibrationpanel(ParameterTree):
         self.autoCalibrateAction = pTypes.ActionParameter(name='Auto Calibrate')
         self.autoCalibrateAction.sigActivated.connect(self.calibrate)
 
-        calibrants = sorted(calibrant.calibrant_factory().all.keys())
+        calibrants = sorted(calibrant.ALL_CALIBRANTS.all.keys())
         self.calibrant = pTypes.ListParameter(name='Calibrant Material', values=calibrants)
 
         self.autoCalibrateMethod = pTypes.ListParameter(name='Algorithm', values=self.algorithms.keys())

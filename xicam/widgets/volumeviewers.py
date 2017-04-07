@@ -36,6 +36,7 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget= VolumeRenderWidget()
         ly.addWidget(self.volumeRenderWidget.native)
 
+        self.HistogramLUTWidget = None
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
@@ -101,7 +102,7 @@ class VolumeViewer(QtGui.QWidget):
     def setLevels(self, levels, update=True):
         self.levels = levels
         self.setLookupTable()
-        self.HistogramLUTWidget.region.setRegion(levels)
+        if self.HistogramLUTWidget: self.HistogramLUTWidget.region.setRegion(levels)
         if update:
             self.volumeRenderWidget.update()
 
