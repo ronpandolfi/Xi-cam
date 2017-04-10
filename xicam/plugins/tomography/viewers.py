@@ -416,8 +416,9 @@ class TomoViewer(QtGui.QWidget):
 
         if active:
             self.viewstack.setCurrentWidget(self.projectionViewer)
-            self.projectionViewer.showCenterDetection()
             self.projectionViewer.hideMBIR()
+            self.projectionViewer.showCenterDetection()
+
         else:
             self.projectionViewer.hideCenterDetection()
 
@@ -426,8 +427,8 @@ class TomoViewer(QtGui.QWidget):
 
         if active:
             self.viewstack.setCurrentWidget(self.projectionViewer)
-            self.projectionViewer.showMBIR()
             self.projectionViewer.hideCenterDetection()
+            self.projectionViewer.showMBIR()
         else:
             self.projectionViewer.hideMBIR()
 
@@ -925,10 +926,12 @@ class ProjectionViewer(QtGui.QWidget):
 
     def manualCOR(self):
         self.cor_box.setCurrentWidget(self.cor_widget)
+        self.stackViewer.show()
         self.sigCORChanged.emit(False)
 
     def autoCOR(self):
         self.cor_box.setCurrentWidget(self.auto_cor_widget)
+        self.stackViewer.hide()
         self.sigCORChanged.emit(True)
 
 
@@ -968,6 +971,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi_histogram.hide()
         self.setButton.hide()
         self.imgoverlay_roi.setVisible(False)
+        self.stackViewer.show()
 
     def showCenterDetection(self):
         """
@@ -979,6 +983,11 @@ class ProjectionViewer(QtGui.QWidget):
         self.roi_histogram.show()
         self.setButton.show()
         self.imgoverlay_roi.setVisible(True)
+
+        if self.auto_cor_button.isChecked():
+            self.stackViewer.hide()
+        else:
+            self.stackViewer.show()
 
     def showMBIR(self):
         self.mbir_viewer.show()
