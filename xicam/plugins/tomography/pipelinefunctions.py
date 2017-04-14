@@ -12,6 +12,10 @@ __status__ = "Beta"
 
 import numpy as np
 import numexpr as ne
+import concurrent.futures as cf
+from tomopy.util import mproc
+import scipy.ndimage.filters as snf
+
 
 DTYPE_RANGE = {'uint8': (0, 255),
                'uint16': (0, 65535),
@@ -209,6 +213,54 @@ def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
     for n in range(len(arr.shape)):
         slc.append(slice(pts.pop(0), pts.pop(0)))
     return arr[slc]
+
+
+def remove_outlier1d(arr, dif, size=3, axis=0, ncore=None, out=None):
+    """
+    Remove high intensity bright spots (and dark spots) from an array, using a one-dimensional
+    median filter along the specified axis
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    dif : float
+        Expected difference value between outlier value and
+        the median value of the array.
+    size : int
+        Size of the median filter.
+    axis : int, optional
+        Axis along which median filtering is performed.
+    ncore : int, optional
+        Number of cores that will be assigned to jobs.
+    out : ndarray, optional
+        Output array for result.  If same as arr, process will be done in-place.
+    Returns
+    -------
+    ndarray
+       Corrected array.
+    """
+    arr = arr.astype(np.float32, copy=False)
+    dif = np.float32(dif)
+
+    tmp = np.empty_like(arr)
+
+    other_axes = [i for i in range(arr.ndim) if i != axis]
+    largest = np.argmax([arr.shape[i] for i in other_axes])
+    lar_axis = other_axes[largest]
+    ncore, chnk_slices = mproc.get_ncore_slices(arr.shape[lar_axis], ncore=ncore)
+    filt_size = [1] * arr.ndim
+    filt_size[axis] = size
+
+    with cf.ThreadPoolExecutor(ncore) as e:
+        slc = [slice(None)] * arr.ndim
+        for i in range(ncore):
+            slc[lar_axis] = chnk_slices[i]
+            e.submit(snf.median_filter, arr[slc], size=filt_size, output=tmp[slc], mode='mirror')
+
+    with mproc.set_numexpr_threads(ncore):
+        out = ne.evaluate('where(abs(arr-tmp)>=dif,tmp,arr)', out=out)
+
+    return out
 
 
 

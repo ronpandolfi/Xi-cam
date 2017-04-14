@@ -10,7 +10,7 @@ Functions:
                  Astra: [BP, FBP_astra, SIRT, SART, ART, CGLS, BP_CUDA, FBP_CUDA, SIRT_CUDA, SART_CUDA,
                          CGLS_CUDA],
                   TomoCam: [Gridrec TomoCam, SIRT TomoCam]}
-  Outlier Removal: [Remove Outliers, Remove NAN]
+  Outlier Removal: [Remove Outliers, Remove NAN, 1D Remove Outliers]
   Ring Removal: [Polar Mean Filter]
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]

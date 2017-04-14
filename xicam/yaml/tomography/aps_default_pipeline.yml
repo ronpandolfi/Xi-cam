@@ -2,14 +2,14 @@
   Read Data:
     Enabled: True
 2. Outlier Removal:
-  Remove Outliers:
+  1D Remove Outliers:
     Parameters:
       dif: 500
       size: 5
       arr: tomo
     Enabled: True
 3. Outlier Removal:
-  Remove Outliers:
+  1D Remove Outliers:
     Parameters:
       dif: 500
       size: 5

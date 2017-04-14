@@ -111,3 +111,6 @@ Slice:
 Read Data:
 - reader
 - pipelinefunctions
+1D Remove Outliers:
+- remove_outlier1d
+- pipelinefunctions

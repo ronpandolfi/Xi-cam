@@ -118,3 +118,17 @@ Read Data:
   type: int
 - name: sinograms_per_chunk
   type: int
+1D Remove Outliers:
+- name: dif
+  type: float
+- name: size
+  type: int
+- name: axis
+  type: int
+  limits: [0, 2]
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
