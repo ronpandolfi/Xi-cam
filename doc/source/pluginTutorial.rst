@@ -174,13 +174,13 @@ simple example:
               {'name': 'Ducks', 'type': 'str', 'value': 'Mallard', 'default': 'Mallard'},
               {'name': 'Rabbits', 'type': 'str', 'value': 'Flemish Giant'}]
 
-    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')],\
-                    parameters = params, openfileshandler = opentest)
+    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')], parameters = params, openfileshandler = opentest)
 
 The two important additions are the function ``runtest``, which creates an image and 1D histogram and plots them both
 in the appropriate viewers. The addition ``toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')]`` to the
 instantiation connects this function to a button represented by ``icons_34.png``. Clicking the button will cause
-``runtest`` to run. The string ``'Run test'`` is the name associated with the button.
+``runtest`` to run. The string ``'Run test'`` is the name associated with the button. To add more buttons, you
+must provide similar tuples with 1) an icon path, 2) a method, and 3) a name.
 
 Adding buttons is also possible with the ``addToolButton`` method of ``EZplugin``.
 
@@ -217,8 +217,7 @@ entirety is shown below:
               {'name': 'Ducks', 'type': 'str', 'value': 'Mallard', 'default': 'Mallard'},
               {'name': 'Rabbits', 'type': 'str', 'value': 'Flemish Giant'}]
 
-    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')],\
-                    parameters = params, openfileshandler = opentest)
+    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')], parameters = params, openfileshandler = opentest)
 
 
 
