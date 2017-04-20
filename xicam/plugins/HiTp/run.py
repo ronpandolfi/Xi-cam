@@ -8,23 +8,21 @@ Created on Mon Jun 13
 
 import os.path
 import time
-import imp
 import numpy as np
 import random
 import sys
+from data_reduction_smooth import data_reduction
+from save_Qchi import save_Qchi
+from save_1Dplot import save_1Dplot
+from save_1Dcsv import save_1Dcsv
+from extract_max_ave_intensity import extract_max_ave_intensity
+from extract_peak_number import extract_peak_num
+from add_feature_to_master import add_feature_to_master
+from save_texture_plot_csv import save_texture_plot_csv
+from extract_texture_extent import extract_texture_extent
+from nearest_neighbor_cosine_distances import nearst_neighbor_distance
+from extract_signal_to_noise_ratio import extract_SNR
 
-# import modules
-reduction = imp.load_source("data_reduction", "data_reduction_smooth.py")
-Qchi = imp.load_source("save_Qchi", "save_Qchi.py")
-oneDplot = imp.load_source("save_1Dplot", "save_1Dplot.py")
-oneDcsv = imp.load_source("save_1Dcsv", "save_1Dcsv.py")
-max_ave = imp.load_source("extract_max_ave_intensity", "extract_max_ave_intensity.py")
-peak_num = imp.load_source("extract_peak_num", "extract_peak_number.py")
-add_feature = imp.load_source("add_feature_to_master", "add_feature_to_master.py")
-save_texture = imp.load_source("save_texture_plot_csv", "save_texture_plot_csv.py")
-extract_texture = imp.load_source("extract_texture_extent", "extract_texture_extent.py")
-neighbor = imp.load_source("nearest_neighbor_distance", "nearest_neighbor_cosine_distances.py")
-SNR = imp.load_source("extract_SNR", "extract_signal_to_noise_ratio.py")
 
 
 
