@@ -19,7 +19,7 @@ def save_Qchi(Q, chi, cake, imageFilename, save_path):
     plt.title('Q-chi polarization corrected_log scale')
     plt.pcolormesh(Q, chi, np.log(cake))
     plt.xlabel('Q')
-    plt.ylabel('chi')
+    plt.ylabel('$\gamma$')
     plt.xlim((0.7, 6.8))
     plt.ylim((-56, 56))
     plt.clim((0, np.log(np.nanmax(cake))))

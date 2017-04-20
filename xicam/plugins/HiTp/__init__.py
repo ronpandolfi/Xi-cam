@@ -1,11 +1,7 @@
 from .. import base
 import widgets
-from run import run
-
-import numpy as np
+from on_the_fly import run
 import os.path
-
-
 
 def runtest():
     #EZTest.bottomwidget.clear()
@@ -20,26 +16,28 @@ def openfiles(filepaths):
         list of filepaths
 
     '''
-
     for filepath in filepaths:
-        # TODO: should this line be moved?
-        HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
+        # # TODO: should this line be moved?
+        # HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
 
-        # print filepath
-        csvpath = filepath[:-8] + 'scan1.csv'
+
+
+        csvpath = filepath[:-8] + 'master.csv'
         HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
-
         # handle new file
         #Example of how to get parameter values
         #print HiTpPlugin.parameters.param('ddetect_dist_pix').value()
+
 
         # calibration
         detect_dist_pix = HiTpPlugin.parameters.param('detect_dist_pix').value()
         bcenter_x_pix = HiTpPlugin.parameters.param('bcenter_x_pix').value()
         bcenter_y_pix = HiTpPlugin.parameters.param('bcenter_y_pix').value()
         detect_tilt_alpha_rad = HiTpPlugin.parameters.param('detect_tilt_alpha_rad').value()
-        detect_tilt_beta_rad = HiTpPlugin.parameters.param('detect_tilt_beta_rad').value()
+        detect_tilt_beta_rad = HiTpPlugin.parameters.param('detect_tilt_delta_rad').value()
         wavelength_A = HiTpPlugin.parameters.param('wavelength_A').value()
+        #first_scan = HiTpPlugin.parameters.param('first_scan').value()
+        #last_scan = HiTpPlugin.parameters.param('last_scan').value()
         polarization = HiTpPlugin.parameters.param('polarization').value()
 
         # parameter
@@ -54,7 +52,8 @@ def openfiles(filepaths):
         neighbor_distance_module = HiTpPlugin.parameters.param('neighbor_distance_module').value()
         add_feature_to_csv_module = HiTpPlugin.parameters.param('add_feature_to_csv_module').value()
 
-        run(filepath, csvpath, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A, bcenter_x_pix, bcenter_y_pix,
+        run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A,
+            bcenter_x_pix, bcenter_y_pix,
             polarization, smpls_per_row,
             Imax_Iave_ratio_module,
             texture_module,
@@ -84,3 +83,5 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                      openfileshandler=openfiles,
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)
+
+
