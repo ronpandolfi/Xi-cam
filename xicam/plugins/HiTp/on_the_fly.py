@@ -59,35 +59,40 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
             save_1Dcsv(Qlist, IntAve, imageFilename, save_path)
             # extract composition information if the information is available
             # extract the number of peaks in 1D spectra as attribute3 by default
-            attribute3, peaks = extract_peak_num(Qlist, IntAve, index)
-            attributes.append(attribute3)
+            attribute3, peaks = extract_peak_num(Qlist, IntAve)
+            attributes += attribute3
 
             # save 1D plot with detected peaks shown in the plot
             save_1Dplot(Qlist, IntAve, peaks, imageFilename, save_path)
 
             if Imax_Iave_ratio_module == True:
                 # extract maximum/average intensity from 1D spectra as attribute1
-                attribute1 = extract_max_ave_intensity(IntAve, index)
-                attributes.append(attribute1)
+                attribute1 = extract_max_ave_intensity(IntAve)
+                attributes += attribute1
 
 
             if texture_module == True:
                 # save 1D texture spectra as a plot (*.png) and *.csv
                 Qlist_texture, texture = save_texture_plot_csv(Q, chi, cake, imageFilename, save_path)
                 # extract texture square sum from the 1D texture spectra as attribute2
-                attribute2 = extract_texture_extent(Qlist_texture, texture, index)
-                attributes.append(attribute2)
+                attribute2 = extract_texture_extent(Qlist_texture, texture)
+                attributes += attribute2
 
             if neighbor_distance_module == True:
                 # extract neighbor distances as attribute4
                 attribute4 = nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, csvpath,
                                                             smpls_per_row)
-                attributes.append(attribute4)
+                attributes += attribute4
 
             if signal_to_noise_module == True:
                 # extract signal-to-noise ratio
-                attribute5 = extract_SNR(index, IntAve)
-                attributes.append(attribute5)
+                attribute5 = extract_SNR(IntAve)
+                attributes += attribute5
+
+            # TODO: how to output print statement
+            if add_feature_to_csv_module == True:
+                add_feature_to_master(attributes, save_path)
+
             break
         except (OSError, IOError):
             # The image was being created but not complete yet

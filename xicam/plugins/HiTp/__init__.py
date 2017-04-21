@@ -20,15 +20,13 @@ def openfiles(filepaths):
         # # TODO: should this line be moved?
         # HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
 
+        csvpath = ''
 
+        ## TODO: Is it possible to point to the csv file?
+        # dummy way to choose a csv file for now
+        csvpath = filepath[:-8] + 'scan1.csv'
 
-        csvpath = filepath[:-8] + 'master.csv'
         HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
-        # handle new file
-        #Example of how to get parameter values
-        #print HiTpPlugin.parameters.param('ddetect_dist_pix').value()
-
-
         # calibration
         detect_dist_pix = HiTpPlugin.parameters.param('detect_dist_pix').value()
         bcenter_x_pix = HiTpPlugin.parameters.param('bcenter_x_pix').value()
