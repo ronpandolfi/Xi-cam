@@ -40,4 +40,4 @@ def extract_SNR(IntAve):
     intercept = 60.7206954077
 
     SNR = slope * np.log(1/popt[2]) + intercept
-    return [SNR]
+    return [['SNR', SNR]]

@@ -14,5 +14,5 @@ def extract_max_ave_intensity(IntAve):
     Imax = np.max(IntAve)
     Iave = np.mean(IntAve)
     ratio = Imax/Iave
-    newRow = [Imax, Iave, ratio]
+    newRow = [['Imax', Imax], ['Iave',Iave], ['Imax/Iave', ratio]]
     return newRow

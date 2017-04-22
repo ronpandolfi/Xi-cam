@@ -35,5 +35,5 @@ def extract_peak_num(Qlist, IntAve, a1 = 1, a2 = 20):
         # else:
         #     peaks_accepted.append(peak)
 
-    newRow = [len(peaks_accepted)]
+    newRow = [['num_of_peaks',len(peaks_accepted)]]
     return newRow, peaks_accepted

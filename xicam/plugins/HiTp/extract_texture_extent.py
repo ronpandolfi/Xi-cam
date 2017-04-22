@@ -11,5 +11,5 @@ def extract_texture_extent(Qlist_texture, texture):
     texture = texture **2
     SqrSum = np.nansum(texture)
     NormSqrSum = SqrSum/float(len(Qlist_texture))
-    newRow = [NormSqrSum]
+    newRow = [['texture_sum', NormSqrSum]]
     return newRow
