@@ -73,12 +73,12 @@ def peak_fitting_GLS(imageFilename, processed_path, Qlist, IntAve, a1, a2):
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-        plt.savefig(os.path(save_path, imageFilename[:-4] + '_peak_fitting_GLS'))
+        plt.savefig(os.path.join(save_path, imageFilename[:-4] + '_peak_fitting_GLS'))
         plt.close()
 
         popt = np.reshape(popt, (popt.size/4, 4))
-        np.savetxt(os.path(save_path, imageFilename[:-4] + '_peak_fitting_GLS.csv'), popt, delimiter=",")
+        np.savetxt(os.path.join(save_path, imageFilename[:-4] + '_peak_fitting_GLS.csv'), popt, delimiter=",")
     except RuntimeError:
         print "Failed to fit", imageFilename
         print "used the previous peak information"
-        np.savetxt(os.path(save_path, imageFilename[:-4] + '_peak_fitting_GLS.csv'), popt, delimiter=",")
+        np.savetxt(os.path.join(save_path, imageFilename[:-4] + '_peak_fitting_GLS.csv'), popt, delimiter=",")

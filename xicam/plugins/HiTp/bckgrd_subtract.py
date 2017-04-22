@@ -78,8 +78,8 @@ def bckgrd_subtract(imageFilename, processed_path, Qlist, IntAve):
     plt.plot(Q_original, intensity_original-bckgrd)
     plt.plot(Q, [0] * len(Q), 'r--')
     plt.xlim(0.8, 5.8)
-    plt.savefig(os.path.join(save_path, imageFilename + '_bckgrd_subtracted.png'))
+    plt.savefig(os.path.join(save_path, imageFilename[:-4] + '_bckgrd_subtracted.png'))
     plt.close('all')
-    np.savetxt(os.path.join(save_path, imageFilename + '_bckgrd_subtracted.csv'), np.concatenate(([Q_original], [intensity_original - bckgrd])).T, delimiter= ',')
+    np.savetxt(os.path.join(save_path, imageFilename[:-4] + '_bckgrd_subtracted.csv'), np.concatenate(([Q_original], [intensity_original - bckgrd])).T, delimiter= ',')
 
     return intensity_original - bckgrd
