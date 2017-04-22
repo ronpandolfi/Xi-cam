@@ -23,6 +23,8 @@ from save_texture_plot_csv import save_texture_plot_csv
 from extract_texture_extent import extract_texture_extent
 from nearest_neighbor_cosine_distances import nearst_neighbor_distance
 from extract_signal_to_noise_ratio import extract_SNR
+from bckgrd_subtract import bckgrd_subtract
+from peak_fitting_GLS import peak_fitting_GLS
 
 def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A, bcenter_x_pix, bcenter_y_pix,
             polarization, smpls_per_row,
@@ -30,7 +32,9 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
             texture_module,
             signal_to_noise_module,
             neighbor_distance_module,
-            add_feature_to_csv_module):
+            add_feature_to_csv_module,
+            background_subtract_module,
+            peak_fitting_module):
     # split filepath into folder_path, filename, and index
     # for example, filepath = 'C:/Users/Sample1/Sample1_10_0001.tif', folder_path = 'C:/Users/Sample1/', filename = 'Sample1_10_0001.tif', index = '0001'
     folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
@@ -101,6 +105,12 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
 
             if add_feature_to_csv_module:
                 add_feature_to_master(attributes.T, save_path)
+
+            if background_subtract_module:
+                bckgrd_subtracted = bckgrd_subtract(imageFilename, save_path, Qlist, IntAve)
+
+            if background_subtract_module and peak_fitting_module:
+                peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 10, 20)
 
             break
         except (OSError, IOError):

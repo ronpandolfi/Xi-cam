@@ -49,6 +49,8 @@ def openfiles(filepaths):
         signal_to_noise_module = HiTpPlugin.parameters.param('signal_to_noise_module').value()
         neighbor_distance_module = HiTpPlugin.parameters.param('neighbor_distance_module').value()
         add_feature_to_csv_module = HiTpPlugin.parameters.param('add_feature_to_csv_module').value()
+        background_subtract_module = HiTpPlugin.parameters.param('background_subtraction_module').value()
+        peak_fitting_module = HiTpPlugin.parameters.param('peak_fitting_module').value()
 
         run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A,
             bcenter_x_pix, bcenter_y_pix,
@@ -57,7 +59,9 @@ def openfiles(filepaths):
             texture_module,
             signal_to_noise_module,
             neighbor_distance_module,
-            add_feature_to_csv_module)
+            add_feature_to_csv_module,
+            background_subtract_module,
+            peak_fitting_module)
 
 HiTpPlugin=base.EZplugin(name='HiTp',
                      toolbuttons=[],#('xicam/gui/icons_34.png',runtest)
@@ -71,13 +75,16 @@ HiTpPlugin=base.EZplugin(name='HiTp',
 
                                  # {'name': 'first_scan', 'value': 1, 'type': 'int'}, # parameter tab
                                  # {'name': 'last_scan', 'value': 441, 'type': 'int'},
-                                 {'name': 'smpls_per_row', 'value': 25, 'type': 'int'},
+
 
                                  {'name': 'Imax_Iave_ratio_module', 'value': True, 'type': 'bool'}, # module tab
                                  {'name': 'texture_module', 'value': True, 'type': 'bool'},
                                  {'name': 'signal_to_noise_module', 'value': True, 'type': 'bool'},
                                  {'name': 'neighbor_distance_module', 'value': False, 'type': 'bool'},
-                                 {'name': 'add_feature_to_csv_module', 'value': True, 'type': 'bool'}],
+                                 {'name': 'smpls_per_row', 'value': 25, 'type': 'int'},
+                                 {'name': 'add_feature_to_csv_module', 'value': True, 'type': 'bool'},
+                                 {'name': 'background_subtraction_module', 'value': False, 'type': 'bool'},
+                                 {'name': 'peak_fitting_module', 'value': False, 'type': 'bool'}],
                      openfileshandler=openfiles,
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)
