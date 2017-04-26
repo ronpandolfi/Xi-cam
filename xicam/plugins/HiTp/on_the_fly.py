@@ -66,8 +66,9 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
             attributes = [['scan_num', index]]
 
             # add metadata to master file
-            metadata = extract_metadata(filepath)
-            attributes = np.concatenate((attributes, metadata))
+            if add_feature_to_csv_module:
+                metadata = extract_metadata(filepath)
+                attributes = np.concatenate((attributes, metadata))
 
             # save Qchi as a plot *.png and *.mat
             save_Qchi(Q, chi, cake, imageFilename, save_path)
