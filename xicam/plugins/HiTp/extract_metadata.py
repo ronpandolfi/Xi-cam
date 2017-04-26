@@ -45,6 +45,7 @@ def extract_metadata(filepath):
     else:
         p_y = float(p_y)
 
+
     metadata = [['p_x', p_x], ['p_y', p_y], ['I0', I0], ['I1', I1], ['bstop', bstop], ['Omron', Omron],
                 ['Temperature', Temperature],['ROI1', ROI1],['ROI2', ROI2], ['ROI3', ROI3], ['ROI4', ROI4], ['ROI5', ROI5],
                 ['ROI6', ROI6], ['ROI7', ROI7], ['ROI8', ROI8], ['ROI9', ROI9], ['ROI10', ROI10]]
