@@ -14,7 +14,6 @@ def save_1Dplot(Qlist, IntAve, peaks, imageFilename, save_path):
     # generate a column average image
     plt.figure(2)
     plt.title('Column average')
-    plt.plot(Qlist[peaks], IntAve[peaks], linestyle = 'None', c = 'r', marker = 'o')
     plt.plot(Qlist, IntAve)
     plt.xlabel('Q')
     plt.ylabel('Intensity')
