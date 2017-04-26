@@ -18,7 +18,7 @@ def save_1Dplot(Qlist, IntAve, peaks, imageFilename, save_path):
     plt.plot(Qlist, IntAve)
     plt.xlabel('Q')
     plt.ylabel('Intensity')
-    plt.xlim((0.7, 6.4))
+    # plt.xlim((0.7, 6.4))
 
     plt.savefig(os.path.join(save_path, imageFilename[:-4]+'_1D'))
     

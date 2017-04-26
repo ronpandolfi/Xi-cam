@@ -115,7 +115,7 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
                 bckgrd_subtracted = bckgrd_subtract(imageFilename, save_path, Qlist, IntAve)
 
             if background_subtract_module and peak_fitting_module:
-                peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 10, 20)
+                peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 5, 20)
 
             break
         except (OSError, IOError):
