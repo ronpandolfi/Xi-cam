@@ -11,6 +11,7 @@ import time
 import numpy as np
 import random
 import sys
+from image_loader import load_image
 from data_reduction import data_reduction
 from save_Qchi import save_Qchi
 from save_1Dplot import save_1Dplot
@@ -55,15 +56,19 @@ def run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_b
     print("\r")
     while 1:
         try:
+            # import image and convert it into an array
+            imArray = load_image(filepath)
+
+            # data_reduction to generate Q-chi and 1D spectra, Q
+            Q, chi, cake, Qlist, IntAve = data_reduction(imArray, detect_dist_pix, Rot, tilt, wavelength_A,
+                                                                   bcenter_x_pix, bcenter_y_pix, polarization)
+
             attributes = [['scan_num', index]]
 
             # add metadata to master file
             metadata = extract_metadata(filepath)
             attributes = np.concatenate((attributes, metadata))
 
-            # data_reduction to generate Q-chi and 1D spectra, Q
-            Q, chi, cake, Qlist, IntAve = data_reduction(filepath, detect_dist_pix, Rot, tilt, wavelength_A,
-                                                                   bcenter_x_pix, bcenter_y_pix, polarization)
             # save Qchi as a plot *.png and *.mat
             save_Qchi(Q, chi, cake, imageFilename, save_path)
             # save 1D spectra as a *.csv
