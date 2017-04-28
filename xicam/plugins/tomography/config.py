@@ -28,7 +28,8 @@ parameter_files = ('tomopy_function_parameters.yml',
                    'aux_function_parameters.yml',
                    'dataexchange_function_parameters.yml',
                    'astra_function_parameters.yml',
-                   'mbir_function_parameters.yml')
+                   'mbir_function_parameters.yml',
+                   'f3d_function_parameters.yml')
 parameters = {}
 
 for file in parameter_files:

@@ -3,7 +3,7 @@ from pipeline import msg
 import tomopy
 
 # Packages to import
-PACKAGE_LIST = ['astra', 'dxchange']
+PACKAGE_LIST = ['astra', 'dxchange', 'tomocam', 'pyF3D']
 
 # Dictionary with package names as keys and package objects as values
 packages = {}
@@ -21,6 +21,9 @@ for name in PACKAGE_LIST:
 packages['tomopy'] = tomopy
 
 # Add the extra functions
-import pipelinefunctions, mbir
+import pipelinefunctions
 packages['pipelinefunctions'] = pipelinefunctions
-packages['mbir'] = mbir
+
+if 'tomocam' in packages:
+    import mbir
+    packages['mbir'] = mbir

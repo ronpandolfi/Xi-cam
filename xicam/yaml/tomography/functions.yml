@@ -1,6 +1,7 @@
 Functions:
   Downsample: [Downsample]
-  Filter: [Gaussian Filter, Median Filter, Sobel Filter]
+  Filter: [Gaussian Filter, TomoPy Median Filter, Sobel Filter, F3D Median Filter, F3D Bilateral Filter, F3D Mask Filter,
+            F3D MM Erosion, F3D MM Dilation, F3D MM Opening, F3D MM Closing]
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
   Normalization: [Regular, Background Intensity, Nearest Flats]

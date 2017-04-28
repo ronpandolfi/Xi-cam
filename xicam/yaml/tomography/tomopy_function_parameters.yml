@@ -1,4 +1,4 @@
-Median Filter:
+TomoPy Median Filter:
 - name: size
   type: int
 - name: axis

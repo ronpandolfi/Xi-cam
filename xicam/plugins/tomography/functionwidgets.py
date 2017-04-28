@@ -14,6 +14,7 @@ __status__ = "Beta"
 import inspect
 import time
 import os
+import fabio
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
@@ -564,6 +565,49 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
 
         return param_dict
 
+class MaskFunctionWidget(FunctionWidget):
+    """
+    Subclass of FunctionWidget for functions with masks.
+    """
+
+    def __init__(self, name, subname, package, checkable=True, closeable=True, parent=None):
+        super(MaskFunctionWidget, self).__init__(name, subname, package, checkable=checkable, closeable=closeable,
+                                                 parent=parent)
+        self.params.child('Browse mask image').sigActivated.connect(self.setBrowse)
+        self.params.child('mask').sigValueChanged.connect(self.showOptions)
+        self.params.child('mask path').hide()
+
+    def showOptions(self):
+        if self.params.child('mask').value() == 'custom mask':
+            self.params.child('mask path').show()
+        else:
+            self.params.child('mask path').hide()
+            if self.params.child('mask').value() == 'StructuredElementL':
+                self.params.child('L').show()
+            else:
+                self.params.child('L').hide()
+
+    def setBrowse(self):
+        path = str(QtGui.QFileDialog.getOpenFileName(None, 'Choose mask image')[0])
+        try:
+            self.mask_image = fabio.open(path).data
+            self.params.param('mask path').show()
+            self.params.param('mask path').setValue(path)
+            self.params.param('mask').setValue('custom mask')
+        except IOError:
+            pass
+
+    @property
+    def updated_param_dict(self):
+        param_dict = {}
+        if self.params.param('mask').value() == 'custom mask':
+            param_dict['mask'] = self.mask_image
+        else:
+            param_dict['mask'] = self.params.param('mask').value()
+        param_dict['image'] = self.param_dict['image']
+        param_dict['L'] = self.param_dict['L']
+        param_dict['platform'] = self.param_dict['platform']
+        return param_dict
 
 class ReadFunctionWidget(FunctionWidget):
     """
@@ -809,6 +853,7 @@ class FunctionManager(fw.FeatureManager):
     sigCORDetectChanged = QtCore.Signal(bool)
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
+    mask_functions = ['F3D Mask Filter', 'F3D MM Erosion', 'F3D MM Dilation', 'F3D MM Opening', 'F3D MM Closing']
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
@@ -834,7 +879,6 @@ class FunctionManager(fw.FeatureManager):
         package : python package
             package where function is defined
         """
-
         if function == 'Reconstruction':
             if 'astra' in reconpkg.packages and package == reconpkg.packages['astra']:
                 func_widget = AstraReconFuncWidget(function, subfunction, package)
@@ -845,6 +889,8 @@ class FunctionManager(fw.FeatureManager):
             self.recon_function = func_widget
             func_widget.input_functions['center'].previewButton.clicked.connect(self.CORChoiceUpdated)
             self.sigPipelineChanged.emit()
+        elif function == 'Filter' and subfunction in self.mask_functions:
+            func_widget = MaskFunctionWidget(function, subfunction, package)
         elif function == 'Reader':
             func_widget = ReadFunctionWidget(function, subfunction, package)
         elif function == 'Write':
@@ -1402,7 +1448,7 @@ class FunctionManager(fw.FeatureManager):
             with open(python_file, 'w') as py:
                 py.write(runnable)
         except NameError or IOError:
-            yield "Error: pipeline runnable not written - path could not be found"
+            yield "Error: pipeline python script not written - path could not be found"
 
 
         # save yaml in reconstruction folder
@@ -1472,6 +1518,7 @@ class FunctionManager(fw.FeatureManager):
         Returns the 'tomo' data in the data_dict, which has been acted on by all functions in the partial_stack
         """
         for tuple in partial_stack:
+            print tuple[1]
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
 
