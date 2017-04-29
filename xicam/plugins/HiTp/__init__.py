@@ -81,7 +81,6 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                                  # {'name': 'first_scan', 'value': 1, 'type': 'int'}, # parameter tab
                                  # {'name': 'last_scan', 'value': 441, 'type': 'int'},
 
-
                                  {'name': 'Imax_Iave_ratio_module', 'value': True, 'type': 'bool'}, # module tab
                                  {'name': 'texture_module', 'value': True, 'type': 'bool'},
                                  {'name': 'signal_to_noise_module', 'value': True, 'type': 'bool'},

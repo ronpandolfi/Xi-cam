@@ -26,7 +26,7 @@ class DaemonParameter(pt.parameterTypes.GroupParameter):
         # self.activate.items.keys()[0].button.setStyleSheet('background-color:green')
 
     def browse(self):
-        path = QFileDialog.getExistingDirectory(None, 'Set daemon director...', '~/')
+        path = QFileDialog.getExistingDirectory(None, 'Set daemon directory...', '~/')
         if path is not None:
             self.param('Directory').setValue(path)
 
