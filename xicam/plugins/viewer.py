@@ -89,7 +89,7 @@ class ViewerPlugin(base.plugin):
 
         # Daemon panel
         self.daemonPanel = ParameterTree()
-        self.daemonPanel.setParameters(DaemonParameter(),showTop=False)
+        self.daemonPanel.setParameters(DaemonParameter(self.openfiles),showTop=False)
         daemonicon = QtGui.QIcon()
         daemonicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.daemonPanel, daemonicon))

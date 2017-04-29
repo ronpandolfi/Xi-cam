@@ -3,7 +3,7 @@ import widgets
 
 
 import numpy as np
-
+from xicam.widgets import daemonwidget
 
 
 def runtest():
@@ -44,7 +44,8 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                                  {'name': 'Imax_Iave_ratio_module', 'value': True, 'type': 'bool'},
                                  {'name': 'texture_module', 'value': True, 'type': 'bool'},
                                  {'name': 'signal_to_noise_module', 'value': True, 'type': 'bool'},
-                                 {'name': 'add_feature_to_csv_module', 'value': True, 'type': 'bool'}],
+                                 {'name': 'add_feature_to_csv_module', 'value': True, 'type': 'bool'},
+                                 daemonwidget.DaemonParameter(openfiles)],
                      openfileshandler=openfiles,
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)

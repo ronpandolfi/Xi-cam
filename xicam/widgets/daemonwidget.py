@@ -8,12 +8,13 @@ from pipeline import daemon
 
 
 class DaemonParameter(pt.parameterTypes.GroupParameter):
-    def __init__(self):
+    def __init__(self, openfileshandler):
         mode = pt.Parameter.create(name='Mode', type='list', values=['Directory', 'Data Broker'])
         folder = pt.Parameter.create(name='Directory', type='str', value='', )  # TODO: make uneditable
         browse = pt.Parameter.create(name='Browse', type='action')
         filter = pt.Parameter.create(name='Filter', type='str', value='*.edf')
         self.activate = pt.Parameter.create(name='Start', type='action')
+        self.handler = openfileshandler
 
 
         params = [mode, folder, browse, filter, self.activate]
@@ -47,7 +48,7 @@ class DaemonParameter(pt.parameterTypes.GroupParameter):
 
     def test(self,*args,**kwargs):
         print args,kwargs
-
+        self.handler(*args,**kwargs)
 
 
 

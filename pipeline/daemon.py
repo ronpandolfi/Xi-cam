@@ -62,9 +62,10 @@ class daemon(QtCore.QRunnable):
             p = None
             # filter paths
             files = list(chunks(files, self.num_cores))
+            print files
 
             for i in range(self.num_cores):
-                p = multiprocessing.Process(target=self.newcallback, args=(path, files[i]))
+                p = multiprocessing.Process(target=self.newcallback, args=(files[i],))
                 jobs.append(p)
                 p.start()
 
