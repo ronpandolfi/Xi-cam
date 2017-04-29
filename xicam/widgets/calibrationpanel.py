@@ -12,20 +12,28 @@ class calibrationpanel(ParameterTree):
          ('2D Ricker Wavelet', calibration.rickerWavelets),
          ('DPDAK Refinement', calibration.dpdakRefine)])
     sigCalibrate = QtCore.Signal(object, str)
+    sigSimulateCalibrant=QtCore.Signal(str)
     def __init__(self):
         super(calibrationpanel, self).__init__()
 
         self.autoCalibrateAction = pTypes.ActionParameter(name='Auto Calibrate')
         self.autoCalibrateAction.sigActivated.connect(self.calibrate)
 
-        calibrants = sorted(calibrant.calibrant_factory().all.keys())
+        calibrants = sorted(calibrant.ALL_CALIBRANTS.all.keys())
         self.calibrant = pTypes.ListParameter(name='Calibrant Material', values=calibrants)
 
-        self.autoCalibrateMethod = pTypes.ListParameter(name='Algorithm', values=self.algorithms.keys())
+        self.autoCalibrateMethod = pTypes.ListParameter(name='Algorithm', values=self.algorithms)
+
+        self.overlayAction = pTypes.ActionParameter(name='Simulate Calibrant')
+        self.overlayAction.sigActivated.connect(self.simulatecalibrant)
 
         self.setParameters(pTypes.GroupParameter(name='Calibration', children=[self.autoCalibrateAction, self.calibrant,
-                                                                               self.autoCalibrateMethod]),
+                                                                               self.autoCalibrateMethod,
+                                                                               self.overlayAction]),
                            showTop=False)
 
     def calibrate(self):
-        self.sigCalibrate.emit(self.algorithms[self.autoCalibrateMethod.value()], self.calibrant.value())
+        self.sigCalibrate.emit(self.autoCalibrateMethod.value(), self.calibrant.value())
+
+    def simulatecalibrant(self):
+        self.sigSimulateCalibrant.emit(self.calibrant.value())

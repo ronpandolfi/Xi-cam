@@ -91,7 +91,7 @@ def clear():
     for item in viewWidget.items:
         item._setView(None)
     grid = gl.GLGridItem(size=QtGui.QVector3D(200,200,0))
-    grid.setSpacing(10,10,10)
+    grid.setSize(10,10,10)
     viewWidget.items = [grid]
     addLayer(-20., 0.)
     viewWidget.update()

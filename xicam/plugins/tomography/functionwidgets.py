@@ -19,6 +19,7 @@ from copy import deepcopy
 from functools import partial
 from modpkgs import yamlmod
 import numpy as np
+import pyqtgraph as pg
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import config
@@ -114,8 +115,8 @@ class FunctionWidget(fw.FeatureWidget):
         self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
         for key, val in self.param_dict.iteritems():
             if key in [p.name() for p in self.params.children()]:
-                self.params.child(key).setValue(val)
-                self.params.child(key).setDefault(val)
+                self.params.param(key).setValue(val)
+                self.params.param(key).setDefault(val)
 
         # Create a list of argument names (this will most generally be the data passed to the function)
         self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
@@ -154,6 +155,12 @@ class FunctionWidget(fw.FeatureWidget):
 
         self.defaults = config.function_defaults['Other']
         self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
+
+        self.expand()
+
+    # make it so function widgets never collapse
+    def collapse(self):
+        pass
 
     @property
     def enabled(self):
@@ -374,9 +381,6 @@ class TomoPyReconFunctionWidget(FunctionWidget):
                 if key in [p.name() for p in self.params.children()]:
                     self.params.child(key).setValue(val)
                     self.params.child(key).setDefault(val)
-
-
-
 
     @property
     def partial(self):
@@ -788,6 +792,7 @@ class FunctionManager(fw.FeatureManager):
 
     sigTestRange = QtCore.Signal(str, object, dict)
     sigPipelineChanged = QtCore.Signal()
+    sigCORDetectChanged = QtCore.Signal(bool)
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
 
@@ -826,6 +831,7 @@ class FunctionManager(fw.FeatureManager):
             else:
                 func_widget = TomoPyReconFunctionWidget(function, subfunction, package)
             self.recon_function = func_widget
+            func_widget.input_functions['center'].previewButton.clicked.connect(self.CORChoiceUpdated)
             self.sigPipelineChanged.emit()
         elif function == 'Reader':
             func_widget = ReadFunctionWidget(function, subfunction, package)
@@ -862,6 +868,48 @@ class FunctionManager(fw.FeatureManager):
         except AttributeError:
             ipf_widget = funcwidget.input_functions[parameter]
         return ipf_widget
+
+    def updateCORChoice(self, boolean):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                feature.input_functions['center'].enabled = boolean
+
+    def updateCORFunc(self, func, widget):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                feature.removeInputFunction('center')
+                feature.addCenterDetectFunction("Center Detection", func, package=reconpkg.packages['tomopy'])
+                self.cor_func = feature.input_functions['center']
+                self.cor_widget = widget
+                for child in widget.params.children():
+                    child.sigValueChanged.connect(self.updateCORPipeline)
+                for child in self.cor_func.params.children():
+                    child.sigValueChanged.connect(self.updateCORWidget)
+
+
+    # slot for connecting cor widget and pipeline cor
+    def updateCORPipeline(self, param):
+        child = self.cor_func.params.child(param.name())
+        child.setValue(param.value())
+
+    # slot for connecting cor widget and pipeline cor
+    def updateCORWidget(self, param):
+        child = self.cor_widget.params.child(param.name())
+        child.setValue(param.value())
+
+
+    def CORChoiceUpdated(self):
+        for feature in self.features:
+            if 'center' in feature.input_functions:
+                self.sigCORDetectChanged.emit(feature.input_functions['center'].enabled)
+    #
+    # if parameter in self.input_functions:  # Check to see if parameter already has input function
+    #     if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
+    #         raise AttributeError('Input function already exists')  # skip if the input function already exists
+    #     self.removeInputFunction(parameter)  # Remove it if it will be replaced
+    # self.input_functions[parameter] = functionwidget
+    # self.addSubFeature(functionwidget)
+    # functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
 
     def updateParameters(self):
         """
@@ -964,8 +1012,9 @@ class FunctionManager(fw.FeatureManager):
                                                          FunctionManager.center_func_slc[ipf.subfunc_name]))
                         else:
                             args.append(datawidget.getsino())
-                        if ipf.subfunc_name == 'Nelder Mead':
-                            ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
+                        if ipf.subfunc_name == 'Nelder-Mead':
+                            args.append(function.input_functions['theta'].partial())
+                            # ipf.partial.keywords['theta'] = function.input_functions['theta'].partial()
                         center = ipf.partial(*args)
 
                     # extract theta values
@@ -999,17 +1048,23 @@ class FunctionManager(fw.FeatureManager):
 
         data_dict = OrderedDict()
 
-        if slc is not None and slc[0].start is not None:
-            slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                    else slc[0])
-            flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
-        else:
-            flat_loc = datawidget.data.fabimage.flatindices()
-
         data_dict['tomo'] = datawidget.getsino(slc=slc)
-        data_dict['flats'] = datawidget.getflats(slc=slc)
-        data_dict['dark'] = datawidget.getdarks(slc=slc)
-        data_dict['flat_loc'] = flat_loc
+        if datawidget.data.flats is not None:
+            data_dict['flats'] = datawidget.getflats(slc=slc)
+        if datawidget.data.darks is not None:
+            data_dict['dark'] = datawidget.getdarks(slc=slc)
+
+        try:
+            if slc is not None and slc[0].start is not None:
+                slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
+                        else slc[0])
+                flat_loc = map_loc(slc_, datawidget.data.fabimage.flatindices())
+            else:
+                flat_loc = datawidget.data.fabimage.flatindices()
+            data_dict['flat_loc'] = flat_loc
+        except TypeError: pass
+        except AttributeError: pass
+
         data_dict['theta'] = theta
         data_dict['center'] = center
 
@@ -1591,7 +1646,7 @@ class FunctionManager(fw.FeatureManager):
                     funcWidget.enabled = False
                 if 'Parameters' in subfuncs[subfunc]:
                     for param, value in subfuncs[subfunc]['Parameters'].iteritems():
-                        child = funcWidget.params.child(param)
+                        child = funcWidget.params.param(param)
                         child.setValue(value)
                         if setdefaults:
                             child.setDefault(value)
@@ -1630,6 +1685,10 @@ class FunctionManager(fw.FeatureManager):
 
         self.removeAllFeatures()
         for func, subfuncs in pipeline.iteritems():
+            try:
+                func = func.split(". ")[1]
+            except IndexError:
+                func = func
             for subfunc in subfuncs:
                 funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
                 for param, value in subfuncs[subfunc].iteritems():
@@ -1913,3 +1972,77 @@ def map_loc(slc, loc):
         loc[0] = 0
 
     return np.ndarray.tolist(loc)
+
+class CORSelectionWidget(QtGui.QWidget):
+
+    cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+    sigCORFuncChanged = QtCore.Signal(str, QtGui.QWidget)
+
+    def __init__(self, subname='Phase Correlation', parent=None):
+        super(CORSelectionWidget, self).__init__(parent=parent)
+
+        self.layout = QtGui.QVBoxLayout()
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params, showTop=False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.method_box = QtGui.QComboBox()
+        self.method_box.currentIndexChanged.connect(self.changeFunction)
+        for item in self.cor_detection_funcs:
+            self.method_box.addItem(item)
+        self.method_box.currentIndexChanged.connect(self.corFuncChanged)
+
+        label = QtGui.QLabel('COR detection function: ')
+        method_layout = QtGui.QHBoxLayout()
+        method_layout.addWidget(label)
+        method_layout.addWidget(self.method_box)
+
+        self.layout.addLayout(method_layout)
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)
+
+    def corFuncChanged(self, index):
+        self.sigCORFuncChanged.emit(self.cor_detection_funcs[index], self)
+
+    def changeFunction(self, index):
+        subname = self.method_box.itemText(index)
+        self.layout.removeWidget(self.param_tree)
+
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params,showTop = False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)
+
+
+
+
+
+# self.cor_method_box = QtGui.QComboBox()
+# self.cor_method_box.currentIndexChanged.connect(self.changeCORfunction)
+# for item in self.cor_detection_funcs:
+#     self.cor_method_box.addItem(item)
+# cor_method_label = QtGui.QLabel('COR detection function: ')
+# cor_method_layout = QtGui.QHBoxLayout()
+# cor_method_layout.addWidget(cor_method_label)
+# cor_method_layout.addWidget(self.cor_method_box)

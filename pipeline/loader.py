@@ -13,7 +13,7 @@ import glob
 import re
 import writer
 from xicam import debugtools, config
-from pipeline.formats import TiffStack
+from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
@@ -425,7 +425,7 @@ class diffimage():
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -797,6 +797,8 @@ class StackImage(object):
                 filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
+            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
+                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -823,6 +825,9 @@ class StackImage(object):
         if self._rawdata is None:
             self._rawdata = self._getframe()
         return self._rawdata
+
+    def transpose(self, ax): # transposing is handled internally
+        return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
@@ -1029,7 +1034,7 @@ class diffimage2(object):
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1174,6 +1179,11 @@ class diffimage2(object):
     def view(self, t):
         if t is np.ndarray:
             return self.displaydata
+
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            msg.logMessage('Conflict with newstyle pyqtgraph imageview; see line 669',level=msg.ERROR)
+        return self
 
     def __getitem__(self, item):
         return self.displaydata[item]
@@ -1321,6 +1331,7 @@ class multifilediffimage2(diffimage2):
 
     @property
     def currentframe(self):
+        if self._currentframe is None: return 0
         return self._currentframe
 
     @currentframe.setter
