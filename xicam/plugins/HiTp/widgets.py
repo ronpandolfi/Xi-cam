@@ -63,13 +63,14 @@ class WaferView(pg.PlotWidget):
         #read csv file
         #....
         #plot visualization
-        print csv
-        print 'loading csv into dataframe'
+        #print csv
+        #print 'loading csv into dataframe'
         p = pd.read_csv(csv)
+        #print p
         x=np.nan_to_num(p['plate_x'])
         y=np.nan_to_num(p['plate_y'])
         z = np.nan_to_num(p[self.csvkeys[mode]])
-        print x, y
+        #print x, y
         d=(x+y).argsort()
         x,y,z = (x[d],
                  y[d],
@@ -77,7 +78,6 @@ class WaferView(pg.PlotWidget):
         zmin = min(z)
         zrange = np.ptp(z)
         z = (z-zmin)/zrange *256
-        print z
 
         points = [{'pos':(x[i],y[i]),
                    'data':z[i]*100,
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     w = WaferView()
     #csv = '/home/rp/data/HiTp/Sample14_master_metadata_high.csv'
-    csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
+    #csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
     w.redrawfromCSV(csv)
 
     win.setCentralWidget(w)

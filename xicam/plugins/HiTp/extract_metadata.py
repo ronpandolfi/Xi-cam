@@ -34,12 +34,12 @@ def extract_metadata(filepath):
 
     # parsing the coordinates
     motors = data[10].split(', ')
-    plate_x = [motor[4:] for motor in motors if motor.startswith('plate_x')][0]
+    plate_x = [motor[8:] for motor in motors if motor.startswith('plate_x')][0]
     if 'e' in plate_x:
         plate_x = 0.0
     else:
         plate_x = float(plate_x)
-    plate_y = [motor[4:] for motor in motors if motor.startswith('plate_y')][0]
+    plate_y = [motor[8:] for motor in motors if motor.startswith('plate_y')][0]
     if 'e' in plate_y:
         plate_y = 0.0
     else:
