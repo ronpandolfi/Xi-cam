@@ -1,6 +1,260 @@
 Plugin Development Tutorial
 ===========================
 
+Plugins allow you to add your own custom analysis and visualization technique to the Xi-cam platform. In the following
+sections, we introduce two platforms for plugin development. The EZ plugin requires no knowledge of Qt and is best used
+for simpler analyses - see :ref:`EZ`. The advanced plugin requires knowledge of Qt but is more flexible its
+applications, so it is best used for more complicated analyses - see :ref:`advanced`. Both platforms require knowledge
+of Python.
+
+.. _EZ:
+
+EZ Plugin Development Tutorial
+------------------------------
+
+The EZ Plugin is a flexible plugin class for users that do not want to learn Qt. They are easy to write, but limited in
+scope compared to plugins which inherit from the base class.
+
+EZ plugins inherit from the ``plugin`` base class from ``xicam.plugins.base.plugin``. For ease of implementation, it
+has the following pre-set attributes:
+
+* ``pyqtgraph.ImageView``, for viewing 2D images or plots
+* ``pyqtgraph.PlotWidget``, for viewing 1D images or plots
+* ``pyqtgraph.ParameterTree``, for holding and editing parameters
+* ``toolbar``, to connect buttons to user-written methods.
+
+Plugin Basics
+^^^^^^^^^^^^^
+
+First, a few quick notes about your plugins.
+
+* Xi-cam assumes that any module or package in the ``./xicam/plugins/`` folder is a plugin. To ensure that Xi-cam registers your plugin, place your module in this folder
+* Each plugin must define a `plugin` class which inherits from ``xicam.plugins.base.plugin``
+* Each plugin will use the default widgets of the `plugin` class if not set - see :ref:`advanced`
+
+Plugin Creation
+^^^^^^^^^^^^^^^
+
+Our first step is to create the plugin by using the ``EZplugin`` class. Xi-cam assumes that any module/package in the
+xicam/plugins directory is a ``plugin``, so place your file in this directory. To create the EZplugin, simply write:
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    EZTest = EZplugin()
+
+Now we have a plugin created using the ``EZplugin``'s defaults. Thus it does not have any functionality aside from the
+widgets it inherits from the base and ``EZplugin`` classes. To start, we'll provide the plugin with a name:
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    EZTest = EZplugin(name = "EZTest")
+
+Tbe Filebrowser and ``openfiles`` Method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each plugin that inherits from the base plugin class (including the ``EZplugin`` class) inherits, by default, a file
+browser from the base plugin. Clicking once on any image or dataset brings up a small preview.
+
+.. image:: images/ez_1.png
+    :width: 900 px
+
+Double clicking on the image provides the plugin a path to the selected image. The ``EZplugin`` class comes with
+methods that place data into the 1D or 2D data viewers. The user, however, must write the method, the ``openfiles``
+method, that takes the path provided by the filebrowser, opens the associated data set, and place the data into the
+plugin itself.
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    def opentest(filepaths):
+        import fabio
+        for filepath in filepaths:
+            img = fabio.open(filepath).data
+            EZTest.setImage(img)
+
+    EZTest = EZplugin(name = "EZTest", openfileshandler = opentest)
+
+
+Here we have written a function ``opentest`` which takes a path to a set of data (or a list of paths), opens it, and
+displays it using the ``setImage`` method. By adding the clause ``openfileshandler = opentest`` to the instantiation,
+we set the ``openfiles`` method of the plugin to the ``opentest`` function.
+
+The ``EZplugin`` also has a ``plot`` method, which plots 1D data instead of 2D data: see :ref:`data_ref` for an example
+of its use.
+
+The ``openfiles`` method we have written uses the ``open`` function from ``fabio``, a Python paackage. After the data
+is opened, the function opens the data using the given path(s) and plots it on the proper viewer.
+
+.. _param_ref:
+
+Parameter Table
+^^^^^^^^^^^^^^^
+
+.. _Parameter documentation: http://www.pyqtgraph.org/documentation/parametertree/parameter.html
+
+Parameters are displayed on the right side of the plugin window in a table format. Parameters may be added to this table
+in the instantiation. When adding parameters, they must be formatted as dictionaries, and have multiple adjustable
+subfields, including the parameter name, type, start value, and default value. Consider the following addition:
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    def opentest(filepaths):
+        import fabio
+        for filepath in filepaths:
+            img = fabio.open(filepath).data
+            EZTest.setImage(img)
+
+    EZTest = EZplugin(name = "EZTest", parameters = [{'name':'Test','value':10,'type':'int', 'default':10}], \
+                    openfileshandler = opentest)
+
+
+The code above will add a single parameter to the parameters list in the plugin. The parameter is named "Test," is an
+integer, and has starting and default values of 10. Adding other parameters follows the same format:
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    def opentest(filepaths):
+        import fabio
+        for filepath in filepaths:
+            img = fabio.open(filepath).data
+            EZTest.setImage(img)
+
+    params = [{'name':'Test','value':10,'type':'int','default':10},
+              {'name': 'Ducks', 'type': 'str', 'value': 'Mallard', 'default': 'Mallard'},
+              {'name': 'Rabbits', 'type': 'str', 'value': 'Flemish Giant'}]
+    EZTest = EZplugin(name = "EZTest", parameters = params, openfileshandler = opentest)
+
+Adding parameters is also possible with the ``EZplugin`` method ``addParameter``, so long as the parameters follow a
+similar format as the previous examples.
+
+Note that the 'value' and 'default' fields are both optional, and do not have to match each other. The parameters are
+held in a field of the ``EZplugin`` called ``self.parameters``. You may access these parameters directly. For example,
+``self.parameters.child('Rabbits')`` contains all information about the "Rabbits" parameter. So
+``self.parameters.child('Rabbits').value()`` and ``self.parameters.child('Rabbits').type()`` return, respectively,
+'Flemish Giant' and 'str.'
+
+
+.. _data_ref:
+
+Data Analysis and the Toolbar
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You may perform data analysis by writing plugin methods and connecting these to the ``EZplugin``'s toolbar. The work of
+connecting the buttons is performed by the ``EZplugin``'s instantiation method. To add a button, you must provide a
+function to connect to the button, an icon for the button, and (optional) a name to associate with the button. Here is a
+simple example:
+
+
+.. code-block:: python
+
+    from xicam.plugins.base import EZplugin
+
+    def opentest(filepaths):
+        ...
+
+    def runtest():
+        import numpy as np
+
+        img = np.random.random((100,100,100))
+        EZTest.setImage(img)
+
+        hist = np.histogram(img,100)
+        EZTest.plot(hist[1][:-1],hist[0])
+
+    params = [{'name':'Test','value':10,'type':'int','default':10},
+              {'name': 'Ducks', 'type': 'str', 'value': 'Mallard', 'default': 'Mallard'},
+              {'name': 'Rabbits', 'type': 'str', 'value': 'Flemish Giant'}]
+
+    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')], parameters = params, openfileshandler = opentest)
+
+The two important additions are the function ``runtest``, which creates an image and 1D histogram and plots them both
+in the appropriate viewers. The addition ``toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')]`` to the
+instantiation connects this function to a button represented by ``icons_34.png``. Clicking the button will cause
+``runtest`` to run. The string ``'Run test'`` is the name associated with the button. To add more buttons, you
+must provide similar tuples with 1) an icon path, 2) a method, and 3) a name.
+
+Adding buttons is also possible with the ``addToolButton`` method of ``EZplugin``.
+
+It is possible to use the parameters in ``self.parameters`` for your functions by accessing them directly: see the
+last paragraph of :ref:`param_ref`.
+
+Example
+^^^^^^^
+
+In this example we will show the functionality of the plugin we have built in the previous sections. The code in its
+entirety is shown below:
+
+.. code-block:: python
+
+
+    from xicam.plugins.base import EZplugin
+
+    def opentest(filepaths):
+        import fabio
+        for filepath in filepaths:
+            img = fabio.open(filepath).data
+            EZTest.setImage(img)
+
+    def runtest():
+        import numpy as np
+
+        img = np.random.random((100,100,100))
+        EZTest.setImage(img)
+
+        hist = np.histogram(img,100)
+        EZTest.plot(hist[1][:-1],hist[0])
+
+    params = [{'name':'Test','value':10,'type':'int','default':10},
+              {'name': 'Ducks', 'type': 'str', 'value': 'Mallard', 'default': 'Mallard'},
+              {'name': 'Rabbits', 'type': 'str', 'value': 'Flemish Giant'}]
+
+    EZTest = EZplugin(name = "EZTest", toolbuttons=[('xicam/gui/icons_34.png',runtest, 'Run test')], parameters = params, openfileshandler = opentest)
+
+
+
+The opening screen of Xi-cam is shown in the image below.
+
+.. image:: images/ez_2.png
+    :width: 900 px
+
+The list of available plugins is shown at the bar at the top ("Batch", "HipGISAXS", "Log", etc). To add the "EZTest"
+exaample, click the "plugins" bar at the top of the page and click the "EZTest" option.
+
+.. image:: images/ez_3.png
+    :width: 900 px
+
+Clicking on the "EZTest" tab will lead you to the interface. The parameters tab is on the right, and empty viewers in
+the center.
+
+.. image:: images/ez_4.png
+    :width: 900 px
+
+Double clicking an image in the filebrowser brings it up on the viewer, due to the ``opentest`` function we wrote.
+
+.. image:: images/ez_5.png
+    :width: 900 px
+
+Finally, clicking the green arrow above the 2D viewer will cause the ``runtest`` function to run. The output is shown
+in the image below.
+
+.. image:: images/ez_6.png
+    :width: 900 px
+
+.. _advanced:
+
+Advanced Plugin Development Tutorial
+------------------------------------
+
+
 .. highlight:: python
     :linenothreshold: 2
 
@@ -10,7 +264,7 @@ knowledge of Python and Qt. In this tutorial we demonstrate implementing a plugi
 The HipRMC binary accepts a single argument: an input parameter file. HipRMC outputs by writing images to disk.
 This plugin mediates these exchanges and displays the results.
 
-**Xi-cam assumes that any module or package in the xicam/plugins directory is a `plugin`.** All Xi-cam plugins must define a
+Recall that **Xi-cam assumes that any module/package in the xicam/plugins directory is a `plugin`.** All Xi-cam plugins must define a
 `plugin` class which inherits `xicam.plugins.base.plugin` and has attributes defining the locations of its widgets.
 The following attributes are optionally inserted into the Xi-cam interface layout:
 
@@ -25,9 +279,8 @@ When not set, default widgets are used. When set to `None`, the corresponding la
 We first start with a short tutorial in which we some basic plugin functionality, before moving on to the full
 HipRMC example.
 
----------------
 Plugin creation
----------------
+^^^^^^^^^^^^^^^
 
 Our first step is to create the plugin subclass which defines necessary plugin attributes. Again, this file must be
 created in the directory xicam/plugins to be detected as a plugin:
@@ -42,11 +295,18 @@ created in the directory xicam/plugins to be detected as a plugin:
         def __init__(self, *args, ''kwargs):
 
             super(plugin, self).__init__(*args, **kwargs)
+            self.centerwidget = None
+            self.rightwidget = None
+            self.leftwidget = None
+            self.bottomwidget = None
+            self.toolbbar = None
 
 The first line imports the plugin base class. The rest of the code names the plugin subclass ("ViewerRMC") and
-instantiates it when Xi-Cam is run. The plugin, at this point, has nothing except the widgets it inherits from the base
-class. We would like to display images in this plugin, so we add a ``QTabWidget``, from ``Pyside.QtGui``, to hold these
-images.
+instantiates it when Xi-Cam is run. It also sets each widget inherited from the base ``plugin`` class to `None`,
+which hides each of these widgets. The plugin at this point literally shows nothing.
+
+Of course, we don't want to keep it this way. We would like to display images in this plugin, so we add a ``QTabWidget``, from ``Pyside.QtGui``, to hold these
+images and set it to the plugin's `centerwidget`.
 
 
 .. code-block:: python
@@ -95,11 +355,11 @@ In the ``__init__`` method, we added a line that connects a tab close request to
 user requests a tab. ``tabClose`` takes and deletes the tab as requested by the user.
 
 
------------------------------
 Opening and Displaying Images
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To display an image, we'll write a method that takes a path and opens the image.
+To display an image, we'll write a method that takes a path and opens the image. The base ``plugin`` class has an
+empty ``openfiles`` method that will be overriden by your plugin's own ``openfiles`` method.
 
 .. code-block:: python
 
@@ -131,9 +391,8 @@ activate the plugin using the ``activate`` method inherited from the base class.
 ``loader`` function, but displaying it requires an ``ImageView`` object from ``pyqtgraph``. The image is loaded into an
 ``ImageView`` object, which itself is then loaded into the ``centerwidget`` of the plugin.
 
---------------------------------
 Adding and Displaying Parameters
---------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this example we use a ``ParameterTree`` from ``pyqtgraph`` to display parameters of interest:
 
@@ -189,9 +448,8 @@ called, say, "time," we must add the parameter name, type, and starting and defa
 This new line adds a "time" parameter of default value 1 to the parameters list. To access the values, we use a
 ``pyqtgraph`` method ``child()``. For example, ``self.configparams.child('time').value()`` returns ``1``.
 
-----------------------------
 Creating and Wiring a Button
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Creating and wiring a button to a method is very straightforward:
 
@@ -231,9 +489,8 @@ which must be written by the user:
 
 Now once the button is pressed by the user, the terminal will print "hello."
 
-----------------------
 ViewerRMC Full Example
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 For the viewer which will display HipRMC output, we need more functionality. Specifically, HipRMC only works on square
 images, and accepts as an input a parameter file. We would like to see its output on the GUI as well. This full example
