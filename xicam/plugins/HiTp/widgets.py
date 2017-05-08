@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     w = WaferView()
     #csv = '/home/rp/data/HiTp/Sample14_master_metadata_high.csv'
-    #csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
+    csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
     w.redrawfromCSV(csv)
 
     win.setCentralWidget(w)
