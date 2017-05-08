@@ -12,7 +12,7 @@ def daemon(path,filter,newcallback,procold=False):
 
 
     @threads.iterator(newcallback)
-    def checkdirectory(self):
+    def checkdirectory():
         """
         Checks a directory for new files, comparing what files are there now vs. before
         """
