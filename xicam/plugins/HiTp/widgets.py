@@ -77,7 +77,7 @@ class WaferView(pg.PlotWidget):
                  z[d])
         zmin = min(z)
         zrange = np.ptp(z)
-        z = (z-zmin)/zrange *256
+        z = np.nan_to_num((z-zmin)/zrange *256)
 
         points = [{'pos':(x[i],y[i]),
                    'data':z[i]*100,
