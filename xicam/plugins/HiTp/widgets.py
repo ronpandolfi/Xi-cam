@@ -87,6 +87,7 @@ class WaferView(pg.PlotWidget):
                    } for i in range(len(z))]
 
         self.waferplotitem.setPoints(points)
+        self.autoRange()
 
 
 
