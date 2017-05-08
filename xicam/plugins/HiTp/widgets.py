@@ -67,8 +67,8 @@ class WaferView(pg.PlotWidget):
         #print 'loading csv into dataframe'
         p = pd.read_csv(csv)
         #print p
-        x=np.nan_to_num(p['plate_x'])
-        y=np.nan_to_num(p['plate_y'])
+        x=np.nan_to_num(p['p_x'])
+        y=np.nan_to_num(p['p_y'])
         z = np.nan_to_num(p[self.csvkeys[mode]])
         #print x, y
         d=(x+y).argsort()
