@@ -158,8 +158,8 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
     maxima_x = []
     maxima_y = []
     for i in range(len(x_0)):
-        roi = image[y_0[i]:y_1[i], x_0[i]:x_1[i]]
-        pos = radial_pos[x_0[i]:x_1[i], y_0[i]:y_1[i]]
+        roi = image[int(y_0[i]):int(y_1[i]), int(x_0[i]):int(x_1[i])]
+        pos = radial_pos[int(x_0[i]):int(x_1[i]), int(y_0[i]):int(y_1[i])]
         if roi.size < half_step ** 2: continue
 
         # calculate roi histogram

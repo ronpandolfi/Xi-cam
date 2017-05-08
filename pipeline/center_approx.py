@@ -252,13 +252,9 @@ def center_approx(img, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img * (img > 0) + 1)
 
-    #testimg(img)
-
-    con = signal.fftconvolve(img, img) / signal.fftconvolve(np.ones_like(img), np.ones_like(img))
-    #testimg(con)
+    con = signal.fftconvolve(img, img) / np.sqrt(signal.fftconvolve(np.ones_like(img), np.ones_like(img)))
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.
-    #print('Center quality:',log,np.sum(con/con.max()))
     return cen
 
 

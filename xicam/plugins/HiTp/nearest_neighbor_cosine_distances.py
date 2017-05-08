@@ -60,4 +60,4 @@ def nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, base_
     # plt.savefig(save_path + base_filename + file_index(index) + '_neighbors.png')
     # plt.close('all')
     distance_sum = distance.cosine(IntAve, neighbor1) + distance.cosine(IntAve, neighbor2)
-    return [index, distance_sum]
+    return [['neighbor_distances', distance_sum]]

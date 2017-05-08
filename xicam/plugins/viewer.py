@@ -21,6 +21,7 @@ from pipeline import loader
 from xicam import config
 import fabio
 from pipeline import calibration
+from xicam.widgets.daemonwidget import DaemonParameter
 
 from xicam.widgets.calibrationpanel import calibrationpanel
 
@@ -67,20 +68,32 @@ class ViewerPlugin(base.plugin):
                                      capture=None, removecosmics=self.removecosmics,thresholdmask=self.thresholdmask)
 
 
+        # Spacegroup Panel
         self.spacegroupwidget = spacegroupwidget()
         self.spacegroupwidget.sigDrawSGOverlay.connect(self.drawsgoverlay)
         sgicon = QtGui.QIcon()
         sgicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
 
+        # Metadata panel
         self.propertytable = widgets.frameproptable()
         self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
+        # Calibration Panel
         self.calibrationPanel = calibrationpanel()
         calicon = QtGui.QIcon()
         calicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.calibrationPanel, calicon))
         self.calibrationPanel.sigCalibrate.connect(self.calibrate)
+        self.calibrationPanel.sigSimulateCalibrant.connect(self.simulatecalibrant)
+
+        # Daemon panel
+        self.daemonPanel = ParameterTree()
+        self.daemonPanel.setParameters(DaemonParameter(self.openfiles),showTop=False)
+        daemonicon = QtGui.QIcon()
+        daemonicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_56.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rightmodes.append((self.daemonPanel, daemonicon))
+
 
         super(ViewerPlugin, self).__init__(*args, **kwargs)
 
@@ -127,6 +140,9 @@ class ViewerPlugin(base.plugin):
 
     def drawsgoverlay(self, peakoverlay):
         self.getCurrentTab().drawsgoverlay(peakoverlay)
+
+    def simulatecalibrant(self,calibrant):
+        self.getCurrentTab().simulatecalibrant(calibrant)
 
     def addmode(self):
         """

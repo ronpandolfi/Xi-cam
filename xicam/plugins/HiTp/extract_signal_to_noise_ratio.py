@@ -21,7 +21,7 @@ def func(x, *params):
         y = y + amp * np.exp( -((x - ctr)/wid)**2)
     return y
 
-def extract_SNR(index, IntAve):
+def extract_SNR(IntAve):
     filter_window = 15
     IntAve_smoothed = savgol_filter(IntAve, filter_window, 2)
     noise = IntAve - IntAve_smoothed
@@ -40,4 +40,4 @@ def extract_SNR(index, IntAve):
     intercept = 60.7206954077
 
     SNR = slope * np.log(1/popt[2]) + intercept
-    return [index, SNR]
+    return [['SNR', SNR]]
