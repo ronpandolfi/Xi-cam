@@ -12,11 +12,12 @@ def daemon(path,filter,newcallback,procold=False):
 
 
     @threads.iterator(newcallback)
-    def checkdirectory():
+    def checkdirectory(self):
         """
         Checks a directory for new files, comparing what files are there now vs. before
         """
-        childfiles = set(os.listdir(path))
+        childfiles = set(glob.glob(os.path.join(path, filter)))
+        if procold: yield list(childfiles)
 
         while True:
             updatedchildren = set(glob.glob(os.path.join(path, filter)))
