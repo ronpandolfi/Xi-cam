@@ -35,7 +35,7 @@ def extract_SNR(IntAve):
 
     # fit noise histogram
     n, bins = np.histogram(noise, bins= bins)
-    popt, pcov = curve_fit(func, bins[:-1], n, p0=guess, bounds = (low, high))
+    popt, pcov = curve_fit(func, bins[:-1], n, p0=guess)
     slope = 9.16805348809
     intercept = 60.7206954077
 

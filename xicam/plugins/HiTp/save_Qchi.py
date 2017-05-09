@@ -17,7 +17,7 @@ def save_Qchi(Q, chi, cake, imageFilename, save_path):
     Q, chi = np.meshgrid(Q, chi)
     plt.figure(1)
     plt.title('Q-chi polarization corrected_log scale')
-    plt.pcolormesh(Q, chi, np.log(cake))
+    plt.pcolormesh(Q, chi, np.log(cake), cmap = 'viridis')
     plt.xlabel('Q')
     plt.ylabel('$\gamma$')
     #plt.xlim((0.7, 6.8))
