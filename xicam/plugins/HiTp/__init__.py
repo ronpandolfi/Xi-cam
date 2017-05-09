@@ -98,7 +98,7 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                                  {'name': 'smpls_per_row', 'value': 25, 'type': 'int'},
                                  {'name': 'background_subtraction_module', 'value': False, 'type': 'bool'},
                                  {'name': 'peak_fitting_module', 'value': False, 'type': 'bool'},
-                                 daemonwidget.DaemonParameter(openfiles)],
+                                 daemonwidget.DaemonParameter(openfiles,filter='*.tif')],
                      openfileshandler=openfiles,
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)

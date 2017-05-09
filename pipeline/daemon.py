@@ -17,7 +17,7 @@ def daemon(path,filter,newcallback,procold=False):
         Checks a directory for new files, comparing what files are there now vs. before
         """
         childfiles = set(glob.glob(os.path.join(path, filter)))
-        if procold: yield list(childfiles)
+        if procold and childfiles: yield list(childfiles)
 
         while True:
             updatedchildren = set(glob.glob(os.path.join(path, filter)))
@@ -42,10 +42,10 @@ def test(*args, **kwargs):
 if __name__ == '__main__':
 
 
-    path = 'C:\\Users\\ronpa\\Downloads'
+    path = '/home/rp/data/HiTp/testset/'
     # files = os.listdir(path)
 
-    procold = False
+    procold = True
     daemon(path, '*.tif', test, procold=procold)
 
     QtCore.QCoreApplication([]).exec_()
