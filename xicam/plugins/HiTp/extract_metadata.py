@@ -21,7 +21,7 @@ def extract_metadata(filepath):
     bstop = float([counter[6:] for counter in counters if counter.startswith('bstop=')][0])
     Omron = float([counter[6:] for counter in counters if counter.startswith('Omron=')][0])
     Temperature = float([counter[5:] for counter in counters if counter.startswith('TEMP=')][0])
-    ROI1 = float([counter[6:] for counter in counters if counter.startswith('ROI1=')][0])
+    ROI1 = float([counter[5:] for counter in counters if counter.startswith('ROI1=')][0])
     ROI2 = float([counter[5:] for counter in counters if counter.startswith('ROI2=')][0])
     ROI3 = float([counter[5:] for counter in counters if counter.startswith('ROI3=')][0])
     ROI4 = float([counter[5:] for counter in counters if counter.startswith('ROI4=')][0])
