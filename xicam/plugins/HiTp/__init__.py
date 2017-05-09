@@ -25,13 +25,6 @@ def openfiles(filepaths):
         # # TODO: should this line be moved?
         # HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
 
-        csvpath = ''
-
-        ## TODO: Is it possible to point to the csv file?
-        # dummy way to choose a csv file for now
-        csvpath = filepath[:-8] + 'scan1.csv'
-
-        HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
         # calibration
         detect_dist_pix = HiTpPlugin.parameters.param('detect_dist_pix').value()
         bcenter_x_pix = HiTpPlugin.parameters.param('bcenter_x_pix').value()
@@ -57,7 +50,7 @@ def openfiles(filepaths):
         background_subtract_module = HiTpPlugin.parameters.param('background_subtraction_module').value()
         peak_fitting_module = HiTpPlugin.parameters.param('peak_fitting_module').value()
 
-        run(filepath, csvpath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A,
+        run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A,
             bcenter_x_pix, bcenter_y_pix,
             polarization, smpls_per_row,
             Imax_Iave_ratio_module,
@@ -67,6 +60,16 @@ def openfiles(filepaths):
             add_feature_to_csv_module,
             background_subtract_module,
             peak_fitting_module)
+
+
+        csvpath = ''
+
+        ## TODO: Is it possible to point to the csv file?
+        # dummy way to choose a csv file for now
+        folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
+        csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
+
+        HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
 
 HiTpPlugin=base.EZplugin(name='HiTp',
                      toolbuttons=[],#('xicam/gui/icons_34.png',runtest)
