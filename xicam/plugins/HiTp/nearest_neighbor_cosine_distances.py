@@ -7,6 +7,8 @@ Created on Wed Aug 03 14:03:38 2016
 
 import numpy as np
 from scipy.spatial import distance
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os.path
 

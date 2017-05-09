@@ -4,6 +4,8 @@ author: fangren
 
 
 import os.path
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import basinhopping

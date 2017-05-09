@@ -1,6 +1,7 @@
 from .. import base
 import widgets
-
+from xicam import threads
+from xicam import plugins
 
 import numpy as np
 from xicam.widgets import daemonwidget
@@ -12,6 +13,11 @@ def runtest():
     #EZTest.bottomwidget.clear()
     pass
 
+def redrawfromCSV(csvpath):
+    plugins.plugins['HiTp'].instance.centerwidget.redrawfromCSV(csvpath)
+
+
+@threads.method(redrawfromCSV)
 def openfiles(filepaths):
     '''
 
@@ -69,7 +75,7 @@ def openfiles(filepaths):
         folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
         csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
 
-        HiTpPlugin.centerwidget.redrawfromCSV(csvpath)
+        return csvpath
 
 HiTpPlugin=base.EZplugin(name='HiTp',
                      toolbuttons=[],#('xicam/gui/icons_34.png',runtest)

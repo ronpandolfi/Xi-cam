@@ -4,6 +4,8 @@ author: fangren
 
 
 from extract_peak_number import extract_peak_num
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path

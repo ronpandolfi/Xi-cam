@@ -7,6 +7,8 @@ Created on Wed July 13 2016
 
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import glob
 import os

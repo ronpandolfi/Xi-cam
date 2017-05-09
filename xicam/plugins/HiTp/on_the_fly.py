@@ -54,75 +54,78 @@ def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, 
 
     print 'processing image ' + filepath
     print("\r")
-    while 1:
-        try:
-            # import image and convert it into an array
-            imArray = load_image(filepath)
 
-            # data_reduction to generate Q-chi and 1D spectra, Q
-            Q, chi, cake, Qlist, IntAve = data_reduction(imArray, detect_dist_pix, Rot, tilt, wavelength_A,
-                                                                   bcenter_x_pix, bcenter_y_pix, polarization)
+    try:
+        # import image and convert it into an array
+        imArray = load_image(filepath)
 
-            attributes = [['scan_num', index]]
+    except (OSError, IOError, IndexError):
+        # The image was being created but not complete yet
+        print 'waiting for image', filepath + ' to be ready...'
+        # wait 1 second and try again
+        time.sleep(1)
+        imArray = load_image(filepath)
 
-            # add metadata to master file
-            if add_feature_to_csv_module:
-                metadata = extract_metadata(filepath)
-                attributes = np.concatenate((attributes, metadata))
+    # data_reduction to generate Q-chi and 1D spectra, Q
+    Q, chi, cake, Qlist, IntAve = data_reduction(imArray, detect_dist_pix, Rot, tilt, wavelength_A,
+                                                           bcenter_x_pix, bcenter_y_pix, polarization)
 
-            # save Qchi as a plot *.png and *.mat
-            save_Qchi(Q, chi, cake, imageFilename, save_path)
-            # save 1D spectra as a *.csv
-            save_1Dcsv(Qlist, IntAve, imageFilename, save_path)
-            # extract composition information if the information is available
-            # extract the number of peaks in 1D spectra as attribute3 by default
-            attribute3, peaks = extract_peak_num(Qlist, IntAve)
-            attributes = np.concatenate((attributes, attribute3))
+    attributes = [['scan_num', index]]
 
-            # save 1D plot with detected peaks shown in the plot
-            save_1Dplot(Qlist, IntAve, peaks, imageFilename, save_path)
+    # add metadata to master file
+    if add_feature_to_csv_module:
+        metadata = extract_metadata(filepath)
+        attributes = np.concatenate((attributes, metadata))
+
+    # save Qchi as a plot *.png and *.mat
+    save_Qchi(Q, chi, cake, imageFilename, save_path)
+    # save 1D spectra as a *.csv
+    save_1Dcsv(Qlist, IntAve, imageFilename, save_path)
+    # extract composition information if the information is available
+    # extract the number of peaks in 1D spectra as attribute3 by default
+    attribute3, peaks = extract_peak_num(Qlist, IntAve)
+    attributes = np.concatenate((attributes, attribute3))
+
+    # save 1D plot with detected peaks shown in the plot
+    save_1Dplot(Qlist, IntAve, peaks, imageFilename, save_path)
 
 
-            if Imax_Iave_ratio_module:
-                # extract maximum/average intensity from 1D spectra as attribute1
-                attribute1 = extract_max_ave_intensity(IntAve)
-                attributes = np.concatenate((attributes, attribute1))
+    if Imax_Iave_ratio_module:
+        # extract maximum/average intensity from 1D spectra as attribute1
+        attribute1 = extract_max_ave_intensity(IntAve)
+        attributes = np.concatenate((attributes, attribute1))
 
 
-            if texture_module:
-                # save 1D texture spectra as a plot (*.png) and *.csv
-                Qlist_texture, texture = save_texture_plot_csv(Q, chi, cake, imageFilename, save_path)
-                # extract texture square sum from the 1D texture spectra as attribute2
-                attribute2 = extract_texture_extent(Qlist_texture, texture)
-                attributes = np.concatenate((attributes, attribute2))
+    if texture_module:
+        # save 1D texture spectra as a plot (*.png) and *.csv
+        Qlist_texture, texture = save_texture_plot_csv(Q, chi, cake, imageFilename, save_path)
+        # extract texture square sum from the 1D texture spectra as attribute2
+        attribute2 = extract_texture_extent(Qlist_texture, texture)
+        attributes = np.concatenate((attributes, attribute2))
 
-            if neighbor_distance_module:
-                # extract neighbor distances as attribute4
-                attribute4 = nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, save_path,
-                                                            smpls_per_row)
-                attributes = np.concatenate((attributes, attribute4))
+    if neighbor_distance_module:
+        # extract neighbor distances as attribute4
+        attribute4 = nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, save_path,
+                                                    smpls_per_row)
+        attributes = np.concatenate((attributes, attribute4))
 
-            if signal_to_noise_module:
-                # extract signal-to-noise ratio
-                attribute5 = extract_SNR(IntAve)
-                attributes = np.concatenate((attributes, attribute5))
+    if signal_to_noise_module:
+        # extract signal-to-noise ratio
+        attribute5 = extract_SNR(IntAve)
+        attributes = np.concatenate((attributes, attribute5))
 
-            # print attributes
+    # print attributes
 
-            if add_feature_to_csv_module:
-                add_feature_to_master(attributes.T, save_path)
+    if add_feature_to_csv_module:
+        add_feature_to_master(attributes.T, save_path)
 
-            if background_subtract_module:
-                bckgrd_subtracted = bckgrd_subtract(imageFilename, save_path, Qlist, IntAve)
+    if background_subtract_module:
+        bckgrd_subtracted = bckgrd_subtract(imageFilename, save_path, Qlist, IntAve)
 
-            if background_subtract_module and peak_fitting_module:
-                peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 5, 20)
+    if background_subtract_module and peak_fitting_module:
+        peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 5, 20)
 
-            break
-        except (OSError, IOError, IndexError):
-            # The image was being created but not complete yet
-            print 'waiting for image', filepath + ' to be ready...'
-            time.sleep(1)
+
 
 
 
