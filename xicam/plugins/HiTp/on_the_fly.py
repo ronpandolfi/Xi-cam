@@ -119,7 +119,7 @@ def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, 
                 peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 5, 20)
 
             break
-        except (OSError, IOError):
+        except (OSError, IOError, IndexError):
             # The image was being created but not complete yet
             print 'waiting for image', filepath + ' to be ready...'
             time.sleep(1)
