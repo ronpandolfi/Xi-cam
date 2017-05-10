@@ -10,7 +10,9 @@ dist/
 xicam.egg_info/
 *.swp
 lib/
+lib64
 bin/
 share/
 local/
+include/
 pip-selfcheck.json
