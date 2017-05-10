@@ -3,9 +3,9 @@ import sys
 
 from PySide import QtGui, QtCore
 
-# if sys.platform == 'win32':
-#     sys.stdout = open(os.path.join(os.path.expanduser('~'),'out.log'),'w')
-#     sys.stderr = open(os.path.join(os.path.expanduser('~'),'err.log'),'w')
+if sys.platform == 'win32':
+    sys.stdout = open(os.path.join(os.path.expanduser('~'),'out.log'),'w')
+    sys.stderr = open(os.path.join(os.path.expanduser('~'),'err.log'),'w')
 
 from splash import SplashScreen
 
