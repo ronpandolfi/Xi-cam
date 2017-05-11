@@ -1519,7 +1519,6 @@ class FunctionManager(fw.FeatureManager):
         Returns the 'tomo' data in the data_dict, which has been acted on by all functions in the partial_stack
         """
         for tuple in partial_stack:
-            print tuple[1]
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
 
