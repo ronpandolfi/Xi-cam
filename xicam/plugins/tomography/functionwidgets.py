@@ -1291,6 +1291,7 @@ class FunctionManager(fw.FeatureManager):
 
         Parameters
         ----------
+
         datawidget
             Class holding the input dataset
         slc slice

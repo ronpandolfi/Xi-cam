@@ -21,3 +21,28 @@ SIRT TomoCam:
     type: float
   - name: num_iter
     type: int
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
+
+MBIR TomoCam:
+  - name: center
+    type: float
+    suffix: px
+  - name: oversamp_factor
+    type: float
+  - name: num_iter
+    type: int
+  - name: smoothness
+    type: float
+  - name: p
+    type: float
+  - name: arr
+    type: list
+    values:
+      - tomo
+      - flats
+      - dark
