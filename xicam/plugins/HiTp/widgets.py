@@ -15,12 +15,12 @@ import numpy as np
 class WaferView(pg.PlotWidget):
     sigPlot = Signal(object) # emits 2-d cake array
 
-    csvkeys = {'crystallinity':'Imax/Iave',}  # TODO: add mappings for other keys
+    csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}  # TODO: add mappings for other keys
 
     def __init__(self):
         super(WaferView, self).__init__()
 
-        self.waferplotitem = pg.ScatterPlotItem(size=10, pen=pg.mkPen('w'))
+        self.waferplotitem = pg.ScatterPlotItem(size=10, pen=pg.mkPen('w'), cmap = 'jet')
         self.addItem(self.waferplotitem)
         ## Make all plots clickable
         self.lastClicked = None
@@ -56,7 +56,7 @@ class WaferView(pg.PlotWidget):
         event.accept()
 
     @Slot(str,str)
-    def redrawfromCSV(self,csv,mode='crystallinity'):
+    def redrawfromCSV(self,csv,mode='peaks'):
         '''
 
         Parameters
@@ -67,13 +67,10 @@ class WaferView(pg.PlotWidget):
             display mode; one of 'SNR','NND','TEXTURE','MAX','AVG','MAX/AVG','#PEAKS','FWHM'
 
         '''
-        #read csv file
-        #....
-        #plot visualization
         #print csv
         #print 'loading csv into dataframe'
         p = pd.read_csv(csv)
-        #print p
+        #print list(p)
         x=np.nan_to_num(p['p_x'])
         y=np.nan_to_num(p['p_y'])
         z = np.nan_to_num(p[self.csvkeys[mode]])
@@ -144,9 +141,10 @@ if __name__ == '__main__':
     win.resize(800, 800)
 
     w = WaferView()
+    # TODO: Looks like the three lines here are not necessary
     #csv = '/home/rp/data/HiTp/Sample14_master_metadata_high.csv'
-    csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
-    w.redrawfromCSV(csv)
+    # csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
+    # w.redrawfromCSV(csv)
 
     win.setCentralWidget(w)
     win.setWindowTitle('Fitting')

@@ -21,10 +21,11 @@ def runtest():
     pass
 
 def redrawfromCSV(csvpath):
+    print csvpath
     plugins.plugins['HiTp'].instance.centerwidget.redrawfromCSV(csvpath)
 
-
 @threads.method(redrawfromCSV)
+
 def openfiles(filepaths):
     """
     Parameters
@@ -72,6 +73,7 @@ def openfiles(filepaths):
         folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
         csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
     return csvpath
+
 
 
 HiTpPlugin=base.EZplugin(name='HiTp',
