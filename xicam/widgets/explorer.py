@@ -78,8 +78,15 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.path = path
 
-        root = QtCore.QDir(path)
+        if os.path.isdir(path):
+            filter='*'
+            root=path
+        else:
+            filter=os.path.basename(path)
+            root=path[:-len(filter)]
+        root = QtCore.QDir(root)
         self.file_model.setRootPath(root.absolutePath())
+        self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
         self.pathChanged.emit(path)
         config.settings['defaultlocalpath'] = path

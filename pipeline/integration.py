@@ -8,6 +8,7 @@ import remesh
 import msg
 
 pyFAI_method = 'cython'
+from modpkgs import pyFAImod
 
 #
 #
@@ -213,10 +214,10 @@ def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], reque
     # data *= cut
 
 
-    cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method=pyFAI_method)
-    mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method=pyFAI_method)
+    cake, q, chi = AI.integrate2d(data.T, xres, yres, method=pyFAI_method)
+    mask, q, chi = AI.integrate2d(mask.T, xres, yres, method=pyFAI_method)
 
-    maskedcake = np.ma.masked_array(cake, mask=mask)
+    maskedcake = np.ma.masked_array(cake, mask=mask<=0)
 
     chiprofile = np.ma.average(maskedcake, axis=1)
 
@@ -375,15 +376,15 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     AIdict=AI.getPyFAI()
     msg.logMessage('remesh corrected calibration: '+str(AIdict))
 
-    q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+    q,qprofile,color,requestkey = qintegrate(data,mask.copy(),AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
-    maxq = (qsquared*mask).max()
+    maxq = np.sqrt((qsquared*mask).max())
     if cut is not None: qsquared[np.logical_not(cut.astype(np.bool))]=np.inf
-    minq = qsquared.min()
+    minq = np.sqrt(qsquared.min())
 
     q = np.linspace(minq,maxq,len(qprofile))/10.
 
-    return q.tolist(), qprofile.tolist(), color, requestkey
+    return q.tolist(), qprofile, color, requestkey
 
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()

@@ -343,22 +343,22 @@ class dimgViewer(QtGui.QWidget):
             cakechi = self.dimg.cakeqy
             if mode is not None:
                 if mode == 'parallel':
-                    return cakeq[y] * np.sin(np.radians(cakechi[x])) / 10.
+                    return cakeq[int(y)] * np.sin(np.radians(cakechi[int(x)])) / 10.
                 elif mode == 'z':
-                    return cakeq[y] * np.cos(np.radians(cakechi[x])) / 10.
+                    return cakeq[int(y)] * np.cos(np.radians(cakechi[int(x)])) / 10.
             else:
-                return cakeq[y] / 10.
+                return cakeq[int(y)] / 10.
 
         elif isremesh:
             remeshqpar = self.dimg.remeshqx
             remeshqz = self.dimg.remeshqy
             if mode is not None:
                 if mode == 'parallel':
-                    return remeshqpar[x, y] / 10.
+                    return remeshqpar[int(x), int(y)] / 10.
                 elif mode == 'z':
-                    return -remeshqz[x, y] / 10.
+                    return -remeshqz[int(x), int(y)] / 10.
             else:
-                return np.sqrt(remeshqz[x, y] ** 2 + remeshqpar[x, y] ** 2) / 10.
+                return np.sqrt(remeshqz[int(x), int(y)] ** 2 + remeshqpar[int(x), int(y)] ** 2) / 10.
 
         else:
             center = config.activeExperiment.center
@@ -1310,7 +1310,7 @@ class integrationsubwidget(pg.PlotWidget):
             if color is None:
                 color = [255, 255, 255]
             y[y<=0]=1.E-9
-            curve = self.plotItem.plot(np.array(x), np.array(y), pen=pg.mkPen(color=color))
+            curve = self.plotItem.plot(np.array(x), np.nan_to_num(np.array(y).astype(float)), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))
 
             self.plotItem.update()
