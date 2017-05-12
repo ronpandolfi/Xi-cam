@@ -1,3 +1,10 @@
+"""
+Created on Apr 2017
+
+@author: Ron Pandolfi
+"""
+
+
 import pyqtgraph as pg
 from PySide.QtGui import *
 from PySide.QtCore import *

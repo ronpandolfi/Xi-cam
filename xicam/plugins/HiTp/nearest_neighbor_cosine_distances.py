@@ -2,7 +2,7 @@
 """
 Created on Wed Aug 03 14:03:38 2016
 
-@author: Tri Duong, Fang Ren
+@author: Fang Ren, Tri Duong
 """
 
 import numpy as np

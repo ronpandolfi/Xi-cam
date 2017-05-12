@@ -1,5 +1,7 @@
 """
-author: fangren
+Created on Mar 2017
+
+@author: fangren, Travis Williams
 """
 
 

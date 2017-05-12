@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Thu Apr 21 14:48:10 2016
+Created on Mar 2017
 
 @author: fangren
 """

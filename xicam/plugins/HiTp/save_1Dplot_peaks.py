@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 13
+Created on Mar 2017
 
 @author: fangren
-
 """
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

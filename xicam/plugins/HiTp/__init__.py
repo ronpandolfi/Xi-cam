@@ -1,3 +1,10 @@
+"""
+Created on Apr 2017
+
+@author: Ron Pandolfi, Fang Ren
+"""
+
+
 from .. import base
 import widgets
 from xicam import threads

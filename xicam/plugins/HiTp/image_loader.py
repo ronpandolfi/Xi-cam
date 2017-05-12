@@ -1,8 +1,3 @@
-"""
-author: Fang Ren (SSRL)
-
-4/26/2017
-"""
 from PIL import Image
 import numpy as np
 

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 13
+Created on Mar 2017
 
-@author: fangren
-
+@author: fangren, Ron Pandolfi
 """
+
 
 import pyFAI
 from PIL import Image

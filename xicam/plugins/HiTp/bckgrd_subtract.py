@@ -1,7 +1,8 @@
 """
-author: fangren
-"""
+Created on Mar 2017
 
+@author: fangren
+"""
 
 import os.path
 import matplotlib

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 13
+Created on Mar 2017
 
 @author: fangren
-
+comtributor: S. Suram (JCAP)
 """
 
 import matplotlib
@@ -25,7 +24,7 @@ def save_Qchi(Q, chi, cake, imageFilename, save_path):
     #plt.xlim((0.7, 6.8))
     #plt.ylim((-56, 56))
     plt.clim((0, np.log(np.nanmax(cake))))
-    # the next two lines contributed by S. Suram (JCAP)
+    # the next two lines are contributed by S. Suram (JCAP)
     inds = np.nonzero(cake)
     plt.clim(scipy.stats.scoreatpercentile(np.log(cake[inds]), 5),
              scipy.stats.scoreatpercentile(np.log(cake[inds]), 95))

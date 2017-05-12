@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Mon Jun 06 18:02:32 2016
+Created on Mar 2017
 
-@author: Apurva Mehta, fangren
+@author: fangren, Apurva Mehta
 """
+
 
 import numpy as np
 
