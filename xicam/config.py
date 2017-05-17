@@ -1,4 +1,9 @@
 # --coding: utf-8 --
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from past.utils import old_div
+from builtins import object
 import pickle
 import pyFAI
 from pyFAI import geometry
@@ -35,7 +40,7 @@ class settingstracker(object):
             try:
                 stream.write(yaml.dump(self.settings))
             except yaml.YAMLError as exc:
-                print exc
+                print(exc)
 
     def __getitem__(self, item):
         try:
@@ -170,12 +175,12 @@ class experiment(Parameter):
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match
-        self.param('Wavelength').setValue(1.239842e-6 / self.param('Energy').value(),
+        self.param('Wavelength').setValue(old_div(1.239842e-6, self.param('Energy').value()),
                                           blockSignal=self.WavelengthChanged)
 
     def WavelengthChanged(self):
         # Make Energy and Wavelength match
-        self.param('Energy').setValue(1.239842e-6 / self.param('Wavelength').value(), blockSignal=self.EnergyChanged)
+        self.param('Energy').setValue(old_div(1.239842e-6, self.param('Wavelength').value()), blockSignal=self.EnergyChanged)
 
     def save(self):
         # Save the experiment .....

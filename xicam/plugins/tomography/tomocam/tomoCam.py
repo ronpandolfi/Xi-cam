@@ -1,10 +1,16 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import tomopy
 import argparse
 import numpy as np
 import afnumpy as afnp
 import arrayfire as af
 
-from XT_ForwardModel import forward_project, init_nufft_params, back_project
+from .XT_ForwardModel import forward_project, init_nufft_params, back_project
 
 #Gridrec reconstruction using GPU based gridding
 #Inputs: tomo : 3D numpy sinogram array with dimensions same as tomopy
@@ -25,21 +31,21 @@ def gpuGridrec(tomo,angles,center,input_params):
         num_slice = new_tomo.shape[0]
         num_angles=new_tomo.shape[2]
         pad_size=np.int16(im_size*input_params['oversamp_factor'])
-        nufft_scaling = (np.pi/pad_size)**2
+        nufft_scaling = (old_div(np.pi,pad_size))**2
         #Initialize structures for NUFFT
         sino={}
         geom={}
         sino['Ns'] =  pad_size#Sinogram size after padding
         sino['Ns_orig'] = im_size #size of original sinogram
-        sino['center'] = center + (sino['Ns']/2 - sino['Ns_orig']/2)  #for padded sinogram
+        sino['center'] = center + (old_div(sino['Ns'],2) - old_div(sino['Ns_orig'],2))  #for padded sinogram
         sino['angles'] = angles
         sino['filter'] = input_params['fbp_filter_param'] #Paramter to control strength of FBP filter normalized to [0,1]
 
         #Initialize NUFFT parameters
         nufft_params = init_nufft_params(sino,geom)
-        rec_nufft = afnp.zeros((num_slice/2,sino['Ns_orig'],sino['Ns_orig']),dtype=afnp.complex64)
+        rec_nufft = afnp.zeros((old_div(num_slice,2),sino['Ns_orig'],sino['Ns_orig']),dtype=afnp.complex64)
         Ax = afnp.zeros((sino['Ns'],num_angles),dtype=afnp.complex64)
-        pad_idx = slice(sino['Ns']/2-sino['Ns_orig']/2,sino['Ns']/2+sino['Ns_orig']/2)
+        pad_idx = slice(old_div(sino['Ns'],2)-old_div(sino['Ns_orig'],2),old_div(sino['Ns'],2)+old_div(sino['Ns_orig'],2))
         rec_nufft_final=np.zeros((num_slice,sino['Ns_orig'],sino['Ns_orig']),dtype=np.float32)
         
         #Move all data to GPU
@@ -48,7 +54,7 @@ def gpuGridrec(tomo,angles,center,input_params):
         gdata=afnp.array(new_tomo[slice_1]+1j*new_tomo[slice_2],dtype=afnp.complex64)
         x_recon = afnp.zeros((sino['Ns'],sino['Ns']),dtype=afnp.complex64)
         #loop over all slices
-        for i in range(0,num_slice/2):
+        for i in range(0,old_div(num_slice,2)):
           Ax[pad_idx,:]=gdata[i]
           #filtered back-projection 
           rec_nufft[i] = (back_project(Ax,nufft_params))[pad_idx,pad_idx]
@@ -79,22 +85,22 @@ def gpuSIRT(tomo,angles,center,input_params):
         num_slice = new_tomo.shape[0]
         num_angles=new_tomo.shape[2]
         pad_size=np.int16(im_size*input_params['oversamp_factor'])
-        nufft_scaling = (np.pi/pad_size)**2
+        nufft_scaling = (old_div(np.pi,pad_size))**2
         num_iter = input_params['num_iter']
         #Initialize structures for NUFFT
         sino={}
         geom={}
         sino['Ns'] =  pad_size#Sinogram size after padding
         sino['Ns_orig'] = im_size #size of original sinogram
-        sino['center'] = center + (sino['Ns']/2 - sino['Ns_orig']/2)  #for padded sinogram
+        sino['center'] = center + (old_div(sino['Ns'],2) - old_div(sino['Ns_orig'],2))  #for padded sinogram
         sino['angles'] = angles
         
         #Initialize NUFFT parameters
         nufft_params = init_nufft_params(sino,geom)
         temp_y = afnp.zeros((sino['Ns'],num_angles),dtype=afnp.complex64)
         temp_x = afnp.zeros((sino['Ns'],sino['Ns']),dtype=afnp.complex64)
-        x_recon  = afnp.zeros((num_slice/2,sino['Ns_orig'],sino['Ns_orig']),dtype=afnp.complex64) 
-        pad_idx = slice(sino['Ns']/2-sino['Ns_orig']/2,sino['Ns']/2+sino['Ns_orig']/2)
+        x_recon  = afnp.zeros((old_div(num_slice,2),sino['Ns_orig'],sino['Ns_orig']),dtype=afnp.complex64) 
+        pad_idx = slice(old_div(sino['Ns'],2)-old_div(sino['Ns_orig'],2),old_div(sino['Ns'],2)+old_div(sino['Ns_orig'],2))
 
         #allocate output array
         rec_sirt_final=np.zeros((num_slice,sino['Ns_orig'],sino['Ns_orig']),dtype=np.float32)
@@ -104,7 +110,7 @@ def gpuSIRT(tomo,angles,center,input_params):
         x_ones= afnp.ones((sino['Ns_orig'],sino['Ns_orig']),dtype=afnp.complex64)
         temp_x[pad_idx,pad_idx]=x_ones
         temp_proj=forward_project(temp_x,nufft_params)*(sino['Ns']*afnp.pi/2)
-        R = 1/afnp.abs(temp_proj)
+        R = old_div(1,afnp.abs(temp_proj))
         R[afnp.isnan(R)]=0
         R[afnp.isinf(R)]=0
         R=afnp.array(R,dtype=afnp.complex64)
@@ -113,7 +119,7 @@ def gpuSIRT(tomo,angles,center,input_params):
         y_ones=afnp.ones((sino['Ns_orig'],num_angles),dtype=afnp.complex64)
         temp_y[pad_idx]=y_ones
         temp_backproj=back_project(temp_y,nufft_params)*nufft_scaling/2
-        C = 1/(afnp.abs(temp_backproj))
+        C = old_div(1,(afnp.abs(temp_backproj)))
         C[afnp.isnan(C)]=0
         C[afnp.isinf(C)]=0
         C=afnp.array(C,dtype=afnp.complex64)
@@ -124,11 +130,11 @@ def gpuSIRT(tomo,angles,center,input_params):
         gdata=afnp.array(new_tomo[slice_1]+1j*new_tomo[slice_2],dtype=afnp.complex64)
         
         #loop over all slices
-        for i in range(num_slice/2):
+        for i in range(old_div(num_slice,2)):
           for iter_num in range(num_iter):
             #filtered back-projection
             temp_x[pad_idx,pad_idx]=x_recon[i]
-            Ax = (np.pi/2)*sino['Ns']*forward_project(temp_x,nufft_params)
+            Ax = (old_div(np.pi,2))*sino['Ns']*forward_project(temp_x,nufft_params)
             temp_y[pad_idx]=gdata[i]
             x_recon[i] = x_recon[i]+(C*back_project(R*(temp_y-Ax),nufft_params)*nufft_scaling/2)[pad_idx,pad_idx]
 

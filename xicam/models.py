@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from PySide.QtCore import Qt
 from PySide import QtCore
 
@@ -79,9 +80,9 @@ class imagePropModel(QtCore.QAbstractTableModel):
         if role == Qt.DisplayRole:
             try:
                 if index.column() == 0:
-                    return self.propdata.keys()[index.row()]
+                    return list(self.propdata.keys())[index.row()]
                 if index.column() == 1:
-                    return self.propdata.values()[index.row()]
+                    return list(self.propdata.values())[index.row()]
             except Exception:
                 return 0
 

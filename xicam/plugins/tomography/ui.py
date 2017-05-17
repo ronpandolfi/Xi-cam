@@ -1,5 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
+from builtins import object
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -16,8 +19,8 @@ from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
-import reconpkg
-import viewers
+from . import reconpkg
+from . import viewers
 
 
 class UIform(object):
@@ -183,7 +186,7 @@ def build_function_menu(menu, functree, functiondata, actionslot):
         slot where the function action triggered signal shoud be connected
     """
 
-    for func, subfuncs in functree.iteritems():
+    for func, subfuncs in functree.items():
         if len(subfuncs) > 1 or func != subfuncs[0]:
             funcmenu = QtGui.QMenu(func)
             menu.addMenu(funcmenu)

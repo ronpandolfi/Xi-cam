@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import RmcView
 import time
@@ -5,7 +10,7 @@ import subprocess
 from PySide import QtGui, QtCore
 from pipeline import hig, loader
 
-class gui():
+class gui(object):
     def __init__(self, ui):
         self.ui = ui
 
@@ -86,7 +91,7 @@ class gui():
             loadingfactors.append(item.text())
 
         rip = self.ui.rmcinputpaths
-        inputpaths = [rip.item(index).text() for index in xrange(rip.count())]
+        inputpaths = [rip.item(index).text() for index in range(rip.count())]
 
         tiles = len(loadingfactors)
 
@@ -128,7 +133,7 @@ class gui():
 
         if checkforresults(self) is True and checkforresults2(self) is True:
 
-            print "Finished", exitcode
+            print("Finished", exitcode)
 
             path = os.path.join(self.ui.rmcoutput.text(), self.ui.rmcRunName.text())
 

@@ -1,9 +1,13 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import str
 import os
 from PySide import QtGui
 from  xicam.plugins import base
-from viewer import ThreeDViewer
+from .viewer import ThreeDViewer
 
 import platform
 op_sys = platform.system()
@@ -30,7 +34,7 @@ class Viewer3DPlugin(base.plugin):
         super(Viewer3DPlugin, self).__init__(*args, **kwargs)
 
     def openfiles(self, paths):
-        print paths
+        print(paths)
         self.activate()
         widget = ThreeDViewer(paths=paths)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))

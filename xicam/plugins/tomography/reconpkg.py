@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import importlib
 from pipeline import msg
 import tomopy
@@ -11,7 +14,7 @@ packages = {}
 for name in PACKAGE_LIST:
     try:
         package = importlib.import_module(name)
-        print package
+        print(package)
         packages[name] = package
         msg.logMessage('{} module loaded'.format(name), level=20)
     except ImportError as ex:
@@ -21,6 +24,6 @@ for name in PACKAGE_LIST:
 packages['tomopy'] = tomopy
 
 # Add the extra functions
-import pipelinefunctions, mbir
+from . import pipelinefunctions, mbir
 packages['pipelinefunctions'] = pipelinefunctions
 packages['mbir'] = mbir

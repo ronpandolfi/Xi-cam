@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
 import logging
 import inspect
 import sys
@@ -56,7 +59,7 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None,suppr
     try:
         stdch.setLevel(level)
     except ValueError:
-        print stuple,level
+        print(stuple,level)
     logger.addHandler(stdch)
 
     if timestamp is None: timestamp = time.asctime()
@@ -64,10 +67,10 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None,suppr
     if type(stuple) is not tuple:
         stuple=[stuple]
 
-    stuple = (unicode(s) for s in stuple)
+    stuple = (str(s) for s in stuple)
 
     s = ' '.join(stuple)
-    m = timestamp +'\t'+unicode(s)
+    m = timestamp +'\t'+str(s)
 
     logger.log(level,m)
     if guilogcallable:
@@ -76,9 +79,9 @@ def logMessage(stuple,level=INFO,loggername=None,timestamp=None,image=None,suppr
         global logbacklog
         logbacklog.append({'stuple':s,'level':level,'loggername':loggername,'timestamp':timestamp,'image':image})
     try:
-        if not suppressreprint: print m
+        if not suppressreprint: print(m)
     except UnicodeEncodeError:
-        print 'A unicode string could not be written to console. Some logging will not be displayed.'
+        print('A unicode string could not be written to console. Some logging will not be displayed.')
 
 def flushbacklog():
     global logbacklog

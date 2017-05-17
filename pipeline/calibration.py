@@ -1,12 +1,18 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 from pipeline import center_approx
-import integration
+from . import integration
 import numpy as np
-import peakfinding
+from . import peakfinding
 from xicam import config
 
 from pyFAI import calibrant
 from functools import wraps
-import msg
+from . import msg
 from xicam import threads
 from scipy import signal
 
@@ -63,7 +69,7 @@ def fourierAutocorrelation(dimg, calibrantkey):
     yield 85
     N = 1
     # guess which order is the first
-    stds=[np.std((peaks[:,0]/(np.arange(len(peaks))+i))[:4]) for i in range(1,5)]
+    stds=[np.std((old_div(peaks[:,0],(np.arange(len(peaks))+i)))[:4]) for i in range(1,5)]
     if min(stds)<5: # threshold accepting peak as higher N
         N=np.argmin(stds)+1 # index of the first detected peak
 
@@ -144,7 +150,7 @@ def rickerWavelets(dimg, calibrantkey):
     yield 100
 
 
-import saxs_calibration as sc
+from . import saxs_calibration as sc
 @calibrationAlgorithm
 def dpdakRefine(dimg,calibrantkey):
 
@@ -159,8 +165,8 @@ def dpdakRefine(dimg,calibrantkey):
 
     data = dimg.rawdata
 
-    print 'Start parameter:'
-    print geometry.getFit2D()
+    print('Start parameter:')
+    print(geometry.getFit2D())
 
     fit_param = ['distance', 'rotation', 'tilt', 'center_x', 'center_y']
     # calculate maxima for every d_spacing
@@ -189,8 +195,8 @@ def dpdakRefine(dimg,calibrantkey):
                         fit_param)
 
 
-    print 'Final parameter:'
-    print geometry.getFit2D()
+    print('Final parameter:')
+    print(geometry.getFit2D())
 
     config.activeExperiment.setvalue('Detector Distance', geometry.get_dist())
     config.activeExperiment.center = geometry.getFit2D()['centerX'],geometry.getFit2D()['centerY']

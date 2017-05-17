@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 # avg dphi correlation (mask normalized) for each q
 
-import base
+from builtins import range
+from . import base
 from PySide import QtGui
 import os
 
-import widgets
+from . import widgets
 
 
 class FXSPlugin(base.plugin):

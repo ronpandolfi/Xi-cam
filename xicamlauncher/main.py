@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import os
 import sys
 
@@ -7,7 +10,7 @@ if sys.platform == 'win32':
     sys.stdout = open(os.path.join(os.path.expanduser('~'),'out.log'),'w')
     sys.stderr = open(os.path.join(os.path.expanduser('~'),'err.log'),'w')
 
-from splash import SplashScreen
+from .splash import SplashScreen
 
 def main():
     sys.path.append(os.path.join(os.getcwd(), 'lib/python2.7/lib-dynload'))
@@ -18,17 +21,17 @@ def main():
         d.cdUp()
         d.cdUp()
         d.setCurrent(d.path())
-        print 'QApp root:',QtCore.QDir().current()
+        print('QApp root:',QtCore.QDir().current())
     except NameError:
-        print 'Could not set QApp root.' # Hopefully this is run as an executable, and this is unnecessary anyway
+        print('Could not set QApp root.') # Hopefully this is run as an executable, and this is unnecessary anyway
 
     for path in sys.path:
-        print 'path:', path
+        print('path:', path)
     import xicam  # IMPORTANT! DO NOT REMOVE! Xicam must be loaded early to avoid graphical bugs on mac (?!)
     app=QtGui.QApplication(sys.argv)
 
     pixmap = QtGui.QPixmap("xicam/gui/splash.gif")
-    print 'CWD:', os.getcwd()
+    print('CWD:', os.getcwd())
     if True:  # Disable to bypass splashscreen for testing on windows
         splash = SplashScreen(pixmap, f=QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.SplashScreen)
         splash.setAttribute(QtCore.Qt.WA_DeleteOnClose)

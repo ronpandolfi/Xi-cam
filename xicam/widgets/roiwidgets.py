@@ -1,5 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
 
 
+from past.utils import old_div
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -137,8 +141,8 @@ class ROImageOverlay(pg.ROI):
 
     def remove_outlier(self, array1, array2, total, thresh = 0.05):
         val = sp.integrate.trapz(array1, array2)
-        print 1- (float(val) / total)
-        if 1 - (float(val)/total) < thresh:
+        print(1- (old_div(float(val), total)))
+        if 1 - (old_div(float(val),total)) < thresh:
             return self.remove_outlier(array1[1:-1],array2[1:-1], total, thresh=thresh)
         else:
             return array1, array2

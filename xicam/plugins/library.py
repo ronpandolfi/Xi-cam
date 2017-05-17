@@ -1,7 +1,12 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from past.utils import old_div
 from PySide import QtGui
 import sys
-import base
-import viewer
+from . import base
+from . import viewer
 
 
 class LibraryPlugin(base.plugin):
@@ -205,7 +210,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.fileicon = QtGui.QImage()
         self.fileicon.load('xicam/gui/post-360412-0-09676400-1365986245.png')
 
-        print 'Library widget generated for ' + path
+        print('Library widget generated for ' + path)
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -229,8 +234,8 @@ class thumbwidgetitem(QtGui.QFrame):
 
             try:
                 self.thumb = np.rot90(np.log(dimg.thumbnail * (dimg.thumbnail > 0) + (dimg.thumbnail < 1))).copy()
-                print 'thumbmax:', np.max(self.thumb)
-                self.thumb *= 255. / np.max(self.thumb)
+                print('thumbmax:', np.max(self.thumb))
+                self.thumb *= old_div(255., np.max(self.thumb))
 
 
 
@@ -239,7 +244,7 @@ class thumbwidgetitem(QtGui.QFrame):
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             except Exception as ex:
-                print ex.message
+                print(ex.message)
 
                 self.image = self.fileicon
 

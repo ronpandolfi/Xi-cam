@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import object
 from collections import OrderedDict
 from PySide import QtGui
 import sys
@@ -17,14 +20,13 @@ disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
 
 
 def initplugins(placeholders):
-    import base
+    from . import base
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
     msg.logMessage(('packages:',packages),msg.DEBUG)
 
     for importer, modname, ispkg in packages:
-
         msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
         mod=safeimporter.import_module('.' + modname, 'xicam.plugins')
         if mod:
@@ -36,7 +38,7 @@ def initplugins(placeholders):
 
     for module in modules:
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
-        for objname,obj in module.__dict__.iteritems():
+        for objname,obj in module.__dict__.items():
             if inspect.isclass(obj):
                 if issubclass(obj, base.plugin) and not obj is base.plugin and not obj is base.EZplugin:
                     link = pluginlink(module, obj, placeholders)
@@ -52,7 +54,7 @@ def initplugins(placeholders):
 
 def buildactivatemenu(modewidget):
     menu = QtGui.QMenu('Plugins')
-    for pluginlink in plugins.values():
+    for pluginlink in list(plugins.values()):
         if pluginlink.plugin.hidden:
             continue
         action = QtGui.QAction(pluginlink.name, menu)
@@ -64,7 +66,7 @@ def buildactivatemenu(modewidget):
     return menu
 
 
-class pluginlink():
+class pluginlink(object):
     def __init__(self, module, plugin, placeholders):
         self.plugin = plugin
         self.modulename = module.__name__

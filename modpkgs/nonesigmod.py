@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # REF: http://stackoverflow.com/questions/23728401/pyside-crashing-python-when-emitting-none-between-threads
 
 _PYSIDE_NONE_SENTINEL = object()

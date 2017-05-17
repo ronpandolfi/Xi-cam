@@ -1,10 +1,18 @@
 #! /usr/bin/env python
 # --coding: utf-8 --
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import itertools
 import numpy as np
 from numpy.linalg import norm
 from scipy.optimize import root
-import sgexclusions
+from . import sgexclusions
 from xicam import config
 
 def volume(a, b, c, alpha=None, beta=None, gamma=None):
@@ -13,11 +21,11 @@ def volume(a, b, c, alpha=None, beta=None, gamma=None):
         return abs(np.dot(a, np.cross(b, c)))
     elif isinstance(a, float) and isinstance(b, float) and isinstance(c, float):
         if alpha is None:
-            alpha = np.pi / 2
+            alpha = old_div(np.pi, 2)
         if beta is None:
-            beta = np.pi / 2
+            beta = old_div(np.pi, 2)
         if gamma is None:
-            gamma = np.pi / 2
+            gamma = old_div(np.pi, 2)
         abc2 = (a * b * c ) ** 2
         t1 = np.cos(alpha) * np.cos(beta) * np.cos(gamma)
         t2 = np.cos(alpha) ** 2 + np.cos(beta) ** 2 + np.cos(gamma) ** 2
@@ -32,11 +40,11 @@ def crystal2sample(a, b, c, alpha=None, beta=None, gamma=None):
     # don't need to do all this if a,b,c are vectors
     # we should convert them to vectors if they are not
     if alpha is None:
-        alpha = np.pi / 2
+        alpha = old_div(np.pi, 2)
     if beta is None:
-        beta = np.pi / 2
+        beta = old_div(np.pi, 2)
     if gamma is None:
-        gamma = np.pi / 2
+        gamma = old_div(np.pi, 2)
     t1 = np.cos(gamma) * np.cos(beta) - np.cos(alpha)
     vol = volume(a, b, c, alpha, beta, gamma)
     R[0, 0] = a
@@ -44,13 +52,13 @@ def crystal2sample(a, b, c, alpha=None, beta=None, gamma=None):
     R[0, 2] = c * np.cos(beta)
     R[1, 1] = b * np.sin(gamma)
     R[1, 2] = -c * t1 / np.sin(gamma)
-    R[2, 2] = vol / (a * b * np.sin(gamma))
+    R[2, 2] = old_div(vol, (a * b * np.sin(gamma)))
     return R
 
 
 def orientation_uvw(uvw, R):
     e = R.dot(uvw)
-    return e / norm(e)
+    return old_div(e, norm(e))
 
 
 def orientation_hkl(hkl, R):
@@ -66,7 +74,7 @@ def orientation_hkl(hkl, R):
 
     # vector Ac
     if not h == 0:
-        A_c[0] = 1. / hkl[0]
+        A_c[0] = old_div(1., hkl[0])
     else:
         A_c[0] = 1.;
         if not k == 0:
@@ -76,7 +84,7 @@ def orientation_hkl(hkl, R):
 
     # vector Bc
     if not k == 0:
-        B_c[1] = 1. / hkl[1]
+        B_c[1] = old_div(1., hkl[1])
     else:
         B_c[1] = 1.;
         if not l == 0:
@@ -86,7 +94,7 @@ def orientation_hkl(hkl, R):
 
     # vector Cc
     if not l == 0:
-        C_c[2] = 1. / hkl[2]
+        C_c[2] = old_div(1., hkl[2])
     else:
         C_c[2] = 1.
         if not h == 0:
@@ -96,7 +104,7 @@ def orientation_hkl(hkl, R):
     AsBs = np.inner(R, (B_c - A_c))
     BsCs = np.inner(R, (C_c - B_c))
     t1 = np.cross(AsBs, BsCs)
-    return t1 / norm(t1)
+    return old_div(t1, norm(t1))
 
 
 def RotationMatrix(u, theta):
@@ -164,13 +172,13 @@ def reflection_condtion(hkl, unitcell, space_grp):
 
 
 def alpha_exit(qz, alphai, k):
-    alf = np.arcsin(qz / k - np.sin(alphai))
+    alf = np.arcsin(old_div(qz, k) - np.sin(alphai))
     return alf
 
 def theta_exit(q, alpha, alphai, k):
-    t1 = np.cos(alpha)**2 + np.cos(alphai)**2 - (q[0]**2 + q[1]**2)/(k*k)
+    t1 = np.cos(alpha)**2 + np.cos(alphai)**2 - old_div((q[0]**2 + q[1]**2),(k*k))
     t2 = 2 * np.cos(alpha) * np.cos(alphai)
-    return np.sign(q[1]) * np.arccos(t1/t2)
+    return np.sign(q[1]) * np.arccos(old_div(t1,t2))
 
 def angles_to_pixels(angles, center, sdd, pixel_size=None):
     if pixel_size is None:
@@ -226,8 +234,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"q\u2225: {}\n".format(self.qpar/1e10)
-        if self.qz is not None: s += u"q\u27c2: {}\n".format(self.qz/1e10)
+        if self.qpar is not None: s += u"q\u2225: {}\n".format(old_div(self.qpar,1e10))
+        if self.qz is not None: s += u"q\u27c2: {}\n".format(old_div(self.qz,1e10))
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -239,10 +247,10 @@ def qvalues(twotheta, alphaf, alphai, wavelen):
 
 def dwba_componets(Gz, k, nu, alphai):
     alphaf = np.zeros(4, dtype=np.float)
-    gprime = Gz/k
+    gprime = old_div(Gz,k)
     t1 = nu**2 - np.cos(alphai)**2
     if np.real(t1) < 0:
-        print 'Error: incoming angle is below the critical angle'
+        print('Error: incoming angle is below the critical angle')
         return None
     cprime = np.sqrt(t1)
     cosa1 = nu**2 - (gprime + cprime)**2 
@@ -270,7 +278,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     # unit vector normal to sample plane
     normal = np.array(normal)
     if norm_type == "xyz":
-        e_norm = normal / norm(normal)
+        e_norm = old_div(normal, norm(normal))
     elif norm_type == "hkl":
         if not normal.dtype.type is np.int_:
             raise TypeError("hkl type must be integer datatype")
@@ -299,7 +307,7 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
     RV = reciprocalvectors(a, b, c)
 
     nu = 1 - np.complex(refdelta, refbeta)
-    HKL = itertools.product(range(-order, order + 1), repeat=3)
+    HKL = itertools.product(list(range(-order, order + 1)), repeat=3)
     alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
     k = 2 * np.pi / wavelen
     peaks = list()
@@ -355,5 +363,5 @@ if __name__ == '__main__':
     p1 = angles_to_pixels(tr,center, sdd=1.84)
     rf = np.array(refle_peaks, dtype=float)
     p2 = angles_to_pixels(rf,center, sdd=1.84)
-    print str(p1)
-    print str(p2)
+    print(str(p1))
+    print(str(p2))

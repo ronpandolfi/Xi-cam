@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from __future__ import division
+from past.utils import old_div
 from PySide import QtGui
 from PySide import QtCore
 from PySide.QtCore import Qt
@@ -175,7 +178,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
             try:
                 self.thumb = np.rot90(np.log(self.dimg.thumbnail + 1)).copy()
-                self.thumb *= 255. / np.max(self.thumb)
+                self.thumb *= old_div(255., np.max(self.thumb))
 
 
 

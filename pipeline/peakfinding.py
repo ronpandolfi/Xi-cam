@@ -1,3 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import object
+from past.utils import old_div
 import numpy as np
 from scipy import signal
 from scipy.ndimage import filters
@@ -30,7 +35,7 @@ from PySide import QtCore
 
 wavelet = signal.ricker # wavelet of choice
 widths = np.arange(1, 20) # range of widths of the ricker wavelet to search/evaluate
-max_distances = widths / 8. # ridgeline connectivity threshold; smaller values gives more peaks; larger values considers overlapping peaks as one
+max_distances = old_div(widths, 8.) # ridgeline connectivity threshold; smaller values gives more peaks; larger values considers overlapping peaks as one
 gap_thresh = 4 # threshold number of rows for ridgeline connectivity; smaller values gives more peaks
 min_length = 3 # minimum ridgeline length; smaller values gives more peaks
 min_snr = 2 # Minimum SNR
@@ -84,7 +89,7 @@ def findpeaks(x, y):
 
 
 # TODO: Refactor this class into xicam module so I can get rid of pyside dependency
-class peaktooltip:
+class peaktooltip(object):
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)
         self.scatterPoints = pg.PlotDataItem(self.q, self.I, size=10, pen=pg.mkPen(None),

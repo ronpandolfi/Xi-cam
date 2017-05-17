@@ -1,6 +1,11 @@
 # --coding: utf-8 --
 #! /usr/bin/env python
 
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import map
+from builtins import range
+from builtins import object
 from collections import OrderedDict
 from xicam import debugtools
 
@@ -63,7 +68,7 @@ def arezeros(*args):
         return True
 
 
-class SGClass:
+class SGClass(object):
     conditions = OrderedDict([])
 
     def check(self,m,SG):
@@ -649,7 +654,7 @@ Hexagonal = Hexagonal()
 Cubic = Cubic()
 
 
-SGkeys = SGClass.conditions.keys()
+SGkeys = list(SGClass.conditions.keys())
 
 crystalsystems = [Triclinic, Monoclinic, Orthorhombic,Tetragonal,Trigonal, Hexagonal, Cubic]
 
@@ -673,7 +678,7 @@ def check(m,SG):
 
 if __name__=='__main__':
     def test(m,SG):
-        print SG,m,check(m,SG)
+        print(SG,m,check(m,SG))
 
     SG=u'P2₁'
     m=(1,2,1)

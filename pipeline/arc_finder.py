@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import glob
 import os
 
@@ -7,11 +14,11 @@ from scipy import signal
 import fabio
 import matplotlib.pyplot as plt
 
-import center_approx
-import integration
+from . import center_approx
+from . import integration
 
-import peakfindingrem
-import peakfinding
+from . import peakfindingrem
+from . import peakfinding
 import scipy.optimize as optimize
 import scipy.stats
 from scipy import interpolate
@@ -195,7 +202,7 @@ def scanforarcs(radialprofile, cen):
     # radialprofile=signal.convolve(radialprofile,signal.gaussian(h, std=8))
     # test = np.max(radialprofile) / h
     #print 't', test
-    peakmax, peakmin = peakfindingrem.peakdet(range(len(radialprofile)), radialprofile, 10)
+    peakmax, peakmin = peakfindingrem.peakdet(list(range(len(radialprofile))), radialprofile, 10)
     peakind = peakmax[:, 0]
 
 
@@ -226,11 +233,11 @@ def scanforarcs(radialprofile, cen):
 
 
 def mirroredgaussian(theta, a, b, c, d):
-    val = (gaussian(theta, a, b, c, d) + gaussian(2 * np.pi - theta, a, b, c, d)) / 2.
+    val = old_div((gaussian(theta, a, b, c, d) + gaussian(2 * np.pi - theta, a, b, c, d)), 2.)
     return val
 
 def gaussian(x, a, b, c, d):
-    val = abs(a) * np.exp(-(x - b) ** 2. / c ** 2.) + abs(d)
+    val = abs(a) * np.exp(old_div(-(x - b) ** 2., c ** 2.)) + abs(d)
     return val
 
 
@@ -269,7 +276,7 @@ def gaussianresidual(params, x, data, sig=1):
 
     # print resids
 
-    weighted = np.sqrt(resids ** 2 / sig ** 2)
+    weighted = np.sqrt(old_div(resids ** 2, sig ** 2))
     return weighted
 
 
@@ -289,7 +296,7 @@ def findgisaxsarcs(img, cen, experiment):
     for qmu in arcs[unique]:
         chiprofile = np.nan_to_num(integration.chi_2Dintegrate(img, (cen[1], cen[0]), qmu, mask=experiment.mask))
 
-        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'r')
+        plt.plot(np.arange(0, np.pi, old_div(1, 30.)), chiprofile, 'r')
 
         # filter out missing chi
         missingpointfloor = np.percentile(chiprofile, 15)
@@ -298,7 +305,7 @@ def findgisaxsarcs(img, cen, experiment):
 
         chiprofile[badpoints] = np.interp(badpoints, goodpoints, chiprofile[goodpoints])
 
-        plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile, 'k')
+        plt.plot(np.arange(0, np.pi, old_div(1, 30.)), chiprofile, 'k')
 
         # f=rfft(chiprofile)
         # plt.plot(f)
@@ -311,13 +318,13 @@ def findgisaxsarcs(img, cen, experiment):
         try:
             params = Parameters()
             params.add('A', value=np.max(chiprofile), min=0)
-            params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+            params.add('mu', value=old_div(np.pi, 2), min=0, max=np.pi)
             params.add('kappa', value=0.1, min=0)
             params.add('floor', value=0.1, min=0)
-            x = np.arange(0, np.pi, 1 / 30.)
+            x = np.arange(0, np.pi, old_div(1, 30.))
 
             out = minimize(residual, params, args=(x, chiprofile))
-            print params
+            print(params)
             # print params['A'].stderr
 
             # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
@@ -335,7 +342,7 @@ def findgisaxsarcs(img, cen, experiment):
 
         popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
         A, chimu, kappa, baseline = popt
-        FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+        FWHM = np.arccos(old_div(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)), kappa))
 
         output.append([qmu, A, chimu, FWHM, baseline, isring])
         # plt.plot(np.arange(0, np.pi, 1 / 30.), chiprofile)
@@ -412,13 +419,13 @@ def fitarc(chiprofile):
     try:
         params = Parameters()
         params.add('A', value=np.max(chiprofile), min=0)
-        params.add('mu', value=np.pi / 2, min=0, max=np.pi)
+        params.add('mu', value=old_div(np.pi, 2), min=0, max=np.pi)
         params.add('kappa', value=0.1, min=0)
         params.add('floor', value=0.1, min=0)
-        x = np.arange(0, np.pi, 1 / 30.)
+        x = np.arange(0, np.pi, old_div(1, 30.))
 
         out = minimize(residual, params, args=(x, chiprofile))
-        print params
+        print(params)
         # print params['A'].stderr
 
         # popt, pcov = optimize.curve_fit(vonmises, np.arange(0, np.pi, 1 / 30.), np.nan_to_num(chiprofile),
@@ -434,7 +441,7 @@ def fitarc(chiprofile):
 
     popt = [params['A'].value, params['mu'].value, params['kappa'].value, params['floor'].value]
     A, chimu, kappa, baseline = popt
-    FWHM = np.arccos(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)) / kappa)
+    FWHM = np.arccos(old_div(np.log(.5 * np.exp(kappa) + .5 * np.exp(-kappa)), kappa))
 
     return A, chimu, FWHM, baseline, isring
 
@@ -508,7 +515,7 @@ def findgisaxsarcs2(img, experiment):
         #roi[chi - 10:chi + 10, q - 5:q + 5]=10
         #roi=np.sum(roi,axis=1)
         slice = img[:, q - 5:q + 5]
-        if np.max(slice) / np.min(slice) < 2:
+        if old_div(np.max(slice), np.min(slice)) < 2:
             pass  # continue
         chiprofile = np.sum(slice, axis=1)
         x = np.arange(np.size(chiprofile))
@@ -541,7 +548,7 @@ if __name__ == "__main__":
     experiment.mask = experiment.getDetector().calc_mask()
 
     for imgpath in glob.glob(os.path.join("../GISAXS samples/", '*.edf')):
-        print "Opening", imgpath
+        print("Opening", imgpath)
 
         # read image
         img = fabio.open(imgpath).data
@@ -570,7 +577,7 @@ if __name__ == "__main__":
         qratio =1.78
 
         for arc in arcs:
-            print arc
+            print(arc)
             if not np.isnan(arc['sigma'].value):
 
                 if False:

@@ -1,3 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 from matplotlib import pyplot as plt
 import os
@@ -67,11 +73,11 @@ def noiseless_curvature(x, y):
     x2 = x[1:-1]
     x3 = x[2:]
     # First derivatives
-    yprime_one = (y2 - y1) / (x2 - x1)  # Defined at location 0.5*(x1 + x2)
-    yprime_two = (y3 - y2) / (x3 - x2)  # Defined at location 0.5*(x2 + x3)
+    yprime_one = old_div((y2 - y1), (x2 - x1))  # Defined at location 0.5*(x1 + x2)
+    yprime_two = old_div((y3 - y2), (x3 - x2))  # Defined at location 0.5*(x2 + x3)
     # Second derivative
     # Defined at location 0.5*(x3 + x1).  For evenly spaced data, defined at x2.
-    curvature[1:-1] = (yprime_two - yprime_one) / (0.5 * (x3 - x1))
+    curvature[1:-1] = old_div((yprime_two - yprime_one), (0.5 * (x3 - x1)))
     # Undefined at endpoints
     curvature[0] = np.nan
     curvature[-1] = np.nan
@@ -170,7 +176,7 @@ def linear_backgrounds(x, y, low_anchor_indices, high_anchor_indices):
     x2 = x[high_anchor_indices]
     y1 = y[low_anchor_indices]
     y2 = y[high_anchor_indices]
-    slope = (y2 - y1) / (x2 - x1)
+    slope = old_div((y2 - y1), (x2 - x1))
     offset = y1 - slope * x1
     return slope, offset
 
@@ -319,7 +325,7 @@ def find_low_variance(local_variance, noise_factor):
     '''
     median_variance = np.median(local_variance)
     mean_variance = local_variance.mean()
-    variance_cutoff = median_variance * (mean_variance / median_variance) ** noise_factor
+    variance_cutoff = median_variance * (old_div(mean_variance, median_variance)) ** noise_factor
     low_variance = np.less(local_variance, variance_cutoff)
     return low_variance
 
@@ -486,7 +492,7 @@ def gauss_guess(x, y, curvature, low_anchor_indices, high_anchor_indices, featur
         signal_ii = y - background_ii
         magnitude_ii = signal_ii[feature_indices[ii]]
         curvature_ii = curvature[feature_indices[ii]]
-        sigma[ii] = (-magnitude_ii / curvature_ii) ** 0.5
+        sigma[ii] = (old_div(-magnitude_ii, curvature_ii)) ** 0.5
         intensity[ii] = magnitude_ii * sigma[ii] * (2 * np.pi) ** 0.5
     return slope, offset, intensity, sigma
 
@@ -507,7 +513,7 @@ def masked_mean_2d_axis_0(y2d, mask2d):
     '''
     sum = (y2d * mask2d).sum(axis=0)
     num_elements = mask2d.sum(axis=0)
-    mean = sum / num_elements
+    mean = old_div(sum, num_elements)
     return mean
 
 
@@ -528,7 +534,7 @@ def masked_variance_2d_axis_0(y2d, mask2d):
     mean = masked_mean_2d_axis_0(y2d, mask2d)
     difference = (y2d - mean) * mask2d
     num_elements = mask2d.sum(axis=0)
-    variance = (difference ** 2).sum(axis=0) / (num_elements - 1)
+    variance = old_div((difference ** 2).sum(axis=0), (num_elements - 1))
     return variance
 
 
@@ -718,8 +724,8 @@ def figure_naive_gauss_guess(x, y, low_bound_indices, high_bound_indices, featur
     for ii in range(number_features):
         centroid = x[feature_indices[ii]]
         linear_model = slope[ii] * x + offset[ii]
-        gauss_model = (intensity[ii] / (sigma[ii] * (2 * np.pi) ** 0.5)) \
-                      * np.exp(-((x - centroid) ** 2) / (2 * sigma[ii] ** 2))
+        gauss_model = (old_div(intensity[ii], (sigma[ii] * (2 * np.pi) ** 0.5))) \
+                      * np.exp(old_div(-((x - centroid) ** 2), (2 * sigma[ii] ** 2)))
         # Fix plotting bpundaries if necessary
         if low_bound_indices[ii] < high_bound_indices[ii]:
             model_segment = (linear_model + gauss_model)[low_bound_indices[ii]: high_bound_indices[ii]]
@@ -845,21 +851,21 @@ def process_demo_1():
     data1 = np.genfromtxt(data_folder + file1, delimiter=',')
     (length, width) = data1.shape  # (1096, 2)
     # The data is for some reason doubled.  Quick 2-line fix.
-    length = length / 2
+    length = old_div(length, 2)
     data1 = data1[0:length, :]
     x = data1[:, 0]
     y = data1[:, 1]
 
     # Local maxima
     maxima = local_maxima_detector(y)
-    print 'Initially detected %i local maxima.' % maxima.sum()
+    print('Initially detected %i local maxima.' % maxima.sum())
     fig, ax = figure_initial_maxima(x, y, maxima)
     plt.savefig(out_folder + 'initial_maxima.pdf')
     #    plt.savefig(out_folder + '.pdf')
 
     # Curvature
     curvature = noiseless_curvature(x, y)
-    normed_curv = curvature / (real_max(curvature) - real_min(curvature))
+    normed_curv = old_div(curvature, (real_max(curvature) - real_min(curvature)))
     curvature_legit = ~np.isnan(curvature)
     curv_minima = local_minima_detector(curvature)
     fig, ax = figure_maxima_curvature(x, y, maxima, normed_curv, curvature_legit)
@@ -879,8 +885,8 @@ def process_demo_1():
 
     # Classifying curvature minima
     normals, high_outliers, low_outliers = isolate_outliers(curvature[curv_minima & curvature_legit], 4)
-    print 'Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
-        low_outliers.sum(), normals.sum(), high_outliers.sum())
+    print('Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
+        low_outliers.sum(), normals.sum(), high_outliers.sum()))
     fig, ax = figure_curv_minima_classified(x, y, curv_minima, high_outliers, normals, low_outliers, normed_curv)
     plt.savefig(out_folder + 'curv_minima_classified.pdf')
 
@@ -893,7 +899,7 @@ def process_demo_1():
     running_local_variance = calc_running_local_variance(y, 2)
     mean_variance = running_local_variance.mean()
     median_variance = np.median(running_local_variance)
-    print 'The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance)
+    print('The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance))
     fig, ax = figure_running_variance(x, y, curv_zeros, running_local_variance)
     plt.savefig(out_folder + 'running_variance.pdf')
 
@@ -929,23 +935,23 @@ def batch_demo():
     for ii in file_list:
         ii = str(ii)
         if (~ii.startswith('Sample') | ~ii.endswith('_1D.csv')):
-            print 'Script wants to remove item %s from list of files to import...' % ii
+            print('Script wants to remove item %s from list of files to import...' % ii)
             if ~ii.startswith('Sample'):
-                print "...because it doesn't start with 'Sample' but instead starts with '%s'..." % ii[:6]
+                print("...because it doesn't start with 'Sample' but instead starts with '%s'..." % ii[:6])
             if ~ii.endswith('_1D.csv'):
-                print "...because it doesn't end with '_1D.csv' but instead ends with '%s'..." % ii[-7:]
-            print '...but there is clearly something wrong with this picture, so it will not be removed.'
+                print("...because it doesn't end with '_1D.csv' but instead ends with '%s'..." % ii[-7:])
+            print('...but there is clearly something wrong with this picture, so it will not be removed.')
             #            file_list.remove(ii)
 
     plt.ioff()  # Don't show me batch plots!
     for ii in file_list:
-        print "Reading file %s." % ii
+        print("Reading file %s." % ii)
         name_string = ii[6:-7]
         # Data intake
         data = np.genfromtxt(data_folder + ii, delimiter=',')
         (length, width) = data.shape  # (1096, 2)
         # The data is for some reason doubled.  Quick 2-line fix.
-        length = length / 2
+        length = old_div(length, 2)
         data = data[0:length, :]
         x = data[:, 0]
         y = data[:, 1]
@@ -953,7 +959,7 @@ def batch_demo():
 
         # Find and classify curvature minima
         curvature = noiseless_curvature(x, y)
-        normed_curv = curvature / (real_max(curvature) - real_min(curvature))
+        normed_curv = old_div(curvature, (real_max(curvature) - real_min(curvature)))
         curvature_legit = ~np.isnan(curvature)
         curv_minima = local_minima_detector(curvature)
         normals, high_outliers, low_outliers = isolate_outliers(curvature[curv_minima & curvature_legit], 4)
@@ -1189,7 +1195,7 @@ def smoothing_demo_1():
     data = np.genfromtxt(data_folder + file1, delimiter=',')
     (length, width) = data.shape  # (1096, 2)
     # The data is for some reason doubled.  Quick 2-line fix.
-    length = length / 2
+    length = old_div(length, 2)
     data = data[0:length, :]
     x = data[:, 0]
     y = data[:, 1]
@@ -1243,7 +1249,7 @@ def smoothing_demo_1():
 def saxs_demo_do_one(x, y, suffix, out_folder):
     # Find and classify curvature maxima
     log_curv = noiseless_curvature(np.log(x), np.log(y))
-    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    normed_curv = old_div(log_curv, (real_max(log_curv) - real_min(log_curv)))
     curvature_legit = ~np.isnan(log_curv)
     log_curv_maxima = local_maxima_detector(log_curv)
     normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
@@ -1332,7 +1338,7 @@ def remove_non_csv(filenames):
 def saxs_demo_do_a_thing(x, y, suffix, out_folder):
     # Find and classify curvature maxima
     log_curv = noiseless_curvature(np.log(x), np.log(y))
-    normed_curv = log_curv / (real_max(log_curv) - real_min(log_curv))
+    normed_curv = old_div(log_curv, (real_max(log_curv) - real_min(log_curv)))
     curvature_legit = ~np.isnan(log_curv)
     log_curv_maxima = local_maxima_detector(log_curv)
     normals, high_outliers, low_outliers = isolate_outliers(log_curv[log_curv_maxima & curvature_legit], 4)
@@ -1402,7 +1408,7 @@ def saxs_demo_2():  # Pretty much just showing it reads in so far.  More to come
 
     plt.close('all')
     plt.ion()  # Interactive plotting back on
-    print 'run done'
+    print('run done')
 
 
 # Life is change
@@ -1441,7 +1447,7 @@ def pseudo_voigt(x, x0, gamma, sigma):
     # *f* and *eta* are constants used in that approximation
     f = (fwhm_gauss ** 5 + 2.69269 * fwhm_gauss ** 4 * fwhm_lorentz + 2.42843 * fwhm_gauss ** 3 * fwhm_lorentz ** 2
          + 4.47163 * fwhm_gauss ** 2 * fwhm_lorentz ** 3 + 0.07842 * fwhm_gauss * fwhm_lorentz ** 4 + fwhm_lorentz ** 5) ** 0.2
-    eta = 1.36603 * (fwhm_lorentz / f) - 0.47719 * (fwhm_lorentz / f) ** 2 + 0.11116 * (fwhm_lorentz / f) ** 3
+    eta = 1.36603 * (old_div(fwhm_lorentz, f)) - 0.47719 * (old_div(fwhm_lorentz, f)) ** 2 + 0.11116 * (old_div(fwhm_lorentz, f)) ** 3
     gauss_profile = gaussian(x, x0, sigma)
     lorentz_profile = lorentzian(x, x0, gamma)
     pseudo_voigt_profile = eta * lorentz_profile + (1 - eta) * gauss_profile
@@ -1474,13 +1480,13 @@ def discriminator():
 
     #    metrics = np.zeros(stuff, stuffy stuff)
     for ii in file_list:
-        print "Reading file %s." % ii
+        print("Reading file %s." % ii)
         #        name_string = ii[6:-7]
         # Data intake
         data = np.genfromtxt(data_folder + ii, delimiter=',')
         (length, width) = data.shape  # (1096, 2)
         # The data is for some reason doubled.  Quick 2-line fix.
-        length = length / 2
+        length = old_div(length, 2)
         data = data[0:length, :]
         x = data[:, 0]
         y = data[:, 1]
@@ -1500,21 +1506,21 @@ def process_demo_2():
     data1 = np.genfromtxt(data_folder + file1, delimiter=',')
     (length, width) = data1.shape  # (1096, 2)
     # The data is for some reason doubled.  Quick 2-line fix.
-    length = length / 2
+    length = old_div(length, 2)
     data1 = data1[0:length, :]
     x = data1[:, 0]
     y = data1[:, 1]
 
     # Local maxima
     maxima = local_maxima_detector(y)
-    print 'Initially detected %i local maxima.' % maxima.sum()
+    print('Initially detected %i local maxima.' % maxima.sum())
     fig, ax = figure_initial_maxima(x, y, maxima)
     plt.savefig(out_folder + 'initial_maxima.pdf')
     #    plt.savefig(out_folder + '.pdf')
 
     # Curvature
     curvature = noiseless_curvature(x, y)
-    normed_curv = curvature / (real_max(curvature) - real_min(curvature))
+    normed_curv = old_div(curvature, (real_max(curvature) - real_min(curvature)))
     curvature_legit = ~np.isnan(curvature)
     curv_minima = local_minima_detector(curvature)
     fig, ax = figure_maxima_curvature(x, y, maxima, normed_curv, curvature_legit)
@@ -1534,8 +1540,8 @@ def process_demo_2():
 
     # Classifying curvature minima
     normals, high_outliers, low_outliers = isolate_outliers(curvature[curv_minima & curvature_legit], 4)
-    print 'Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
-        low_outliers.sum(), normals.sum(), high_outliers.sum())
+    print('Found %i low outliers (features?), %i normals (noise), and %i high outliers (problems?).' % (
+        low_outliers.sum(), normals.sum(), high_outliers.sum()))
     fig, ax = figure_curv_minima_classified(x, y, curv_minima, high_outliers, normals, low_outliers, normed_curv)
     plt.savefig(out_folder + 'curv_minima_classified.pdf')
 
@@ -1548,7 +1554,7 @@ def process_demo_2():
     running_local_variance = calc_running_local_variance(y, 2)
     mean_variance = running_local_variance.mean()
     median_variance = np.median(running_local_variance)
-    print 'The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance)
+    print('The median of the calculated running variance is %f, and the mean is %f.' % (median_variance, mean_variance))
     fig, ax = figure_running_variance(x, y, curv_zeros, running_local_variance)
     plt.savefig(out_folder + 'running_variance.pdf')
 

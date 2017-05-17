@@ -1,5 +1,9 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 #import nexpy.api.nexus as nx
 
+from future import standard_library
+standard_library.install_aliases()
 import numpy as nx
 
 import numpy as np
@@ -12,7 +16,7 @@ import os
 from PIL import Image
 from fabio import edfimage, tifimage
 import scipy.misc
-import msg
+from . import msg
 
 
 class nexusmerger(QtCore.QThread):
@@ -43,7 +47,7 @@ def mergenexus(**kwargs):
         nxroot.data.thumbnail = kwargs['thumb']
     # TODO: merge variation
     if not hasattr(nxroot.data, 'variation'):
-        nxroot.data.variation = kwargs['variation'].items()
+        nxroot.data.variation = list(kwargs['variation'].items())
 
     if newfile:
         writenexus(nxroot, kwargs['path'])
@@ -69,12 +73,12 @@ def thumbnail(img, factor=5):
     return np.array(img)
 
 
-import StringIO
+import io
 
 
 @debugtools.timeit
 def jpeg(img):
-    buffer = StringIO.StringIO()
+    buffer = io.StringIO()
     pilImage = Image.fromarray(img)
     pilImage.save(buffer, "JPEG", quality=85)
     msg.logMessage(('JPEG buffer size (bytes):', buffer.len),msg.DEBUG)
@@ -83,7 +87,7 @@ def jpeg(img):
 
 def blockshaped(arr, factor):
     firstslice = np.array_split(arr, arr.shape[0] // factor)
-    secondslice = map(lambda x: np.array_split(x, arr.shape[1] // factor, axis=1), firstslice)
+    secondslice = [np.array_split(x, arr.shape[1] // factor, axis=1) for x in firstslice]
     return np.array(secondslice)
 
 

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import object
 import os
 import time
 from functools import partial
@@ -5,10 +8,10 @@ from functools import partial
 import numpy as np
 import yaml
 
-import customwidgets
-import display
-import featuremanager
-import ui
+from . import customwidgets
+from . import display
+from . import featuremanager
+from . import ui
 from modpkgs.collectionsmod import UnsortableOrderedDict
 from pipeline import msg
 from xicam import clientmanager as cmanager
@@ -171,7 +174,7 @@ class HipGISAXSPlugin(base.plugin):
         self.writeyaml()
 
         if len(cmanager.ssh_clients):
-            client = cmanager.ssh_clients.values()[0]
+            client = list(cmanager.ssh_clients.values())[0]
             self.loginSuccess(client)
         else:
 
@@ -243,7 +246,7 @@ class HipGISAXSPlugin(base.plugin):
 
 
 
-class mainwindow():
+class mainwindow(object):
     def __init__(self, app):
         self.app = app
 

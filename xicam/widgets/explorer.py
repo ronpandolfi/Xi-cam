@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -524,7 +530,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         for index in range(len(data)):
             derived_data = {data[index]['fs']['stage']:
                             data[index]['name']}
-            if 'derivatives' in data[index]['fs'].keys():
+            if 'derivatives' in list(data[index]['fs'].keys()):
                 derivatives = data[index]['fs']['derivatives']
                 for d_index in range(len(derivatives)):
                     stage = derivatives[d_index]['dstage']
@@ -543,7 +549,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     def addTreeItems(self, item, value):
         item.setExpanded(False)
         if type(value) is dict:
-            for key, val in sorted(value.iteritems()):
+            for key, val in sorted(value.items()):
                 icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
                 child = QtGui.QTreeWidgetItem([key], parent=self)
                 child.setIcon(0, icon)
@@ -578,7 +584,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         return datasets
 
     def handleOpenAction(self):
-        save_paths = map(lambda dset: os.path.join(tempfile.gettempdir(), dset), self.getSelectedDatasets())
+        save_paths = [os.path.join(tempfile.gettempdir(), dset) for dset in self.getSelectedDatasets()]
         for path in save_paths:
             self.handleDownloadAction(save_paths=[path], fslot=(lambda: self.sigOpen.emit([path])))
 
@@ -783,7 +789,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
         self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
                                              'Bragg': addbragg, 'SFTP': addsftp})
-        self.newtabmenu.addActions(self.standard_actions.values())
+        self.newtabmenu.addActions(list(self.standard_actions.values()))
         self.newtabmenu.addAction(showjobtab)
         addspot.triggered.connect(self.addSPOTTab)
         addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
@@ -793,15 +799,15 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         showjobtab.triggered.connect(lambda: self.addTab(self.jobtab, 'Jobs'))
 
     def enableActions(self):
-        for name, action in self.standard_actions.iteritems():
-            if name in self.explorers.keys():
+        for name, action in self.standard_actions.items():
+            if name in list(self.explorers.keys()):
                 action.setEnabled(False)
             else:
                 action.setEnabled(True)
 
     def removeTab(self, p_int):
         if self.tabText(p_int) != 'Jobs':
-            name = self.explorers.keys()[p_int]
+            name = list(self.explorers.keys())[p_int]
             explorer = self.explorers.pop(name)
             cmanager.logout(explorer.file_view.client)
             self.widget(p_int).deleteLater()
@@ -809,7 +815,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         super(MultipleFileExplorer, self).removeTab(p_int)
 
     def removeTabs(self):
-        for i in xrange(1, self.count()):
+        for i in range(1, self.count()):
             self.removeTab(1)
 
     def onPlusClicked(self):
@@ -1117,7 +1123,7 @@ class JobEntry(QtGui.QWidget):
         self.progressbar.setValue(i)
 
     def progressRaw(self, transfered, total):
-        self.progress(transfered/total)
+        self.progress(old_div(transfered,total))
 
     def pulseStart(self):
         self.progressbar.setRange(0, 0)

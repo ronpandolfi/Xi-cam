@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from past.utils import old_div
 import collections
 import numpy as np
-import loader
+from . import loader
 from scipy import signal
-import integration
-import writer
+from . import integration
+from . import writer
 #from skimage.measure import block_reduce  # Use this to subsample if you want
 
 # README!
@@ -47,7 +51,7 @@ def normabsdiffderiv(data, t, roi):
     current = data[t].astype(float)
     previous = data[t - 1].astype(float)
     next = data[t + 1].astype(float)
-    return -np.sum(roi * (np.abs(next - current) / current) + np.sum(np.abs(current - previous) / current))
+    return -np.sum(roi * (old_div(np.abs(next - current), current)) + np.sum(old_div(np.abs(current - previous), current)))
 
 
 def chisquaredwithfirst(data, t, roi):
@@ -64,7 +68,7 @@ def radialintegration(data, t, roi):
 def angularcorrelationwithfirst(data, t, roi):
     # ROI is assumed to be in cake mode
 
-    experiment.center = (experiment.center[0] / 5, experiment.center[1] / 5)
+    experiment.center = (old_div(experiment.center[0], 5), old_div(experiment.center[1], 5))
 
     currentcake, _, _ = integration.cake(data[t], experiment)
     firstcake, _, _ = integration.cake(data[0], experiment)

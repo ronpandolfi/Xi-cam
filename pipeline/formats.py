@@ -1,3 +1,11 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 import sys
 import inspect
@@ -11,7 +19,7 @@ import fabio
 import pyFAI
 from pyFAI import detectors
 import logging
-import msg
+from . import msg
 import pyfits
 from nexusformat import nexus as nx
 from collections import OrderedDict
@@ -81,7 +89,7 @@ class nexusimage(fabioimage):
             self.rawdata = self._h5['entry']['data']['data']
             self.readheader(f)
 
-            self.frames = range(self.rawdata.shape[0])
+            self.frames = list(range(self.rawdata.shape[0]))
 
         dfrm = self.rawdata[self.frames[frame]]
         self.currentframe = frame
@@ -238,7 +246,7 @@ class nexusimage(fabioimage):
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
             _arr = self.rawdata[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
-                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+                arr = np.empty((len(list(range(s[0][0], s[0][1], s[0][2]))), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
@@ -251,7 +259,7 @@ class nexusimage(fabioimage):
         self.data = self.rawdata[self.frames[frame]]
         return self.data
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -324,7 +332,7 @@ class rawimage(fabioimage):
     def read(self, f, frame=None):
         with open(f, 'r') as f:
             data = np.fromfile(f, dtype=np.int32)
-        for name, detector in detectors.ALL_DETECTORS.iteritems():
+        for name, detector in detectors.ALL_DETECTORS.items():
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if np.prod(detector.MAX_SHAPE) == len(data):  #
@@ -333,8 +341,8 @@ class rawimage(fabioimage):
                     break
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                if len(data) in [np.prod(np.array(detector.MAX_SHAPE) / b) for b in
-                                 detector.BINNED_PIXEL_SIZE.keys()]:
+                if len(data) in [np.prod(old_div(np.array(detector.MAX_SHAPE), b)) for b in
+                                 list(detector.BINNED_PIXEL_SIZE.keys())]:
                     detector = detector()
                     msg.logMessage('Detector found with binning: ' + name, msg.INFO)
                     break
@@ -431,10 +439,10 @@ class ALS733H5image(fabioimage):
     @property
     def nframes(self):
         with h5py.File(self.filename, 'r') as h:
-            dset = h[h.keys()[0]]
-            ddet = dset[dset.keys()[0]]
+            dset = h[list(h.keys())[0]]
+            ddet = dset[list(dset.keys())[0]]
             if self.isburst:
-                frames = sum(map(lambda key: '.edf' in key, ddet.keys()))
+                frames = sum(['.edf' in key for key in list(ddet.keys())])
             else:
                 frames = 1
         return frames
@@ -451,15 +459,15 @@ class ALS733H5image(fabioimage):
             frame = 0
         f = self.filename
         with h5py.File(f, 'r') as h:
-            dset = h[h.keys()[0]]
-            ddet = dset[dset.keys()[0]]
+            dset = h[list(h.keys())[0]]
+            ddet = dset[list(dset.keys())[0]]
             if self.isburst:
-                frames = [key for key in ddet.keys() if '.edf' in key]
+                frames = [key for key in list(ddet.keys()) if '.edf' in key]
                 dfrm = ddet[frames[frame]]
             elif self.istiled:
                 high = ddet[u'high']
                 low = ddet[u'low']
-                frames = [high[high.keys()[0]], low[low.keys()[0]]]
+                frames = [high[list(high.keys())[0]], low[list(low.keys())[0]]]
                 dfrm = frames[frame]
             else:
                 dfrm = ddet
@@ -470,9 +478,9 @@ class ALS733H5image(fabioimage):
     def isburst(self):
         try:
             with h5py.File(self.filename, 'r') as h:
-                dset = h[h.keys()[0]]
-                ddet = dset[dset.keys()[0]]
-                return not (u'high' in ddet.keys() and u'low' in ddet.keys())
+                dset = h[list(h.keys())[0]]
+                ddet = dset[list(dset.keys())[0]]
+                return not (u'high' in list(ddet.keys()) and u'low' in list(ddet.keys()))
         except AttributeError:
             return False
 
@@ -480,9 +488,9 @@ class ALS733H5image(fabioimage):
     def istiled(self):
         try:
             with h5py.File(self.filename, 'r') as h:
-                dset = h[h.keys()[0]]
-                ddet = dset[dset.keys()[0]]
-                return u'high' in ddet.keys() and u'low' in ddet.keys()
+                dset = h[list(h.keys())[0]]
+                ddet = dset[list(dset.keys())[0]]
+                return u'high' in list(ddet.keys()) and u'low' in list(ddet.keys())
         except AttributeError:
             return False
 
@@ -542,7 +550,7 @@ class ALS832H5image(fabioimage):
             except KeyError:
                 raise H5ReadError
 
-            self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
+            self.frames = [key for key in list(self._dgroup.keys()) if 'bak' not in key and 'drk' not in key]
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm[0]
@@ -552,10 +560,10 @@ class ALS832H5image(fabioimage):
         self._dgroup.attrs.modify(key, value)
 
     def _finddatagroup(self, h5object):
-        keys = h5object.keys()
+        keys = list(h5object.keys())
         if len(keys) == 1:
             if isinstance(h5object[keys[0]], h5py.Group):
-                group_keys = h5object[keys[0]].keys()
+                group_keys = list(h5object[keys[0]].keys())
                 if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
                     return h5object[keys[0]]
                 else:
@@ -578,7 +586,7 @@ class ALS832H5image(fabioimage):
         if self._flat_frames is None:
             self._flat_frames = {}
             counter = 0
-            for key in self._dgroup.keys():
+            for key in list(self._dgroup.keys()):
                 if 'bak' in key:
                     self._flat_frames[counter] = key
                     counter +=1
@@ -589,7 +597,7 @@ class ALS832H5image(fabioimage):
         if self._dark_frames is None:
             self._dark_frames = {}
             counter = 0
-            for key in self._dgroup.keys():
+            for key in list(self._dgroup.keys()):
                 if 'drk' in key:
                     self._dark_frames[counter] = key
                     counter +=1
@@ -599,13 +607,13 @@ class ALS832H5image(fabioimage):
     @property
     def flats(self):
         if self._flats is None:
-            self._flats = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'bak' in key])
+            self._flats = np.stack([self._dgroup[key][0] for key in list(self._dgroup.keys()) if 'bak' in key])
         return self._flats
 
     @property
     def darks(self):
         if self._darks is None:
-            self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
+            self._darks = np.stack([self._dgroup[key][0] for key in list(self._dgroup.keys()) if 'drk' in key])
         return self._darks
 
     def flatindices(self):
@@ -661,7 +669,7 @@ class ALS832H5image(fabioimage):
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
             _arr = self._dgroup[self.frames[i]][0, slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
-                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+                arr = np.empty((len(list(range(s[0][0], s[0][1], s[0][2]))), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
@@ -675,7 +683,7 @@ class ALS832H5image(fabioimage):
         return self.data
 
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -732,7 +740,7 @@ class GeneralAPSH5image(fabioimage):
             self._dgroup = self._finddatagroup(self._h5)
             self.readheader(f)
 
-            self.frames = range(self._dgroup.shape[0])
+            self.frames = list(range(self._dgroup.shape[0]))
             # self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
 
         dfrm = self._dgroup[self.frames[frame]]
@@ -741,7 +749,7 @@ class GeneralAPSH5image(fabioimage):
         return self
 
     def _finddatagroup(self, h5object):
-        keys = h5object.keys()
+        keys = list(h5object.keys())
         for key in keys:
             try:
                 data, data_key = self._check_if_dataset(h5object, key)
@@ -760,7 +768,7 @@ class GeneralAPSH5image(fabioimage):
             return h5object, key
         else:
             try:
-                for lower_key in h5object[key].keys():
+                for lower_key in list(h5object[key].keys()):
                     return self._check_if_dataset(h5object[key], lower_key)
             except AttributeError:
                 pass
@@ -819,7 +827,7 @@ class GeneralAPSH5image(fabioimage):
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
             _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
-                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+                arr = np.empty((len(list(range(s[0][0], s[0][1], s[0][2]))), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
@@ -832,7 +840,7 @@ class GeneralAPSH5image(fabioimage):
         self.data = self._dgroup[self.frames[frame]]
         return self.data
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -891,7 +899,7 @@ class DXchangeH5image(fabioimage):
         return self
 
     def _finddatagroup(self, h5object):
-        exchange_groups = [key for key in h5object.keys() if 'exchange' in key]
+        exchange_groups = [key for key in list(h5object.keys()) if 'exchange' in key]
         if len(exchange_groups) > 1:
             raise RuntimeWarning('More than one exchange group found. Will use \'exchange\'\n'
                                  'Need to use logging for this...')
@@ -921,7 +929,7 @@ class DXchangeH5image(fabioimage):
         self.data = self._dgroup['data'][frame]
         return self.data
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -983,7 +991,7 @@ class CondensedTiffStack(object):
         super(CondensedTiffStack, self).__init__()
 
         self.rawdata = tifffile.imread(path, memmap=True)
-        self.frames = range(self.rawdata.shape[0])
+        self.frames = list(range(self.rawdata.shape[0]))
         self.header = header
         self._readheader()
 
@@ -1037,7 +1045,7 @@ class EdfImage(edfimage.EdfImage):
 
         keylesslines = 0
         for line in lines:
-            cells = filter(None, re.split('[=:]+', line))
+            cells = [_f for _f in re.split('[=:]+', line) if _f]
 
             key = cells[0].strip()
 
@@ -1073,7 +1081,7 @@ class H5ReadError(IOError):
 #     imshow(arr, cmap='gray')
 #     show()
 def tests():
-    print fabio.open('/media/winHDD/hparks/aps_example.h5').data
+    print(fabio.open('/media/winHDD/hparks/aps_example.h5').data)
 
 if __name__ == '__main__':
     tests()

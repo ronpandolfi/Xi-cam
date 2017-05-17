@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from PySide import QtGui, QtCore
 from fabio import edfimage, tifimage
 import numpy as np

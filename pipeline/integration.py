@@ -1,11 +1,17 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 import numpy as np
 from xicam import config
 from PySide import QtCore
 import multiprocessing
 import time
 import pyFAI
-import remesh
-import msg
+from . import remesh
+from . import msg
 
 pyFAI_method = 'cython'
 from modpkgs import pyFAImod
@@ -107,7 +113,7 @@ def pixel_2Dintegrate(dimg, mask=None):
 
     tbin = np.bincount(r.ravel(), data.ravel())
     nr = np.bincount(r.ravel(), (mask).ravel())
-    radialprofile = tbin / nr
+    radialprofile = old_div(tbin, nr)
 
     return radialprofile
 
@@ -129,20 +135,20 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 
     delta = 3
 
-    rinf = mu - delta / 2.
-    rsup = mu + delta / 2.
+    rinf = mu - old_div(delta, 2.)
+    rsup = mu + old_div(delta, 2.)
 
     rmask = ((rinf < r) & (r < rsup) & (x < cen[0])).astype(np.int)
     data *= rmask
 
-    chi = chires * np.arctan((y - cen[1]) / (x - cen[0]))
+    chi = chires * np.arctan(old_div((y - cen[1]), (x - cen[0])))
     chi += chires * np.pi / 2.
     chi = np.round(chi).astype(np.int)
     chi *= (chi > 0)
 
     tbin = np.bincount(chi.ravel(), data.ravel())
     nr = np.bincount(chi.ravel(), rmask.ravel())
-    angleprofile = tbin / nr
+    angleprofile = old_div(tbin, nr)
 
     # vimodel = pymodelfit.builtins.GaussianModel()
     # vimodel.mu = np.pi / 2 * 100
@@ -187,7 +193,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
 
     (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
 
-    q = q/10.
+    q = old_div(q,10.)
 
     return q.tolist(), radialprofile.tolist(), color, requestkey
 
@@ -247,7 +253,7 @@ def xintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qx = AI.qArray(data.shape[::-1])[int(AI.getFit2D()['centerY']),:]/10
+    qx = old_div(AI.qArray(data.shape[::-1])[int(AI.getFit2D()['centerY']),:],10)
     qx[:qx.argmin()]*=-1
 
     return qx.tolist(), xprofile.tolist(), color, requestkey
@@ -277,7 +283,7 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
-    qz = AI.qArray(data.shape[::-1])[:,int(AI.getFit2D()['centerX'])]/10
+    qz = old_div(AI.qArray(data.shape[::-1])[:,int(AI.getFit2D()['centerX'])],10)
     qz[:qz.argmin()]*=-1
 
     return qz.tolist(), xprofile.tolist(), color, requestkey
@@ -325,7 +331,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    chi = np.arange(-180,180,360/1000.)
+    chi = np.arange(-180,180,old_div(360,1000.))
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     xprofile = np.ma.average(maskeddata, axis=1)
@@ -367,7 +373,7 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
 
-    print 'center?:',remeshcenter
+    print('center?:',remeshcenter)
 
     f2d=AI.getFit2D()
     f2d['centerX']=remeshcenter[0]
@@ -382,7 +388,7 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     if cut is not None: qsquared[np.logical_not(cut.astype(np.bool))]=np.inf
     minq = np.sqrt(qsquared.min())
 
-    q = np.linspace(minq,maxq,len(qprofile))/10.
+    q = old_div(np.linspace(minq,maxq,len(qprofile)),10.)
 
     return q.tolist(), qprofile, color, requestkey
 
@@ -419,7 +425,7 @@ def remeshxintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
         mask &= cut.astype(bool)
 
     center = np.where(np.abs(qpar) == np.abs(qpar).min())
-    qx = qpar[:,center[0][0]]/10.
+    qx = old_div(qpar[:,center[0][0]],10.)
 
     maskeddata = np.ma.masked_array(data, mask=1 - mask)
     xprofile = np.ma.average(maskeddata, axis=1)
@@ -440,7 +446,7 @@ def remeshzintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
         mask &= cut.astype(bool)
 
     center = np.where(np.abs(qvrt) == np.abs(qvrt).min())
-    qx = -qvrt[center[1][0]]/10.
+    qx = old_div(-qvrt[center[1][0]],10.)
 
     maskeddata = np.ma.masked_array(data, mask=1 - mask)
     xprofile = np.ma.average(maskeddata, axis=0)

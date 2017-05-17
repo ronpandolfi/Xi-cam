@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import distributed
 from tornado.ioloop import IOLoop
 from threading import Thread
@@ -14,7 +18,7 @@ import threading
 from pipeline import msg
 
 try:
-    import SocketServer
+    import socketserver
 except ImportError:
     import socketserver as SocketServer
 
@@ -26,12 +30,12 @@ def verbose(s):
         msg.logMessage(s,msg.DEBUG)
 
 
-class ForwardServer(SocketServer.ThreadingTCPServer):
+class ForwardServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
     allow_reuse_address = True
 
 
-class Handler(SocketServer.BaseRequestHandler):
+class Handler(socketserver.BaseRequestHandler):
     def handle(self):
         try:
             chan = self.ssh_transport.open_channel('direct-tcpip',
@@ -141,7 +145,7 @@ class DaskWorker(object):
 # client.load_system_host_keys()
 # client.connect('edison.nersc.gov', username="hkrishna")
 
-class RemoteScheduler():
+class RemoteScheduler(object):
     """
        Create a remote executor
     """

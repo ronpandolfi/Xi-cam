@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
+from functools import reduce
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -22,10 +33,10 @@ import numpy as np
 import pyqtgraph as pg
 from PySide import QtCore, QtGui
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import config
-import reconpkg
-import ui
-import Queue
+from . import config
+from . import reconpkg
+from . import ui
+import queue
 from xicam.widgets import featurewidgets as fw
 
 
@@ -91,7 +102,7 @@ class FunctionWidget(fw.FeatureWidget):
             self.name += ' (' + subname + ')'
         super(FunctionWidget, self).__init__(self.name, checkable=checkable, closeable=closeable, parent=parent)
 
-        self.func_name = name
+        self.__name__ = name
         self.subfunc_name = subname
         self.input_functions = {}
         self.param_dict = {}
@@ -113,13 +124,13 @@ class FunctionWidget(fw.FeatureWidget):
         argspec = inspect.getargspec(self._function)
         default_argnum = len(argspec[3])
         self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
-        for key, val in self.param_dict.iteritems():
+        for key, val in self.param_dict.items():
             if key in [p.name() for p in self.params.children()]:
                 self.params.param(key).setValue(val)
                 self.params.param(key).setDefault(val)
 
         # Create a list of argument names (this will most generally be the data passed to the function)
-        self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
+        self.missing_args = [i for i in argspec[0] if i not in list(self.param_dict.keys())]
 
         self.parammenu = QtGui.QMenu()
         action = QtGui.QAction('Test Parameter Range', self)
@@ -130,7 +141,7 @@ class FunctionWidget(fw.FeatureWidget):
         self.menu = QtGui.QMenu()
 
         if input_functions is not None:
-            for param, ipf in input_functions.iteritems():
+            for param, ipf in input_functions.items():
                 self.addInputFunction(param, ipf)
 
         # wire up param changed signals
@@ -154,7 +165,7 @@ class FunctionWidget(fw.FeatureWidget):
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
         self.defaults = config.function_defaults['Other']
-        self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
+        self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': str}
 
         self.expand()
 
@@ -186,7 +197,7 @@ class FunctionWidget(fw.FeatureWidget):
         """
         Parameter dictionary with only the parameters that are shown in GUI
         """
-        param_dict = {key: val for (key, val) in self.param_dict.iteritems()
+        param_dict = {key: val for (key, val) in self.param_dict.items()
                       if key in [param.name() for param in self.params.children()]}
         return param_dict
 
@@ -205,10 +216,10 @@ class FunctionWidget(fw.FeatureWidget):
 
         if self.defaults:
             param_dict = {}
-            for key, val in self.param_dict.iteritems():
+            for key, val in self.param_dict.items():
                 if type(val) is str and 'None' in val:
                     pass
-                elif key in self.defaults.iterkeys():
+                elif key in iter(self.defaults.keys()):
                     arg_type = self.defaults[key]['type']
                     try:
                         param_dict[key] = arg_type(val)
@@ -229,7 +240,7 @@ class FunctionWidget(fw.FeatureWidget):
         signature = str(self._function.__name__) + '('
         for arg in self.missing_args:
             signature += '{},'.format(arg)
-        for param, value in self.param_dict.iteritems():
+        for param, value in self.param_dict.items():
             signature += '{0}={1},'.format(param, value) if not isinstance(value, str) else \
                 '{0}=\'{1}\','.format(param, value)
         return signature[:-1] + ')'
@@ -240,7 +251,7 @@ class FunctionWidget(fw.FeatureWidget):
         Update the values of the parameter dictionary with the current values in UI
         """
         self.param_dict.update({param.name(): param.value() for param in self.params.children()})
-        for p, ipf in self.input_functions.iteritems():
+        for p, ipf in self.input_functions.items():
             ipf.updateParamsDict()
 
     def addInputFunction(self, parameter, functionwidget):
@@ -326,9 +337,9 @@ class FunctionWidget(fw.FeatureWidget):
             start, end, step = None, None, None
             if 'limits' in param.opts:
                 start, end = param.opts['limits']
-                step = (end - start) / 3 + 1
+                step = old_div((end - start), 3) + 1
             elif param.value() is not None:
-                start, end, step = param.value() / 2, 4 * (param.value()) / 2, param.value() / 2
+                start, end, step = old_div(param.value(), 2), 4 * (param.value()) / 2, old_div(param.value(), 2)
             test = TestRangeDialog(param.type(), (start, end, step))
         elif param.type() == 'list':
             test = TestListRangeDialog(param.opts['values'])
@@ -375,7 +386,7 @@ class TomoPyReconFunctionWidget(FunctionWidget):
         defaults = config.function_defaults['Tomopy']
         if subname in defaults:
             self.defaults = defaults[subname]
-            for key in self.defaults.iterkeys():
+            for key in self.defaults.keys():
                 val = self.defaults[key]['default']
                 self.param_dict.update({key: val})
                 if key in [p.name() for p in self.params.children()]:
@@ -395,8 +406,8 @@ class TomoPyReconFunctionWidget(FunctionWidget):
         Return the param dict of the FunctionWidget updated with proper types
         """
         param_dict = {}
-        for key, val in self.param_dict.iteritems():
-            if key in self.defaults.iterkeys():
+        for key, val in self.param_dict.items():
+            if key in iter(self.defaults.keys()):
                 arg_type = self.defaults[key]['type']
                 try:
                     param_dict[key] = self.allowed_types[arg_type](val)
@@ -405,7 +416,7 @@ class TomoPyReconFunctionWidget(FunctionWidget):
             else:
                 param_dict[key] = val
         # 'cutoff' and 'order' are not passed into the recon function in the correct format
-        if 'cutoff' in param_dict.keys() and 'order' in param_dict.keys():
+        if 'cutoff' in list(param_dict.keys()) and 'order' in list(param_dict.keys()):
             param_dict['filter_par'] = list((param_dict.pop('cutoff'), param_dict.pop('order')))
         return param_dict
 
@@ -506,7 +517,7 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         defaults = config.function_defaults['Astra']
         if subname in defaults:
             self.defaults = defaults[subname]
-            for key in self.defaults.iterkeys():
+            for key in self.defaults.keys():
                 val = self.defaults[key]['default']
                 self.param_dict.update({key: val})
                 if key in [p.name() for p in self.params.children()]:
@@ -526,11 +537,11 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         param_dict = {}
         param_dict['options'] = self.param_dict['options']
         param_dict['options']['extra_options']={}
-        for key, val in self.param_dict.iteritems():
+        for key, val in self.param_dict.items():
             if key in self.tomopy_args:
                 if type(val) == str and 'None' in val:
                     param_dict[key] = None
-                elif key in self.defaults.iterkeys():
+                elif key in iter(self.defaults.keys()):
                     arg_type = self.defaults[key]['type']
                     param_dict[key] = self.allowed_types[arg_type](val)
                 else:
@@ -539,7 +550,7 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
                 pass
             elif 'num_iter' in key:
                 param_dict['options']['num_iter'] = self.param_dict['num_iter']
-            elif key in config.function_defaults['Astra'][self.subfunc_name].iterkeys():
+            elif key in iter(config.function_defaults['Astra'][self.subfunc_name].keys()):
                 param_dict['options']['extra_options'][key] = val
             else:
                 pass
@@ -659,7 +670,7 @@ class WriteFunctionWidget(FunctionWidget):
 
         self.param_dict.update({param.name(): param.value() for param in self.params.children()
                                 if param.name() != 'Browse'})  # skip the Browse parameter!
-        for p, ipf in self.input_functions.iteritems():
+        for p, ipf in self.input_functions.items():
             ipf.updateParamsDict()
 
 
@@ -805,7 +816,7 @@ class FunctionManager(fw.FeatureManager):
         self.recon_function = None
 
         # queue for reconstructions
-        self.recon_queue = Queue.Queue()
+        self.recon_queue = queue.Queue()
 
 
     # TODO fix this astra check raise error if package not available
@@ -949,7 +960,7 @@ class FunctionManager(fw.FeatureManager):
             self.cor_offset = lambda x: x + n
         elif 'Downsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
-            self.cor_scale = lambda x: x / 2 ** s
+            self.cor_scale = lambda x: old_div(x, 2 ** s)
         elif 'Upsample' in name and param_dict['axis'] == 2:
             s = param_dict['level']
             self.cor_scale = lambda x: x * 2 ** s
@@ -979,7 +990,7 @@ class FunctionManager(fw.FeatureManager):
             fpartial = function.partial
             # set keywords that will be adjusted later by input functions or users
             for arg in inspect.getargspec(function._function)[0]:
-                if arg not in fpartial.keywords.iterkeys() or arg in 'center':
+                if arg not in iter(fpartial.keywords.keys()) or arg in 'center':
                     fpartial.keywords[arg] = '{}'.format(arg)
 
             # get rid of degenerate keyword arguments
@@ -998,7 +1009,7 @@ class FunctionManager(fw.FeatureManager):
             lst.append((fpartial, function.name))
 
             if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
-                for param,ipf in function.input_functions.iteritems():
+                for param,ipf in function.input_functions.items():
                     if not ipf.enabled:
                         if 'center' in param:
                             center = function.partial.keywords['center']
@@ -1008,8 +1019,8 @@ class FunctionManager(fw.FeatureManager):
                         # this portion is taken from old updateFunctionPartial code
                         args = []
                         if ipf.subfunc_name in FunctionManager.center_func_slc:
-                            map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                            list(map(args.append, list(map(datawidget.data.fabimage.__getitem__,
+                                                         FunctionManager.center_func_slc[ipf.subfunc_name]))))
                         else:
                             args.append(datawidget.getsino())
                         if ipf.subfunc_name == 'Nelder-Mead':
@@ -1108,14 +1119,14 @@ class FunctionManager(fw.FeatureManager):
                 else:
                     fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
 
-        for param, ipf in funcwidget.input_functions.iteritems():
+        for param, ipf in funcwidget.input_functions.items():
             args = []
             if not ipf.enabled:
                 continue
             if param == 'center':
                 if ipf.subfunc_name in FunctionManager.center_func_slc:
-                    map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                    list(map(args.append, list(map(datawidget.data.fabimage.__getitem__,
+                                         FunctionManager.center_func_slc[ipf.subfunc_name]))))
                 else:
                     args.append(datawidget.getsino())
 
@@ -1127,9 +1138,9 @@ class FunctionManager(fw.FeatureManager):
                 stack_dict[param] = fpartial.keywords[param]
 
 
-        if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
-            self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
-        elif 'Reconstruction' in funcwidget.func_name:
+        if funcwidget.__name__ in ('Padding', 'Downsample', 'Upsample'):
+            self.setCenterCorrection(funcwidget.__name__, fpartial.keywords)
+        elif 'Reconstruction' in funcwidget.__name__:
             fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
             self.resetCenterCorrection()
 
@@ -1163,8 +1174,8 @@ class FunctionManager(fw.FeatureManager):
 
         write = 'tomo'
 
-        for key, val in param_dict.iteritems():
-            if val in data_dict.iterkeys():
+        for key, val in param_dict.items():
+            if val in iter(data_dict.keys()):
                 if 'arr' in key or 'tomo' in key:
                     write = val
                 function.keywords[key] = data_dict[val]
@@ -1224,19 +1235,19 @@ class FunctionManager(fw.FeatureManager):
         count = 1
         for func in self.features:
             name = func.name
-            func_name = str(count) + ". " + func.func_name
+            func_name = str(count) + ". " + func.__name__
             if not func.enabled:
                 continue
-            elif func.func_name in skip_names:
+            elif func.__name__ in skip_names:
                 stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 count += 1
                 continue
-            elif fixed_func is not None and func.func_name == fixed_func.func_name:
+            elif fixed_func is not None and func.__name__ == fixed_func.__name__:
                 func = fixed_func
-                for key, val in func.exposed_param_dict.iteritems():
+                for key, val in func.exposed_param_dict.items():
                     if key in 'center':
                         data_dict[key] = val
-                    elif key in params_dict[name].iterkeys() and key not in 'center':
+                    elif key in iter(params_dict[name].keys()) and key not in 'center':
                         params_dict[name][key] = val
             stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
             count += 1
@@ -1244,7 +1255,7 @@ class FunctionManager(fw.FeatureManager):
             # load partial_stack
             fpartial = func.partial
             for arg in inspect.getargspec(func._function)[0]:
-                if arg not in fpartial.keywords.iterkeys() or arg in 'center':
+                if arg not in iter(fpartial.keywords.keys()) or arg in 'center':
                     fpartial.keywords[arg] = '{}'.format(arg)
             # get rid of degenerate keyword arguments
             if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
@@ -1255,11 +1266,11 @@ class FunctionManager(fw.FeatureManager):
             #     fpartial.keywords['ncore'] = ncore
             partial_stack.append((fpartial, name, params_dict[name]))
 
-            for param, ipf in func.input_functions.iteritems():
+            for param, ipf in func.input_functions.items():
                 if ipf.enabled:
                     if 'Input Functions' not in stack_dict[func_name][func.subfunc_name]:
                         stack_dict[func_name][func.subfunc_name]['Input Functions'] = {}
-                    ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+                    ipf_dict = {param: {ipf.__name__: {ipf.subfunc_name: ipf.exposed_param_dict}}}
                     stack_dict[func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
 
                     # update input function keywords in slice preview table
@@ -1344,10 +1355,10 @@ class FunctionManager(fw.FeatureManager):
 
 
         # save yaml in reconstruction folder
-        for key in yaml_pipe.iterkeys(): # special case for 'center' param
+        for key in yaml_pipe.keys(): # special case for 'center' param
             if 'Recon' in key:
-                for subfunc in yaml_pipe[key].iterkeys():
-                    if 'Parameters' in yaml_pipe[key][subfunc].iterkeys():
+                for subfunc in yaml_pipe[key].keys():
+                    if 'Parameters' in iter(yaml_pipe[key][subfunc].keys()):
                         yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
 
 
@@ -1478,22 +1489,22 @@ class FunctionManager(fw.FeatureManager):
         for func in self.features:
             if not func.enabled:
                 continue
-            elif func.func_name in skip_names:
-                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            elif func.__name__ in skip_names:
+                self.stack_dict[func.__name__] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
                 continue
-            elif fixed_func is not None and func.func_name == fixed_func.func_name:
+            elif fixed_func is not None and func.__name__ == fixed_func.__name__:
                 func = fixed_func  # replace the function with the fixed function
-            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-            p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.func_name][func.subfunc_name], slc)
+            self.stack_dict[func.__name__] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
+            p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.__name__][func.subfunc_name], slc)
             if 'ncore' in p.keywords:
                 p.keywords['ncore'] = ncore
             partial_stack.append(p)
-            for param, ipf in func.input_functions.iteritems():
+            for param, ipf in func.input_functions.items():
                 if ipf.enabled:
-                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
-                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
-                    ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
+                    if 'Input Functions' not in self.stack_dict[func.__name__][func.subfunc_name]:
+                        self.stack_dict[func.__name__][func.subfunc_name]['Input Functions'] = {}
+                    ipf_dict = {param: {ipf.__name__: {ipf.subfunc_name: ipf.exposed_param_dict}}}
+                    self.stack_dict[func.__name__][func.subfunc_name]['Input Functions'].update(ipf_dict)
 
         self.lockParams(False)
         return partial_stack, self.stack_dict
@@ -1574,7 +1585,7 @@ class FunctionManager(fw.FeatureManager):
                 yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
 
         # save yaml in reconstruction folder
-        for key in pipeline_dict.iterkeys():
+        for key in pipeline_dict.keys():
             if 'Write' in key:
                 save_file = pipeline_dict[key]['fname'] + '.yml'
         try:
@@ -1602,12 +1613,12 @@ class FunctionManager(fw.FeatureManager):
             Range of parameters to be evaluated
         """
         self.updateParameters()
-        if function.func_name in 'Reader':
+        if function.__name__ in 'Reader':
             return
         for i in prange:
             function.param_dict[parameter] = i
             # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
-            fixed_func = type('FixedFunc', (), {'func_name': function.func_name, 'subfunc_name': function.subfunc_name,
+            fixed_func = type('FixedFunc', (), {'func_name': function.__name__, 'subfunc_name': function.subfunc_name,
                                                 'missing_args': function.missing_args,
                                                 'param_dict': function.param_dict,
                                                 'exposed_param_dict': function.exposed_param_dict,
@@ -1615,7 +1626,7 @@ class FunctionManager(fw.FeatureManager):
                                                 'input_functions': function.input_functions,
                                                 '_function': function._function})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
-                                   fixed_func, {'function': function.func_name, parameter: prange})
+                                   fixed_func, {'function': function.__name__, parameter: prange})
 
 
 
@@ -1635,7 +1646,7 @@ class FunctionManager(fw.FeatureManager):
 
         self.removeAllFeatures()
         # Way too many for loops, oops... may want to restructure the yaml files
-        for func, subfuncs in pipeline.iteritems():
+        for func, subfuncs in pipeline.items():
             try:
                 func = func.split(". ")[1]
             except IndexError:
@@ -1645,14 +1656,14 @@ class FunctionManager(fw.FeatureManager):
                 if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
                     funcWidget.enabled = False
                 if 'Parameters' in subfuncs[subfunc]:
-                    for param, value in subfuncs[subfunc]['Parameters'].iteritems():
+                    for param, value in subfuncs[subfunc]['Parameters'].items():
                         child = funcWidget.params.param(param)
                         child.setValue(value)
                         if setdefaults:
                             child.setDefault(value)
                 if 'Input Functions' in subfuncs[subfunc]:
-                    for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
-                        for ipf, sipfs in ipfs.iteritems():
+                    for param, ipfs in subfuncs[subfunc]['Input Functions'].items():
+                        for ipf, sipfs in ipfs.items():
                             for sipf in sipfs:
                                 if param in funcWidget.input_functions:
                                     ifwidget = funcWidget.input_functions[param]
@@ -1662,7 +1673,7 @@ class FunctionManager(fw.FeatureManager):
                                 if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
                                     ifwidget.enabled = False
                                 if 'Parameters' in sipfs[sipf]:
-                                    for p, v in sipfs[sipf]['Parameters'].iteritems():
+                                    for p, v in sipfs[sipf]['Parameters'].items():
                                         ifwidget.params.child(p).setValue(v)
                                         if setdefaults:
                                             ifwidget.params.child(p).setDefault(v)
@@ -1684,22 +1695,22 @@ class FunctionManager(fw.FeatureManager):
         """
 
         self.removeAllFeatures()
-        for func, subfuncs in pipeline.iteritems():
+        for func, subfuncs in pipeline.items():
             try:
                 func = func.split(". ")[1]
             except IndexError:
                 func = func
             for subfunc in subfuncs:
                 funcWidget = self.addFunction(func, subfunc, package=reconpkg.packages[config_dict[subfunc][1]])
-                for param, value in subfuncs[subfunc].iteritems():
+                for param, value in subfuncs[subfunc].items():
                     if param == 'Package':
                         continue
                     elif param == 'Input Functions':
-                        for param, ipfs in value.iteritems():
-                            for ipf, sipf in ipfs.iteritems():
-                                ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf.keys()[0],
-                                                    package=reconpkg.packages[config_dict[sipf.keys()[0]][1]])
-                                for p, v in sipf[sipf.keys()[0]].items():
+                        for param, ipfs in value.items():
+                            for ipf, sipf in ipfs.items():
+                                ifwidget = self.addInputFunction(funcWidget, param, ipf, list(sipf.keys())[0],
+                                                    package=reconpkg.packages[config_dict[list(sipf.keys())[0]][1]])
+                                for p, v in list(sipf[list(sipf.keys())[0]].items()):
                                     ifwidget.params.child(p).setValue(v)
                                 ifwidget.updateParamsDict()
                     else:
@@ -1747,9 +1758,9 @@ class FunctionManager(fw.FeatureManager):
         signature += "\ttotal_sino = (sino[1] - sino[0] - 1) // sino[2] + 1\n"
         signature += "\tif total_sino < sino_p_chunk:\n\t\tsino_p_chunk = total_sino\n\n"
 
-        if 'center' not in subfunc_dict.iterkeys():
+        if 'center' not in iter(subfunc_dict.keys()):
             signature += "\tcenter = {}\n".format(center)
-        for key, val in subfunc_dict.iteritems():
+        for key, val in subfunc_dict.items():
             signature += "\t{} = {}\n".format(key, val)
 
         signature += "\n\n\t# MAIN LOOP FOR RECONSTRUCTION\n"
@@ -1764,7 +1775,7 @@ class FunctionManager(fw.FeatureManager):
 
         signature += "\t\t# the function pipeline: keywords used in each function are located in the\n"
         signature += "\t\t# 'params' assignment for each function\n\n"
-        for func, param_dict in func_dict.iteritems():
+        for func, param_dict in func_dict.items():
             try:
                 func = func.split(". ")[1]
             except IndexError:
@@ -1959,10 +1970,10 @@ def map_loc(slc, loc):
     """
 
     step = slc.step if slc.step is not None else 1
-    ind = range(slc.start, slc.stop, step)
+    ind = list(range(slc.start, slc.stop, step))
     loc = np.array(loc)
     low, upp = ind[0], ind[-1]
-    buff = (loc[-1] - loc[0]) / len(loc)
+    buff = old_div((loc[-1] - loc[0]), len(loc))
     min_loc = low - buff
     max_loc = upp + buff
     loc = np.intersect1d(loc[loc > min_loc], loc[loc < max_loc])
@@ -1991,7 +2002,7 @@ class CORSelectionWidget(QtGui.QWidget):
         self.param_tree.setMinimumHeight(200)
         self.param_tree.setMinimumWidth(200)
         self.param_tree.setParameters(self.params, showTop=False)
-        for key, val in self.function.param_dict.iteritems():
+        for key, val in self.function.param_dict.items():
             if key in [p.name() for p in self.params.children()]:
                 self.params.child(key).setValue(val)
                 self.params.child(key).setDefault(val)
@@ -2026,7 +2037,7 @@ class CORSelectionWidget(QtGui.QWidget):
         self.param_tree.setMinimumHeight(200)
         self.param_tree.setMinimumWidth(200)
         self.param_tree.setParameters(self.params,showTop = False)
-        for key, val in self.function.param_dict.iteritems():
+        for key, val in self.function.param_dict.items():
             if key in [p.name() for p in self.params.children()]:
                 self.params.child(key).setValue(val)
                 self.params.child(key).setDefault(val)

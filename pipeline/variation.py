@@ -1,9 +1,12 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import range
 import numpy as np
-import loader
+from . import loader
 import scipy.ndimage
 import warnings
-import variationoperators
-import msg
+from . import variationoperators
+from . import msg
 
 
 def variationiterator(simg,operationindex,roi=None,color=None):
@@ -42,7 +45,7 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
                 else:
                     roi = 1
             with np.errstate(divide='ignore'):
-                return variationoperators.operations.values()[operationindex](p, c, n, roi, None, None)
+                return list(variationoperators.operations.values())[operationindex](p, c, n, roi, None, None)
         except TypeError:
             msg.logMessage('Variation could not be determined for a frame.',msg.ERROR)
     else:

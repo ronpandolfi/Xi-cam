@@ -1,5 +1,10 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
+from builtins import str
+from builtins import map
+from builtins import range
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -12,7 +17,7 @@ __status__ = "Beta"
 
 import numpy as np
 import pyqtgraph as pg
-import explorer
+from . import explorer
 from PySide import QtGui, QtCore
 
 
@@ -44,7 +49,7 @@ class DataTreeWidget(QtGui.QTreeWidget):
             parent.addChild(node)
 
         if isinstance(data, dict):
-            for k in data.keys():
+            for k in list(data.keys()):
                 self.buildTree(data[k], node, str(k))
         elif isinstance(data, list) or isinstance(data, tuple):
             for i in range(len(data)):
@@ -108,7 +113,7 @@ class ImageView(pg.ImageView):
         try:
             if viewBox.sceneBoundingRect().contains(pos):
                 mousePoint = viewBox.mapSceneToView(pos)
-                x, y = map(int, (mousePoint.x(), mousePoint.y()))
+                x, y = list(map(int, (mousePoint.x(), mousePoint.y())))
                 if (0 <= x < self.imageItem.image.shape[0]) & (0 <= y < self.imageItem.image.shape[1]):  # within bounds
                     self.coordsLabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x={0},"
                                              u"   <span style=''>y={1}</span>,   <span style=''>I={2}</span>"\

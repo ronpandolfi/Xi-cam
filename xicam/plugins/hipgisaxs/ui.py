@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
 

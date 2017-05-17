@@ -2,11 +2,15 @@
 
 # from image_load import *
 # import loader
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from past.utils import old_div
 import numpy as np
 from pyFAI import geometry
 
 from PySide import QtGui
-import msg
+from . import msg
 
 
 try:
@@ -31,11 +35,11 @@ def calc_q_range(lims, geometry, alphai, cen):
 
     # calculate angles 
     tmp = np.sqrt(y ** 2 + sdd ** 2)
-    cos2theta = sdd / tmp
-    sin2theta = y / tmp
+    cos2theta = old_div(sdd, tmp)
+    sin2theta = old_div(y, tmp)
     tmp = np.sqrt(z ** 2 + y ** 2 + sdd ** 2)
-    cosalpha = sdd / tmp
-    sinalpha = z / tmp
+    cosalpha = old_div(sdd, tmp)
+    sinalpha = old_div(z, tmp)
     k0 = 2. * np.pi / wavelen
 
     # calculate q-values of each corner
@@ -65,8 +69,8 @@ def remesh(image, filename, geometry, alphai):
 
     # uniformly spaced q-values for remeshed image
     nqz = image.shape[0]
-    dqz = (qrange[3] - qrange[2]) / (nqz - 1)
-    nqp = np.int((qrange[1] - qrange[0]) / dqz)
+    dqz = old_div((qrange[3] - qrange[2]), (nqz - 1))
+    nqp = np.int(old_div((qrange[1] - qrange[0]), dqz))
     qvrt = np.linspace(qrange[2], qrange[3], nqz)
     qpar = qrange[0] + np.arange(nqp) * dqz
     qpar, qvrt = np.meshgrid(qpar, qvrt)
@@ -80,24 +84,24 @@ def remesh(image, filename, geometry, alphai):
         cosi = np.cos(alphai)
         sini = np.sin(alphai)
 
-        sina = (qvrt / k0) - sini
+        sina = (old_div(qvrt, k0)) - sini
         cosa2 = 1 - sina ** 2
         cosa = np.sqrt(cosa2)
-        tana = sina / cosa
+        tana = old_div(sina, cosa)
 
-        t1 = cosa2 + cosi ** 2 - (qpar / k0) ** 2
+        t1 = cosa2 + cosi ** 2 - (old_div(qpar, k0)) ** 2
         t2 = 2. * cosa * cosi
-        cost = t1 / t2
+        cost = old_div(t1, t2)
         cost[t1 > t2] = 0
         with np.errstate(divide='ignore'):
             tant = np.sign(qpar) * np.sqrt(1. - cost ** 2) / cost
             tant[cost == 0] = 0
 
         # F : (qp,qz) --> (x,y)
-        map_x = (tant * sdd + center[0]) / pixel[0]
+        map_x = old_div((tant * sdd + center[0]), pixel[0])
         cost[cost < 0] = 1
         with np.errstate(divide='ignore'):
-            map_y = (tana * sdd / cost + center[1]) / pixel[1]
+            map_y = old_div((tana * sdd / cost + center[1]), pixel[1])
 
 
         # compute null space
@@ -135,8 +139,8 @@ def remeshqarray(image, filename, geometry, alphai):
 
     # uniformly spaced q-values for remeshed image
     nqz = image.shape[0]
-    dqz = (qrange[3] - qrange[2]) / (nqz - 1)
-    nqp = np.int((qrange[1] - qrange[0]) / dqz)
+    dqz = old_div((qrange[3] - qrange[2]), (nqz - 1))
+    nqp = np.int(old_div((qrange[1] - qrange[0]), dqz))
     qvrt = np.linspace(qrange[2], qrange[3], nqz)
     qpar = qrange[0] + np.arange(nqp) * dqz
     qpar, qvrt = np.meshgrid(qpar, qvrt)

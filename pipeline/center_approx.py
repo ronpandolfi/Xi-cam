@@ -1,5 +1,10 @@
 #! /usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import glob
 import os
 import time
@@ -9,8 +14,8 @@ import fabio
 from scipy import optimize
 from scipy import signal
 
-import saxs_calibration
-import peakfindingrem
+from . import saxs_calibration
+from . import peakfindingrem
 
 
 def approx_width(r):
@@ -36,7 +41,7 @@ def tophat2(radius, scale=1):
     t = np.sqrt(x ** 2 + y ** 2) - radius
     s = width
     a = scale / np.sqrt(2 * np.pi) / s ** 3
-    w = a * (1 - (t / s) ** 2) * np.exp(-t ** 2 / s ** 2 / 2.)
+    w = a * (1 - (old_div(t, s)) ** 2) * np.exp(-t ** 2 / s ** 2 / 2.)
     return w
 
 
@@ -252,9 +257,9 @@ def center_approx(img, mask, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img * (img > 0) + 1)
 
-    con = signal.fftconvolve(img*mask, img*mask) / np.sqrt(signal.fftconvolve(np.ones_like(img), np.ones_like(img)))
+    con = old_div(signal.fftconvolve(img*mask, img*mask), np.sqrt(signal.fftconvolve(np.ones_like(img), np.ones_like(img))))
 
-    cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.
+    cen = old_div(np.array(np.unravel_index(con.argmax(), con.shape)), 2.)
     return cen
 
 

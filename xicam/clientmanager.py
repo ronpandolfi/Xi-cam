@@ -1,5 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
+from builtins import object
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -10,7 +13,7 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
-import threads
+from . import threads
 import client
 from pipeline import msg
 

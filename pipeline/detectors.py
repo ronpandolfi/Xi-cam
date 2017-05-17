@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from past.utils import old_div
 import pyFAI.detectors
 import fabio
 import logging
@@ -38,8 +42,8 @@ class PrincetonMTE(pyFAI.detectors.Detector):
                 self._pixel2 = self.BINNED_PIXEL_SIZE[bin_size[1]]
             else:
                 # logger.warning("Binning factor (%sx%s) is not an official value for Princeton Instruments detectors" % (bin_size[0], bin_size[1]))
-                self._pixel1 = self.BINNED_PIXEL_SIZE[1] / float(bin_size[0])
-                self._pixel2 = self.BINNED_PIXEL_SIZE[1] / float(bin_size[1])
+                self._pixel1 = old_div(self.BINNED_PIXEL_SIZE[1], float(bin_size[0]))
+                self._pixel2 = old_div(self.BINNED_PIXEL_SIZE[1], float(bin_size[1]))
             self._binning = bin_size
             self.shape = (self.max_shape[0] // bin_size[0],
                           self.max_shape[1] // bin_size[1])
@@ -86,11 +90,11 @@ class PhotonicScience(pyFAI.detectors.Detector):
             self._binning = (int(2 * pixel1 / self.DEFAULT_PIXEL1), int(2 * pixel2 / self.DEFAULT_PIXEL2))
             self.shape = tuple(s // b for s, b in zip(self.max_shape, self._binning))
         else:
-            self.shape = (1042/2, 1042/2)
+            self.shape = (old_div(1042,2), old_div(1042,2))
             self._binning = (2, 2)
 
     def __repr__(self):
         return "Detector %s\t PixelSize= %.3e, %.3e m" % \
             (self.name, self._pixel1, self._pixel2)
 
-ALL_DETECTORS = OrderedDict((cls().name,cls) for cls in sorted(pyFAI.detectors.ALL_DETECTORS.values(),key=lambda cls:cls().name))
+ALL_DETECTORS = OrderedDict((cls().name,cls) for cls in sorted(list(pyFAI.detectors.ALL_DETECTORS.values()),key=lambda cls:cls().name))

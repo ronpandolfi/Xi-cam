@@ -2,6 +2,7 @@
 """
 @author: lbluque
 """
+from __future__ import unicode_literals
 import time
 from PySide import QtGui, QtCore
 from PySide.QtUiTools import QUiLoader

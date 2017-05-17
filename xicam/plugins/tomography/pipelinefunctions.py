@@ -1,5 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
 
 
+from builtins import str
+from builtins import range
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -219,8 +223,8 @@ if __name__ == '__main__':
     # d = np.array(d[0], dtype=np.float32)
     d = d[0]
     c = convert_data(d, imin=0, imax=0)
-    print d.dtype
-    print c.dtype
+    print(d.dtype)
+    print(c.dtype)
     figure(0)
     imshow(d[0])
     figure(1)

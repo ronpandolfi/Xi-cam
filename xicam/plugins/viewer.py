@@ -1,3 +1,9 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import platform
 from fabio import edfimage
 from pipeline import msg
@@ -10,11 +16,11 @@ if op_sys == 'Darwin':
     except ImportError:
         msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
-import base
+from . import base
 from PySide import QtGui, QtCore
 import os
 from pyqtgraph.parametertree import ParameterTree
-import widgets
+from . import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
@@ -170,7 +176,7 @@ class ViewerPlugin(base.plugin):
         """
         Launch a tab as a div operation
         """
-        operation = lambda m: m[0] / m[1]
+        operation = lambda m: old_div(m[0], m[1])
         self.launchmultimode(operation, 'Division')
 
     def averagemode(self):
@@ -279,9 +285,9 @@ class ViewerPlugin(base.plugin):
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
         dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
-                                   directory=unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)),
+                                   directory=str(os.path.dirname(self.getCurrentTab().dimg.filepath)),
                                    filter=u"EDF (*.edf)")
-        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
+        dialog.selectFile(str(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
         msg.logMessage(filename,msg.DEBUG)
         if ok and filename:

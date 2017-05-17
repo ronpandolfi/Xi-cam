@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from PySide import QtGui, QtCore
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType

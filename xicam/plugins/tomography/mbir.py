@@ -1,5 +1,7 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 try:
-    from tomocam import tomoCam
+    from .tomocam import tomoCam
 except ImportError:
     pass
 

@@ -1,6 +1,12 @@
 #! /usr#! /usr/bin/env python
 
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -27,10 +33,10 @@ from xicam.plugins import base
 from xicam.widgets.customwidgets import sliceDialog
 from pipeline import msg
 from xicam import threads
-from viewers import TomoViewer
-import ui
-import config
-from functionwidgets import FunctionManager
+from .viewers import TomoViewer
+from . import ui
+from . import config
+from .functionwidgets import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
@@ -298,7 +304,7 @@ class TomographyPlugin(base.plugin):
         """
         widget =  self.centerwidget.widget(self.currentWidget())
         if widget is not None:
-            self.ui.property_table.setData(widget.data.header.items())
+            self.ui.property_table.setData(list(widget.data.header.items()))
             # self.ui.setMBIR(widget.data.header.items())
             self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
             self.ui.property_table.show()
@@ -311,10 +317,10 @@ class TomographyPlugin(base.plugin):
                 self.manager.setPipelineFromYAML(config.load_pipeline(APS_PIPELINE_YAML))
                 config.set_aps_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)
-            recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
+            recon_funcs = [func for func in self.manager.features if func.__name__ == 'Reconstruction']
             for rfunc in recon_funcs:
                 if not rfunc.params.child('center').value():
-                    rfunc.params.child('center').setValue(widget.data.shape[1]/2)
+                    rfunc.params.child('center').setValue(old_div(widget.data.shape[1],2))
                 rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
 
 
@@ -329,7 +335,7 @@ class TomographyPlugin(base.plugin):
 
         for function in self.manager.features:
             currentWidget.pipeline[function.name] = OrderedDict()
-            for (key,val) in function.param_dict.iteritems():
+            for (key,val) in function.param_dict.items():
                 currentWidget.pipeline[function.name][key] = val
             currentWidget.pipeline[function.name]['func_name'] = str(function.package) + "." + \
                                                                  str(function._function.__name__)
@@ -342,7 +348,7 @@ class TomographyPlugin(base.plugin):
             currentWidget.pipeline[function.name]['missing_args'] = lst
 
             input_dict = OrderedDict()
-            for key,val in function.input_functions.iteritems():
+            for key,val in function.input_functions.items():
                 # print key, ",", val.params.children()
                 dict = OrderedDict()
                 dict['func'] = val
@@ -412,7 +418,7 @@ class TomographyPlugin(base.plugin):
 
         if len(self.manager.features) < 1 or self.centerwidget.widget(self.currentWidget()) == -1:
             return False
-        elif 'Reconstruction' not in [func.func_name for func in self.manager.features]:
+        elif 'Reconstruction' not in [func.__name__ for func in self.manager.features]:
             QtGui.QMessageBox.warning(None, 'Reconstruction method required',
                                       'You have to select a reconstruction method to run a preview')
             return False

@@ -1,4 +1,10 @@
 # --coding: utf-8 --
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import map
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import numpy as np
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
@@ -40,7 +46,7 @@ class timelineStackPlot(QtGui.QWidget):
         self._curvesdata = []
 
     def mapSlider(self):
-        return 10 * (np.exp(self.slider.value() / 100.) - 1)
+        return 10 * (np.exp(old_div(self.slider.value(), 100.)) - 1)
 
     def setOffset(self, value):
         for i in range(len(self.curves)):
@@ -62,7 +68,7 @@ class timelineStackPlot(QtGui.QWidget):
     def setColors(self):
         for i in range(len(self.curves)):
             self.curves[i].setPen(
-                pg.mkPen(color=[(1 - float(i) / len(self.curves)) * 255, float(i) / len(self.curves) * 255, 255]))
+                pg.mkPen(color=[(1 - old_div(float(i), len(self.curves))) * 255, float(i) / len(self.curves) * 255, 255]))
 
     def clear(self):
         self.curves = []
@@ -140,7 +146,7 @@ class TimelinePlot(QtGui.QTabWidget):
     def setData(self):
         if 'x' not in self._data:
             for colorhash in self._data['colors']:
-                color = map(int, colorhash.split(','))
+                color = list(map(int, colorhash.split(',')))
                 self.currentPlot().setData(self._data['t'], self._data[colorhash], color)
         else:
             self.currentPlot().setData(self._data['t'], self._data['x'], self._data['y'])

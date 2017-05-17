@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import map
+from builtins import str
+from past.utils import old_div
 import numpy as np  # Import important packages
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
@@ -14,7 +21,7 @@ def calcscale(imv):  # Defines calcscale function
     """
     image = imv.getProcessedImage()
 
-    scale = imv.scalemax / float(image[imv.currentIndex].shape[1])
+    scale = old_div(imv.scalemax, float(image[imv.currentIndex].shape[1]))
     return scale
 
 
@@ -37,11 +44,11 @@ class imagetimeline(list):  # Sets up the image so it will fin the the viewer
 
     @property
     def max(self):
-        return max(map(np.max, self))
+        return max(list(map(np.max, self)))
 
     @property
     def min(self):
-        return min(map(np.min, self))
+        return min(list(map(np.min, self)))
 
     @property
     def dtype(self):
@@ -71,7 +78,7 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
 
 
     def quickMinMax(self, data):  # Defines quickMinMax functon
-        return min(map(np.min, data)), max(map(np.max, data))
+        return min(list(map(np.min, data))), max(list(map(np.max, data)))
 
     def updateImage(self, autoHistogramRange=True):  # Defines updateImage functon
         if self.image is None:
@@ -90,8 +97,8 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
 
         self.imageItem.resetTransform()  # Resets the scale up below
         self.imageItem.scale(scale, scale)  # Scales up by the factor of scale
-        print 'Image shape' + str(image.shape)
-        print 'Scale set to: ' + str(scale)
+        print('Image shape' + str(image.shape))
+        print('Scale set to: ' + str(scale))
 
         self.view_number.setValue(self.currentIndex)
         self.sigImageChanged.emit()
@@ -111,14 +118,14 @@ class fftView(QtGui.QTabWidget):
         if not image_list:
             return
         if type(image_list) == dict:
-            for path, img in image_list.iteritems():
+            for path, img in image_list.items():
                 try:
                     img = np.array(img)
                     len(img)
                     flag = True
                     if do_fft: img = self.do_fft(img)
 
-                    for item in self.img_dict.itervalues():
+                    for item in self.img_dict.values():
                         if np.array_equal(img, item): flag = False
                     if flag:
                         self.img_dict[path.split('/')[-1]] = img
@@ -132,7 +139,7 @@ class fftView(QtGui.QTabWidget):
                     flag = True
                     if do_fft: img = self.do_fft(img)
 
-                    for item in self.img_dict.itervalues():
+                    for item in self.img_dict.values():
                         if np.array_equal(img, item): flag = False
                     if flag:
                         self.img_dict[len(self.img_dict)] = img
@@ -146,8 +153,8 @@ class fftView(QtGui.QTabWidget):
         del self.img_dict
         self.img_dict = img_dict
 
-        data = imagetimeline(self.img_dict.itervalues())
-        sizemax = max(map(np.shape, data))[0]
+        data = imagetimeline(iter(self.img_dict.values()))
+        sizemax = max(list(map(np.shape, data)))[0]
 
         view = TimelineView(sizemax)
         view.setImage(data)
@@ -191,7 +198,7 @@ class fftView(QtGui.QTabWidget):
 
     def imageNameChanged(self):
         view = self.currentWidget()
-        for key, val in self.img_dict.iteritems():
+        for key, val in self.img_dict.items():
             if np.array_equal(val, view.image[view.currentIndex]):
                 self.currentWidget().label.setText(key)
 
@@ -207,11 +214,11 @@ class rmcView(QtGui.QTabWidget):
         paths = glob.glob(os.path.join(root,
                                        '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
 
-        indices = dict(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths]))
+        indices = dict(list(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths])))
 
         tiles = dict()
 
-        for path, ind in indices.iteritems():
+        for path, ind in indices.items():
             if int(ind[1]) in tiles:
                 tiles[int(ind[1])].append(path)
             else:
@@ -225,15 +232,15 @@ class rmcView(QtGui.QTabWidget):
                 img = Image.open(path).convert('L')
                 img = np.array(img)
 
-                print path  # Prints the path
-                print img.shape  # Prints the shape of the array
+                print(path)  # Prints the path
+                print(img.shape)  # Prints the shape of the array
 
                 images.append(img)
                 self.image_dict[path.split('/')[-1]] = img
 
             data = imagetimeline(images)
 
-            sizemax = max(map(np.shape, data))[0]
+            sizemax = max(list(map(np.shape, data)))[0]
 
             view = TimelineView(sizemax)
             view.setImage(data)
@@ -264,12 +271,12 @@ class rmcView(QtGui.QTabWidget):
         paths = glob.glob(os.path.join(root,
                                        '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
 
-        indices = dict(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths]))
+        indices = dict(list(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths])))
 
         tiles = dict()
 
 
-        for path, ind in indices.iteritems():
+        for path, ind in indices.items():
             if int(ind[1]) in tiles:
                 tiles[int(ind[1])].append(path)
             else:
@@ -285,14 +292,14 @@ class rmcView(QtGui.QTabWidget):
                 img = Image.open(path).convert('L')
                 img = np.array(img)
 
-                print path  # Prints the path
-                print img.shape  # Prints the shape of the array
+                print(path)  # Prints the path
+                print(img.shape)  # Prints the shape of the array
 
                 images.append(img)
                 self.image_dict[path.split('/')[-1]] = img
 
             data = imagetimeline(images)
-            sizemax = max(map(np.shape, data))[0]
+            sizemax = max(list(map(np.shape, data)))[0]
 
             view = TimelineView(sizemax)
             view.setImage(data)
@@ -318,7 +325,7 @@ class rmcView(QtGui.QTabWidget):
     def imageNameChanged(self):
 
         view = self.currentWidget()
-        for key, val in self.image_dict.iteritems():
+        for key, val in self.image_dict.items():
             if np.array_equal(val, view.image[view.currentIndex]):
                 self.currentWidget().label.setText(key)
 

@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from PySide import QtGui
 import sys
-import base
+from . import base
 from xicam import plugins
 
 # Overload for Py2App

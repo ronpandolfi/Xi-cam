@@ -1,10 +1,18 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
 from collections import deque
 import numpy as np
 import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
-from loader import ProjectionStack, SinogramStack
+from .loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
@@ -321,7 +329,7 @@ class TomoViewer(QtGui.QWidget):
         elif prange:
             dummy_prange = dict(prange)
             func = dummy_prange.pop('function')
-            param = dummy_prange.keys()[0]
+            param = list(dummy_prange.keys())[0]
 
             if len(self.prange) < 1 and recon is not None:
                 self.prange = prange[param]
@@ -337,9 +345,9 @@ class TomoViewer(QtGui.QWidget):
             # run through each recon in the preview_holder, and add them to the preview viewer if the top param in
             # prange matches the preview metadata
             for index, rec in enumerate(self.preview_holder):
-                for key in rec[1].iterkeys():
+                for key in rec[1].keys():
                     if func in key:
-                        subfunc = rec[1][key].keys()[0]
+                        subfunc = list(rec[1][key].keys())[0]
                         param_val = rec[1][key][subfunc][param]
                 if top_val == param_val:
                     self.previewViewer.addPreview(np.rot90(rec[0][0], 1), rec[1], rec[2])
@@ -461,7 +469,7 @@ class MBIRViewer(QtGui.QWidget):
         self.val_box = QtGui.QDoubleSpinBox(parent = self.manual_tab)
         self.val_box.setRange(0,10000)
         self.val_box.setDecimals(1)
-        self.val_box.setValue(int(data.shape[1])/2)
+        self.val_box.setValue(old_div(int(data.shape[1]),2))
         text_label = QtGui.QLabel('Center of Rotation: ', parent = self.manual_tab)
         text_layout = QtGui.QHBoxLayout()
         text_layout.addWidget(text_label)
@@ -479,7 +487,7 @@ class MBIRViewer(QtGui.QWidget):
         self.cor_param_tree.setMinimumHeight(200)
         self.cor_param_tree.setMinimumWidth(200)
         self.cor_param_tree.setParameters(self.cor_params,showTop = False)
-        for key, val in self.cor_function.param_dict.iteritems():
+        for key, val in self.cor_function.param_dict.items():
             if key in [p.name() for p in self.cor_params.children()]:
                 self.cor_params.child(key).setValue(val)
                 self.cor_params.child(key).setDefault(val)
@@ -575,7 +583,7 @@ class MBIRViewer(QtGui.QWidget):
         self.cor_param_tree.setMinimumHeight(200)
         self.cor_param_tree.setMinimumWidth(200)
         self.cor_param_tree.setParameters(self.cor_params,showTop = False)
-        for key, val in self.cor_function.param_dict.iteritems():
+        for key, val in self.cor_function.param_dict.items():
             if key in [p.name() for p in self.cor_params.children()]:
                 self.cor_params.child(key).setValue(val)
                 self.cor_params.child(key).setDefault(val)
@@ -608,7 +616,7 @@ class MBIRViewer(QtGui.QWidget):
             return -1
         else:
             if cor_function == 'Phase Correlation':
-                proj1, proj2 = map(self.data.fabimage.__getitem__, (0,-1))
+                proj1, proj2 = list(map(self.data.fabimage.__getitem__, (0,-1)))
                 kwargs = {'proj1' : proj1, 'proj2' : proj2}
             elif cor_function == 'Vo':
                 kwargs = {'tomo' : np.ascontiguousarray(self.data.fabimage[:, :, :])}
@@ -643,7 +651,7 @@ class MBIRViewer(QtGui.QWidget):
 
             views = int(self.data[0]) - 1
             file_name = self.path.split("/")[-1].split(".")[0]
-            nodes = int(np.ceil(self.mbir_params.child('Z num elts').value()/ float(24)))
+            nodes = int(np.ceil(old_div(self.mbir_params.child('Z num elts').value(), float(24))))
             output = os.path.join('/',self.mbir_params.child('Output folder').value(), file_name + '_mbir')
 
             try:
@@ -789,7 +797,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.setCenterButton.setToolTip('Set center in pipeline')
         originBox = QtGui.QLabel(parent=self.cor_widget)
         originBox.setText('x={}   y={}'.format(0, 0))
-        center = center if center is not None else data.shape[1]/2.0
+        center = center if center is not None else old_div(data.shape[1],2.0)
         self.centerBox.setValue(center) #setText(str(center))
         h1 = QtGui.QHBoxLayout()
         h1.setAlignment(QtCore.Qt.AlignLeft)
@@ -874,7 +882,7 @@ class ProjectionViewer(QtGui.QWidget):
 
     def writeCOR(self):
         cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',
-                                           'Write COR value to file',self.data.shape[1]/2)
+                                           'Write COR value to file',old_div(self.data.shape[1],2))
         if cor[1]:
             self.data.fabimage.change_dataset_attribute('center', cor[0])
 
@@ -910,7 +918,7 @@ class ProjectionViewer(QtGui.QWidget):
             x-coordinate of overlay image in the background images coordinates
         """
 
-        center = (self.data.shape[1] + x - 1)/2.0 # subtract half a pixel out of 'some' convention?
+        center = old_div((self.data.shape[1] + x - 1),2.0) # subtract half a pixel out of 'some' convention?
         self.centerBox.setValue(center)
         self.sigCenterChanged.emit(center)
 
@@ -1005,11 +1013,11 @@ class ProjectionViewer(QtGui.QWidget):
             self.flat = np.median(self.data.flats, axis=0).transpose()
             self.dark = np.median(self.data.darks, axis=0).transpose()
 
-            proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
+            proj = old_div((self.imageItem.image - self.dark),(self.flat - self.dark))
             overlay = self.imgoverlay_roi.currentImage
             if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
-            overlay = (overlay - self.dark)/(self.flat - self.dark)
+            overlay = old_div((overlay - self.dark),(self.flat - self.dark))
             if self.imgoverlay_roi.flipped:
                 overlay = np.flipud(overlay)
             self.imgoverlay_roi.currentImage = overlay
@@ -1151,7 +1159,7 @@ class PreviewViewer(QtGui.QSplitter):
             self.functionform.setCurrentWidget(self.datatrees[index])
             self.view_number.setValue(self.slice_numbers[index])
         except IndexError as e:
-            print 'index {} does not exist'.format(index)
+            print('index {} does not exist'.format(index))
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me
@@ -1403,9 +1411,9 @@ class ArrayDeque(deque):
             #     raise ValueError('All arrays in arraylist must have the same dimensions')
             # elif False in [arraylist[0].dtype == array.dtype for array in arraylist[1:]]:
             #     raise ValueError('All arrays in arraylist must have the same data type')
-            map(self._shape.append, arraylist[0].shape)
+            list(map(self._shape.append, arraylist[0].shape))
         elif arrayshape:
-            map(self._shape.append, arrayshape)
+            list(map(self._shape.append, arrayshape))
 
         self.ndim = len(self._shape)
 

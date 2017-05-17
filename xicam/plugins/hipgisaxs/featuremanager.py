@@ -1,12 +1,15 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import range
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-import models
-import ui
-import customwidgets
-import display
-import hig
+from . import models
+from . import ui
+from . import customwidgets
+from . import display
+from . import hig
 
 
 features = []

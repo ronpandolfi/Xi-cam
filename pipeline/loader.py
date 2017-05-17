@@ -1,5 +1,13 @@
 # -*- coding: UTF-8 -*-
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 
 import fabio
@@ -11,7 +19,7 @@ from pyFAI import detectors
 import pyFAI
 import glob
 import re
-import writer
+from . import writer
 from xicam import debugtools, config
 from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
@@ -24,7 +32,7 @@ from pipeline import msg
 
 import numpy as nx
 
-import detectors  # injects pyFAI with custom detectors
+from . import detectors  # injects pyFAI with custom detectors
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
@@ -166,8 +174,8 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
         I1 = float(paras1[config.activeExperiment.mapHeader('I1 AI')])
         I2 = float(paras2[config.activeExperiment.mapHeader('I1 AI')])
 
-    deltaX = round((positionX2 - positionX1) / 0.172)
-    deltaY = round((positionY2 - positionY1) / 0.172)
+    deltaX = round(old_div((positionX2 - positionX1), 0.172))
+    deltaY = round(old_div((positionY2 - positionY1), 0.172))
     padtop2 = 0
     padbottom1 = 0
     padtop1 = 0
@@ -203,7 +211,7 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
                       'constant')
 
     with np.errstate(divide='ignore',invalid='ignore'):
-        data = (d1 / I1 + d2 / I2) / (mask2 + mask1) * (I1 + I2) / 2.
+        data = (old_div(d1, I1) + old_div(d2, I2)) / (mask2 + mask1) * (I1 + I2) / 2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)
 
@@ -288,7 +296,7 @@ def convertto8bit(image):
     # image = np.array(image, copy=False)
     # image.clip(display_min, display_max, out=image)
     # image -= display_min
-    np.true_divide(image, (display_max - display_min + 1) / 256., out=image, casting='unsafe')
+    np.true_divide(image, old_div((display_max - display_min + 1), 256.), out=image, casting='unsafe')
     return image.astype(np.uint8)
 
 
@@ -314,10 +322,10 @@ def loadimageseries(pattern):
     return data
 
 
-import integration, remesh, center_approx, variation, pathtools
+from . import integration, remesh, center_approx, variation, pathtools
 
 
-class diffimage():
+class diffimage(object):
     def __init__(self, filepath=None, data=None, detector=None, experiment=None):
         """
         Image class for diffraction images that caches and validates cache
@@ -329,7 +337,7 @@ class diffimage():
 
         msg.logMessage('diffimage is deprecated. Migrate this to diffimage2',msg.WARNING)
 
-        msg.logMessage('Loading ' + unicode(filepath) + '...')
+        msg.logMessage('Loading ' + str(filepath) + '...')
 
         self._data = data
 
@@ -429,7 +437,7 @@ class diffimage():
         return self._detector
 
     def finddetector(self):
-        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.items()):
             # print detector
             # print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
@@ -440,8 +448,8 @@ class diffimage():
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                for binning in detector.BINNED_PIXEL_SIZE.keys():
-                    if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                for binning in list(detector.BINNED_PIXEL_SIZE.keys()):
+                    if self.data.shape[::-1] == tuple(old_div(np.array(detector.MAX_SHAPE), binning)):
                         detector = detector()
                         msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
@@ -604,7 +612,7 @@ class diffimage():
 
     @property
     def radialintegration(self):
-        if 'radialintegration' in self.cache.keys():
+        if 'radialintegration' in list(self.cache.keys()):
             self.cache['radialintegration'] = integration.radialintegrate(self)
 
         return self.cache['radialintegration']
@@ -616,7 +624,7 @@ class diffimage():
             raise AttributeError('diffimage has no attribute: ' + name)
 
 
-class imageseries():
+class imageseries(object):
     def __init__(self, paths, experiment=None):
         self.paths = dict()
         self.variation = dict()
@@ -652,7 +660,7 @@ class imageseries():
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
     def __getitem__(self, item):
-        return self.getDiffImage(self.paths.keys()[item])
+        return self.getDiffImage(list(self.paths.keys())[item])
 
     def getDiffImage(self, key):
         # print self.paths.keys()
@@ -686,12 +694,12 @@ class imageseries():
         variation = dict()
 
         # get the first frame's profile
-        keys = self.paths.keys()
+        keys = list(self.paths.keys())
 
         if roi is not None:
             roi = writer.thumbnail(roi.T)
 
-        for key, index in zip(keys, range(self.__len__())):
+        for key, index in zip(keys, list(range(self.__len__()))):
             variationx = self.path2frame(self.paths[key])
             variationy = self.calcVariation(index, operationindex, roi)
 
@@ -709,8 +717,8 @@ class imageseries():
         thumbs = self.thumbs
         try:
             if operationindex == 7:
-                return variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
-            return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
+                return list(variation.variationoperators.operations.values())[operationindex](self[i].data, i, roi)
+            return list(variation.variationoperators.operations.values())[operationindex](thumbs, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
@@ -744,7 +752,7 @@ class imageseries():
 from PIL import Image
 
 
-class jpegimageset():
+class jpegimageset(object):
     def __init__(self, jpegs):
         self.jpegs = jpegs
 
@@ -833,7 +841,7 @@ class StackImage(object):
         for i, j in enumerate(range(0, self.shape[0], level)):
             img = self._getimage(j)[::level, ::level].transpose()
             if i == 0:  # allocate array:
-                shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
+                shape = (np.ceil(old_div(float(self.shape[0]), level)), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
             vol[i] = img
         return vol
@@ -846,7 +854,7 @@ class StackImage(object):
         # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
-            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
+            if len(self._framecache) > self._cachesize: del self._framecache[list(self._framecache.keys())[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
@@ -1038,7 +1046,7 @@ class diffimage2(object):
         return self._detector
 
     def finddetector(self):
-        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.items()):
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
@@ -1047,8 +1055,8 @@ class diffimage2(object):
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                for binning in detector.BINNED_PIXEL_SIZE.keys():
-                    if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                for binning in list(detector.BINNED_PIXEL_SIZE.keys()):
+                    if self.rawdata.shape[::-1] == tuple(old_div(np.array(detector.MAX_SHAPE), binning)):
                         detector = detector()
                         msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
@@ -1414,7 +1422,7 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            return self.xvals('')[i], list(variation.variationoperators.operations.values())[operationindex](self, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
@@ -1494,7 +1502,7 @@ class stackdiffimage2(diffimage2):
         frame = min(frame, len(self))
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache) > 2: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            if len(self._framecache) > 2: del self._framecache[list(self._framecache.keys())[0]]  # del the first cached item
             self._framecache[frame] = np.rot90(self.fabimage.getframe(frame).data, 3)
         return self._framecache[frame]
 
@@ -1503,7 +1511,7 @@ class stackdiffimage2(diffimage2):
 
 
 def loaddiffimage(src):
-    if type(src) in [unicode, str]:
+    if type(src) in [str, str]:
         return singlefilediffimage2(src)
     elif type(src) is list and len(src) == 1 and os.path.splitext(src[0])[-1] == '.h5':
         return stackdiffimage2(src[0])

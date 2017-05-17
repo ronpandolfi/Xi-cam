@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from builtins import map
+from builtins import object
 def load(path):
     with open(path) as f:
         content = f.read()
@@ -19,7 +24,7 @@ def dict2str(d, depth=0):
     content = ''
     keyseparator = ' '
     tabseparator = ''
-    for value in d.values():
+    for value in list(d.values()):
         if type(value) is dict:
             keyseparator = '\n'
             tabseparator = u'\t'
@@ -30,7 +35,7 @@ def dict2str(d, depth=0):
 
         if type(d[key]) is dict:
             dictlineseparator = ''
-            for value in d[key].values():
+            for value in list(d[key].values()):
                 if type(value) is dict:
                     dictlineseparator = '\n'
             content += u'{0}{1} = {{{2}'.format(u'\t' * depth, str(key), dictlineseparator)
@@ -42,7 +47,7 @@ def dict2str(d, depth=0):
         elif type(d[key]) is list:
             content += u'{0}{1} = {2},{3}'.format(tabseparator * depth, keytext,
                                                   '[ ' + ' '.join(map(str, d[key])) + ' ]', keyseparator)
-        elif type(d[key]) is unicode:
+        elif type(d[key]) is str:
             content += u'{0}{1} = "{2}",{3}'.format(tabseparator * depth, keytext, str(d[key]), keyseparator)
         elif type(d[key]) is str:
             content += u'{0}{1} = "{2}",{3}'.format(tabseparator * depth, keytext, str(d[key]), keyseparator)
@@ -54,7 +59,7 @@ def dict2str(d, depth=0):
     return content
 
 
-class hig:
+class hig(object):
     def __init__(self, **d):
         self.__dict__.update(d)
 
@@ -82,4 +87,4 @@ if __name__ == '__main__':
                                          'numstepsfactor': 1000,
                                          'scalefactor': 32}}}
     h = hig(**d)
-    print h
+    print(h)

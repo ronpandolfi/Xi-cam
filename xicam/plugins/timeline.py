@@ -1,3 +1,9 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import platform
 from pipeline import msg
 
@@ -10,13 +16,13 @@ if op_sys == 'Darwin':
         msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
 
-import base, viewer
+from . import base, viewer
 from PySide import QtGui
 import os
 # from moviepy.editor import VideoClip
 import numpy as np
 
-import widgets
+from . import widgets
 from pipeline import calibration
 from xicam.widgets.NDTimelinePlotWidget import TimelinePlot
 
@@ -158,5 +164,5 @@ class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
 
 
 def convertto8bit(image):
-    image *= (np.iinfo(np.uint8).max - 1) / float(np.max(image))
+    image *= old_div((np.iinfo(np.uint8).max - 1), float(np.max(image)))
     return image.astype(np.uint8).copy()

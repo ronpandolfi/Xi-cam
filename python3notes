@@ -1,0 +1,5 @@
+Vispy:
+ - Change site.py 429 to fp = open(filename, "rU",encoding='utf-8')
+
+qtconsole:
+ - Change rich_jupyter_widget.py 64-65 to self._jpg_supported = 'jpeg' in QtGui.QImageReader.supportedImageFormats()

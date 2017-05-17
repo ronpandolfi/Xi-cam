@@ -1,3 +1,5 @@
 #! /usr/bin/env python
 
-from tomoCam import gpuGridrec, gpuSIRT
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from .tomoCam import gpuGridrec, gpuSIRT

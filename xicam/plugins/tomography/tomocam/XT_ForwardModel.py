@@ -1,20 +1,24 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
 #Fuction to implement the tomographic forward and back-projection kernel in python
 
-import gnufft 
+from past.utils import old_div
+from . import gnufft 
 import math
 import numpy as np
 import afnumpy as afnp 
 import afnumpy.fft as af_fft
 import scipy.special as sc_spl #For bessel functions
 import tomopy
-from XT_Common import padmat
+from .XT_Common import padmat
 #import ipdb
 
 def forward_project(x,params):
     #inputs : x - afnumpy array containing the complex valued image
     #       : params - a list containing all parameters for the NUFFT 
 
-    qxyXrxy = (params['fft2Dshift']*af_fft.fft2(x*params['deapod_filt']*params['fft2Dshift']))/params['Ns'] #real space (rxy) to Fourier space (qxy)
+    qxyXrxy = old_div((params['fft2Dshift']*af_fft.fft2(x*params['deapod_filt']*params['fft2Dshift'])),params['Ns']) #real space (rxy) to Fourier space (qxy)
     
     qtXqxy = gnufft.polarsample(params['gxy'],qxyXrxy,params['gkblut'],params['scale'],params['k_r']) #Fourier space to polar coordinates interpolation (qxy to qt)
 
@@ -53,7 +57,7 @@ def init_nufft_params(sino,geom):
     Ns_orig = sino['Ns_orig']
     ang = sino['angles']
 
-    q_grid = np.arange(1,sino['Ns']+1) - np.floor((sino['Ns']+1)/2) - 1
+    q_grid = np.arange(1,sino['Ns']+1) - np.floor(old_div((sino['Ns']+1),2)) - 1
     sino['tt'],sino['qq']=np.meshgrid(ang*180/math.pi,q_grid)
 
     # Preload the Bessel kernel (real components!)
@@ -68,15 +72,15 @@ def init_nufft_params(sino,geom):
 
     # polar to cartesian, centered
     [xi,yi]=pol2cart(sino['qq'],sino['tt']*math.pi/180)
-    xi = xi+np.floor((Ns+1)/2)
-    yi = yi+np.floor((Ns+1)/2)
+    xi = xi+np.floor(old_div((Ns+1),2))
+    yi = yi+np.floor(old_div((Ns+1),2))
    
     params={}
     params['k_r'] = k_r
     params['deapod_filt']=afnp.array(deapodization(Ns,KB,Ns_orig),dtype=afnp.float32)
     params['sino_mask'] = afnp.array(padmat(np.ones((Ns_orig,sino['qq'].shape[1])),np.array((Ns,sino['qq'].shape[1])),0),dtype=afnp.float32)
     params['grid'] = [Ns,Ns] #np.array([Ns,Ns],dtype=np.int32)
-    params['scale']= ((KBLUT_LENGTH-1)/k_r)
+    params['scale']= (old_div((KBLUT_LENGTH-1),k_r))
     params['center'] = afnp.array(sino['center'])
     params['Ns'] = Ns
 
@@ -93,8 +97,8 @@ def init_nufft_params(sino,geom):
     kernel=np.ones(Ns)
     if 'filter' in sino:
       temp_r = np.linspace(-1,1,Ns)
-      kernel = (Ns)*np.fabs(temp_r)*np.sinc(temp_r/2)
-      temp_pos = (1-sino['filter'])/2
+      kernel = (Ns)*np.fabs(temp_r)*np.sinc(old_div(temp_r,2))
+      temp_pos = old_div((1-sino['filter']),2)
       temp_mask[0:np.int16(temp_pos*Ns)]=0
       temp_mask[np.int16((1-temp_pos)*Ns):]=0
     params['giDq']=afnp.array(kernel*temp_mask,dtype=afnp.complex64)
@@ -102,7 +106,7 @@ def init_nufft_params(sino,geom):
     temp = afnp.array((-1)**params['det_grid'],dtype=afnp.float32)
     temp2 = np.array((-1)**params['det_grid'],dtype=afnp.float32)
     temp2 = afnp.array(temp2.reshape(1,sino['Ns']))
-    temp3 = afnp.array(afnp.exp(-1j*2*params['center']*(afnp.pi/params['Ns'])*params['det_grid']).astype(afnp.complex64))
+    temp3 = afnp.array(afnp.exp(-1j*2*params['center']*(old_div(afnp.pi,params['Ns']))*params['det_grid']).astype(afnp.complex64))
     temp4 = afnp.array(afnp.exp(1j*2*params['center']*afnp.pi/params['Ns']*params['det_grid']).astype(afnp.complex64))
     params['fft2Dshift'] = afnp.array(temp*temp2,dtype=afnp.complex64)
     params['fftshift1D'] = lambda x : temp*x
@@ -127,22 +131,22 @@ def init_nufft_params(sino,geom):
 
 def deapodization(Ns,KB,Ns_orig):
 
-    xx=np.arange(1,Ns+1)-Ns/2-1
+    xx=np.arange(1,Ns+1)-old_div(Ns,2)-1
     dpz=np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(np.reshape(KB(xx,np.array(0)),(np.size(xx),1))*KB(xx,np.array(0)))))
     # assume oversampling, do not divide outside box in real space:
     msk = padmat(np.ones((Ns_orig,Ns_orig)),np.array((Ns,Ns)),0)
     msk=msk.astype(bool)
     dpz=dpz.real#astype(float)
     dpz[~msk] = 1            #keep the value outside box
-    dpz=1/dpz               #deapodization factor truncated
-    dpz=dpz/dpz[Ns/2+1,Ns/2+1] #scaling
+    dpz=old_div(1,dpz)               #deapodization factor truncated
+    dpz=old_div(dpz,dpz[old_div(Ns,2)+1,old_div(Ns,2)+1]) #scaling
     return dpz
 
     
 def KBlut(k_r,beta,nlut):
     kk=np.linspace(0,k_r,nlut)
     kblut = KB2( kk, 2*k_r, beta)
-    scale = (nlut-1)/k_r
+    scale = old_div((nlut-1),k_r)
     kbcrop = lambda x: (np.abs(x)<=k_r)
     KBI = lambda x: np.int16(np.abs(x)*scale-np.floor(np.abs(x)*scale))
     KB1D = lambda x: (np.reshape(kblut[np.int16(np.floor(np.abs(x)*scale)*kbcrop(x))],x.shape)*KBI(x)+np.reshape(kblut[np.int16(np.ceil(np.abs(x)*scale)*kbcrop(x))],x.shape)*(1-KBI(x)))*kbcrop(x)
@@ -152,7 +156,7 @@ def KBlut(k_r,beta,nlut):
 
 def KB2(x, k_r, beta):
     w = sc_spl.iv(0, beta*np.sqrt(1-(2*x/k_r)**2)) 
-    w=w/np.abs(sc_spl.iv(0, beta))
+    w=old_div(w,np.abs(sc_spl.iv(0, beta)))
     w=(w*(x<=k_r))
     return w
 

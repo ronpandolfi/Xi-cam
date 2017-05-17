@@ -1,8 +1,10 @@
+from __future__ import unicode_literals
+from builtins import object
 from distributed import Scheduler, Worker, Executor
 from pipeline import msg
 
 
-class LocalScheduler():
+class LocalScheduler(object):
     def __init__(self, dloop):
         """
           Create a local scheduler and worker to run commands
