@@ -438,7 +438,7 @@ class dimgViewer(QtGui.QWidget):
             remeshqz = self.dimg.remeshqx
             q = remeshqpar ** 2 + remeshqz ** 2
             center = np.where(q == q.min())
-            return zip(*center)[0]
+            return list(zip(*center))[0]
         else:
             return config.activeExperiment.center
 
@@ -1069,6 +1069,8 @@ class timelineViewer(dimgViewer):
         paths = [os.path.join(d, path) for path in paths]
         self.simg.appendimages(paths)
 
+    def addTimelineData(self,*args,**kwargs):
+        self.sigAddTimelineData.emit(*args,**kwargs)
 
 
     def rescan(self):
@@ -1085,7 +1087,7 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
+        bg_variation = threads.iterator(callback_slot=self.addTimelineData,
                                         finished_slot=self.processingfinished,
                                         parent=self)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)

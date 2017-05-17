@@ -26,7 +26,7 @@ def pyside_none_deco(func):
 
     def inner(*args, **kwargs):
         newargs = map(sentinel_guard, args)
-        newkwargs = {k: sentinel_guard(v) for k, v in kwargs.iteritems()}
+        newkwargs = {k: sentinel_guard(v) for k, v in kwargs.items()}
         return func(*newargs, **newkwargs)
 
     return inner
