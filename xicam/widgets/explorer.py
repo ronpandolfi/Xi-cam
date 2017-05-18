@@ -230,65 +230,43 @@ class RemoteFileView(QtGui.QListWidget):
     def handleDeleteAction(self):
         pass
 
+class DataBrokerView(QtGui.QListView):
+    """
+    Explorer interface for DataBroker connection
+    """
 
-# This has been replaced with SFTP based client see SFTPFileView
-# class NERSCFileView(RemoteFileView):
-# """
-#     File explorer for NERSC systems, must be passed a client and a worker to make REST calls
-#     """
-#
-#     def __init__(self, nersc_client, system, parent=None):
-#         self.system = system
-#         super(NERSCFileView, self).__init__(nersc_client, parent=parent)
-#         self.client.set_scratch_dir(system)
-#         self.path = self.client.scratch_dir
-#         self.getDirContents(self.path, self.system)
-#
-#     def refresh(self, path=None):
-#         if path is None:
-#             path = self.path
-#
-#         super(NERSCFileView, self).getDirContents(path, self.system)
-#         super(NERSCFileView, self).refresh(path=path)
-#
-#    def onDoubleClick(self, item):
-#        file_name = item.text()
-#        if '.' in file_name:
-#            save_path = os.path.join(tempfile.gettempdir(), file_name)
-#            self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
-#        super(NERSCFileView, self).onDoubleClick(item)
-#
-#     def handleOpenAction(self):
-#         paths = self.getSelectedFilePaths()
-#         files = [os.path.split(path)[-1] for path in paths]
-#         for file_name in files:
-#             save_path = os.path.join(tempfile.gettempdir(), file_name)
-#             self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
-#
-#     def handleDownloadAction(self, save_path=None, fslot=None):
-#         fpath = super(NERSCFileView, self).handleDownloadAction()
-#         size = self.client.get_file_size(fpath, self.system)
-#         desc = 'File {0} from {1}'.format(fpath, self.system)
-#         if size < 100*2**20:
-#             method = self.client.download_file_generator
-#             args = [fpath, self.system]
-#             kwargs = {}
-#             if save_path is not None:
-#                 kwargs['save_path'] = save_path
-#         else:
-#             # USE GLOBUS API CALL HERE, Think of how to get access to client
-#             pass
-#
-#         self.sigDownload.emit(desc, method, args, kwargs, fslot)
-#
-#     def handleTransferAction(self):
-#         return None
-#
-#     def handleDeleteAction(self):
-#         runnable = threads.RunnableMethod(self.client.delete_file,
-#                                           method_args=(self.getSelectedFilePath(), self.system),
-#                                           finished_slot=self.refresh)
-#         threads.add_to_queue(runnable)
+    pathChanged = QtCore.Signal(str)
+    sigDelete = QtCore.Signal(list)
+    sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
+
+    def __init__(self, db, parent=None):
+        super(DataBrokerView, self).__init__()
+        self.db = db
+        self.query('')
+
+    def query(self,querystring):
+        results = self.db[querystring]
+        self.fillList(results)
+
+    def fillList(self, results):
+        self.clear()
+        for item in results:
+            self.addItem(item['name'])
+
+    def refresh(self, path=None):
+        if path is None:
+            path = self.path
+        else:
+            self.path = path
+        self.pathChanged.emit(path)
+
+
+
+
 
 
 class GlobusFileView(RemoteFileView):
@@ -749,7 +727,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     """
 
     sigLoginSuccess = QtCore.Signal(bool)
-    sigLoginRequest = QtCore.Signal(QtCore.Signal, bool)
+    sigLoginRequest = QtCore.Signal(QtCore.Signal, bool, bool)
     sigProgJob = QtCore.Signal(str, object, list, dict, object)
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
@@ -781,16 +759,18 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.tabCloseRequested.connect(self.removeTab)
 
         self.newtabmenu = QtGui.QMenu(None)
+        adddatabroker = QtGui.QAction('Data Broker', self.newtabmenu)
         addspot = QtGui.QAction('SPOT', self.newtabmenu)
         addcori = QtGui.QAction('Cori', self.newtabmenu)
         addedison = QtGui.QAction('Edison', self.newtabmenu)
         addbragg = QtGui.QAction('Bragg', self.newtabmenu)
         addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
-        self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
-                                             'Bragg': addbragg, 'SFTP': addsftp})
+        self.standard_actions = OrderedDict({'DataBroker':adddatabroker,'SPOT': addspot, 'Cori': addcori,
+                                             'Edison': addedison, 'Bragg': addbragg, 'SFTP': addsftp})
         self.newtabmenu.addActions(list(self.standard_actions.values()))
         self.newtabmenu.addAction(showjobtab)
+        adddatabroker.triggered.connect(self.addDataBrokerTab)
         addspot.triggered.connect(self.addSPOTTab)
         addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
         addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
@@ -820,6 +800,17 @@ class MultipleFileExplorer(QtGui.QTabWidget):
 
     def onPlusClicked(self):
         self.newtabmenu.popup(QtGui.QCursor.pos())
+
+    def addDataBrokerTab(self):
+        add_DB_tab = lambda client: self.addFileExplorer('DataBroker',
+                                                         FileExplorer(DataBrokerView(client, self)))
+        add_DB_callback = lambda client: self.loginSuccess(client,
+                                                             add_explorer=add_DB_tab)
+        login_callback = lambda client: cmanager.add_sftp_client(client.host,
+                                                                 client,
+                                                                 add_DB_callback)
+        DB_client = cmanager.DB_client
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client), True, False)
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer

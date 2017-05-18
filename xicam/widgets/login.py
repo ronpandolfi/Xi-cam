@@ -66,7 +66,7 @@ class LoginDialog(QtGui.QWidget):
         self.loginClicked.connect(self._login_slot)
 
     @QtCore.Slot(QtCore.Signal, bool)
-    def loginRequest(self, login_clicked_slot, show_host=False):
+    def loginRequest(self, login_clicked_slot, show_host=False, show_creds=True):
         """
         Slot to receive login request signal and setup/show the loginDialog accordingly
 
@@ -78,10 +78,9 @@ class LoginDialog(QtGui.QWidget):
             Boolean to show the host QTextEdit to input a hostname
         """
 
-        if show_host:
-            self.ui.host_box.show()
-        else:
-            self.ui.host_box.hide()
+        self.ui.host_box.setVisible(show_host)
+        self.ui.user_box.setVisible(show_creds)
+        self.ui.pass_box.setVisible(show_creds)
         self.ui.user_box.setFocus()
         self.login_slot = login_clicked_slot
         self.setCurrentWidget(self.ui.login_page)
@@ -92,9 +91,9 @@ class LoginDialog(QtGui.QWidget):
         Handles the login button clicked signal and calls the login_slot if all input fields are satisfied
         """
         host, usr, pwd = self.ui.host_box.text(), self.ui.user_box.text(), self.ui.pass_box.text()
-        if usr == '':
+        if usr == '' and self.ui.user_box.isVisible():
             QtGui.QMessageBox.warning(self, 'Username missing', 'You forgot to mention who you are!')
-        elif pwd == '':
+        elif pwd == '' and self.ui.user_box.isVisible():
             QtGui.QMessageBox.warning(self, 'Password missing',
                                       'You need to provide proof that you really are {}!'.format(usr))
         elif host == '' and not self.ui.host_box.isHidden():
