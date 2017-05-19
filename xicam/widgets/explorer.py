@@ -230,7 +230,7 @@ class RemoteFileView(QtGui.QListWidget):
     def handleDeleteAction(self):
         pass
 
-class DataBrokerView(QtGui.QListView):
+class DataBrokerView(QtGui.QListWidget):
     """
     Explorer interface for DataBroker connection
     """
@@ -244,18 +244,26 @@ class DataBrokerView(QtGui.QListView):
     sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, db, parent=None):
+        self.path = ''
         super(DataBrokerView, self).__init__()
         self.db = db
         self.query('')
 
-    def query(self,querystring):
-        results = self.db[querystring]
+    def query(self, querystring):
+        try:
+            query = int(querystring)
+            results = self.db[query]
+        except ValueError:
+            query = eval("dict({})".format(querystring))
+            results = self.db(**query)
         self.fillList(results)
 
     def fillList(self, results):
         self.clear()
         for item in results:
-            self.addItem(item['name'])
+            item = item.start
+            self.addItem('{} [{}]'.format(item['uid'][:6],
+                                          item.get('scan_id', '')))
 
     def refresh(self, path=None):
         if path is None:

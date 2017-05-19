@@ -2,7 +2,7 @@
 class DataBrokerClient(object): # replace with databroker client
     def __init__(self, host, **kwargs):
         super(DataBrokerClient, self).__init__()
-        self.host=host
+        self.host = host
 
         # set up filestore
 
@@ -34,6 +34,9 @@ class DataBrokerClient(object): # replace with databroker client
 
     def __getattr__(self, item):
         return self.db.__getattr__(item)
+
+    def __call__(self, *args, **kwargs):
+        return self.db(*args, **kwargs)
 
 
 class DBError(Exception):
