@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from copy import copy
-from pipeline.loader import StackImage
-
+from pipeline.loader import StackImage, PStack
+import numpy as np
+try:
+    from functools import lru_cache
+except ImportError:
+    lru_cache = lambda *args: lambda x: x
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -34,11 +38,12 @@ class ProjectionStack(StackImage):
             self.flats, self.darks = None, None
 
 
-
-
 class SinogramStack(StackImage):
     """
     Simply subclass of StackImage for Tomography Sinogram stacks.
+
+    TODO:
+      - make sure flats / darks are handled correctly
     """
 
     def __init__(self, filepath=None, data=None):
@@ -62,7 +67,6 @@ class SinogramStack(StackImage):
         SinogramStack
             Object cast into SinogramStack
         """
-
         new_obj = copy(obj)
         new_obj.__class__ = cls
         new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
@@ -73,3 +77,26 @@ class SinogramStack(StackImage):
         Override method from base class to read along sinogram dimension
         """
         return self.fabimage[:, frame, :].transpose()
+
+
+class PSinogramStack(PStack):
+    @classmethod
+    def cast(cls, obj):
+        # This is dirty!
+        new_obj = copy(obj)
+        new_obj.__class__ = cls
+        new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
+        return new_obj
+
+    @lru_cache(5)
+    def _gi(self, indx):
+        """guts of __getitem__
+
+        Split this like so because pyqtgraph throws lists at us
+        which lru can not hash!
+        """
+        # TODO this is gonig to be __sloooow__
+        out = np.empty((self.shape[0],) + self.shape[2:])
+        for j, im in enumerate(self.primary):
+            out[:, j] = im[indx, :]
+        return out

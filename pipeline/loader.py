@@ -25,6 +25,11 @@ from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
+try:
+    from functools import lru_cache
+except ImportError:
+    lru_cache = lambda *args: lambda x: x
+
 # try:
 #     import libtiff
 # except IOError:
@@ -51,8 +56,9 @@ def loadimage(path):
         host, _, uid = path[3:].partition('/')
         db = dc[host]
         h = db[uid]
+
         return np.transpose(
-            np.array(db.db.get_images(h, 'img')),
+            np.array(db.db.get_images(h, 'image')),
             (2, 0, 1))
 
     try:
@@ -798,9 +804,61 @@ class jpegimageset(object):
             return np.array([self.jpegs[i] for i in item])
 
 
+class PStack(object):
+    ndim = 3
+
+    def __init__(self, primary, dark, flat, hdr):
+        self.primary = primary
+
+        self.darks = dark
+        self.flats = flat
+        self.dtype = primary.pixel_type
+        self.header = hdr
+
+        # these are required because this object gets passed
+        # into pyqtgraph which tries to down sample / scale
+        self.max = primary[0].max()
+        self.min = primary[0].min()
+        self.shape = (len(primary), ) + primary.frame_shape
+        self.size = np.product(self.shape)
+
+        # shim because this is expected a few other places in
+        # the code.
+        self.fabimage = primary
+
+    def transpose(self, ax):
+        return self
+
+    def __getitem__(self, indx):
+        # this is a hack to work around pyqtgraph expecting a
+        # non-proxy object that it can progress
+        if (isinstance(indx, list) and
+                all(isinstance(ind, slice) for ind in indx)):
+            indx = 0
+        # in all other cases pass through
+        return self._gi(indx)
+
+    @lru_cache(5)
+    def _gi(self, indx):
+        """guts of __getitem__
+
+        Split this like so because pyqtgraph throws lists at us
+        which lru can not hash!
+        """
+        return self.primary[indx]
+
+    @property
+    def rawdata(self):
+        # this is required else where in the code base.
+        # the existing implementations seem to just cache
+        # what ever the 'current frame' is !?!
+        return self[0]
+
+
 class StackImage(object):
-    """
-    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """Class for displaying a Image Stack in a pyqtgraph ImageView and be
+    able to scroll through the various Images
+
     """
 
     ndim = 3
@@ -857,14 +915,16 @@ class StackImage(object):
         return vol
 
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
-        if frame is None: frame = self.currentframe
+        if frame is None:
+            frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
         # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
-            if len(self._framecache) > self._cachesize: del self._framecache[list(self._framecache.keys())[0]]
+            if len(self._framecache) > self._cachesize:
+                del self._framecache[list(self._framecache.keys())[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
