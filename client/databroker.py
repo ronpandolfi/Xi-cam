@@ -14,8 +14,10 @@ class DataBrokerClient(object): # replace with databroker client
         from filestore.fs import FileStore
         from metadatastore.mds import MDS
         from databroker import Broker
+        from databroker.core import register_builtin_handlers
 
-        fs_config = {'host': 'localhost', 'port': 27017, 'database': 'fs_dev'}
+        fs_config = {'host': host, 'port': 27017,
+                     'database':'filestore-production-v1'}
 
         try:
             # this only needs to be done once
@@ -27,7 +29,8 @@ class DataBrokerClient(object): # replace with databroker client
 
         fs.register_handler('ALS_HDF', ALSHDF5Handler)
         fs.register_handler('ALS_HDF_SINO', ALSHDF5SinoHandler)
-        mds_conf = dict(database='mds_dev6', host='localhost',
+        register_builtin_handlers(fs)
+        mds_conf = dict(database='metadatastore-production-v1', host=host,
                         port=27017, timezone='US/Eastern')
 
         mds = MDS(mds_conf, 1, auth=False)

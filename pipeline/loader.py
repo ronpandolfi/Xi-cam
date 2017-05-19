@@ -51,10 +51,14 @@ def loadimage(path):
         host, _, uid = path[3:].partition('/')
         db = dc[host]
         h = db[uid]
+        
+        img_names = [k for d in h.descriptors if d['name'] == 'primary'
+                    for k, v in d['data_keys'].items() if v['dtype'] == 'array']
+        try:
+            return np.array(db.db.get_images(h, img_names[0])).squeeze()
+        except FileNotFoundError:
+            return path
 
-        return np.transpose(
-            np.array(db.db.get_images(h, 'image')),
-            (2, 0, 1))
 
     try:
         ext = os.path.splitext(path)[1]

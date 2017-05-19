@@ -1,5 +1,4 @@
 # --coding: utf-8 --
-
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
@@ -1649,8 +1648,8 @@ class previewwidget(pg.GraphicsLayoutWidget):
         # self.textitem.dataBounds = textItemBounds
 
     def loaditem(self, item):
-        if isinstance(item, str) or isinstance(item, str):
-            if os.path.isfile(item) or os.path.isdir(item):
+        if isinstance(item, str):
+            if os.path.isfile(item) or os.path.isdir(item) or item[:3]=='DB:':
                 item = loader.loadimage(item)
             else:
                 self.setText(item)

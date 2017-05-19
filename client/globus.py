@@ -7,7 +7,7 @@ from builtins import filter
 from builtins import str
 from past.utils import old_div
 import base64
-from . import json
+import json
 import os
 from urllib.parse import quote
 import time

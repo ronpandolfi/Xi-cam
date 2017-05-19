@@ -245,11 +245,11 @@ class DataBrokerView(QtGui.QListWidget):
     sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, db, parent=None):
-        self.path = ''
+        self.path = '-100:'
+        self.db = db
         self._headers = {}
         super(DataBrokerView, self).__init__()
-        self.db = db
-        self.query('')
+        self.query(self.path)
         self.doubleClicked.connect(self.onDoubleClick)
 
     def clear(self):
@@ -260,18 +260,46 @@ class DataBrokerView(QtGui.QListWidget):
         header = self._headers[item.data()]
         self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
                                              header.start['uid'])])
+    def currentChanged(self, current, previous):
+        uid = 'DB:{}/{}'.format(self.db.host,
+                                self._headers[current.data()].start['uid'])
+        self.sigItemPreview.emit(uid)
 
     def query(self, querystring):
-        try:
-            query = int(querystring)
-            results = [self.db[query]]
-        except ValueError:
+        results = []
+
+        # if querystring is null, limit to last 100
+        if not querystring: 
+            querystring='-100:'
+
+        # if querystring is int-like
+        if not results:
+            try:
+                query = int(querystring)
+            except ValueError:
+                pass
+            else:
+                results = [self.db[query]]
+	
+        # if querystring is slice-like, slice db
+        if not results:
+            try:
+                query = slice(*map(lambda x: int(x.strip()) if x.strip() else None, querystring.split(':')))
+            except ValueError:
+                pass
+            else:
+                results = self.db[query]
+
+        # if querystring is dict-like
+        if not results:
             try:
                 query = eval("dict({})".format(querystring))
             except Exception:
-                results = []
+                pass
             else:
                 results = self.db(**query)
+
+        self.path=querystring
         self.fillList(results)
 
     def fillList(self, results):
@@ -665,6 +693,7 @@ class FileExplorer(QtGui.QWidget):
 
     def pathlabelChanged(self):
         path = self.path_label.text()
+        print('pathlabelChanged:'+path)
         self.file_view.refresh(path=path)
 
     def onBackClicked(self):
@@ -676,6 +705,7 @@ class FileExplorer(QtGui.QWidget):
         self.file_view.refresh()
 
     def setPathLabel(self, path):
+        print('setPathlable:'+path)
         self.path_label.setText(path)
 
     def getSelectedFilePaths(self):
