@@ -249,8 +249,17 @@ class DataBrokerView(QtGui.QListWidget):
         self.db = db
         self._headers = {}
         super(DataBrokerView, self).__init__()
+        self.setSelectionMode(self.ExtendedSelection)
         self.query(self.path)
         self.doubleClicked.connect(self.onDoubleClick)
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Open', self)]
+        standardActions[0].triggered.connect(self.openSelected)
+        self.menu.addActions(standardActions)
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
 
     def clear(self):
         super().clear()
@@ -264,6 +273,16 @@ class DataBrokerView(QtGui.QListWidget):
         uid = 'DB:{}/{}'.format(self.db.host,
                                 self._headers[current.data()].start['uid'])
         self.sigItemPreview.emit(uid)
+
+    def openSelected(self):
+        items = self.selectedIndexes()
+        paths = ['DB:{}/{}'.format(self.db.host,
+                                   self._headers[item.data()].start['uid'])
+                 for item in items]
+        self.sigOpen.emit(paths)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
 
     def query(self, querystring):
         results = []
@@ -304,12 +323,17 @@ class DataBrokerView(QtGui.QListWidget):
 
     def fillList(self, results):
         self.clear()
-        for item in results:
-            start = item.start
-            key = '{} [{}]'.format(start['uid'][:6],
-                                   start.get('scan_id', ''))
-            self.addItem(key)
-            self._headers[key] = item
+        for h in results:
+            start = h.start
+            key = '{} [{}] sample: {}'.format(start.get('plan_name', '??'),
+                                   start.get('scan_id', ''), start.get('sample_name', '??'))
+
+            item = QtGui.QListWidgetItem(key)
+
+            if h.stop is None or h.stop['exit_status'] in ['abort','fail']:
+                item.setBackground(QtGui.QBrush(QtCore.Qt.red))
+            self.addItem(item)
+            self._headers[key] = h
 
     def refresh(self, path=None):
         if path is None:
