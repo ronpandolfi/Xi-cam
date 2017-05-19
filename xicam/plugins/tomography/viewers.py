@@ -7,12 +7,13 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from collections import deque
+from copy import copy
 import numpy as np
 import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
-from .loader import ProjectionStack, SinogramStack, PSinogramStack
+from .loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage, PStack
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
@@ -140,7 +141,8 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
         if isinstance(self.data, PStack):
-            sgram = PSinogramStack.cast(self.data)
+            sgram = copy(self.data)
+            sgram.primary = sgram.sino
         else:
             sgram = SinogramStack.cast(self.data)
         self.sinogramViewer = StackViewer(sgram,
@@ -224,18 +226,22 @@ class TomoViewer(QtGui.QWidget):
             host, _, uid = paths[3:].partition('/')
             db = dc[host]
             h = db[uid]
-            primary = db.db.get_images(h, 'image',
-                                       stream_name='primary')
+            projection = db.db.get_images(h, 'image',
+                                          stream_name='primary')
             dark = db.db.get_images(h, 'image',
                                     stream_name='darkframe')
             flat = db.db.get_images(h, 'image',
                                     stream_name='background')
+            sinogram = db.db.get_images(h, 'sinogram',
+                                        stream_name='sinogram')
+
             # this is required because code else where expects it
-            for pim in (primary, dark, flat):
+            for pim in (projection, dark, flat, sinogram):
                 pim.frames = [str(j) for j in range(len(pim))]
-            primary.flat_frames = {j: str(j) for j in range(len(flat))}
-            primary.dark_frames = {j: str(j) for j in range(len(dark))}
-            return PStack(primary, dark, flat, h.start)
+            for pim in (projection, sinogram):
+                pim.flat_frames = {j: str(j) for j in range(len(flat))}
+                pim.dark_frames = {j: str(j) for j in range(len(dark))}
+            return PStack(projection, dark, flat, sinogram, h.start)
 
         if raw:
             return ProjectionStack(paths)

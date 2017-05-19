@@ -25,11 +25,6 @@ from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
-try:
-    from functools import lru_cache
-except ImportError:
-    lru_cache = lambda *args: lambda x: x
-
 # try:
 #     import libtiff
 # except IOError:
@@ -807,24 +802,38 @@ class jpegimageset(object):
 class PStack(object):
     ndim = 3
 
-    def __init__(self, primary, dark, flat, hdr):
-        self.primary = primary
-
+    def __init__(self, projections, dark, flat, sino, hdr):
+        self.primary = projections
+        self.projections = projections
+        self.sino = sino
         self.darks = dark
         self.flats = flat
-        self.dtype = primary.pixel_type
+        self.dtype = projections.pixel_type
         self.header = hdr
 
-        # these are required because this object gets passed
-        # into pyqtgraph which tries to down sample / scale
-        self.max = primary[0].max()
-        self.min = primary[0].min()
-        self.shape = (len(primary), ) + primary.frame_shape
-        self.size = np.product(self.shape)
+    # shim because this is expected a few other places in
+    # the code.
+    @property
+    def fabimage(self):
+        return self.primary
 
-        # shim because this is expected a few other places in
-        # the code.
-        self.fabimage = primary
+    # these are required because this object gets passed
+    # into pyqtgraph which tries to down sample / scale
+    @property
+    def max(self):
+        return self[0].max()
+
+    @property
+    def min(self):
+        return self[0].min()
+
+    @property
+    def shape(self):
+        return (len(self.primary), ) + self.primary.frame_shape
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
 
     def transpose(self, ax):
         return self
@@ -838,7 +847,6 @@ class PStack(object):
         # in all other cases pass through
         return self._gi(indx)
 
-    @lru_cache(5)
     def _gi(self, indx):
         """guts of __getitem__
 
