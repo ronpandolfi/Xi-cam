@@ -230,6 +230,7 @@ class RemoteFileView(QtGui.QListWidget):
     def handleDeleteAction(self):
         pass
 
+
 class DataBrokerView(QtGui.QListWidget):
     """
     Explorer interface for DataBroker connection
@@ -252,10 +253,14 @@ class DataBrokerView(QtGui.QListWidget):
     def query(self, querystring):
         try:
             query = int(querystring)
-            results = self.db[query]
+            results = [self.db[query]]
         except ValueError:
-            query = eval("dict({})".format(querystring))
-            results = self.db(**query)
+            try:
+                query = eval("dict({})".format(querystring))
+            except Exception:
+                results = []
+            else:
+                results = self.db(**query)
         self.fillList(results)
 
     def fillList(self, results):
@@ -263,18 +268,15 @@ class DataBrokerView(QtGui.QListWidget):
         for item in results:
             item = item.start
             self.addItem('{} [{}]'.format(item['uid'][:6],
-                                          item.get('scan_id', '')))
+                                              item.get('scan_id', '')))
 
     def refresh(self, path=None):
         if path is None:
             path = self.path
         else:
             self.path = path
+        self.query(path)
         self.pathChanged.emit(path)
-
-
-
-
 
 
 class GlobusFileView(RemoteFileView):
