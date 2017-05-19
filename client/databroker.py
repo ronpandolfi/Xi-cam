@@ -18,6 +18,38 @@ class DataBrokerClient(object): # replace with databroker client
                 return ['{name}_{index}.npy'.format(name=self._name, **kwargs)
                         for kwargs in datum_kwarg_gen]
 
+        class ALSHDF5Handler:
+            specs = {'ALS_HDF'}
+
+            def __init__(self, filename, group):
+                self._filename = filename
+                self._group_nm = group
+                self._file = None
+                self._group = None
+
+            def _open(self):
+                import h5py
+                if self._file is None or not self._file.id:
+                    self._file = h5py.File(self._filename, 'r')
+                    self._group = self._file[self._group_nm]
+
+            def close(self):
+                super().close()
+                self._group = None
+                self._file.close()
+                self._file = None
+
+            def __call__(self, dset_name):
+                print('called')
+                if not self._group:
+                    self._open()
+                return self._group[dset_name][:].squeeze()
+
+            def get_file_list(self, datum_kwarg_gen):
+                return [self._filename]
+
+
+
         super(DataBrokerClient, self).__init__()
         self.host = host
 
@@ -38,7 +70,8 @@ class DataBrokerClient(object): # replace with databroker client
 
         fs = FileStore(fs_config, version=1)
         fs.register_handler('RWFS_NPY', ReaderWithFSHandler)
-        mds_conf = dict(database='mds_dev', host='localhost',
+        fs.register_handler('ALS_HDF', ALSHDF5Handler)
+        mds_conf = dict(database='mds_dev3', host='localhost',
                         port=27017, timezone='US/Eastern')
 
         mds = MDS(mds_conf, 1, auth=False)
