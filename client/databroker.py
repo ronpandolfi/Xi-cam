@@ -1,8 +1,12 @@
 
+
 class DataBrokerClient(object): # replace with databroker client
     def __init__(self, host, **kwargs):
+        import os
+        import numpy as np
+        from suitcase.als import ALSHDF5Handler, ALSHDF5SinoHandler
         super(DataBrokerClient, self).__init__()
-        self.host=host
+        self.host = host
 
         # set up filestore
 
@@ -20,7 +24,10 @@ class DataBrokerClient(object): # replace with databroker client
             pass
 
         fs = FileStore(fs_config, version=1)
-        mds_conf = dict(database='mds_dev', host='localhost',
+
+        fs.register_handler('ALS_HDF', ALSHDF5Handler)
+        fs.register_handler('ALS_HDF_SINO', ALSHDF5SinoHandler)
+        mds_conf = dict(database='mds_dev6', host='localhost',
                         port=27017, timezone='US/Eastern')
 
         mds = MDS(mds_conf, 1, auth=False)
@@ -34,6 +41,9 @@ class DataBrokerClient(object): # replace with databroker client
 
     def __getattr__(self, item):
         return self.db.__getattr__(item)
+
+    def __call__(self, *args, **kwargs):
+        return self.db(*args, **kwargs)
 
 
 class DBError(Exception):

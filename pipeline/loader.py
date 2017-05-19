@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
 from __future__ import unicode_literals
@@ -45,6 +45,17 @@ def loadsingle(path):
 
 def loadimage(path):
     data = None
+    if path.startswith('DB:'):
+        from xicam import clientmanager
+        dc = clientmanager.databroker_clients
+        host, _, uid = path[3:].partition('/')
+        db = dc[host]
+        h = db[uid]
+
+        return np.transpose(
+            np.array(db.db.get_images(h, 'image')),
+            (2, 0, 1))
+
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
@@ -788,9 +799,74 @@ class jpegimageset(object):
             return np.array([self.jpegs[i] for i in item])
 
 
+class PStack(object):
+    ndim = 3
+
+    def __init__(self, projections, dark, flat, sino, hdr):
+        self.primary = projections
+        self.projections = projections
+        self.sino = sino
+        self.darks = dark
+        self.flats = flat
+        self.dtype = projections.pixel_type
+        self.header = hdr
+
+    # shim because this is expected a few other places in
+    # the code.
+    @property
+    def fabimage(self):
+        return self.primary
+
+    # these are required because this object gets passed
+    # into pyqtgraph which tries to down sample / scale
+    @property
+    def max(self):
+        return self[0].max()
+
+    @property
+    def min(self):
+        return self[0].min()
+
+    @property
+    def shape(self):
+        return (len(self.primary), ) + self.primary.frame_shape
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
+
+    def transpose(self, ax):
+        return self
+
+    def __getitem__(self, indx):
+        # this is a hack to work around pyqtgraph expecting a
+        # non-proxy object that it can progress
+        if (isinstance(indx, list) and
+                all(isinstance(ind, slice) for ind in indx)):
+            indx = 0
+        # in all other cases pass through
+        return self._gi(indx)
+
+    def _gi(self, indx):
+        """guts of __getitem__
+
+        Split this like so because pyqtgraph throws lists at us
+        which lru can not hash!
+        """
+        return self.primary[indx]
+
+    @property
+    def rawdata(self):
+        # this is required else where in the code base.
+        # the existing implementations seem to just cache
+        # what ever the 'current frame' is !?!
+        return self[0]
+
+
 class StackImage(object):
-    """
-    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """Class for displaying a Image Stack in a pyqtgraph ImageView and be
+    able to scroll through the various Images
+
     """
 
     ndim = 3
@@ -847,14 +923,16 @@ class StackImage(object):
         return vol
 
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
-        if frame is None: frame = self.currentframe
+        if frame is None:
+            frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
         # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
-            if len(self._framecache) > self._cachesize: del self._framecache[list(self._framecache.keys())[0]]
+            if len(self._framecache) > self._cachesize:
+                del self._framecache[list(self._framecache.keys())[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
@@ -1065,6 +1143,7 @@ class diffimage2(object):
 
     @detector.setter
     def detector(self, value):
+
         if type(value) == str:
             try:
                 self._detector = pyFAI.detectors.ALL_DETECTORS[value]

@@ -230,7 +230,8 @@ class RemoteFileView(QtGui.QListWidget):
     def handleDeleteAction(self):
         pass
 
-class DataBrokerView(QtGui.QListView):
+
+class DataBrokerView(QtGui.QListWidget):
     """
     Explorer interface for DataBroker connection
     """
@@ -244,29 +245,51 @@ class DataBrokerView(QtGui.QListView):
     sigItemPreview = QtCore.Signal(str)
 
     def __init__(self, db, parent=None):
+        self.path = ''
+        self._headers = {}
         super(DataBrokerView, self).__init__()
         self.db = db
         self.query('')
+        self.doubleClicked.connect(self.onDoubleClick)
 
-    def query(self,querystring):
-        results = self.db[querystring]
+    def clear(self):
+        super().clear()
+        self._headers.clear()
+
+    def onDoubleClick(self, item):
+        header = self._headers[item.data()]
+        self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
+                                             header.start['uid'])])
+
+    def query(self, querystring):
+        try:
+            query = int(querystring)
+            results = [self.db[query]]
+        except ValueError:
+            try:
+                query = eval("dict({})".format(querystring))
+            except Exception:
+                results = []
+            else:
+                results = self.db(**query)
         self.fillList(results)
 
     def fillList(self, results):
         self.clear()
         for item in results:
-            self.addItem(item['name'])
+            start = item.start
+            key = '{} [{}]'.format(start['uid'][:6],
+                                   start.get('scan_id', ''))
+            self.addItem(key)
+            self._headers[key] = item
 
     def refresh(self, path=None):
         if path is None:
             path = self.path
         else:
             self.path = path
+        self.query(path)
         self.pathChanged.emit(path)
-
-
-
-
 
 
 class GlobusFileView(RemoteFileView):
@@ -805,12 +828,13 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         add_DB_tab = lambda client: self.addFileExplorer('DataBroker',
                                                          FileExplorer(DataBrokerView(client, self)))
         add_DB_callback = lambda client: self.loginSuccess(client,
-                                                             add_explorer=add_DB_tab)
-        login_callback = lambda client: cmanager.add_sftp_client(client.host,
-                                                                 client,
-                                                                 add_DB_callback)
+                                                           add_explorer=add_DB_tab)
+        login_callback = lambda client: cmanager.add_DB_client(client.host,
+                                                               client,
+                                                               add_DB_callback)
         DB_client = cmanager.DB_client
-        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client), True, False)
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client),
+                                  True, False)
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer

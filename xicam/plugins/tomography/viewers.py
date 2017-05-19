@@ -7,13 +7,14 @@ from builtins import map
 from builtins import range
 from past.utils import old_div
 from collections import deque
+from copy import copy
 import numpy as np
 import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from .loader import ProjectionStack, SinogramStack
-from pipeline.loader import StackImage
+from pipeline.loader import StackImage, PStack
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, reconpkg, config
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
@@ -139,8 +140,13 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
-
-        self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
+        if isinstance(self.data, PStack):
+            sgram = copy(self.data)
+            sgram.primary = sgram.sino
+        else:
+            sgram = SinogramStack.cast(self.data)
+        self.sinogramViewer = StackViewer(sgram,
+                                          parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
@@ -214,12 +220,33 @@ class TomoViewer(QtGui.QWidget):
             Class with raw data from file
 
         """
+        if isinstance(paths, str) and paths.startswith('DB:'):
+            from xicam import clientmanager
+            dc = clientmanager.databroker_clients
+            host, _, uid = paths[3:].partition('/')
+            db = dc[host]
+            h = db[uid]
+            projection = db.db.get_images(h, 'image',
+                                          stream_name='primary')
+            dark = db.db.get_images(h, 'image',
+                                    stream_name='darkframe')
+            flat = db.db.get_images(h, 'image',
+                                    stream_name='background')
+            sinogram = db.db.get_images(h, 'sinogram',
+                                        stream_name='sinogram')
+
+            # this is required because code else where expects it
+            for pim in (projection, dark, flat, sinogram):
+                pim.frames = [str(j) for j in range(len(pim))]
+            for pim in (projection, sinogram):
+                pim.flat_frames = {j: str(j) for j in range(len(flat))}
+                pim.dark_frames = {j: str(j) for j in range(len(dark))}
+            return PStack(projection, dark, flat, sinogram, h.start)
 
         if raw:
             return ProjectionStack(paths)
         else:
             return StackImage(paths)
-
 
     def getsino(self, slc=None): #might need to redo the flipping and turning to get this in the right orientation
         """
