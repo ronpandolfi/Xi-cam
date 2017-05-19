@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
 from __future__ import unicode_literals
@@ -45,6 +45,14 @@ def loadsingle(path):
 
 def loadimage(path):
     data = None
+    if path.startswith('DB:'):
+        from xicam import clientmanager
+        dc = clientmanager.databroker_clients
+        host, _, uid = path[3:].partition('/')
+        db = dc[host]
+        h = db[uid]
+        return nx.array(db.get_images(h, 'img'))
+
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:

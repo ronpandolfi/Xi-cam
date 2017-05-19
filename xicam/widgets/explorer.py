@@ -246,9 +246,20 @@ class DataBrokerView(QtGui.QListWidget):
 
     def __init__(self, db, parent=None):
         self.path = ''
+        self._headers = {}
         super(DataBrokerView, self).__init__()
         self.db = db
         self.query('')
+        self.doubleClicked.connect(self.onDoubleClick)
+
+    def clear(self):
+        super().clear()
+        self._headers.clear()
+
+    def onDoubleClick(self, item):
+        header = self._headers[item.data()]
+        self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
+                                             header.start['uid'])])
 
     def query(self, querystring):
         try:
@@ -266,9 +277,11 @@ class DataBrokerView(QtGui.QListWidget):
     def fillList(self, results):
         self.clear()
         for item in results:
-            item = item.start
-            self.addItem('{} [{}]'.format(item['uid'][:6],
-                                              item.get('scan_id', '')))
+            start = item.start
+            key = '{} [{}]'.format(start['uid'][:6],
+                                   start.get('scan_id', ''))
+            self.addItem(key)
+            self._headers[key] = item
 
     def refresh(self, path=None):
         if path is None:
@@ -815,12 +828,13 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         add_DB_tab = lambda client: self.addFileExplorer('DataBroker',
                                                          FileExplorer(DataBrokerView(client, self)))
         add_DB_callback = lambda client: self.loginSuccess(client,
-                                                             add_explorer=add_DB_tab)
-        login_callback = lambda client: cmanager.add_sftp_client(client.host,
-                                                                 client,
-                                                                 add_DB_callback)
+                                                           add_explorer=add_DB_tab)
+        login_callback = lambda client: cmanager.add_DB_client(client.host,
+                                                               client,
+                                                               add_DB_callback)
         DB_client = cmanager.DB_client
-        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client), True, False)
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client),
+                                  True, False)
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
