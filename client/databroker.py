@@ -1,6 +1,23 @@
 
+
 class DataBrokerClient(object): # replace with databroker client
     def __init__(self, host, **kwargs):
+        import os
+        import numpy as np
+
+        class ReaderWithFSHandler:
+            specs = {'RWFS_NPY'}
+
+            def __init__(self, filename, root=''):
+                self._name = os.path.join(root, filename)
+
+            def __call__(self, index):
+                return np.load('{}_{}.npy'.format(self._name, index))
+
+            def get_file_list(self, datum_kwarg_gen):
+                return ['{name}_{index}.npy'.format(name=self._name, **kwargs)
+                        for kwargs in datum_kwarg_gen]
+
         super(DataBrokerClient, self).__init__()
         self.host = host
 
@@ -20,6 +37,7 @@ class DataBrokerClient(object): # replace with databroker client
             pass
 
         fs = FileStore(fs_config, version=1)
+        fs.register_handler('RWFS_NPY', ReaderWithFSHandler)
         mds_conf = dict(database='mds_dev', host='localhost',
                         port=27017, timezone='US/Eastern')
 

@@ -51,7 +51,9 @@ def loadimage(path):
         host, _, uid = path[3:].partition('/')
         db = dc[host]
         h = db[uid]
-        return nx.array(db.get_images(h, 'img'))
+        return np.transpose(
+            np.array(db.db.get_images(h, 'img')),
+            (2, 0, 1))
 
     try:
         ext = os.path.splitext(path)[1]
@@ -1073,6 +1075,7 @@ class diffimage2(object):
 
     @detector.setter
     def detector(self, value):
+
         if type(value) == str:
             try:
                 self._detector = pyFAI.detectors.ALL_DETECTORS[value]
