@@ -359,10 +359,13 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionRun_SlicePreview)
         self.addAction(self.actionRun_MultiSlicePreview)
         self.addAction(self.actionRun_3DPreview)
-        self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
         self.addAction(self.actionROI)
         self.addWidget(self.openButton)
+
+        # mbir functionality should be replaced by remote workflow (dask)
+        # TODO: remove all references to MBIR toolbutton + functionality
+        # self.addAction(self.actionMBIR)
 
         # self.addAction(toolbuttonMaskingAction)
 
