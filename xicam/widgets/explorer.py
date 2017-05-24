@@ -94,7 +94,6 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
-        self.pathChanged.emit(path)
         config.settings['defaultlocalpath'] = path
 
     def menuRequested(self, position):
@@ -103,7 +102,8 @@ class LocalFileView(QtGui.QTreeView):
     def onDoubleClick(self, index):
         path = self.file_model.filePath(index)
         if os.path.isdir(path):
-            self.refresh(path=path)
+            self.pathChanged.emit(path)
+            #self.refresh(path=path)
         else:
             self.sigOpen.emit([path])
 
@@ -722,6 +722,7 @@ class FileExplorer(QtGui.QWidget):
         path = self.file_view.path
         path = os.path.dirname(str(path))
         self.file_view.refresh(path=path)
+        self.file_view.pathChanged.emit(path)
 
     def onRefreshClicked(self):
         self.file_view.refresh()
