@@ -341,7 +341,6 @@ class DataBrokerView(QtGui.QListWidget):
         else:
             self.path = path
         self.query(path)
-        self.pathChanged.emit(path)
 
 
 class GlobusFileView(RemoteFileView):
@@ -717,7 +716,6 @@ class FileExplorer(QtGui.QWidget):
 
     def pathlabelChanged(self):
         path = self.path_label.text()
-        print('pathlabelChanged:'+path)
         self.file_view.refresh(path=path)
 
     def onBackClicked(self):
@@ -729,7 +727,6 @@ class FileExplorer(QtGui.QWidget):
         self.file_view.refresh()
 
     def setPathLabel(self, path):
-        print('setPathlable:'+path)
         self.path_label.setText(path)
 
     def getSelectedFilePaths(self):
