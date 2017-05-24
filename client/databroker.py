@@ -4,7 +4,8 @@ class DataBrokerClient(object): # replace with databroker client
     def __init__(self, host, **kwargs):
         import os
         import numpy as np
-        from suitcase.als import ALSHDF5Handler, ALSHDF5SinoHandler
+        from suitcase.als832 import ALSHDF5Handler, ALSHDF5SinoHandler
+        from suitcase.als733 import ALSEDFHandler
         super(DataBrokerClient, self).__init__()
         self.host = host
 
@@ -17,7 +18,7 @@ class DataBrokerClient(object): # replace with databroker client
         from databroker.core import register_builtin_handlers
 
         fs_config = {'host': host, 'port': 27017,
-                     'database':'filestore-production-v1'}
+                     'database':'fs_dev'}
 
         try:
             # this only needs to be done once
@@ -29,8 +30,9 @@ class DataBrokerClient(object): # replace with databroker client
 
         fs.register_handler('ALS_HDF', ALSHDF5Handler)
         fs.register_handler('ALS_HDF_SINO', ALSHDF5SinoHandler)
+        fs.register_handler('ALS_EDF', ALSEDFHandler)
         register_builtin_handlers(fs)
-        mds_conf = dict(database='metadatastore-production-v1', host=host,
+        mds_conf = dict(database='mds_dev', host=host,
                         port=27017, timezone='US/Eastern')
 
         mds = MDS(mds_conf, 1, auth=False)
