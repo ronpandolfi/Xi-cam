@@ -10,6 +10,7 @@ from pipeline import pathtools
 import os
 from pipeline import msg
 from pipeline import detectors
+from modpkgs.pyFAImod import AzimuthalIntegrator
 
 
 class settingstracker(object):
@@ -49,32 +50,13 @@ class settingstracker(object):
 
 settings=settingstracker()
 
-class PyFAIGeometry(pyFAI.geometry.Geometry):
-    def set_fit2d(self,
-                  wavelength,
-                  distance,
-                  center_x,
-                  center_y,
-                  tilt,
-                  rotation):
-        self.set_wavelength(wavelength * 1e-10)
-        self.setFit2D(distance, center_x, center_y, tilt, rotation)
-
-    def get_fit2d(self):
-        param_dict = self.getFit2D()
-        return [self.get_wavelength() * 1e10,
-                param_dict['directDist'],
-                param_dict['centerX'],
-                param_dict['centerY'],
-                param_dict['tilt'],
-                param_dict['tiltPlanRotation']]
-
 
 
 class experiment(Parameter):
     def __init__(self, path=None):
 
         self.imageshape = (1475, 1709)
+        self._AI = AzimuthalIntegrator()
 
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
@@ -201,24 +183,13 @@ class experiment(Parameter):
         self.setvalue('Center X', cen[0])
         self.setvalue('Center Y', cen[1])
 
-    def getAI(self):
+    @property
+    def AI(self):
         """
         :rtype : pyFAI.AzimuthalIntegrator
         """
-        # print(self.getDetector().MAX_SHAPE)
-        AI = pyFAI.AzimuthalIntegrator(
-            wavelength=self.getvalue('Wavelength'))
-        #                                dist=self.getvalue('Detector Distance'),
-        #                                poni1=self.getvalue('Pixel Size X') * (self.getvalue('Center Y')),
-        #                                poni2=self.getvalue('Pixel Size Y') * (self.getvalue('Center X')),
-        #                                rot1=0,
-        #                                rot2=0,
-        #                                rot3=0,
-        #                                pixel1=self.getvalue('Pixel Size Y'),
-        #                                pixel2=self.getvalue('Pixel Size X'),
-        #                                detector=self.getDetector(),
         if self.fit2dstyle.isChecked():
-            AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
+            self._AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
                         self.getvalue('Center X'),
                         self.getvalue('Center Y'),
                         self.getvalue('Detector Tilt'),
@@ -226,16 +197,16 @@ class experiment(Parameter):
                         self.getvalue('Pixel Size Y') * 1.e6,
                         self.getvalue('Pixel Size X') * 1.e6)
         elif self.wxdiffstyle.isChecked():
-            AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
+            self._AI.setFit2D(self.getvalue('Detector Distance') * 1000.,
                         self.getvalue('Center X'),
                         self.getvalue('Center Y'),
                         self.getvalue('Detector Tilt') / 2. / np.pi * 360.,
                         360. - (2 * np.pi - self.getvalue('Detector Rotation')) / 2. / np.pi * 360.,
                         self.getvalue('Pixel Size Y') * 1.e6,
                         self.getvalue('Pixel Size X') * 1.e6)
-        AI.set_wavelength(self.getvalue('Wavelength'))
+        self._AI.set_wavelength(self.getvalue('Wavelength'))
         # print AI
-        return AI
+        return self._AI
 
         # def getGeometry(self):
         #     """
@@ -311,6 +282,18 @@ class experiment(Parameter):
             rot.setOpts(**{'suffix': ' rad'})
             tilt.setOpts(**{'suffix': ' rad'})
 
+    def qAt(self,x,y):
+        return self.AI.qFunction(y,x)/10
+
+    def qParallelAt(self,x,y):
+        q = self.AI.qFunction(self.center[1],x)
+        if x<self.center[0]: q=-q
+        return q/10
+
+    def qZAt(self,x,y):
+        q = self.AI.qFunction(y,self.center[0])
+        if y<self.center[1]: q=-q
+        return q/10
 
 activeExperiment = None
 

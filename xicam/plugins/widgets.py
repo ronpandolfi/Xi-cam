@@ -281,16 +281,20 @@ class dimgViewer(QtGui.QWidget):
         """
         pos = evt  ## using signal proxy turns original arguments into a tuple
         if self.viewbox.sceneBoundingRect().contains(pos):
-            mousePoint = self.viewbox.mapSceneToView(pos)
-            self.vLine.setPos(mousePoint.x())
-            self.hLine.setPos(mousePoint.y())
-            mousePoint = self.imageitem.mapFromScene(pos)
-            if (0 < mousePoint.x() < self.imageitem.image.shape[0]) & (
-                            0 < mousePoint.y() < self.imageitem.image.shape[1]):  # within bounds
+            qPoint = self.viewbox.mapSceneToView(pos)
+            pixelPoint = self.imageitem.mapFromScene(pos)
+
+            qpar = qPoint.x()
+            qz = qPoint.y()
+
+            pixx = pixelPoint.x()
+            pixy = pixelPoint.y()
+            self.vLine.setPos(qpar)
+            self.hLine.setPos(qz)
+            if (0 < pixx < self.imageitem.image.shape[0]) & (
+                            0 < pixy < self.imageitem.image.shape[1]):  # within bounds
                 # angstrom=QChar(0x00B5)
                 if config.activeExperiment.iscalibrated:
-                    x = mousePoint.x()
-                    y = mousePoint.y()
 
                     data = self.dimg.transformdata
 
@@ -304,36 +308,35 @@ class dimgViewer(QtGui.QWidget):
                     # print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
-                                             u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                              u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,"
+                                             u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                              u"  d=%0.3f nm,"
                                              u"  \u03B8=%.2f</div>" % (
-                                                 x,
-                                                 y,
-                                                 data[int(x),
-                                                      int(y)],
-                                                 self.getq(x, y),
-                                                 self.getq(x, y, 'z'),
-                                                 self.getq(x, y, 'parallel'),
-                                                 2 * np.pi / self.getq(x, y) / 10,
-                                                 360. / (2 * np.pi) * np.arctan2(self.getq(x, y, 'z'),
-                                                                                 self.getq(x, y, 'parallel'))))
+                                                 pixx,
+                                                 pixy,
+                                                 data[int(pixx),
+                                                      int(pixy)],
+                                                 qpar**2+qz**2,
+                                                 qpar,
+                                                 qz,
+                                                 2 * np.pi / (qpar**2+qz**2) / 10,
+                                                 360. / (2 * np.pi) * np.arctan2(qz,qpar)))
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
                     if self.plotwidget is not None: #for timeline
-                        self.plotwidget.movPosLine(self.getq(x, y),
-                                                   self.getq(x, y, mode='parallel'),
-                                                   self.getq(x, y, mode='z'))
+                        self.plotwidget.movPosLine(qpar**2+qz**2,
+                                                   qpar,
+                                                   qz)
 
                 else:
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
                                              u"  Calibration Required...</div>" % (
-                                                 mousePoint.x(),
-                                                 mousePoint.y(),
-                                                 self.dimg.data[int(mousePoint.x()),
-                                                                int(mousePoint.y())],
+                                                 pixx,
+                                                 pixy,
+                                                 self.dimg.data[int(pixx),
+                                                                int(pixy)],
                                              ))
 
                     # self.coordslabel.setVisible(True)
@@ -343,50 +346,50 @@ class dimgViewer(QtGui.QWidget):
                 if hasattr(self.plotwidget, 'qintegration'):
                     self.plotwidget.qintegration.posLine.hide()
 
-    def getq(self, x, y, mode=None):  # This is a mess...rewrite it sometime
-        iscake = self.toolbar.actionCake.isChecked()
-        isremesh = self.toolbar.actionRemeshing.isChecked()
-
-        if iscake:
-            cakeq = self.dimg.cakeqx
-            cakechi = self.dimg.cakeqy
-            if mode is not None:
-                if mode == 'parallel':
-                    return cakeq[int(y)] * np.sin(np.radians(cakechi[int(x)])) / 10.
-                elif mode == 'z':
-                    return cakeq[int(y)] * np.cos(np.radians(cakechi[int(x)])) / 10.
-            else:
-                return cakeq[int(y)] / 10.
-
-        elif isremesh:
-            remeshqpar = self.dimg.remeshqx
-            remeshqz = self.dimg.remeshqy
-            if mode is not None:
-                if mode == 'parallel':
-                    return remeshqpar[int(x), int(y)] / 10.
-                elif mode == 'z':
-                    return -remeshqz[int(x), int(y)] / 10.
-            else:
-                return np.sqrt(remeshqz[int(x), int(y)] ** 2 + remeshqpar[int(x), int(y)] ** 2) / 10.
-
-        else:
-            center = config.activeExperiment.center
-            if mode is not None:
-                if mode == 'z':
-                    x = center[0]
-                if mode == 'parallel':
-                    y = center[1]
-
-            r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-            theta = np.arctan2(r * config.activeExperiment.getvalue('Pixel Size X'),
-                               config.activeExperiment.getvalue('Detector Distance'))
-            wavelength = config.activeExperiment.getvalue('Wavelength')
-            q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
-            if mode == 'parallel' and x < center[0]:
-                return -q
-            if mode == 'z' and y < center[1]:
-                return -q
-            return q
+    # def getq(self, x, y, mode=None):  # This is a mess...rewrite it sometime
+    #     iscake = self.toolbar.actionCake.isChecked()
+    #     isremesh = self.toolbar.actionRemeshing.isChecked()
+    #
+    #     if iscake:
+    #         cakeq = self.dimg.cakeqx
+    #         cakechi = self.dimg.cakeqy
+    #         if mode is not None:
+    #             if mode == 'parallel':
+    #                 return cakeq[int(y)] * np.sin(np.radians(cakechi[int(x)])) / 10.
+    #             elif mode == 'z':
+    #                 return cakeq[int(y)] * np.cos(np.radians(cakechi[int(x)])) / 10.
+    #         else:
+    #             return cakeq[int(y)] / 10.
+    #
+    #     elif isremesh:
+    #         remeshqpar = self.dimg.remeshqx
+    #         remeshqz = self.dimg.remeshqy
+    #         if mode is not None:
+    #             if mode == 'parallel':
+    #                 return remeshqpar[int(x), int(y)] / 10.
+    #             elif mode == 'z':
+    #                 return -remeshqz[int(x), int(y)] / 10.
+    #         else:
+    #             return np.sqrt(remeshqz[int(x), int(y)] ** 2 + remeshqpar[int(x), int(y)] ** 2) / 10.
+    #
+    #     else:
+    #         center = config.activeExperiment.center
+    #         if mode is not None:
+    #             if mode == 'z':
+    #                 x = center[0]
+    #             if mode == 'parallel':
+    #                 y = center[1]
+    #
+    #         r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+    #         theta = np.arctan2(r * config.activeExperiment.getvalue('Pixel Size X'),
+    #                            config.activeExperiment.getvalue('Detector Distance'))
+    #         wavelength = config.activeExperiment.getvalue('Wavelength')
+    #         q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+    #         if mode == 'parallel' and x < center[0]:
+    #             return -q
+    #         if mode == 'z' and y < center[1]:
+    #             return -q
+    #         return q
 
     def leaveEvent(self, evt):
         """
@@ -421,13 +424,18 @@ class dimgViewer(QtGui.QWidget):
         if returnimg:
             return self.dimg
         else:
-            self.scale = (self.getq(*self.dimg.displaydata.shape, mode='parallel') -
-                     self.getq(0,0, mode='parallel')) / self.dimg.displaydata.shape[0]
-            self.pos = (self.getq(0,0,'parallel'),self.getq(0,0,'z'))
-            msg.logMessage(('scale:',self.scale),msg.DEBUG)
-            msg.logMessage(('pos:', self.pos), msg.DEBUG)
-            self.imgview.setImage(self.dimg,pos=self.pos,
-                                  scale=(self.scale,self.scale))
+            #target: -.120,-.319
+            scale = (config.activeExperiment.qParallelAt(self.dimg.displaydata.shape[0],0) -
+                     config.activeExperiment.qParallelAt(0,0)) / self.dimg.displaydata.shape[0]
+            pos = [config.activeExperiment.qParallelAt(-.5,-.5),
+                   config.activeExperiment.qZAt(-.5,-.5)]
+            print('scale:',scale)
+            print('pos:',pos)
+            self.imgview.setImage(self.dimg,
+                                  pos=pos,
+                                  scale=(scale,scale))
+
+
 
         self.replot()
 
@@ -475,7 +483,7 @@ class dimgViewer(QtGui.QWidget):
 
     def arccut(self):
 
-        arc = ROI.ArcROI(self.getcenter(), 500)
+        arc = ROI.ArcROI((0,0), .11*3/2)
         arc.sigRegionChangeFinished.connect(self.replot)
         self.viewbox.addItem(arc)
         self.replot()
@@ -490,9 +498,8 @@ class dimgViewer(QtGui.QWidget):
         # self.parentwindow.difftoolbar.actionVertical_Cut.setChecked(False)
         # self.parentwindow.difftoolbar.actionHorizontal_Cut.setChecked(False)
         # if self.parentwindow.difftoolbar.actionLine_Cut.isChecked():
-        region = ROI.LineROI(
-            self.getcenter(),
-            [self.getcenter()[0], -self.dimg.transformdata.shape[0]], 5, removable=True)
+        region = ROI.LineROI((0,0),
+            [0, -.11], .01, removable=True)
         region.sigRemoveRequested.connect(self.removeROI)
         self.viewbox.addItem(region)
         self.replot()
@@ -513,9 +520,8 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in verticalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.transformdata.shape[0]],
-                                      values=[self.getcenter()[0] - 10,
-                                              10 + self.getcenter()[0]])
+                                      #bounds=[0, self.dimg.transformdata.shape[0]],
+                                      values=[- .05,.05])
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
@@ -538,9 +544,8 @@ class dimgViewer(QtGui.QWidget):
         # except AttributeError:
         #         print('Attribute error in horizontalcut')
         region = ROI.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal, brush=pg.mkBrush('#00FFFF32'),
-                                      bounds=[0, self.dimg.transformdata.shape[1]],
-                                      values=[self.getcenter()[1]-10,
-                                              10 + self.getcenter()[1]])
+                                      #bounds=[0, self.dimg.transformdata.shape[1]],
+                                      values=[-.05,.05])
         for line in region.lines:
             line.setPen(pg.mkPen('#00FFFF'))
         region.sigRegionChangeFinished.connect(self.replot)
@@ -570,7 +575,7 @@ class dimgViewer(QtGui.QWidget):
 
 
     def simulatecalibrant(self, calibrantkey):
-        ai = config.activeExperiment.getAI()
+        ai = config.activeExperiment.AI
         c = calibrant.ALL_CALIBRANTS[calibrantkey]
         c.set_wavelength(ai.wavelength)
         fakecalibrationimg = c.fake_calibration_image(ai, shape=self.dimg.displaydata.shape[::-1], Imax=255, U=0, V=0, W=0.00001).T
@@ -1271,7 +1276,7 @@ class integrationsubwidget(pg.PlotWidget):
 
 
         # threads.method(callback_slot=self.plotresult)(self.test)('test')
-        args = data, mask, dimg.experiment.getAI().getPyFAI(), None, None, self.requestkey, qvrt, qpar
+        args = data, mask, dimg.experiment.AI.getPyFAI(), None, None, self.requestkey, qvrt, qpar
 
 
         # replot roi integration

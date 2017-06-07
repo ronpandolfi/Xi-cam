@@ -8,6 +8,41 @@ logger = logging.getLogger("pyFAI.azimuthalIntegrator")
 # monkey patch to correct auto-inversion of masks
 class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
 
+    def set_fit2d(self,
+                  wavelength,
+                  distance,
+                  center_x,
+                  center_y,
+                  tilt,
+                  rotation):
+        self.set_wavelength(wavelength * 1e-10)
+        self.setFit2D(distance, center_x, center_y, tilt, rotation)
+
+    def get_fit2d(self):
+        param_dict = self.getFit2D()
+        return [self.get_wavelength() * 1e10,
+                param_dict['directDist'],
+                param_dict['centerX'],
+                param_dict['centerY'],
+                param_dict['tilt'],
+                param_dict['tiltPlanRotation']]
+
+    @staticmethod
+    def arrayify(d):
+        return numpy.array([d]) if not isinstance(d,numpy.ndarray) else d
+    
+    @staticmethod
+    def dearrayify(q):
+        return q[0] if q.size==1 else q
+            
+        
+    def qFunction(self, d1, d2, param=None, path='cython'):     # Allow scalar input (missing feature)
+        return self.dearrayify(super(AzimuthalIntegrator, self).qFunction(self.arrayify(d1), 
+                                                                          self.arrayify(d2), 
+                                                                          param, 
+                                                                          path))
+
+
 
     def create_mask(self, data, mask=None,
                     dummy=None, delta_dummy=None, mode="normal"):
