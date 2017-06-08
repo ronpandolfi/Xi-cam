@@ -113,13 +113,9 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-
-        self.flatViewer = ArrayViewer(self.data.flats, flipAxes=True, parent=self)
-        if self.data.fabimage.flat_frames: self.flatViewer.connectImageToName(self.data.fabimage.flat_frames)
+        self.flatViewer = ArrayViewer(self.data.flats, parent=self)
+        self.darkViewer = ArrayViewer(self.data.darks, parent=self)
         self.viewstack.addWidget(self.flatViewer)
-
-        self.darkViewer = ArrayViewer(data=self.data.darks, flipAxes=True, parent=self)
-        if self.data.fabimage.dark_frames: self.darkViewer.connectImageToName(self.data.fabimage.dark_frames)
         self.viewstack.addWidget(self.darkViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
@@ -170,47 +166,38 @@ class TomoViewer(QtGui.QWidget):
         flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select flats for this dataset: ")
         path = flat_dialog[0]
 
-        if path.endswith('.tif') or path.endswith('.tiff'):
-            import tifffile
-            flats = tifffile.imread(path)
-            self.data.flats = flats
-            self.flatViewer.setData(self.data.flats, flipAxes=True)
-            self.flatViewer.label.hide()
-        elif path:
+        if path:
             import fabio
+            msg.showMessage('Loading flats...')
             try:
                 flats = fabio.open(path)
-                self.data.flats = np.stack([np.squeeze(np.copy(flats._dgroup[frame])) for frame in flats.frames])
-                self.flatViewer.setData(self.data.flats, flipAxes=True)
-                self.flatViewer.label.hide()
+                self.data.flats = OrderedDict()
+                for frame in sorted(flats.frames):
+                    self.data.flats[frame] = np.squeeze(np.copy(flats._dgroup[frame])).transpose()
+                self.flatViewer.setData(self.data.flats)
                 del flats
             except IOError:
                 QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
-
-
+        msg.clearMessage()
 
     def openDarks(self):
 
         dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select darks for this dataset: ")
         path = dark_dialog[0]
 
-        if path.endswith('.tif') or path.endswith('.tiff'):
-            import tifffile
-            darks = tifffile.imread(path)
-            self.data.darks = darks
-            self.darkViewer.setData(self.data.darks, flipAxes=True)
-            self.darkViewer.label.hide()
-        elif path:
+        if path:
             import fabio
+            msg.showMessage('Loading darks...', timeout=10)
             try:
                 darks = fabio.open(path)
-                self.data.darks = np.stack([np.squeeze(np.copy(darks._dgroup[frame])) for frame in darks.frames])
-                self.darkViewer.setData(self.data.darks, flipAxes=True)
-                self.darkViewer.label.hide()
+                self.data.darks = OrderedDict()
+                for frame in sorted(darks.frames):
+                    self.data.darks[frame] = np.squeeze(np.copy(darks._dgroup[frame])).transpose()
+                self.darkViewer.setData(self.data.darks)
                 del darks
             except IOError:
                 QtGui.QMessageBox.warning(self, 'Warning', 'Darks not loaded.')
-
+        msg.clearMessage()
 
     @staticmethod
     def loaddata(paths, raw=True):

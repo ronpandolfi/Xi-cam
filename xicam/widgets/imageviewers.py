@@ -83,12 +83,16 @@ class StackViewer(ImageView):
         self.sigTimeChanged.connect(self.indexAndNameChanged)
         self.label.setText(str(self.image_names[self.currentIndex]))
 
+
     def indexAndNameChanged(self, ind, time):
         self.setCurrentIndex(ind)
         self.view_spinBox.setValue(ind)
         self.label.setText(str(self.image_names[ind]))
 
 class ArrayViewer(StackViewer):
+    """
+    Subclass of StackViewer to allow for more general data inputs
+    """
 
     def __init__(self, data=None, view_label=None, flipAxes=False, *args, **kwargs):
 
@@ -99,9 +103,6 @@ class ArrayViewer(StackViewer):
             view_label.setText('No: ')
         self.view_spinBox = QtGui.QSpinBox(self)
         self.view_spinBox.setKeyboardTracking(False)
-
-        if data is not None:
-            self.setData(data, flipAxes=flipAxes)
 
         # push button for setting the max/min values of a histogram widget
         self.setButton = histDialogButton('Set', parent=self)
@@ -125,18 +126,21 @@ class ArrayViewer(StackViewer):
 
         self.label = QtGui.QLabel(parent=self)
         self.ui.gridLayout.addWidget(self.label, 2, 0, 1, 1)
+        if data:
+            self.setData(data)
 
-    def flipAxes(self, arr):
-        toReturn = np.empty((arr.shape[0], arr.shape[2], arr.shape[1]))
-        for i in range(arr.shape[0]):
-            toReturn[i] = arr[i].transpose()
-        return toReturn
 
-    def setData(self, data, flipAxes=False):
-        if flipAxes: data = self.flipAxes(data)
+    def setData(self, data):
+        if type(data) is dict or type(data).__bases__[0] is dict:
+            self.keys = data.keys()
+            data = np.array(data.values())
+        else:
+            self.keys = None
         self.data = data
         self.setImage(self.data)
         self.autoLevels()
         self.view_spinBox.setRange(0, self.data.shape[0] - 1)
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.shape[1], self.data.shape[2]))
+        if self.keys:
+            self.connectImageToName(self.keys)
 

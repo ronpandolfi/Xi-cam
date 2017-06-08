@@ -78,10 +78,6 @@ class ALS832H5image(fabioimage):
         self._flats = None
         self._darks = None
 
-        self._proj_frames = None
-        self._flat_frames = None
-        self._dark_frames = None
-
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
@@ -141,46 +137,23 @@ class ALS832H5image(fabioimage):
             raise H5ReadError('Unable to find dataset group')
 
     @property
-    def proj_frames(self):
-        if self._proj_frames is None:
-            self._proj_frames = {}
-            for i in range(len(self.frames)):
-                self._proj_frames[i] = self.frames[i]
-        return self._proj_frames
-
-    @property
-    def flat_frames(self):
-        if self._flat_frames is None:
-            self._flat_frames = {}
-            counter = 0
-            for key in self._dgroup.keys():
-                if 'bak' in key:
-                    self._flat_frames[counter] = key
-                    counter +=1
-        return self._flat_frames
-
-    @property
-    def dark_frames(self):
-        if self._dark_frames is None:
-            self._dark_frames = {}
-            counter = 0
-            for key in self._dgroup.keys():
-                if 'drk' in key:
-                    self._dark_frames[counter] = key
-                    counter +=1
-        return self._dark_frames
-
-
-    @property
     def flats(self):
         if self._flats is None:
-            self._flats = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'bak' in key])
+            self._flats = OrderedDict()
+            for key in sorted(self._dgroup.keys()):
+                if 'bak' in key:
+                    self._flats[key] = self._dgroup[key][0].transpose()
         return self._flats
 
     @property
     def darks(self):
         if self._darks is None:
-            self._darks = np.stack([self._dgroup[key][0] for key in self._dgroup.keys() if 'drk' in key])
+            if self._darks is None:
+                self._darks = OrderedDict()
+                for key in sorted(self._dgroup.keys()):
+                    if 'drk' in key:
+                        self._darks[key] = self._dgroup[key][0].transpose()
+            return self._darks
         return self._darks
 
     def flatindices(self):
@@ -379,18 +352,6 @@ class nexusimage(fabioimage):
     #                 return self._check_if_dataset(h5object[key], lower_key)
     #         except AttributeError:
     #             pass
-
-    @property
-    def proj_frames(self):
-        return self._proj_frames
-
-    @property
-    def flat_frames(self):
-        return self._flat_frames
-
-    @property
-    def dark_frames(self):
-        return self._dark_frames
 
     @property
     def flats(self):
@@ -735,7 +696,6 @@ class GeneralAPSH5image(fabioimage):
             self.readheader(f)
 
             self.frames = range(self._dgroup.shape[0])
-            # self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
 
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
