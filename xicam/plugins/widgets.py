@@ -962,7 +962,7 @@ class dimgViewer(QtGui.QWidget):
     def drawsgoverlay(self, peakoverlay):
         self.clearsgoverlays()
 
-        peakoverlay.setCenter(*self.getcenter())
+        peakoverlay.setCenter(*config.activeExperiment.center)
 
         #peakoverlay.setRect(QtCore.QRect(self.getcenter()[0],self.getcenter()[1],1,1))
         self.viewbox.addItem(peakoverlay)

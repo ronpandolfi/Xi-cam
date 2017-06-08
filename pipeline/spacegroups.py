@@ -153,7 +153,7 @@ class peakoverlay(pg.ScatterPlotItem):
         self.centerx = 0
         self.centery = 0
         if len(peaks):
-            x, y = zip(*[[p.x, p.y] for p in peaks])
+            x, y = zip(*[[p.qpar, p.qz] for p in peaks])
             symbols = ['s' if p.mode == 'Transmission' else 'o' for p in peaks]
             colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in peaks]
             super(peakoverlay, self).__init__(x, y, size=10, brush=None, pen=colors, symbol=symbols)
@@ -171,11 +171,11 @@ class peakoverlay(pg.ScatterPlotItem):
         self.displayRelative()
 
     def displayRelative(self):
-        px, py = zip(*[[p.x, p.y] for p in self.peaks])
+        qpar, qz = zip(*[[p.qpar, p.qz] for p in self.peaks])
 
         symbols = ['s' if p.mode == 'Transmission' else 'o' for p in self.peaks]
         colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in self.peaks]
-        self.setData(x=np.array(px)+self.centerx,y=np.array(py)+self.centery,size=10,brush=None,pen=colors,symbol=symbols)
+        self.setData(x=qpar,y=qz,size=10,brush=None,pen=colors,symbol=symbols)
 
     def enable(self, parent):
         self.scene().sigMouseMoved.connect(self.onMove)
@@ -319,7 +319,7 @@ class spacegroupwidget(ParameterTree):
             center = config.activeExperiment.center
             sdd = config.activeExperiment.getvalue('Detector Distance')
             pixelsize = config.activeExperiment.getvalue('Pixel Size X')
-            peak.position(center,sdd,pixelsize)
+            # peak.position(center,sdd,pixelsize)
         #     pixels = spacegrp_peaks.angles_to_pixels(np.array(peaks[key]), center, sdd)
         #     peaks[key] = pixels
 

@@ -199,7 +199,7 @@ class peak(object):
         self.qz = None
 
     def pos(self):
-        return self.x, self.y
+        return self.qpar, self.qz
 
     # qz, alphaf and y-poition are going to be different
     def copy(self):
@@ -210,12 +210,12 @@ class peak(object):
         val.x = self.x
         return val
 
-    def position(self, center, sdd, pixels):
-        tan_2t = np.tan(self.twotheta)
-        tan_al = np.tan(self.alphaf)
-        x= tan_2t * sdd
-        self.x = sdd * tan_2t / pixels# + config.activeExperiment.center[0]
-        self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels# + config.activeExperiment.center[1]
+    # def position(self, center, sdd, pixels):
+    #     tan_2t = np.tan(self.twotheta)
+    #     tan_al = np.tan(self.alphaf)
+    #     x= tan_2t * sdd
+    #     self.x = sdd * tan_2t / pixels# + config.activeExperiment.center[0]
+    #     self.y = np.sqrt(sdd ** 2 + x ** 2) * tan_al / pixels# + config.activeExperiment.center[1]
 
     def isAt(self, pos):
         if np.isnan(self.twotheta): return False
@@ -226,8 +226,8 @@ class peak(object):
         s += u"Lattice vector (h,k,l): {}\n".format(self.hkl)
         if self.twotheta is not None: s += u"2\u03B8: {}\n".format(self.twotheta)
         if self.alphaf is not None: s += u"\u03B1f: {}\n".format(self.alphaf)
-        if self.qpar is not None: s += u"q\u2225: {}\n".format(self.qpar/1e10)
-        if self.qz is not None: s += u"q\u27c2: {}\n".format(self.qz/1e10)
+        if self.qpar is not None: s += u"q\u2225: {}\n".format(self.qpar)
+        if self.qz is not None: s += u"q\u27c2: {}\n".format(self.qz)
         return s
 
 def qvalues(twotheta, alphaf, alphai, wavelen):
@@ -321,8 +321,8 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
             transmission.hkl = hkl
             transmission.twotheta = theta
             transmission.alphaf = alphaf[0]
-            transmission.qpar = qpar
-            transmission.qz = G[2]
+            transmission.qpar = qpar/1e10
+            transmission.qz = G[2]/1e10
             peaks.append(transmission)
 
             # calulate reflection peaks
@@ -330,8 +330,8 @@ def find_peaks(a, b, c, alpha=None, beta=None, gamma=None, normal=None,
             reflection.hkl = hkl
             reflection.twotheta = theta
             reflection.alphaf = alphaf[1]
-            reflection.qpar = qpar
-            reflection.qz = G[2]
+            reflection.qpar = qpar/1e10
+            reflection.qz = G[2]/1e10
             peaks.append(reflection)
 
     return peaks
