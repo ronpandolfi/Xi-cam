@@ -126,16 +126,25 @@ class ArrayViewer(StackViewer):
 
         self.label = QtGui.QLabel(parent=self)
         self.ui.gridLayout.addWidget(self.label, 2, 0, 1, 1)
-        if data:
-            self.setData(data)
+        if data is not None:
+            self.setData(data, flipAxes=flipAxes)
 
+    def flipAxes(self, arr):
 
-    def setData(self, data):
+        toReturn = np.empty((arr.shape[0], arr.shape[2], arr.shape[1]))
+        for i in range(arr.shape[0]):
+            toReturn[i] = arr[i].transpose()
+        return toReturn
+
+    def setData(self, data, flipAxes=False):
+
         if type(data) is dict or type(data).__bases__[0] is dict:
             self.keys = data.keys()
             data = np.array(data.values())
         else:
             self.keys = None
+
+        if flipAxes: data = self.flipAxes(data)
         self.data = data
         self.setImage(self.data)
         self.autoLevels()
@@ -143,4 +152,3 @@ class ArrayViewer(StackViewer):
         self.getImageItem().setRect(QtCore.QRect(0, 0, self.data.shape[1], self.data.shape[2]))
         if self.keys:
             self.connectImageToName(self.keys)
-

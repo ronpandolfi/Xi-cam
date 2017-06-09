@@ -32,6 +32,9 @@ class ProjectionStack(StackImage):
         except AttributeError:
             self.flats, self.darks = None, None
 
+    def _getframe(self, frame=None):
+        return super(ProjectionStack, self)._getframe(frame=frame).transpose()
+
 
 
 
@@ -71,4 +74,8 @@ class SinogramStack(StackImage):
         """
         Override method from base class to read along sinogram dimension
         """
-        return self.fabimage[:, frame, :].transpose()
+        return self.fabimage[:, frame, :]
+
+
+    def _getframe(self, frame=None):
+        return super(SinogramStack, self)._getframe(frame=frame).transpose()

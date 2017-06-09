@@ -68,7 +68,7 @@ class ALS832H5image(fabioimage):
     """
     extensions = ['h5']
 
-    def __init__(self, data=None, header=None):
+    def __init__(self, data=None, header=None, transpose=False):
         super(ALS832H5image, self).__init__(data=data, header=header)
         self.frames = None
         self.currentframe = 0
@@ -142,7 +142,7 @@ class ALS832H5image(fabioimage):
             self._flats = OrderedDict()
             for key in sorted(self._dgroup.keys()):
                 if 'bak' in key:
-                    self._flats[key] = self._dgroup[key][0].transpose()
+                    self._flats[key] = self._dgroup[key][0]
         return self._flats
 
     @property
@@ -152,7 +152,7 @@ class ALS832H5image(fabioimage):
                 self._darks = OrderedDict()
                 for key in sorted(self._dgroup.keys()):
                     if 'drk' in key:
-                        self._darks[key] = self._dgroup[key][0].transpose()
+                        self._darks[key] = self._dgroup[key][0]
             return self._darks
         return self._darks
 
@@ -463,7 +463,7 @@ class tomotifimage(fabioimage):
         return self
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[frame]
+        self.data = self._dgroup[frame].transpose()
         return self.data
 
     def __getitem__(self, item):
@@ -830,7 +830,7 @@ class GeneralAPSH5image(fabioimage):
         return self.nframes
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[self.frames[frame]]
+        self.data = self._dgroup[self.frames[frame]].transpose()
         return self.data
 
     def next(self):

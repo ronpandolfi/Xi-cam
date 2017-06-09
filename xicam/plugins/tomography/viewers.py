@@ -7,7 +7,7 @@ from collections import OrderedDict
 from loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
-from xicam.plugins.tomography import functionwidgets, reconpkg, config
+from xicam.plugins.tomography import functionwidgets, functionmanager, reconpkg, config
 from xicam.widgets.customwidgets import DataTreeWidget, ImageView, histDialogButton
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer, ArrayViewer
@@ -113,8 +113,8 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.flatViewer = ArrayViewer(self.data.flats, parent=self)
-        self.darkViewer = ArrayViewer(self.data.darks, parent=self)
+        self.flatViewer = ArrayViewer(self.data.flats,flipAxes=True,  parent=self)
+        self.darkViewer = ArrayViewer(self.data.darks, flipAxes=True, parent=self)
         self.viewstack.addWidget(self.flatViewer)
         self.viewstack.addWidget(self.darkViewer)
 
@@ -241,7 +241,7 @@ class TomoViewer(QtGui.QWidget):
 
         """
         if slc is None:
-            return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
+            return np.ascontiguousarray(self.sinogramViewer.currentdata[:, np.newaxis, :])
         else:
             return np.ascontiguousarray(self.data.fabimage[slc])
 
@@ -280,10 +280,11 @@ class TomoViewer(QtGui.QWidget):
             Array of flat field data
 
         """
+        flats = np.array(self.data.flats.values())
         if slc is None:
-            return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
+            return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.flats[slc])
+            return np.ascontiguousarray(flats[slc])
 
     def getdarks(self, slc=None):
         """
@@ -300,10 +301,11 @@ class TomoViewer(QtGui.QWidget):
             Array of dark field data
 
         """
+        darks = np.array(self.data.darks.values())
         if slc is None:
-            return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
+            return np.ascontiguousarray(darks[:, self.sinogramViewer.currentIndex, :])
         else:
-            return np.ascontiguousarray(self.data.darks[slc])
+            return np.ascontiguousarray(darks[slc])
 
     def getheader(self):
         """Return the data's header (metadata)"""
@@ -778,7 +780,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
-        self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+        self.auto_cor_widget = functionmanager.CORSelectionWidget(parent=self)
         self.cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         self.auto_cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         self.cor_widget.setMinimumHeight(50)

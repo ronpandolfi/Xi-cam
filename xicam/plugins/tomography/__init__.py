@@ -31,7 +31,7 @@ from xicam import threads
 from viewers import TomoViewer
 import ui
 import config
-from functionwidgets import FunctionManager
+from functionmanager import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline

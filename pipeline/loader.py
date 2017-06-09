@@ -822,12 +822,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
-    def transpose(self, ax): # transposing is handled internally
+    def transpose(self, ax):
+        # TODO: find a good way to do this
+        # TODO: annoying because of the way hdfs are stored
         return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
-            img = self._getimage(j)[::level, ::level].transpose()
+            img = self._getimage(j)[::level, ::level]
             if i == 0:  # allocate array:
                 shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
@@ -847,7 +849,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return self.fabimage.getframe(frame).transpose()
+        return self.fabimage.getframe(frame)
 
     def invalidatecache(self):
         self.cache = dict()
