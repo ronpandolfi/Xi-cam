@@ -158,6 +158,14 @@ def loadparas(path):
             fimg = fabio.open(path)
             return fimg.header
 
+        elif path.startswith('DB:'):
+            from xicam import clientmanager
+            dc = clientmanager.databroker_clients
+            host, _, uid = path[3:].partition('/')
+            db = dc[host]
+            h = db[uid]
+            return h
+
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)

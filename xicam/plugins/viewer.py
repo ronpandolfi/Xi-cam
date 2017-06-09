@@ -21,6 +21,7 @@ from PySide import QtGui, QtCore
 import os
 from pyqtgraph.parametertree import ParameterTree
 from . import widgets
+from xicam.widgets import metadatawidget
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
@@ -79,7 +80,7 @@ class ViewerPlugin(base.plugin):
         sgicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
 
-        self.propertytable = widgets.frameproptable()
+        self.propertytable = metadatawidget.MetaDataWidget()
         self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
         self.calibrationPanel = calibrationpanel()
