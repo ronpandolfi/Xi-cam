@@ -6,7 +6,7 @@ import tifffile
 import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
-from fabio import fabioutils, edfimage
+from fabio import fabioutils, edfimage, tifimage
 import fabio
 import pyFAI
 from pyFAI import detectors
@@ -438,8 +438,62 @@ class nexusimage(fabioimage):
         self._h5.close()
 
 
+@register_fabioclass
+class tomotifimage(fabioimage):
 
+    """
+    Fabio class for tiff images (specifically for tomography)
+    """
 
+    extensions = ['.tif', '.tiff']
+
+    def __init__(self, data=None, header=None):
+        super(tomotifimage, self).__init__(data=data, header=header)
+        self.frames = None
+        self.currentframe = 0
+        self._dgroup = None
+        self.header = None
+        self.flats = None
+        self.darks = None
+
+    def read(self, f, frame=None):
+        self._dgroup = tifffile.imread(f)
+        self.data = self._dgroup[0]
+        self.frames = range(self._dgroup.shape[0])
+        return self
+
+    def getframe(self, frame=0):
+        self.data = self._dgroup[frame]
+        return self.data
+
+    def __getitem__(self, item):
+        return self._dgroup[item]
+
+    def __len__(self):
+        return self._dgroup.shape[0]
+
+    def flatindices(self):
+        nproj = len(self)
+        return [0, nproj - 1]
+
+    def next(self):
+        if self.currentframe < self.__len__() - 1:
+            self.currentframe += 1
+        else:
+            raise StopIteration
+        return self.getframe(self.currentframe)
+
+    def previous(self):
+        if self.currentframe > 0:
+            self.currentframe -= 1
+            return self.getframe(self.currentframe)
+        else:
+            raise StopIteration
+
+    def close(self):
+        pass
+
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'tomotif'))
 
 @register_fabioclass
 class npyimage(fabioimage):
@@ -655,7 +709,6 @@ class ALS733H5image(fabioimage):
         except AttributeError:
             return False
 
-# currently not necessary, but could be used in future for non-standardized hdf formats
 @register_h5class
 class GeneralAPSH5image(fabioimage):
     """
@@ -668,8 +721,8 @@ class GeneralAPSH5image(fabioimage):
         self.header = None
         self._h5 = None
         self._dgroup = None
-        self._flats = None
-        self._darks = None
+        self.flats = None
+        self.darks = None
 
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
@@ -727,14 +780,6 @@ class GeneralAPSH5image(fabioimage):
             except AttributeError:
                 pass
 
-    @property
-    def flats(self):
-        return self._flats
-
-    @property
-    def darks(self):
-        return self._darks
-
     def flatindices(self):
         nproj = len(self)
         return [0, nproj - 1]
@@ -746,12 +791,6 @@ class GeneralAPSH5image(fabioimage):
     @nframes.setter
     def nframes(self, n):
         pass
-
-    # def getsinogram(self, idx=None):
-    #     if idx is None: idx = self.data.shape[0]//2
-    #     self.sinogram = np.vstack([frame for frame in map(lambda x: self._dgroup[self.frames[x]][0, idx],
-    #                                                               range(self.nframes))])
-    #     return self.sinogram
 
     def __getitem__(self, item):
         s = []

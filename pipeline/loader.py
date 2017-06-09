@@ -795,10 +795,6 @@ class StackImage(object):
         if filepath is not None:
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
-            if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
-            # elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-            #     self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
