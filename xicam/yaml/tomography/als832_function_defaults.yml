@@ -150,6 +150,10 @@ SIRT TomoCam:
   center:
     name: center
     type: float
+MBIR TomoCam:
+  center:
+    name: center
+    type: float
 
 
 

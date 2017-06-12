@@ -124,10 +124,82 @@ class ImageView(pg.ImageView):
         except AttributeError:
             pass
 
+class histDialogButton(QtGui.QPushButton):
+
+    def __init__(self, label, *args, **kwargs):
+        super(histDialogButton, self).__init__(label, *args, **kwargs)
+
+        self.value = None
+
+    def showDialog(self, min_default, max_default):
+
+        self.dialog = QtGui.QDialog(parent=self.window())
+        layout = QtGui.QVBoxLayout()
+        text = QtGui.QLabel("Set maximum and minimum values for histogram.")
+        layout.addWidget(text)
+        layout.addSpacing(5)
+
+        label1 = QtGui.QLabel("Max: ")
+        label2 = QtGui.QLabel("Min: ")
+
+        self.field1 = QtGui.QDoubleSpinBox()
+        self.field2 = QtGui.QDoubleSpinBox()
+        self.field1.setRange(-1000000, 1000000)
+        self.field2.setRange(-1000000, 1000000)
+        self.field1.setValue(max_default)
+        self.field2.setValue(min_default)
+
+        h1 = QtGui.QHBoxLayout()
+        h1.addWidget(label1)
+        h1.addWidget(self.field1)
+        h2 = QtGui.QHBoxLayout()
+        h2.addWidget(label2)
+        h2.addWidget(self.field2)
+
+        valueButton = QtGui.QPushButton("Ok")
+        valueButton.setDefault(True)
+        cancelButton = QtGui.QPushButton("Cancel")
+        valueButton.clicked.connect(self.return_vals)
+        cancelButton.clicked.connect(self.cancel)
+
+        h3 = QtGui.QHBoxLayout()
+        h3.addWidget(cancelButton)
+        h3.addWidget(valueButton)
+
+        layout.addLayout(h1)
+        layout.addLayout(h2)
+        layout.addLayout(h3)
+        self.dialog.setLayout(layout)
+        self.dialog.setWindowTitle("Set histogram bounds")
+        self.dialog.exec_()
+
+    def return_vals(self):
+        self.value = [self.field2.value(), self.field1.value()]
+        self.dialog.accept()
+
+
+    def cancel(self):
+        self.value = None
+        self.dialog.reject()
+
+    def connectToHistWidget(self, hist):
+
+        self.hist = hist
+        self.clicked.connect(self.setHistValues)
+
+    def setHistValues(self):
+
+        defaults = self.hist.getLevels()
+        self.showDialog(defaults[0], defaults[1])
+
+        if self.value:
+            self.hist.setLevels(self.value[0], self.value[1])
+
+
 class dataDialog(QtGui.QDialog):
 
     """
-    Subclass of QDialog to allow for inputs
+    Subclass of QDialog to allow for inputs for filenames
     """
 
     def __init__(self, parent=None, msg=None):

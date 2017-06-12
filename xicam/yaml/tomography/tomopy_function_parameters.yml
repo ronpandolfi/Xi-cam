@@ -1,4 +1,4 @@
-Median Filter:
+TomoPy Median Filter:
 - name: size
   type: int
 - name: axis
@@ -260,8 +260,8 @@ Projection Angles:
 - name: ang1
   type: float
   suffix: "\u00b0"
-- name: ang2
-  type: float
+- name: range
+  type: int
   suffix: "\u00b0"
 ART:
   - name: center
