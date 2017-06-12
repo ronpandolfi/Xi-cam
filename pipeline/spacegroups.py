@@ -193,8 +193,8 @@ class peakoverlay(pg.ScatterPlotItem):
     #         self.display_text.hide()
 
     def peaksAtRelative(self, pos):
-        x = pos.x()-self.centerx
-        y = pos.y()-self.centery
+        pospar = pos.x()
+        posz = pos.y()
         pw = self.pixelWidth()
         ph = self.pixelHeight()
         peaks = []
@@ -205,7 +205,7 @@ class peakoverlay(pg.ScatterPlotItem):
             if self.opts['pxMode']:
                 s2x *= pw
                 s2y *= ph
-            if x > sx - s2x and x < sx + s2x and y > sy - s2y and y < sy + s2y:
+            if pospar > sx - s2x and pospar < sx + s2x and posz > sy - s2y and posz < sy + s2y:
                 peaks.append(p)
                 # print "HIT:", x, y, sx, sy, s2x, s2y
                 # else:
