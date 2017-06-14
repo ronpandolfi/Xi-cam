@@ -11,7 +11,7 @@ import fabio
 import pyFAI
 from pyFAI import detectors
 import logging
-import msg
+from . import msg
 import pyfits
 from nexusformat import nexus as nx
 from collections import OrderedDict
@@ -246,12 +246,12 @@ class nexusimage(fabioimage):
     extensions = ['.hdf']
 
     def read(self, f, frame=None):
-        nxroot = nx.nxload(f)
-        # print nxroot.tree
-        if hasattr(nxroot, 'entry'):
-            if hasattr(nxroot.entry, 'data'):
-                if hasattr(nxroot.entry.data,'data'):
-                    self._dgroup = nxroot.entry.data.data
+        # nxroot = nx.nxload(f)
+        # # print nxroot.tree
+        # if hasattr(nxroot, 'entry'):
+        #     if hasattr(nxroot.entry, 'data'):
+        #         if hasattr(nxroot.entry.data,'data'):
+        #             self._dgroup = nxroot.entry.data.data
 
         self.filename = f
         if frame is None:
@@ -259,12 +259,12 @@ class nexusimage(fabioimage):
         if self._h5 is None:
             # Check header for unique attributes
             self._h5 = h5py.File(self.filename, 'r+')
-            self.rawdata = self._h5['entry']['data']['data']
+            self._dgroup = self._h5['entry']['data']['data']
             self.readheader(f)
 
-            self.frames = range(self.rawdata.shape[0])
+            self.frames = range(self._dgroup.shape[0])
 
-        dfrm = self.rawdata[self.frames[frame]]
+        dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm
 
@@ -274,10 +274,10 @@ class nexusimage(fabioimage):
 
     @staticmethod
     def validate(f, frame=None):
-        nxroot = nx.nxload(f)
-        assert hasattr(nxroot, 'entry')
-        assert hasattr(nxroot.entry, 'data')
-        assert hasattr(nxroot.entry.data, 'data')
+        h5 = h5py.File(f, 'r')
+        assert list(h5.keys())[0] == 'entry'
+        assert 'data' in list(h5['entry'].keys())
+        assert list(h5['entry']['data'])[0] == 'data'
 
     def __init__(self, data=None , header=None):
         super(nexusimage, self).__init__(data=data, header=header)
@@ -289,16 +289,12 @@ class nexusimage(fabioimage):
         self._flats = None
         self._darks = None
 
-        self._proj_frames = None
-        self._flat_frames = None
-        self._dark_frames = None
-
     # Context manager for "with" statement compatibility
     def __enter__(self, *arg, **kwarg):
         return self
 
     def change_dataset_attribute(self, key, value):
-        self.rawdata.attrs.modify(key, value)
+        self._dgroup.attrs.modify(key, value)
 
     def __exit__(self, *arg, **kwarg):
         self.close()
@@ -307,51 +303,7 @@ class nexusimage(fabioimage):
         #not really useful at this point
         if self._h5 is not None:
             self.header=dict(self._h5.attrs)
-            self.header.update(**self.rawdata.attrs)
-
-    # def read(self, f, frame=None):
-    #     self.filename = f
-    #     if frame is None:
-    #         frame = 0
-    #     if self._h5 is None:
-    #
-    #         # Check header for unique attributes
-    #         self._h5 = h5py.File(self.filename, 'r')
-    #         self._dgroup = self._finddatagroup(self._h5)
-    #         self.readheader(f)
-    #
-    #         self.frames = range(self._dgroup.shape[0])
-    #         # self.frames = [key for key in self._dgroup.keys() if 'bak' not in key and 'drk' not in key]
-    #
-    #     dfrm = self._dgroup[self.frames[frame]]
-    #     self.currentframe = frame
-    #     self.data = dfrm
-    #     return self
-    #
-    # def _finddatagroup(self, h5object):
-    #     keys = h5object.keys()
-    #     for key in keys:
-    #         try:
-    #             data, data_key = self._check_if_dataset(h5object, key)
-    #             break
-    #         except TypeError:
-    #             pass
-    #
-    #     try:
-    #         return data[data_key]
-    #     except NameError:
-    #         raise H5ReadError('Unable to find dataset group')
-    #
-    # def _check_if_dataset(self, h5object, key):
-    #     #recursively find dataset in h5 tree structure
-    #     if isinstance(h5object[key], h5py.Dataset):
-    #         return h5object, key
-    #     else:
-    #         try:
-    #             for lower_key in h5object[key].keys():
-    #                 return self._check_if_dataset(h5object[key], lower_key)
-    #         except AttributeError:
-    #             pass
+            self.header.update(**self._dgroup.attrs)
 
     @property
     def flats(self):
@@ -405,7 +357,7 @@ class nexusimage(fabioimage):
             s.append((start, stop, step))
 
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
-            _arr = self.rawdata[self.frames[i]][slice(*s[1]), slice(*s[2])]
+            _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
                 arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
@@ -417,7 +369,7 @@ class nexusimage(fabioimage):
         return self.nframes
 
     def getframe(self, frame=0):
-        self.data = self.rawdata[self.frames[frame]]
+        self.data = self._dgroup[self.frames[frame]]
         return self.data
 
     def next(self):
@@ -830,7 +782,7 @@ class GeneralAPSH5image(fabioimage):
         return self.nframes
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[self.frames[frame]].transpose()
+        self.data = self._dgroup[self.frames[frame]]
         return self.data
 
     def next(self):

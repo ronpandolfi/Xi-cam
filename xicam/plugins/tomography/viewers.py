@@ -4,7 +4,7 @@ import tomopy
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 from collections import OrderedDict
-from loader import ProjectionStack, SinogramStack
+from .loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage
 from pipeline import msg
 from xicam.plugins.tomography import functionwidgets, functionmanager, reconpkg, config
@@ -1209,7 +1209,7 @@ class PreviewViewer(QtGui.QSplitter):
             self.functionform.setCurrentWidget(self.datatrees[index])
             self.view_number.setValue(self.slice_numbers[index])
         except IndexError as e:
-            print 'index {} does not exist'.format(index)
+            print('index {} does not exist'.format(index))
 
     # Could be leaking memory if I don't explicitly delete the datatrees that are being removed
     # from the previewdata deque but are still in the functionform widget? Hopefully python gc is taking good care of me

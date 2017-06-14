@@ -776,7 +776,7 @@ class FunctionManager(fw.FeatureManager):
             start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
             end = end if end < sino[1] else sino[1]
 
-            slc = (slice(*proj), slice(*width) ,slice(start, end, sino[2]))
+            slc = (slice(*proj),slice(start, end, sino[2]), slice(*width))
 
 
             # load data dictionary

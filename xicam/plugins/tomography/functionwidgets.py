@@ -27,6 +27,7 @@ import config
 import reconpkg
 import ui
 from xicam.widgets import featurewidgets as fw
+from functionmanager import TestRangeDialog
 
 
 class FunctionWidget(fw.FeatureWidget):

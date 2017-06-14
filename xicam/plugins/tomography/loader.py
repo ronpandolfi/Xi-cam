@@ -76,6 +76,5 @@ class SinogramStack(StackImage):
         """
         return self.fabimage[:, frame, :]
 
-
     def _getframe(self, frame=None):
         return super(SinogramStack, self)._getframe(frame=frame).transpose()
