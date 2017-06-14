@@ -102,7 +102,7 @@ class VolumeViewer(QtGui.QWidget):
                 try:
                     region.item.region.setRegion([0, vol.shape[i]])
                 except RuntimeError as e:
-                    print(e.message)
+                    print(e)
 
     def moveGradientTick(self, idx, pos):
         tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]

@@ -104,6 +104,7 @@ class FunctionWidget(fw.FeatureWidget):
         super(FunctionWidget, self).__init__(self.name, checkable=checkable, closeable=closeable, parent=parent)
 
         self.__name__ = name
+        self.func_name = name
         self.subfunc_name = subname
         self.input_functions = {}
         self.param_dict = {}

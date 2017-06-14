@@ -91,7 +91,7 @@ class TomoViewer(QtGui.QWidget):
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection View')  # TODO: Add icons!
+        self.viewmode.addTab('Projection View')
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Flats')
         self.viewmode.addTab('Darks')
@@ -117,13 +117,14 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
-        if isinstance(self.data, PStack):
-            sgram = copy(self.data)
-            sgram.primary = sgram.sino
-        else:
-            sgram = SinogramStack.cast(self.data)
-        self.sinogramViewer = StackViewer(sgram,
-                                          parent=self)
+        # if isinstance(self.data, PStack):
+        #     sgram = copy(self.data)
+        #     sgram.primary = sgram.sino
+        # else:
+        #     sgram = SinogramStack.cast(self.data)
+        # self.sinogramViewer = StackViewer(sgram, parent=self)
+
+        self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
@@ -315,7 +316,7 @@ class TomoViewer(QtGui.QWidget):
             Array of flat field data
 
         """
-        flats = np.array(self.data.flats.values())
+        flats = np.array(list(self.data.flats.values()))
         if slc is None:
             return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
         else:
@@ -336,7 +337,7 @@ class TomoViewer(QtGui.QWidget):
             Array of dark field data
 
         """
-        darks = np.array(self.data.darks.values())
+        darks = np.array(list(self.data.darks.values()))
         if slc is None:
             return np.ascontiguousarray(darks[:, self.sinogramViewer.currentIndex, :])
         else:

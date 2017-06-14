@@ -14,6 +14,7 @@ packages = {}
 for name in PACKAGE_LIST:
     try:
         package = importlib.import_module(name)
+        packages[name] = package
         msg.logMessage('{} module loaded'.format(name), level=20)
     except ImportError as ex:
         msg.logMessage('{} module not available'.format(name), level=30)  # 30 -> warning'

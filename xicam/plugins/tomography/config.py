@@ -124,7 +124,7 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         p.setDefault(v)
                         p.setValue(v)
                     except KeyError as e:
-                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), str(e)),
                                        level=40)
         elif f.__name__ == 'Reader': #dataset specific read values
             set_reader_defaults(f, shape, cpu_count())
@@ -182,7 +182,7 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
                         p.setDefault(v)
                         p.setValue(v)
                     except KeyError as e:
-                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), str(e)),
                                        level=40)
         elif f.__name__ == 'Reader':  # dataset specific read values
             set_reader_defaults(f, shape, cpu_count())

@@ -22,9 +22,9 @@ from pyqtgraph import parametertree as pt
 from collections import deque
 import xicam.widgets.featurewidgets as fw
 from xicam.widgets.customwidgets import DataTreeWidget
-import reconpkg
 import os
-import viewers
+from . import reconpkg
+from . import viewers
 
 
 class UIform(object):

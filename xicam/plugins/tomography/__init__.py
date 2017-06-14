@@ -37,7 +37,7 @@ from xicam import threads
 from .viewers import TomoViewer
 from . import ui
 from . import config
-from .functionwidgets import FunctionManager
+from .functionmanager import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
@@ -235,7 +235,7 @@ class TomographyPlugin(base.plugin):
             self.manager.updateParameters()
             self.toolbar.actionCenter.setChecked(False)
         except (AttributeError, RuntimeError) as e:
-            msg.logMessage(e.message, level=msg.ERROR)
+            msg.logMessage(str(e), level=msg.ERROR)
 
     def reconnectTabs(self):
         """
@@ -362,14 +362,14 @@ class TomographyPlugin(base.plugin):
             input_dict = OrderedDict()
             for key,val in function.input_functions.items():
                 # print key, ",", val.params.children()
-                dict = OrderedDict()
-                dict['func'] = val
-                dict['enabled'] = val.enabled
-                dict['subfunc_name'] = val.subfunc_name
-                dict['vals'] = OrderedDict()
+                dct = OrderedDict()
+                dct['func'] = val
+                dct['enabled'] = val.enabled
+                dct['subfunc_name'] = val.subfunc_name
+                dct['vals'] = OrderedDict()
                 for child in val.params.children():
-                    dict['vals'][child.name()] = child.value()
-                input_dict[key] = dict
+                    dct['vals'][child.name()] = child.value()
+                input_dict[key] = dct
             currentWidget.pipeline[function.name]["input_functions"] = input_dict
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
@@ -453,7 +453,7 @@ class TomographyPlugin(base.plugin):
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
             self.preview_slices = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func, prange=prange)
+            self.processFunctionStack(callback=self.runSlicePreview,fixed_func=fixed_func, prange=prange)
 
     def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
 
@@ -473,11 +473,11 @@ class TomographyPlugin(base.plugin):
                     if value[0] == value[1]:
                         self.preview_slices = value[1]
                         self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+                        self.processFunctionStack(callback=self.runSlicePreview,fixed_func=fixed_func)
                     else:
                         self.preview_slices = [value[0],value[1]]
                         slc = (slice(None,None,None), slice(value[0],value[1]+1,1), slice(None,None,None))
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), slc=slc, fixed_func=fixed_func)
+                        self.processFunctionStack(callback=self.runSlicePreview, slc=slc, fixed_func=fixed_func)
         except AttributeError:
             pass
 
@@ -514,7 +514,7 @@ class TomographyPlugin(base.plugin):
             msg.showMessage('Computing 3D preview...', timeout=0)
             slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
             self.manager.cor_scale = lambda x: x // 8
-            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+            self.processFunctionStack(callback=self.run3DPreview, slc=slc)
 
 
 

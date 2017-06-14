@@ -947,6 +947,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
+        print(self.fabimage.getframe(frame).shape)
         return self.fabimage.getframe(frame)
 
     def invalidatecache(self):

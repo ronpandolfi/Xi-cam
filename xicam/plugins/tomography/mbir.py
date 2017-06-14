@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
-from tomocam import tomoCam
+from .tomocam import tomoCam
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
