@@ -1026,7 +1026,7 @@ class H5ReadError(IOError):
 #     imshow(arr, cmap='gray')
 #     show()
 def tests():
-    print fabio.open('/media/winHDD/hparks/aps_example.h5').data
+    print(fabio.open('/media/winHDD/hparks/aps_example.h5').data)
 
 if __name__ == '__main__':
     tests()

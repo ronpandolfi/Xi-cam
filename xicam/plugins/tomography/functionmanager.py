@@ -210,6 +210,9 @@ class FunctionManager(fw.FeatureManager):
 
         return func_widget
 
+    def printhere(self):
+        print('button clicked')
+
     def connectCropPad(self):
         names = [func.name for func in self.features]
         if 'Padding' in names and 'Crop' in names:
@@ -264,6 +267,7 @@ class FunctionManager(fw.FeatureManager):
             if 'center' in feature.input_functions:
                 feature.removeInputFunction('center')
                 feature.addCenterDetectFunction("Center Detection", func, package=reconpkg.packages['tomopy'])
+                feature.input_functions['center'].previewButton.clicked.connect(self.CORChoiceUpdated)
                 self.cor_func = feature.input_functions['center']
                 self.cor_widget = widget
                 for child in widget.params.children():

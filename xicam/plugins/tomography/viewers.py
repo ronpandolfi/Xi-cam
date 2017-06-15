@@ -901,9 +901,11 @@ class ProjectionViewer(QtGui.QWidget):
     def updateCORChoice(self, boolean):
         if boolean:
             self.cor_box.setCurrentWidget(self.auto_cor_widget)
+            self.stackViewer.hide()
             self.auto_cor_button.setChecked(True)
         else:
             self.cor_box.setCurrentWidget(self.cor_widget)
+            self.stackViewer.show()
             self.manual_cor_button.setChecked(True)
 
     def writeCOR(self):
