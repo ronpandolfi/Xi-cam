@@ -185,7 +185,7 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
 
     xres = 2000
 
-    (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
+    (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T)  #pyfai uses 0-valid mask
 
     q = q/10.
 

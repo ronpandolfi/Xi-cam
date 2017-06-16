@@ -884,10 +884,20 @@ class dimgViewer(QtGui.QWidget):
             # Draw the mask as a red channel image with an alpha mask
             msg.logMessage(('maskmax:', np.max(mask)), msg.DEBUG)
             invmask = 1 - mask
+
+            scale = (config.activeExperiment.qParallelAt(self.dimg.displaydata.shape[0], 0) -
+                     config.activeExperiment.qParallelAt(0, 0)) / self.dimg.displaydata.shape[0]
+            pos = [config.activeExperiment.qParallelAt(-.5, -.5),
+                   config.activeExperiment.qZAt(-.5, -.5)]
+            print('scale:', scale)
+            print('pos:', pos)
+
             self.maskimage.setImage(
                 np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float),
                 opacity=.5)
             self.maskimage.setLevels([0, 1])
+            self.maskimage.setScale(scale)
+            self.maskimage.setPos(*pos)
 
     # def finddetector(self):
     # # detector, mask = pipeline.loader.finddetector(self.imgdata)
@@ -1286,7 +1296,7 @@ class integrationsubwidget(pg.PlotWidget):
                 # xglobals.pool.apply_async(integrationfunction,
                 #                           args=(data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar),
                 #                           callback=self.replotcallback)
-                args = data, mask, dimg.experiment.getAI().getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar
+                args = data, mask, dimg.experiment.AI.getPyFAI(), cut, [0, 255, 255], self.requestkey, qvrt, qpar
 
         threads.method(callback_slot=self.plotresult)(integrationfunction)(*args)
 
