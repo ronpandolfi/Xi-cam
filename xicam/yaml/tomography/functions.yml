@@ -20,6 +20,9 @@ Functions:
   Convert Data Type: [Convert Data Type]
   Write: [Tiff Stack, Write HDF5] #, Numpy Array, Data Exchange
   Array Operation: [Add, Subtract, Multiply, Divide, Maximum]
+  Beam Hardening: [Beam Hardening]
+  Sino 360 to 180: [Sino 360 to 180]
+  Beam Tilt: [Beam Tilt]
   Reader: [Read Data]
 Input Functions:
   Reconstruction:

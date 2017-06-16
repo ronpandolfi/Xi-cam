@@ -132,3 +132,37 @@ Read Data:
     - tomo
     - flats
     - dark
+Beam Hardening:
+- name: a0
+  type: float
+- name: a0
+  type: float
+- name: a0
+  type: float
+- name: a0
+  type: float
+- name: a0
+  type: float
+- name: a0
+  type: float
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
+Beam Tilt:
+- name: tilt
+  type: int
+- name: tiltcenter_slice
+  type: int
+- name: tiltcenter_det
+  type: int
+- name: sino_0
+  type: int
+- name: arr
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark

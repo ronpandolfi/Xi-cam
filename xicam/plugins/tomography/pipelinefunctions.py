@@ -15,6 +15,7 @@ import numexpr as ne
 import concurrent.futures as cf
 from tomopy.util import mproc
 import scipy.ndimage.filters as snf
+import skimage.transform as st
 
 
 DTYPE_RANGE = {'uint8': (0, 255),
@@ -261,6 +262,59 @@ def remove_outlier1d(arr, dif, size=3, axis=0, ncore=None, out=None):
         out = ne.evaluate('where(abs(arr-tmp)>=dif,tmp,arr)', out=out)
 
     return out
+
+def beam_hardening(arr, a0=0, a1=1.0, a2=0, a3=0, a4=0, a5=0.1):
+    """
+    beam hardening correction, based on "Correction for beam hardening in computed tomography",
+    Gabor Herman, 1979 Phys. Med. Biol. 24 81
+
+    Correction is: tomo = a0 + a1*tomo + a2*tomo^2 + a3*tomo^3 + a4*tomo^4 + a5*tomo^5
+    """
+
+    loc_dict = {}
+    loc_dict['a0'] = np.float32(a0)
+    loc_dict['a1'] = np.float32(a1)
+    loc_dict['a2'] = np.float32(a2)
+    loc_dict['a3'] = np.float32(a3)
+    loc_dict['a4'] = np.float32(a4)
+    loc_dict['a5'] = np.float32(a5)
+
+    return ne.evaluate('a0 + a1*tomo + a2*tomo**2 + a3*tomo**3 + a4*tomo**4 + a5*tomo**5', local_dict=loc_dict)
+
+def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0=0):
+    """
+    Offset dataset tilt
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    tilt :
+    tiltcenter_slice : int, optional
+        Center of dataset in x (sinogram) direction
+    tiltcenter_det: int, optional
+        Center of dataset in y (image height) direction
+    sino_0 : int, optional
+        Position of first sinogram in 'arr' relative to larger dataset. For example, if sino_0=200, then the first
+        sinogram in 'arr' is the 200th in the larger dataset from which 'arr' is derived
+    Returns
+    -------
+    ndarray
+       Corrected array.
+    """
+
+    if not tiltcenter_slice:
+        tiltcenter_slice = arr.shape[1]/2
+    if not tiltcenter_det:
+        tiltcenter_det = arr.shape[2]/2
+
+    new_center = tiltcenter_slice - 0.5 -sino_0
+    center_det = tiltcenter_det - 0.5
+    cntr = (center_det, new_center)
+    for b in range(arr.shape[0]):
+        arr[b] = st.rotate(arr[b], tilt, center=cntr, preserve_range=True, order=1, mode='edge', clip=True)
+
+    return arr
 
 
 

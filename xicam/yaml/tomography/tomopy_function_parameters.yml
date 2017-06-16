@@ -254,6 +254,20 @@ Remove Outliers:
     - tomo
     - flats
     - dark
+Sino 360 to 180:
+- name: overlap
+  type: int
+- name: rotation
+  type: list
+  values:
+    - left
+    - right
+- name: data
+  type: list
+  values:
+    - tomo
+    - flats
+    - dark
 Projection Angles:
 - name: nang
   type: int

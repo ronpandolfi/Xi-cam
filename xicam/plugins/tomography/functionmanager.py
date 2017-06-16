@@ -26,100 +26,6 @@ import reconpkg
 import functionwidgets as fc
 from xicam.widgets import featurewidgets as fw
 
-class TestRangeDialog(QtGui.QDialog):
-    """
-    Simple QDialog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
-    parameter
-    """
-
-    def __init__(self, dtype, prange, **opts):
-        super(TestRangeDialog, self).__init__(**opts)
-        SpinBox = QtGui.QSpinBox if dtype == 'int' else QtGui.QDoubleSpinBox
-        self.gridLayout = QtGui.QGridLayout(self)
-        self.spinBox = SpinBox(self)
-        self.gridLayout.addWidget(self.spinBox, 1, 0, 1, 1)
-        self.spinBox_2 = SpinBox(self)
-        self.gridLayout.addWidget(self.spinBox_2, 1, 1, 1, 1)
-        self.spinBox_3 = SpinBox(self)
-        self.gridLayout.addWidget(self.spinBox_3, 1, 2, 1, 1)
-        self.label = QtGui.QLabel(self)
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
-        self.label_2 = QtGui.QLabel(self)
-        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
-        self.gridLayout.addWidget(self.label_2, 0, 1, 1, 1)
-        self.label_3 = QtGui.QLabel(self)
-        self.label_3.setAlignment(QtCore.Qt.AlignCenter)
-        self.gridLayout.addWidget(self.label_3, 0, 2, 1, 1)
-        self.buttonBox = QtGui.QDialogButtonBox(self)
-        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
-        self.gridLayout.addWidget(self.buttonBox, 0, 3, 2, 1)
-
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        if prange is not (None, None, None):
-            self.spinBox.setMaximum(9999)  # 3 * prange[2])
-            self.spinBox_2.setMaximum(9999)  # 3 * prange[2])
-            self.spinBox_3.setMaximum(9999)  # prange[2])
-
-            self.spinBox.setValue(prange[0])
-            self.spinBox_2.setValue(prange[1])
-            self.spinBox_3.setValue(prange[2])
-
-        self.setWindowTitle("Set parameter range")
-        self.label.setText("Start")
-        self.label_2.setText("End")
-        self.label_3.setText("Step")
-
-    def selectedRange(self):
-        # return the end as selected end + step so that the range includes the end
-        return np.arange(self.spinBox.value(), self.spinBox_2.value(), self.spinBox_3.value())
-
-
-class TestListRangeDialog(QtGui.QDialog):
-    """
-    Simple QDialog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
-    in order to test the different function parameters.
-    """
-
-    def __init__(self, options, **opts):
-        super(TestListRangeDialog, self).__init__(**opts)
-        self.gridLayout = QtGui.QGridLayout(self)
-        self.comboBox = QtGui.QComboBox(self)
-        self.gridLayout.addWidget(self.comboBox, 1, 0, 1, 1)
-        self.lineEdit = QtGui.QLineEdit(self)
-        self.lineEdit.setReadOnly(True)
-        self.gridLayout.addWidget(self.lineEdit, 2, 0, 1, 1)
-        self.buttonBox = QtGui.QDialogButtonBox(self)
-        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
-        self.gridLayout.addWidget(self.buttonBox, 1, 1, 2, 1)
-
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.setWindowTitle('Set parameter range')
-
-        self.options = options
-        self.comboBox.addItems(options)
-        self.comboBox.activated.connect(self.addToList)
-        self.lineEdit.setText(' '.join(options))
-        self.lineEdit.keyPressEvent = self.keyPressEvent
-
-    def addToList(self, option):
-        self.lineEdit.setText(str(self.lineEdit.text()) + ' ' + self.options[option])
-
-    def keyPressEvent(self, ev):
-        if ev.key() == QtCore.Qt.Key_Backspace or ev.key() == QtCore.Qt.Key_Delete:
-            self.lineEdit.setText(' '.join(str(self.lineEdit.text()).split(' ')[:-1]))
-        elif ev.key() == QtCore.Qt.Key_Enter or ev.key() == QtCore.Qt.Key_Return:
-            self.addToList(self.comboBox.currentIndex())
-        ev.accept()
-
-    def selectedRange(self):
-        return str(self.lineEdit.text()).split(' ')
-
 
 class FunctionManager(fw.FeatureManager):
     """
@@ -159,6 +65,39 @@ class FunctionManager(fw.FeatureManager):
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
     mask_functions = ['F3D Mask Filter', 'F3D MM Erosion', 'F3D MM Dilation', 'F3D MM Opening', 'F3D MM Closing']
+    slice_dir = {
+        'Remove Outliers': 'proj',
+        'Remove NAN': 'proj',
+        '1D Remove Outliers': 'proj',
+        'Nearest Flats': 'sino',
+        'Regular': 'both',
+        'Background Intensity': 'proj',
+        'Beam Hardening': 'both',
+        'Negative Logarithm': 'both',
+        'Fourier - Wavelet': 'sino',
+        'Titarenko': 'sino',
+        'Smoothing Filter': 'sino',
+        'do_360_to_180': 'sino',
+        # 'correcttilt': 'proj',
+        'Phase Retrieval': 'proj',
+        'Gridrec': 'sino', 'FBP': 'sino', 'ART': 'sino', 'BART': 'sino', 'MLEM': 'sino', 'OSEm': 'sino',
+        'OSPML Hybrid': 'sino', 'OSPML Quad': 'sino', 'PML Hybrid': 'sino', 'PML Quad': 'sino', 'SIRT': 'sino',
+        'BP': 'sino', 'FBP_astra': 'sino', 'SIRT': 'sino', 'SART': 'sino', 'ART': 'sino', 'CGLS': 'sino', 'BP_CUDA': 'sino',
+        'FBP_CUDA': 'sino', 'SIRT_CUDA': 'sino', 'SART_CUDA': 'sino', 'CGLS_CUDA': 'sino', 'Gridrec Tomocam': 'sino',
+        'SIRT TomoCam': 'sino', 'MBIR TomoCam': 'sino',
+        'Polar Mean Filter': 'sino',
+        'F3D Bilateral Filter': 'both',
+        'Convert Data Type': 'both',
+        'Tiff Stack': 'both',
+        'Write HDF5': 'both',
+        'Padding': 'sino',
+        'Slice': 'sino',
+        'Downsample': 'both',
+        'Upsample': 'both',
+        'Circular Mask': 'sino',
+        'Add': 'both', 'Subtract': 'both', 'Multiply': 'both', 'Divide': 'both', 'Maximum': 'both'
+    }
+
 
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
@@ -1454,8 +1393,98 @@ class CORSelectionWidget(QtGui.QWidget):
         self.layout.addWidget(self.param_tree)
         self.setLayout(self.layout)
 
+class TestRangeDialog(QtGui.QDialog):
+    """
+    Simple QDialog subclass with three spinBoxes to inter start, end, step for a range to test a particular function
+    parameter
+    """
 
+    def __init__(self, dtype, prange, **opts):
+        super(TestRangeDialog, self).__init__(**opts)
+        SpinBox = QtGui.QSpinBox if dtype == 'int' else QtGui.QDoubleSpinBox
+        self.gridLayout = QtGui.QGridLayout(self)
+        self.spinBox = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox, 1, 0, 1, 1)
+        self.spinBox_2 = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox_2, 1, 1, 1, 1)
+        self.spinBox_3 = SpinBox(self)
+        self.gridLayout.addWidget(self.spinBox_3, 1, 2, 1, 1)
+        self.label = QtGui.QLabel(self)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.label_2 = QtGui.QLabel(self)
+        self.label_2.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label_2, 0, 1, 1, 1)
+        self.label_3 = QtGui.QLabel(self)
+        self.label_3.setAlignment(QtCore.Qt.AlignCenter)
+        self.gridLayout.addWidget(self.label_3, 0, 2, 1, 1)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.gridLayout.addWidget(self.buttonBox, 0, 3, 2, 1)
 
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        if prange is not (None, None, None):
+            self.spinBox.setMaximum(9999)  # 3 * prange[2])
+            self.spinBox_2.setMaximum(9999)  # 3 * prange[2])
+            self.spinBox_3.setMaximum(9999)  # prange[2])
+
+            self.spinBox.setValue(prange[0])
+            self.spinBox_2.setValue(prange[1])
+            self.spinBox_3.setValue(prange[2])
+
+        self.setWindowTitle("Set parameter range")
+        self.label.setText("Start")
+        self.label_2.setText("End")
+        self.label_3.setText("Step")
+
+    def selectedRange(self):
+        # return the end as selected end + step so that the range includes the end
+        return np.arange(self.spinBox.value(), self.spinBox_2.value(), self.spinBox_3.value())
+
+class TestListRangeDialog(QtGui.QDialog):
+    """
+    Simple QDialog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
+    in order to test the different function parameters.
+    """
+
+    def __init__(self, options, **opts):
+        super(TestListRangeDialog, self).__init__(**opts)
+        self.gridLayout = QtGui.QGridLayout(self)
+        self.comboBox = QtGui.QComboBox(self)
+        self.gridLayout.addWidget(self.comboBox, 1, 0, 1, 1)
+        self.lineEdit = QtGui.QLineEdit(self)
+        self.lineEdit.setReadOnly(True)
+        self.gridLayout.addWidget(self.lineEdit, 2, 0, 1, 1)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Vertical)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.gridLayout.addWidget(self.buttonBox, 1, 1, 2, 1)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.setWindowTitle('Set parameter range')
+
+        self.options = options
+        self.comboBox.addItems(options)
+        self.comboBox.activated.connect(self.addToList)
+        self.lineEdit.setText(' '.join(options))
+        self.lineEdit.keyPressEvent = self.keyPressEvent
+
+    def addToList(self, option):
+        self.lineEdit.setText(str(self.lineEdit.text()) + ' ' + self.options[option])
+
+    def keyPressEvent(self, ev):
+        if ev.key() == QtCore.Qt.Key_Backspace or ev.key() == QtCore.Qt.Key_Delete:
+            self.lineEdit.setText(' '.join(str(self.lineEdit.text()).split(' ')[:-1]))
+        elif ev.key() == QtCore.Qt.Key_Enter or ev.key() == QtCore.Qt.Key_Return:
+            self.addToList(self.comboBox.currentIndex())
+        ev.accept()
+
+    def selectedRange(self):
+        return str(self.lineEdit.text()).split(' ')
 
 
 

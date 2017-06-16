@@ -68,6 +68,9 @@ Projection Angles:
 Remove NAN:
 - remove_nan
 - tomopy
+Sino 360 to 180:
+- sino_360_to_180
+- tomopy
 
 # Data Exchange Functions
 Tiff Stack:
@@ -136,4 +139,10 @@ Read Data:
 - pipelinefunctions
 1D Remove Outliers:
 - remove_outlier1d
+- pipelinefunctions
+Beam Hardening:
+- beam_hardening
+- pipelinefunctions
+Beam Tilt:
+- correct_tilt
 - pipelinefunctions

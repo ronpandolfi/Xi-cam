@@ -181,10 +181,10 @@ class TomographyPlugin(base.plugin):
         # turns on/off COR function in pipeline from COR widget's signal
         widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
 
-        # updates the COR function in pipeline based on COr function chosen in COR widget
+        # updates the COR function in pipeline based on function chosen in COR widget
         widget.projectionViewer.auto_cor_widget.sigCORFuncChanged.connect(self.manager.updateCORFunc)
 
-        #
+        # updates the COR widget based on the COR function chosen
         self.manager.sigCORDetectChanged.connect(widget.projectionViewer.updateCORChoice)
 
 
@@ -199,16 +199,6 @@ class TomographyPlugin(base.plugin):
         widget.wireupCenterSelection(self.manager.recon_function)
         self.centerwidget.addTab(widget, os.path.basename(files))
         self.centerwidget.setCurrentWidget(widget)
-
-    # def currentWidget(self):
-    #     """
-    #     Return the current widget (viewer.TomoViewer) from the centerwidgets tabs
-    #     """
-    #
-    #     try:
-    #         return self.centerwidget.currentWidget()
-    #     except AttributeError:
-    #         return None
 
     def openFlats(self):
 
@@ -228,11 +218,14 @@ class TomographyPlugin(base.plugin):
             raise
 
     def currentWidget(self):
+        """
+        Return the current widget (viewer.TomoViewer) from the centerwidgets tabs
+        """
 
         try:
-            return self.centerwidget.widget(self.currentIndex())
+            return self.centerwidget.currentWidget()
         except AttributeError:
-            raise
+            return None
 
     def currentChanged(self, index):
         """

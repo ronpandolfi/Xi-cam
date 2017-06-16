@@ -59,6 +59,7 @@ with open('xicam/yaml/tomography/aps_function_defaults.yml','r') as stream:
 # Load dictionary for astra recon functions
 with open('xicam/yaml/tomography/function_defaults.yml','r') as stream:
     function_defaults=yaml.load(stream)
+    print('breakpoint')
 
 
 def load_pipeline(yaml_file):
