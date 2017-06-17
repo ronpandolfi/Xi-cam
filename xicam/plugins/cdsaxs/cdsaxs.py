@@ -140,7 +140,7 @@ def interpolation(qxyi, sampling_size=(400, 400)):
     #for p in to_fill:
     #    img[p[0], p[1]] += interpolator(p[0], p[1])
 
-    '''
+
     for p in to_fill:
         if abs((p[1] - origin) / 2) >= (p[0]):
             continue
@@ -149,7 +149,7 @@ def interpolation(qxyi, sampling_size=(400, 400)):
         except ValueError:
             cpt += 1
             pass
-    '''
+
     log_possible = np.where(img!='nan')
     img[log_possible] = np.log(img[log_possible] - img[log_possible].min() + 1.)
     return img, qk_shift

@@ -1,4 +1,6 @@
 
+
+
 import __future__
 import os, sys, time
 import simulation, fitting, cdsaxs
@@ -286,7 +288,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         ga = GSimpleGA.GSimpleGA(genome)
         ga.selector.set(Selectors.GRouletteWheel)
-        ga.setGenerations(300)
+        ga.setGenerations(100)
         ga.setMinimax(Consts.minimaxType["minimize"])
 
         #ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
@@ -429,4 +431,9 @@ class CDModelWidget(pg.PlotWidget):
 
 class CDProfileWidget(pg.ImageView):
     pass
+
+
+#################################################################################################################################
+#################################################################################################################################
+#################################################################################################################################
 
