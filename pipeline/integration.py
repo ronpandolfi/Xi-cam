@@ -329,7 +329,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
     if cut is not None:
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
-        mask &= cut.astype(bool)
+        mask = (mask & cut.astype(bool))
 
     chi = np.arange(-180,180,old_div(360,1000.))
 
@@ -349,7 +349,7 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
     if cut is not None:
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
-        mask &= cut.astype(bool)
+        mask = mask & cut.astype(bool)
 
     q = np.arange(1000)*np.max(qpar)/10000.
 

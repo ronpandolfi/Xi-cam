@@ -1318,6 +1318,7 @@ class integrationsubwidget(pg.PlotWidget):
                 self.iscleared = True
             if color is None:
                 color = [255, 255, 255]
+            y=y.astype(np.float)
             y[y<=0]=1.E-9
             curve = self.plotItem.plot(np.array(x), np.nan_to_num(np.array(y).astype(float)), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))

@@ -42,7 +42,6 @@ imagecache = dict()
 def loadsingle(path):
     return loadimage(path), loadparas(path)
 
-
 def loadimage(path):
     data = None
     if path.startswith('DB:'):
@@ -51,13 +50,22 @@ def loadimage(path):
         host, _, uid = path[3:].partition('/')
         db = dc[host]
         h = db[uid]
-        
+
         img_names = [k for d in h.descriptors if d['name'] == 'primary'
                     for k, v in d['data_keys'].items() if v['dtype'] == 'array']
-        try:
-            return np.array(db.db.get_images(h, img_names[0])).squeeze()
-        except FileNotFoundError:
-            return path
+
+        # For tiled data
+        if h.start.get('mode') == 'tiled':
+            ev1, ev2 = [doc['data'] for name, doc in h.stream('primary', fill=True) if name == 'event']
+            data,mask = loadstitched('','',data1=ev1['image'],data2=ev2['image'],paras1=ev1,paras2=ev2)
+            return data, mask
+        else:
+            data = np.array(db.db.get_images(h, img_names[0])).squeeze()
+            if data.ndim>2:
+                data =np.transpose(data,[1,2,0])
+            return data
+
+
 
 
     try:
@@ -79,6 +87,7 @@ def loadimage(path):
         msg.logMessage('IO Error loading: ' + path,msg.ERROR)
     except TypeError:
         msg.logMessage('The selected file is not a type understood by fabIO.',msg.ERROR)
+
 
     return data
 
@@ -305,7 +314,9 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    img = loadimage(path)
+    if not isinstance(img,tuple): img=(img,None)
+    return img
 
 
 def loadxfs(path):
