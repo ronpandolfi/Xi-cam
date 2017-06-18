@@ -77,12 +77,15 @@ class settingstracker(ptypes.GroupParameter):
         self._builddialog()
         self.dialog.show()
 
+    # TODO check for new template fields on start
     @staticmethod
     def template():
         return {'type':'group','name':'settings','children':[
             {'name':'Default Local Path','value':os.path.expanduser('~'),'type':'str'},
-            {'name':'Integration Bins (q)','value':1000,'type':'int'},
-            {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int'}]}
+            {'name':'Integration Bins (q)','value':1000,'type':'int','min':1},
+            {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int','min':1},
+            {'name':'Image Load Rotations','value':0,'type':'int'},
+            {'name':'Image Load Transpose','value':False,'type':'bool'}]}
 
 
 settings=settingstracker()
