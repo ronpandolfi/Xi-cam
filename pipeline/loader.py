@@ -275,6 +275,13 @@ def loadpath(path):
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
     img = loadimage(path)
+
+    # Do extra rotations/transposition
+    if config.settings['Image Load Transpose']:
+        img=img.transpose()
+    if config.settings['Image Load Rotations']:
+        img=np.rot90(img,config.settings['Image Load Rotations'])
+
     if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
     return img
 
