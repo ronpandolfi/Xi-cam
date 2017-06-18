@@ -116,9 +116,9 @@ class experiment(Parameter):
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
                       {'name': 'Detector', 'type': 'list', 'values':detectors.ALL_DETECTORS},
-                      {'name': 'Pixel Size X', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size X', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
-                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
                       {'name': 'Center X', 'type': 'float', 'value': 0, 'suffix': ' px'},
                       {'name': 'Center Y', 'type': 'float', 'value': 0, 'suffix': ' px'},
