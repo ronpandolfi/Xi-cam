@@ -274,7 +274,7 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    return loadimage(path), finddetectorbyfilename(path).calc_mask()
 
 
 def loadxfs(path):
