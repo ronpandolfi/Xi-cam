@@ -330,7 +330,7 @@ class DataBrokerView(QtGui.QListWidget):
 
             item = QtGui.QListWidgetItem(key)
 
-            if h.stop is None or h.stop['exit_status'] in ['abort','fail']:
+            if not h.get('stop') or h.get('stop',{'exit_status':'fail'})['exit_status'] in ['abort','fail']:
                 item.setBackground(QtGui.QBrush(QtCore.Qt.red))
             self.addItem(item)
             self._headers[key] = h
