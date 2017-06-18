@@ -32,6 +32,10 @@ class MetaDataWidget(QTreeWidget):
         useAsMenu.addAction('Timeline Axis').triggered.connect(self.useAsTimeline)
         self.contextMenu.addMenu(useAsMenu)
 
+    def mousePressEvent(self,ev):
+        if ev.button()==Qt.RightButton:
+            self.contextMenu.popup(self.mapToGlobal(ev.pos()))
+
     def setData(self,data):
         self(data)
 
