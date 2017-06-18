@@ -36,7 +36,7 @@ class BatchPlugin(base.plugin):
         self.roiOption = pTypes.SimpleParameter(type='bool', name='Integrate last ROI', value=True)
         self.logOption = pTypes.SimpleParameter(type='bool', name='Log scale image', value=False)
         self.cakeOption = pTypes.SimpleParameter(type='bool', name='Cake (q/chi)', value=False)
-        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
+        self.exportformat = pTypes.ListParameter(type='list', name='Image export format', value=0, values=['None','EDF (.edf)','TIFF (.tif)','JPEG (.jpg)'])
         self.processButton = pTypes.ActionParameter(name='Process')
         # self.abortButton = pTypes.ActionParameter(name='Abort')
         params = [self.remeshOption, self.cakeOption, self.integrateOption, self.roiOption, self.logOption, self.exportformat, self.processButton]
@@ -51,7 +51,10 @@ class BatchPlugin(base.plugin):
         pathlist = self.fileslistwidget.paths
         paths = [pathlist.item(index).text() for index in range(pathlist.count())]
 
-        imageext=re.findall(r'(?<=\()\..{3}(?=\))',self.exportformat.value())[0]
+        if self.exportformat.value()=='None':
+            imageext=None
+        else:
+            imageext=re.findall(r'(?<=\()\..{3}(?=\))',self.exportformat.value())[0]
 
         for path in paths:
 
@@ -72,7 +75,7 @@ class BatchPlugin(base.plugin):
 
             if self.integrateOption.value():
                 x, y, _, _ = dimg.integrate()
-                data = np.array([x, y])
+                data = np.array([x, y]).T
                 if not writer.writearray(data, path, suffix=''):
                     break
 
@@ -82,13 +85,13 @@ class BatchPlugin(base.plugin):
                     # lastroi is a tuple with an ROI item and an imageitem (both are need to get a cut array)
                     cut = (xglobals.lastroi[0].getArrayRegion(np.ones_like(dimg.data), xglobals.lastroi[1])).T
                     x, y, _, _ = dimg.integrate(cut=cut)
-                    data = np.array([x, y])
+                    data = np.array([x, y]).T
                     if not writer.writearray(data, path, suffix='_roi'):
                         break
                 else:
                     pass  # No ROI was defined, hm...
 
-            if os.path.splitext(path)[-1] != imageext:
+            if os.path.splitext(path)[-1] != imageext and imageext:
                 data = dimg.data
                 writer.writeimage(data if not self.logOption.value() else (np.log(data * (data > 0) + (data < 1))), path, ext=imageext)
 

@@ -44,7 +44,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = config.settings['defaultlocalpath']
+        self.path = config.settings['Default Local Path']
         if not self.path: self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
@@ -94,7 +94,7 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
-        config.settings['defaultlocalpath'] = path
+        config.settings['Default Local Path'] = path
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
@@ -288,7 +288,7 @@ class DataBrokerView(QtGui.QListWidget):
         results = []
 
         # if querystring is null, limit to last 100
-        if not querystring: 
+        if not querystring:
             querystring='-100:'
 
         # if querystring is int-like
@@ -299,7 +299,7 @@ class DataBrokerView(QtGui.QListWidget):
                 pass
             else:
                 results = [self.db[query]]
-	
+
         # if querystring is slice-like, slice db
         if not results:
             try:
