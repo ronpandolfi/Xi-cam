@@ -1,10 +1,10 @@
+# --coding: utf-8 --
 import numpy as np
 from xicam import config
 from PySide import QtCore
 import multiprocessing
 import time
 import pyFAI
-import remesh
 import msg
 
 pyFAI_method = 'cython'
@@ -183,16 +183,15 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask = mask.astype(bool) & cut.astype(bool)
 
-    xres = 2000
 
-    (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
+    (q, radialprofile) = AI.integrate1d(data.T, config.settings['Integration Bins (q)'], mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
 
     q = q/10.
 
     return q.tolist(), radialprofile.tolist(), color, requestkey
 
 
-def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None, xres=1000, yres=1000):
+def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None, xres=config.settings['Integration Bins (χ)'], yres=config.settings['Integration Bins (q)']):
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
     # Always do mask with 1-valid, 0's excluded
@@ -283,7 +282,7 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
     return qz.tolist(), xprofile.tolist(), color, requestkey
 
 
-def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
+def cake(imgdata, experiment, mask=None,  xres=config.settings['Integration Bins (χ)'], yres=config.settings['Integration Bins (q)']):
     if mask is None:
         mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
@@ -325,7 +324,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    chi = np.arange(-180,180,360/1000.)
+    chi = np.arange(-180,180,360/config.settings['Integration Bins (χ)'])
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     xprofile = np.ma.average(maskeddata, axis=1)
@@ -345,7 +344,7 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    q = np.arange(1000)*np.max(qpar)/10000.
+    q = np.arange(config.settings['Integration Bins (q)'])*np.max(qpar)/ 10./config.settings['Integration Bins (q)']
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     zprofile = np.ma.average(maskeddata, axis=0)
