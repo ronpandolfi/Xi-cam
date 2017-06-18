@@ -104,15 +104,8 @@ class dimgViewer(QtGui.QWidget):
         else:
             self.dimg = loader.loaddiffimage(src)
 
-        self.axesItem = pg.PlotItem()
-        self.axesItem.setLabel('bottom', u'q (Å⁻¹)')#, units='s')
-        self.axesItem.setLabel('left', u'q (Å⁻¹)')
-        self.axesItem.axes['left']['item'].setZValue(10)
-        self.axesItem.axes['top']['item'].setZValue(10)
-
-
         # Make an imageview for the image
-        self.imgview = ImageView(self, actionLog_Intensity=self.toolbar.actionLog_Intensity, view=self.axesItem)
+        self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
         self.imageitem = self.imgview.getImageItem()
         self.graphicslayoutwidget = self.imgview
         self.imgview.ui.roiBtn.setParent(None)
@@ -165,8 +158,6 @@ class dimgViewer(QtGui.QWidget):
         self.coordslabel.setMouseTracking(True)
 
         self.centerplot = pg.ScatterPlotItem()
-        self.centerplot.setData([0],[0], pen=None, symbol='o',
-                                brush=pg.mkBrush('#FFA500'))
         self.viewbox.addItem(self.centerplot)
 
         self.sgToverlay = pg.ScatterPlotItem()
@@ -231,6 +222,7 @@ class dimgViewer(QtGui.QWidget):
 
                 if config.activeExperiment.iscalibrated:
                     self.replot()
+                    self.drawcenter()
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
@@ -284,7 +276,6 @@ class dimgViewer(QtGui.QWidget):
             mousePoint = self.viewbox.mapSceneToView(pos)
             self.vLine.setPos(mousePoint.x())
             self.hLine.setPos(mousePoint.y())
-            mousePoint = self.imageitem.mapFromScene(pos)
             if (0 < mousePoint.x() < self.imageitem.image.shape[0]) & (
                             0 < mousePoint.y() < self.imageitem.image.shape[1]):  # within bounds
                 # angstrom=QChar(0x00B5)
@@ -421,13 +412,9 @@ class dimgViewer(QtGui.QWidget):
         if returnimg:
             return self.dimg
         else:
-            self.scale = (self.getq(*self.dimg.displaydata.shape, mode='parallel') -
-                     self.getq(0,0, mode='parallel')) / self.dimg.displaydata.shape[0]
-            self.pos = (self.getq(0,0,'parallel'),self.getq(0,0,'z'))
-            msg.logMessage(('scale:',self.scale),msg.DEBUG)
-            msg.logMessage(('pos:', self.pos), msg.DEBUG)
-            self.imgview.setImage(self.dimg,pos=self.pos,
-                                  scale=(self.scale,self.scale))
+            self.imgview.setImage(self.dimg)
+
+        self.drawcenter()
 
         self.replot()
 
@@ -565,9 +552,25 @@ class dimgViewer(QtGui.QWidget):
         # Auto find the beam center
         self.dimg.findcenter()
         if not skipdraw:
+            self.drawcenter()
             self.replot()
 
+    def drawcenter(self):
 
+        center = self.getcenter()
+        # Mark the center
+        if self.centerplot is not None: self.centerplot.clear()
+        self.centerplot.setData([center[0]], [center[1]], pen=None, symbol='o',
+                                brush=pg.mkBrush('#FFA500'))
+        # self.viewbox.addItem(self.centerplot)
+
+        # Move Arc ROIs to center
+
+
+        for item in self.viewbox.addedItems:
+            # print item
+            if issubclass(type(item), ROI.ArcROI):
+                item.setPos(center)
 
     def simulatecalibrant(self, calibrantkey):
         ai = config.activeExperiment.getAI()
@@ -588,6 +591,7 @@ class dimgViewer(QtGui.QWidget):
         algorithm(self.dimg, calibrant)
 
         self.replot()
+        self.drawcenter()
 
     @debugtools.timeit
     def refinecenter(self):
@@ -596,6 +600,7 @@ class dimgViewer(QtGui.QWidget):
 
         cen = center_approx.refinecenter(self.dimg)
         config.activeExperiment.center = cen
+        self.drawcenter()
 
     def getROIs(self):
         return [roi for roi in self.viewbox.addedItems if hasattr(roi, 'isdeleting') and not roi.isdeleting]
