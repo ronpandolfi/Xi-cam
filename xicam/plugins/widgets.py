@@ -162,6 +162,13 @@ class dimgViewer(QtGui.QWidget):
         self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
         self.coordslabel.setMouseTracking(True)
 
+        menu = self.viewbox.menu
+        setcenter = QtGui.QAction('Set Center',menu)
+        setcenter.setObjectName('setcenter')
+        setcenter.triggered.connect(self.setcenter)
+        menu.addAction(setcenter)
+
+
         self.centerplot = pg.ScatterPlotItem()
         self.viewbox.addItem(self.centerplot)
 
@@ -194,15 +201,6 @@ class dimgViewer(QtGui.QWidget):
         self.calibrantoverlay = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.calibrantoverlay)
 
-        # import ROI
-        # self.arc=ROI.ArcROI((620.,29.),500.)
-        # self.viewbox.addItem(self.arc)
-        # print self.dimg.data
-        # print self.imageitem
-
-
-        # self.viewbox.addItem(pg.SpiralROI((0,0),1))
-
         try:
             energy = self.dimg.headers['Beamline Energy']
             if energy is not None:
@@ -231,6 +229,16 @@ class dimgViewer(QtGui.QWidget):
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
+
+
+    def mousePressEvent(self,ev):
+        super(dimgViewer, self).mousePressEvent(ev)
+        self.lastclick = self.imageitem.mapFromScene(ev.pos())
+
+    def setcenter(self,*args,**kwargs):
+        config.activeExperiment.center=self.lastclick.x(),self.lastclick.y()
+        self.redrawimage()
+        self.replot()
 
     def loadLUT(self):
 

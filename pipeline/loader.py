@@ -315,7 +315,7 @@ def loadpath(path):
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
     img = loadimage(path)
-    if not isinstance(img, tuple): img = (img, finddetectorbyfilename(path).calc_mask())
+    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
     return img
 
 
