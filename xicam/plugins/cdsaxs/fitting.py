@@ -1,26 +1,5 @@
 import numpy as np
-from pyswarm import pso
 
-import simulation
-
-from pyevolve import G1DList
-from pyevolve import GSimpleGA
-from pyevolve import Selectors
-from pyevolve import Statistics
-from pyevolve import DBAdapters
-import pyevolve
-
-from random import randrange
-import cPickle as pickle
-import psutil
-import multiprocessing
-from collections import deque
-from itertools import repeat
-import panda as pd
-import emcee
-import deap.base as deap_base
-from deap import creator, tools
-from deap import cma as cmaes
 '''
 
 

@@ -1,6 +1,6 @@
 import __future__
 import os, sys, time
-import simulation, fitting, cdsaxs
+from xicam.plugins.cdsaxs import simulation, fitting, cdsaxs
 from scipy.fftpack import *
 from  numpy.fft import *
 from scipy.signal import resample
@@ -16,30 +16,14 @@ from modpkgs import guiinvoker
 import matplotlib.pyplot as plt
 
 from PySide import QtGui, QtCore
-from xicam import debugtools
 
-from pipeline.spacegroups import spacegroupwidget
-from xicam import config
-
-from xicam.widgets.calibrationpanel import calibrationpanel
-from pipeline import integration, center_approx
-
-import astropy
-
-from pyevolve import G1DList
-from pyevolve import GSimpleGA
-from pyevolve import Selectors, Consts
-from pyevolve import Statistics
-from pyevolve import DBAdapters
-import pyevolve
 
 from random import randrange
-import cPickle as pickle
+# import cPickle as pickle
 import psutil
 import multiprocessing
 from collections import deque
 from itertools import repeat
-# import pandas as pd
 import emcee
 import deap.base as deap_base
 from deap import creator, tools
