@@ -619,19 +619,6 @@ class TomographyPlugin(base.plugin):
         recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
                                     interrupt_signal=self.bottom.local_cancelButton.clicked,
                                     finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
-        #
-        # pstart = self.ui.config_params.child('Start Projection').value()
-        # pend = self.ui.config_params.child('End Projection').value()
-        # pstep = self.ui.config_params.child('Step Projection').value()
-        # sstart = self.ui.config_params.child('Start Sinogram').value()
-        # send = self.ui.config_params.child('End Sinogram').value()
-        # sstep =  self.ui.config_params.child('Step Sinogram').value()
-        #
-        # recon_iter(datawidget = self.currentWidget(), proj = (pstart, pend, pstep), sino = (sstart, send, sstep),
-        #            sino_p_chunk = self.ui.config_params.child('Sinograms/Chunk').value(),
-        #            ncore=self.ui.config_params.child('CPU Cores').value())
-
-
 
     def freeRecon(self):
         """
@@ -670,22 +657,24 @@ class TomographyPlugin(base.plugin):
 
         proj = None
         sino = None
-        chunk = None
+        sino_chunk = None
+        proj_chunk = None
         width = None
         for f in self.manager.features:
             if 'Reader' in f.name:
                 proj = f.projections
                 sino = f.sinograms
-                chunk = f.chunk
+                sino_chunk = f.sino_chunk
+                proj_chunk = f.proj_chunk
                 width = f.width
 
-        if (not proj and not sino and not chunk) or (not proj[1] and not sino[1] and not chunk):
+        if (not proj and not sino and not sino_chunk) or (not proj[1] and not sino[1] and not sino_chunk):
             sino = (0, currentWidget.data.shape[2], 1)
             proj = (0, currentWidget.data.shape[0], 1)
-            chunk = cpu_count()*5
+            sino_chunk = cpu_count()*5
             width = (None, None, None)
 
-        args = (currentWidget, run_state, proj, sino, chunk, width, cpu_count())
+        args = (currentWidget, run_state, proj, sino, sino_chunk, proj_chunk, width, cpu_count())
 
         self.queue_widget.recon_queue.append([recon_iter, args])
         self.queue_widget.addRecon(args)

@@ -238,7 +238,9 @@ def set_reader_defaults(reader_widget, shape, cpu):
     reader_widget.params.child('end_width').setValue(shape[1])
     reader_widget.params.child('end_width').setDefault(shape[1])
     reader_widget.params.child('sinograms_per_chunk').setValue(cpu * 5)
+    reader_widget.params.child('projections_per_chunk').setValue(cpu * 5)
     reader_widget.params.child('sinograms_per_chunk').setDefault(cpu * 5)
+    reader_widget.params.child('projections_per_chunk').setDefault(cpu * 5)
 
 
 

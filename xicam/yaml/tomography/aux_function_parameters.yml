@@ -118,6 +118,8 @@ Read Data:
   type: int
 - name: sinograms_per_chunk
   type: int
+- name: projections_per_chunk
+  type: int
 1D Remove Outliers:
 - name: dif
   type: float

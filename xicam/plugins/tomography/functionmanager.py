@@ -25,6 +25,7 @@ import config
 import reconpkg
 import functionwidgets as fc
 from xicam.widgets import featurewidgets as fw
+import dxchange
 
 
 class FunctionManager(fw.FeatureManager):
@@ -68,13 +69,13 @@ class FunctionManager(fw.FeatureManager):
     slice_dir = {
         'Remove Outliers': 'proj',
         'Remove NAN': 'proj',
-        '1D Remove Outliers': 'proj',
+        '1D Remove Outliers': 'sino',
         'Nearest Flats': 'sino',
         'Regular': 'both',
         'Background Intensity': 'proj',
         'Beam Hardening': 'both',
         'Negative Logarithm': 'both',
-        'Fourier - Wavelet': 'sino',
+        'Fourier-Wavelet': 'sino',
         'Titarenko': 'sino',
         'Smoothing Filter': 'sino',
         'do_360_to_180': 'sino',
@@ -91,6 +92,7 @@ class FunctionManager(fw.FeatureManager):
         'Tiff Stack': 'both',
         'Write HDF5': 'both',
         'Padding': 'sino',
+        'Crop': 'sino',
         'Slice': 'sino',
         'Downsample': 'both',
         'Upsample': 'both',
@@ -628,7 +630,8 @@ class FunctionManager(fw.FeatureManager):
 
 
 
-    def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, width, ncore = None):
+    def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, proj_p_chunk,
+                       width, ncore = None):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
@@ -649,6 +652,8 @@ class FunctionManager(fw.FeatureManager):
             Sinogram range indices (start, end, step)
         sino_p_chunk : int
             Number of sinograms per chunk
+        proj_p_chunk : int
+            Number of projections per chunk
         ncore : int
             Number of cores to run functions
         pipeline_dict: dictionary
@@ -662,10 +667,13 @@ class FunctionManager(fw.FeatureManager):
 
         start_time = time.time()
         write_start = sino[0]
-        nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-        total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
-        if total_sino < sino_p_chunk:
-            sino_p_chunk = total_sino
+
+        num_proj_per_chunk = np.minimum(proj_p_chunk, proj[1] - proj[0])
+        numprojchunks = (proj[1] - proj[0] - 1)//num_proj_per_chunk+1
+        num_sino_per_chunk = np.minimum(sino_p_chunk, sino[1] - sino[0])
+        numsinochunks = (sino[1]-sino[0]-1)//num_sino_per_chunk+1
+        numprojused = (proj[1] - proj[0])//proj[2]
+        numsinoused = (sino[1] - sino[0])//sino[2]
 
         func_pipeline, theta, center, extract = run_state
         yaml_pipe = extract[0]
@@ -699,7 +707,6 @@ class FunctionManager(fw.FeatureManager):
         except NameError or IOError:
             yield "Error: pipeline python script not written - path could not be found"
 
-
         # save yaml in reconstruction folder
         for key in yaml_pipe.iterkeys(): # special case for 'center' param
             if 'Recon' in key:
@@ -714,40 +721,86 @@ class FunctionManager(fw.FeatureManager):
         except NameError or IOError:
             yield "Error: function pipeline yaml not written - path could not be found"
 
-        for i in range(nchunk):
+        # determine which direction to slice in first
+        for func in func_pipeline:
+            subfunc = func[1].split('(')[-1].split(')')[0]
+            if self.slice_dir[subfunc] != 'both':
+                axis = self.slice_dir[subfunc]
+                break
 
-            start, end  = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
-            end = end if end < sino[1] else sino[1]
+        curfunc = 0
+        curtemp = 0
+        tempfilenames = [os.path.join(os.path.dirname(path), 'tmp0.h5'),
+                         os.path.join(os.path.dirname(path), 'tmp1.h5')]
+        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
 
-            slc = (slice(*proj),slice(start, end, sino[2]), slice(*width))
+        while True:
+            if axis=='proj':
+                niter = numprojchunks
+            else:
+                niter = numsinochunks
+            for y in range(niter):
+                yield "\n{} chunk {} of {}\n".format(axis, y+1, niter)
+                if curfunc==0:
+                    if axis=='proj':
+                        slc = (slice(y*num_proj_per_chunk+proj[0], np.minimum((y+1)*num_proj_per_chunk+proj[0], proj[1]),
+                                     proj[2]), slice(*sino), slice(*width))
+                    else:
+                        slc = (slice(*proj), slice(y*num_sino_per_chunk+sino[0], np.minimum((y+1)*num_sino_per_chunk
+                                + sino[0], sino[1]), sino[2]), slice(*width))
+                    data_dict = self.loadDataDictionary(datawidget, theta, center, slc=slc)
+                else:
+                    if axis=='proj':
+                        start, end = y * num_proj_per_chunk, np.minimum((y + 1)*num_proj_per_chunk, numprojused)
+                        tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
+                                slc=((start, end, 1), (0, sino[1]-sino[0], 1), (0, width[1]-width[0], 1)))
+                    else:
+                        start, end = y * num_sino_per_chunk, np.minimum((y + 1)*num_sino_per_chunk, numsinoused)
+                        tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
+                                slc=((0, proj[1]-proj[0], 1), (start, end, 1), (0, width[1]-width[0], 1)))
+                    data_dict['tomo'] = tomo
+                dofunc = curfunc
+                data_dict['start'] = write_start
+                while True:
+                    function_tuple = func_pipeline[dofunc]
+                    subfunc = function_tuple[1].split('(')[-1].split(')')[0]
+                    newaxis = self.slice_dir[subfunc]
+                    if newaxis != 'both' and newaxis != axis:
+                        # we have to switch the axis, so flush to disk
+                        if y ==0:
+                            try:
+                                os.remove(tempfilenames[1-curtemp])
+                            except OSError:
+                                pass
+                        appendaxis = 1 if axis=='sino' else 0
+                        dxchange.write_hdf5(data_dict['tomo'], fname=tempfilenames[1-curtemp], gname='tmp', dname='tmp',
+                                            overwrite=False, appendaxis=appendaxis)
+                        break
+                    yield "{}: ".format(function_tuple[1])
+                    curtime = time.time()
+                    function, write = self.updatePartial(function_tuple[0], function_tuple[1], data_dict,
+                                                         params_dict[function_tuple[1]], slc)
+                    data_dict[write] = function()
+                    yield 'Finished in {:2f} seconds\n'.format(time.time()-curtime)
+                    dofunc += 1
+                    if dofunc == len(func_pipeline):
+                        break
+                if axis == 'sino':
+                    write_start += num_sino_per_chunk
+            curtemp = 1 - curtemp
+            curfunc = dofunc
+            if curfunc == len(func_pipeline):
+                break
 
-
-            # load data dictionary
-            data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
-            data_dict['start'] = write_start
-            shape = data_dict['tomo'].shape[1]
-
-
-
-            for function_tuple in func_pipeline:
-                ts = time.time()
-                name = function_tuple[1]
-                function = function_tuple[0]
-
-                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function_tuple[1],
-                                                                                              start, end, total_sino)
-                function, write = self.updatePartial(function, name, data_dict, params_dict[name], slc)
-                data_dict[write] = function()
-
-                yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-            write_start += shape
-            del data_dict
-
-
-        # print final 'finished with recon' message
-        yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time() - start_time)
-
+            axis = self.slice_dir[func_pipeline[curfunc][1].split('(')[-1].split(')')[0]]
+        yield "cleaning up temp files"
+        for tmpfile in tempfilenames:
+            try:
+                os.remove(tmpfile)
+            except OSError:
+                pass
+        yield "End Time: " + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
+        yield "It took {:3f} s to process {}".format(time.time() - start_time, path)
 
 
     def foldSliceStack(self, partial_stack, data_dict):

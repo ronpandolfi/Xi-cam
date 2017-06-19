@@ -628,8 +628,12 @@ class ReadFunctionWidget(FunctionWidget):
                 self.params.child('step_projection').value())
 
     @property
-    def chunk(self):
+    def sino_chunk(self):
         return self.params.child('sinograms_per_chunk').value()
+
+    @property
+    def proj_chunk(self):
+        return self.params.child('projections_per_chunk').value()
 
     @property
     def width(self):
