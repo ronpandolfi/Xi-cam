@@ -265,22 +265,26 @@ class DataBrokerView(QtGui.QListWidget):
         super().clear()
         self._headers.clear()
 
+    def openSelected(self):
+        items = self.selectedIndexes()
+        headers = [self._headers[item.data()] for item in items]
+
+        if hasattr(self._headers[items[0]].start,'scan_id'): headers = sorted(headers,key=lambda h: h.start['scan_id'])
+        
+        paths = ['DB:{}/{}'.format(header.start['uid'])
+                 for header in headers]
+        self.sigOpen.emit(paths)
+
+
     def onDoubleClick(self, item):
         header = self._headers[item.data()]
         self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
                                              header.start['uid'])])
+
     def currentChanged(self, current, previous):
         uid = 'DB:{}/{}'.format(self.db.host,
                                 self._headers[current.data()].start['uid'])
         self.sigItemPreview.emit(uid)
-
-    def openSelected(self):
-        items = self.selectedIndexes()
-        paths = ['DB:{}/{}'.format(self.db.host,
-                                   self._headers[item.data()].start['uid'])
-                 for item in items]
-        self.sigOpen.emit(paths)
-
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
