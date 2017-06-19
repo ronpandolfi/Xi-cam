@@ -1471,7 +1471,10 @@ class multifilediffimage2(diffimage2):
         if self._xvals is None:
             timekey = config.activeExperiment.headermap['Timeline Axis']
             if timekey:
-                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                try:
+                    self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                except KeyError: # TODO: allow DB headers to be keyed without .start 
+                    self._xvals = np.array([float(self.iHeaders(i).start[timekey]) for i in range(len(self.filepaths))])
             else:
                 self._xvals = np.arange(len(self.filepaths))
         return self._xvals
