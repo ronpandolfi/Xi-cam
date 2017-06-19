@@ -1434,7 +1434,8 @@ class multifilediffimage2(diffimage2):
     ndim = 3
 
     def __init__(self, filepaths, detector=None, experiment=None):
-        self.filepaths = sorted(list(filepaths))
+        self.filepaths=filepaths
+        if not filepaths[0].startswith('DB:'): self.filepaths = sorted(list(self.filepaths))
         self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()

@@ -268,10 +268,7 @@ class DataBrokerView(QtGui.QListWidget):
     def openSelected(self):
         items = self.selectedIndexes()
         headers = [self._headers[item.data()] for item in items]
-
-        if hasattr(self._headers[items[0]].start,'scan_id'): headers = sorted(headers,key=lambda h: h.start['scan_id'])
-        
-        paths = ['DB:{}/{}'.format(header.start['uid'])
+        paths = ['DB:{}/{}'.format(self.db.host,header.start['uid'])
                  for header in headers]
         self.sigOpen.emit(paths)
 
