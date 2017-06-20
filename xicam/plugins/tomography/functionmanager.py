@@ -63,6 +63,7 @@ class FunctionManager(fw.FeatureManager):
     sigTestRange = QtCore.Signal(str, object, dict)
     sigPipelineChanged = QtCore.Signal()
     sigCORDetectChanged = QtCore.Signal(bool)
+    sigFuncAdded = QtCore.Signal()
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
     mask_functions = ['F3D Mask Filter', 'F3D MM Erosion', 'F3D MM Dilation', 'F3D MM Opening', 'F3D MM Closing']
@@ -149,10 +150,19 @@ class FunctionManager(fw.FeatureManager):
         if function == 'Padding' or function  == 'Crop':
             self.connectCropPad()
 
+        self.sigFuncAdded.emit()
         return func_widget
 
-    def printhere(self):
-        print('button clicked')
+
+    def setFunctionValues(self, funcwidget, params, setDefault=False):
+        for param, value in params.iteritems():
+            try:
+                funcwidget.params.child(param).setValue(value)
+            except Exception:
+                pass
+            if setDefault:
+                funcwidget.params.child(param).setDefault(value)
+
 
     def connectCropPad(self):
         names = [func.name for func in self.features]
@@ -196,6 +206,7 @@ class FunctionManager(fw.FeatureManager):
             funcwidget.addInputFunction(parameter, ipf_widget)
         except AttributeError:
             ipf_widget = funcwidget.input_functions[parameter]
+        self.sigFuncAdded.emit()
         return ipf_widget
 
     def updateCORChoice(self, boolean):
@@ -1055,11 +1066,7 @@ class FunctionManager(fw.FeatureManager):
                 if 'Enabled' in subfuncs[subfunc] and not subfuncs[subfunc]['Enabled']:
                     funcWidget.enabled = False
                 if 'Parameters' in subfuncs[subfunc]:
-                    for param, value in subfuncs[subfunc]['Parameters'].iteritems():
-                        child = funcWidget.params.child(param)
-                        child.setValue(value)
-                        if setdefaults:
-                            child.setDefault(value)
+                    self.setFunctionValues(funcWidget, subfuncs[subfunc]['Parameters'], setdefaults)
                 if 'Input Functions' in subfuncs[subfunc]:
                     for param, ipfs in subfuncs[subfunc]['Input Functions'].iteritems():
                         for ipf, sipfs in ipfs.iteritems():
@@ -1072,10 +1079,7 @@ class FunctionManager(fw.FeatureManager):
                                 if 'Enabled' in sipfs[sipf] and not sipfs[sipf]['Enabled']:
                                     ifwidget.enabled = False
                                 if 'Parameters' in sipfs[sipf]:
-                                    for p, v in sipfs[sipf]['Parameters'].iteritems():
-                                        ifwidget.params.child(p).setValue(v)
-                                        if setdefaults:
-                                            ifwidget.params.child(p).setDefault(v)
+                                    self.setFunctionValues(ifwidget, sipfs[sipf]['Parameters'], setdefaults)
                                 ifwidget.updateParamsDict()
                 funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()

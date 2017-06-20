@@ -101,6 +101,7 @@ class TomographyPlugin(base.plugin):
                                        blank_form='Select a function from\n below to set parameters...')
         self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
         self.manager.sigPipelineChanged.connect(self.reconnectTabs)
+        self.manager.sigFuncAdded.connect(self.setPipelineValues)
 
         # queue for recon jobs
         self.queue_widget = self.ui.queue

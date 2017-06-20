@@ -29,11 +29,45 @@ def register_fabioclass(cls):
 
 
 h5classes = list()
+tiffclasses = list()
+
+def register_tiffclass(cls):
+    global tiffclasses
+    tiffclasses.append(cls)
+    return cls
 
 def register_h5class(cls):
     global h5classes
     h5classes.append(cls)
     return cls
+
+@register_fabioclass
+class xicamtiffimage(fabioimage):
+    extensions = ['.tiff', '.tif']
+
+    def read(self, filename, frame=None):
+        for tiff in tiffclasses:
+            if hasattr(tiff,'validate'): # check which class preferably based on the validate staticmethod
+                try:
+                    tiff.validate(filename, frame)
+                except Exception as ex:
+                    continue
+            try: # if there isn't one, try to read with this class
+                return xicamtiffimage._instantiate_read(tiff,filename,frame)
+            except Exception as ex:
+                continue
+
+        # if custom classes fail, use built-in class
+        return xicamtiffimage._instantiate_read(fabio.tifimage.tifimage, filename, frame)
+
+    @staticmethod
+    def _instantiate_read(cls,filename,frame):
+        fabh5 = cls()
+        fabh5.filename = filename
+        return fabh5.read(filename, frame)
+
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'xicamtiff'))
+
 
 @register_fabioclass
 class hdf5image(fabioimage):
@@ -390,7 +424,7 @@ class nexusimage(fabioimage):
         self._h5.close()
 
 
-@register_fabioclass
+@register_tiffclass
 class tomotifimage(fabioimage):
 
     """
@@ -407,6 +441,11 @@ class tomotifimage(fabioimage):
         self.header = None
         self.flats = None
         self.darks = None
+
+    @staticmethod
+    def validate(f, frame=None):
+        tiff = tifffile.imread(f)
+        assert len(tiff.shape) > 2
 
     def read(self, f, frame=None):
         self._dgroup = tifffile.imread(f)
@@ -444,8 +483,6 @@ class tomotifimage(fabioimage):
 
     def close(self):
         pass
-
-fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'tomotif'))
 
 @register_fabioclass
 class npyimage(fabioimage):
