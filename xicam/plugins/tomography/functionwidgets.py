@@ -154,7 +154,6 @@ class FunctionWidget(fw.FeatureWidget):
         self.previewButton.setChecked(True)
         self.previewButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
-        self.defaults = config.function_defaults['Other']
         self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
 
         self.expand()
@@ -282,7 +281,7 @@ class FunctionWidget(fw.FeatureWidget):
         """
         Slot connected to a pg.Parameter.sigChanged signal
         """
-        if self.defaults:
+        if hasattr(self, 'defaults'):
             try:
                 arg_type = self.defaults[param.name()]['type']
                 try:
@@ -384,9 +383,8 @@ class TomoPyReconFunctionWidget(FunctionWidget):
                                self.addCenterDetectFunction)
         self.menu.addMenu(self.submenu)
 
-        defaults = config.function_defaults['Tomopy']
-        if subname in defaults:
-            self.defaults = defaults[subname]
+        if subname in config.function_defaults.keys():
+            self.defaults = config.function_defaults[subname]
             for key in self.defaults.iterkeys():
                 val = self.defaults[key]['default']
                 self.param_dict.update({key: val})
@@ -515,16 +513,14 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
         else:
             self.param_dict['options']['proj_type'] = 'linear'
 
-        defaults = config.function_defaults['Astra']
-        if subname in defaults:
-            self.defaults = defaults[subname]
+        if subname in config.function_defaults.keys():
+            self.defaults = config.function_defaults[subname]
             for key in self.defaults.iterkeys():
                 val = self.defaults[key]['default']
                 self.param_dict.update({key: val})
                 if key in [p.name() for p in self.params.children()]:
                     self.params.child(key).setValue(val)
                     self.params.child(key).setDefault(val)
-
 
 
 

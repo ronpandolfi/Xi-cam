@@ -23,22 +23,31 @@ PARAM_TYPES = {'int': int, 'float': float}
 with open('xicam/yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
-# Load parameter data for available functions
-parameter_files = ('tomopy_function_parameters.yml',
-                   'aux_function_parameters.yml',
-                   'dataexchange_function_parameters.yml',
-                   'astra_function_parameters.yml',
-                   'mbir_function_parameters.yml',
-                   'f3d_function_parameters.yml')
-parameters = {}
+parameters = {}; als832defaults = {}; aps_defaults = {}; names = {}; function_defaults = {}
+with open('xicam/yaml/tomography/functions_info.yml', 'r') as stream:
+    info = yaml.load(stream)
+    for key in info.keys():
+        # load parameter data for available functions
+        if 'parameters' in info[key].keys():
+            parameters[key] = info[key]['parameters']
 
-for file in parameter_files:
-    with open('xicam/yaml/tomography/'+file ,'r') as stream:
-        parameters.update(yaml.load(stream))
+        # load dictionary with function parameters to be retrieved from metadata
+        try:
+            als832defaults[key] = info[key]['conversions']['als']
+        except KeyError:
+            pass
+        try:
+            aps_defaults[key] = info[key]['conversions']['aps']
+        except KeyError:
+            pass
 
-# Load dictionary with pipeline names and function names
-with open('xicam/yaml/tomography/function_names.yml','r') as stream:
-    names=yaml.load(stream)
+        # load dictionary with pipeline names and function names
+        if 'name' in info[key].keys():
+            names[key] = info[key]['name']
+
+        # load dictionary of set defaults
+        if 'defaults' in info[key].keys():
+            function_defaults[key] = info[key]['defaults']
 
 # Add reconstruction methods to function name dictionary, but include the package the method is in
 for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
@@ -49,17 +58,6 @@ for algorithm in funcs['Functions']['Reconstruction']['Astra']:
 
 for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
     names[algorithm] = ['recon','mbir']
-
-# Load dictionary with function parameters to be retrieved from metadatas
-with open('xicam/yaml/tomography/als832_function_defaults.yml','r') as stream:
-    als832defaults = yaml.load(stream)
-with open('xicam/yaml/tomography/aps_function_defaults.yml','r') as stream:
-    aps_defaults = yaml.load(stream)
-
-# Load dictionary for astra recon functions
-with open('xicam/yaml/tomography/function_defaults.yml','r') as stream:
-    function_defaults=yaml.load(stream)
-    print('breakpoint')
 
 
 def load_pipeline(yaml_file):

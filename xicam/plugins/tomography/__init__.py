@@ -35,7 +35,7 @@ from functionmanager import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
-DEFAULT_PIPELINE_YAML = 'xicam/yaml/tomography/default_pipeline.yml'
+DEFAULT_PIPELINE_YAML = 'xicam/yaml/tomography/als_default_pipeline.yml'
 APS_PIPELINE_YAML = 'xicam/yaml/tomography/aps_default_pipeline.yml'
 
 
