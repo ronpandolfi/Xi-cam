@@ -117,14 +117,12 @@ class TomoViewer(QtGui.QWidget):
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
-        # if isinstance(self.data, PStack):
-        #     sgram = copy(self.data)
-        #     sgram.primary = sgram.sino
-        # else:
-        #     sgram = SinogramStack.cast(self.data)
-        # self.sinogramViewer = StackViewer(sgram, parent=self)
-
-        self.sinogramViewer = StackViewer(SinogramStack.cast(self.data), parent=self)
+        if isinstance(self.data, PStack):
+            sgram = copy(self.data)
+            sgram.primary = sgram.sino
+        else:
+            sgram = SinogramStack.cast(self.data)
+        self.sinogramViewer = StackViewer(sgram, parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 

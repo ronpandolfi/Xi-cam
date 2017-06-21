@@ -44,7 +44,6 @@ from psutil import cpu_count
 DEFAULT_PIPELINE_YAML = 'xicam/yaml/tomography/default_pipeline.yml'
 APS_PIPELINE_YAML = 'xicam/yaml/tomography/aps_default_pipeline.yml'
 
-
 class TomographyPlugin(base.plugin):
     """
     Tomography plugin class
@@ -723,6 +722,7 @@ class TomographyPlugin(base.plugin):
         self.queue_widget.removeRecon(0)
         self.recon_running = False
         self.runReconstruction()
+
 
 
 
