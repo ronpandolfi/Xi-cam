@@ -96,9 +96,9 @@ class pluginlink(object):
 
     @enabled.setter
     def enabled(self, enabled):
-        if enabled:
+        if enabled and not self._enabled:
             self.enable()
-        else:
+        elif not enabled and self._enabled:
             self.disable()
 
     def toggle(self):

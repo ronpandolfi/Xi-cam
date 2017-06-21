@@ -252,7 +252,6 @@ class ViewerPlugin(base.plugin):
         self.activate()
         if type(paths) is not list:
             paths = [paths]
-
         widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, src=paths, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)

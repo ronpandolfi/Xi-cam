@@ -23,6 +23,7 @@ class MetaDataWidget(QTreeWidget):
         self.setHeaderLabels(('Key','Value'))
         self.header().setStretchLastSection(True)
         self.setColumnWidth(0,100)
+        self.setSelectionMode(self.SingleSelection)
 
 
         self.contextMenu = QMenu()
@@ -31,6 +32,12 @@ class MetaDataWidget(QTreeWidget):
         useAsMenu.addAction('Downstream Intensity').triggered.connect(self.useAsI1)
         useAsMenu.addAction('Timeline Axis').triggered.connect(self.useAsTimeline)
         self.contextMenu.addMenu(useAsMenu)
+
+    def mousePressEvent(self,ev):
+        if ev.button()==Qt.RightButton:
+            self.contextMenu.popup(self.mapToGlobal(ev.pos()))
+            ev.accept()
+        super(MetaDataWidget, self).mousePressEvent(ev)
 
     def setData(self,data):
         self(data)
@@ -45,7 +52,7 @@ class MetaDataWidget(QTreeWidget):
         config.activeExperiment.setHeaderMap('Timeline Axis', self.getSelectedKey())
 
     def getSelectedKey(self):
-        return self.item(self.selectedIndexes()[0].row(),0).value
+        return self.selectedItems()[0].text(0)
 
     def __call__(self, header):
         self.fill(header)

@@ -44,7 +44,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = config.settings['defaultlocalpath']
+        self.path = config.settings['Default Local Path']
         if not self.path: self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
@@ -94,7 +94,7 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
-        config.settings['defaultlocalpath'] = path
+        config.settings['Default Local Path'] = path
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
@@ -265,22 +265,23 @@ class DataBrokerView(QtGui.QListWidget):
         super().clear()
         self._headers.clear()
 
+    def openSelected(self):
+        items = self.selectedIndexes()
+        headers = [self._headers[item.data()] for item in items]
+        paths = ['DB:{}/{}'.format(self.db.host,header.start['uid'])
+                 for header in headers]
+        self.sigOpen.emit(paths)
+
+
     def onDoubleClick(self, item):
         header = self._headers[item.data()]
         self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
                                              header.start['uid'])])
+
     def currentChanged(self, current, previous):
         uid = 'DB:{}/{}'.format(self.db.host,
                                 self._headers[current.data()].start['uid'])
         self.sigItemPreview.emit(uid)
-
-    def openSelected(self):
-        items = self.selectedIndexes()
-        paths = ['DB:{}/{}'.format(self.db.host,
-                                   self._headers[item.data()].start['uid'])
-                 for item in items]
-        self.sigOpen.emit(paths)
-
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -288,7 +289,7 @@ class DataBrokerView(QtGui.QListWidget):
         results = []
 
         # if querystring is null, limit to last 100
-        if not querystring: 
+        if not querystring:
             querystring='-100:'
 
         # if querystring is int-like
@@ -299,7 +300,7 @@ class DataBrokerView(QtGui.QListWidget):
                 pass
             else:
                 results = [self.db[query]]
-	
+
         # if querystring is slice-like, slice db
         if not results:
             try:
@@ -330,7 +331,7 @@ class DataBrokerView(QtGui.QListWidget):
 
             item = QtGui.QListWidgetItem(key)
 
-            if h.stop is None or h.stop['exit_status'] in ['abort','fail']:
+            if not h.get('stop') or h.get('stop',{'exit_status':'fail'})['exit_status'] in ['abort','fail']:
                 item.setBackground(QtGui.QBrush(QtCore.Qt.red))
             self.addItem(item)
             self._headers[key] = h

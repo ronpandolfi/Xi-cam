@@ -9,7 +9,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
+from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools, writer
 from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
@@ -162,6 +162,13 @@ class dimgViewer(QtGui.QWidget):
         self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
         self.coordslabel.setMouseTracking(True)
 
+        menu = self.viewbox.menu
+        setcenter = QtGui.QAction('Set Center',menu)
+        setcenter.setObjectName('setcenter')
+        setcenter.triggered.connect(self.setcenter)
+        menu.addAction(setcenter)
+
+
         self.centerplot = pg.ScatterPlotItem()
         self.viewbox.addItem(self.centerplot)
 
@@ -194,15 +201,6 @@ class dimgViewer(QtGui.QWidget):
         self.calibrantoverlay = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.calibrantoverlay)
 
-        # import ROI
-        # self.arc=ROI.ArcROI((620.,29.),500.)
-        # self.viewbox.addItem(self.arc)
-        # print self.dimg.data
-        # print self.imageitem
-
-
-        # self.viewbox.addItem(pg.SpiralROI((0,0),1))
-
         try:
             energy = self.dimg.headers['Beamline Energy']
             if energy is not None:
@@ -231,6 +229,16 @@ class dimgViewer(QtGui.QWidget):
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
+
+
+    def mousePressEvent(self,ev):
+        super(dimgViewer, self).mousePressEvent(ev)
+        self.lastclick = self.imageitem.mapFromScene(ev.pos())
+
+    def setcenter(self,*args,**kwargs):
+        config.activeExperiment.center=self.lastclick.x(),self.lastclick.y()
+        self.redrawimage()
+        self.replot()
 
     def loadLUT(self):
 
@@ -583,9 +591,6 @@ class dimgViewer(QtGui.QWidget):
         c.set_wavelength(ai.wavelength)
         fakecalibrationimg = c.fake_calibration_image(ai, shape=self.dimg.displaydata.shape[::-1], Imax=255, U=0, V=0, W=0.00001).T
 
-        self.maskimage.setImage(
-            )
-
         self.calibrantoverlay.setImage(np.dstack((np.ones_like(fakecalibrationimg), fakecalibrationimg, np.zeros_like(fakecalibrationimg), fakecalibrationimg)).astype(np.float),
             opacity=.5)
         self.maskimage.setLevels([0, 1])
@@ -910,7 +915,7 @@ class dimgViewer(QtGui.QWidget):
     def exportimage(self):
         data = self.imageitem.image
         guesspath = self.paths[0]
-        dialogs.savedatadialog(data=data, guesspath=guesspath, headers=self.dimg.headers)
+        writer.writeimage(data, path=guesspath, headers=self.dimg.headers,dialog=True)
 
     def capture(self):
         captureroi = None
@@ -950,7 +955,7 @@ class dimgViewer(QtGui.QWidget):
             qvrt_max = self.getq(*topright, mode='z') * 10
 
             headers = {'qpar_min': qpar_min, 'qpar_max': qpar_max, 'qvrt_min': qvrt_min, 'qvrt_max': qvrt_max}
-            dialogs.savedatadialog(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath)
+            writer.writeimage(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath, dialog=True)
 
             # Remove the ROI
             self.viewbox.removeItem(self.captureROI)
@@ -1318,6 +1323,7 @@ class integrationsubwidget(pg.PlotWidget):
                 self.iscleared = True
             if color is None:
                 color = [255, 255, 255]
+            y=y.astype(np.float)
             y[y<=0]=1.E-9
             curve = self.plotItem.plot(np.array(x), np.nan_to_num(np.array(y).astype(float)), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))

@@ -42,7 +42,6 @@ imagecache = dict()
 def loadsingle(path):
     return loadimage(path), loadparas(path)
 
-
 def loadimage(path):
     data = None
     if path.startswith('DB:'):
@@ -51,13 +50,22 @@ def loadimage(path):
         host, _, uid = path[3:].partition('/')
         db = dc[host]
         h = db[uid]
-        
+
         img_names = [k for d in h.descriptors if d['name'] == 'primary'
                     for k, v in d['data_keys'].items() if v['dtype'] == 'array']
-        try:
-            return np.array(db.db.get_images(h, img_names[0])).squeeze()
-        except FileNotFoundError:
-            return path
+
+        # For tiled data
+        if h.start.get('mode') == 'tiled':
+            ev1, ev2 = [doc['data'] for name, doc in h.stream('primary', fill=True) if name == 'event']
+            data,mask = loadstitched('','',data1=ev1['image'],data2=ev2['image'],paras1=ev1,paras2=ev2)
+            return data, mask
+        else:
+            data = np.array(db.db.get_images(h, img_names[0])).squeeze()
+            if data.ndim>2:
+                data =np.transpose(data,[1,2,0])
+            return data
+
+
 
 
     try:
@@ -79,6 +87,7 @@ def loadimage(path):
         msg.logMessage('IO Error loading: ' + path,msg.ERROR)
     except TypeError:
         msg.logMessage('The selected file is not a type understood by fabIO.',msg.ERROR)
+
 
     return data
 
@@ -305,7 +314,16 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    img = loadimage(path)
+
+    # Do extra rotations/transposition
+    if config.settings['Image Load Transpose']:
+        img = img.transpose()
+    if config.settings['Image Load Rotations']:
+        img = np.rot90(img, config.settings['Image Load Rotations'])
+
+    if not isinstance(img, tuple): img = (img, 1 - finddetectorbyfilename(path).calc_mask())
+    return img
 
 
 def loadxfs(path):
@@ -1414,7 +1432,8 @@ class multifilediffimage2(diffimage2):
     ndim = 3
 
     def __init__(self, filepaths, detector=None, experiment=None):
-        self.filepaths = sorted(list(filepaths))
+        self.filepaths=filepaths
+        if not filepaths[0].startswith('DB:'): self.filepaths = sorted(list(self.filepaths))
         self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
@@ -1451,7 +1470,10 @@ class multifilediffimage2(diffimage2):
         if self._xvals is None:
             timekey = config.activeExperiment.headermap['Timeline Axis']
             if timekey:
-                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                try:
+                    self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                except KeyError: # TODO: allow DB headers to be keyed without .start
+                    self._xvals = np.array([float(self.iHeaders(i).start[timekey]) for i in range(len(self.filepaths))])
             else:
                 self._xvals = np.arange(len(self.filepaths))
         return self._xvals
