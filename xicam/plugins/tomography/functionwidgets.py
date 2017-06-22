@@ -102,7 +102,8 @@ class FunctionWidget(fw.FeatureWidget):
         self.package = package.__name__
 
         # TODO have the children kwarg be passed to __init__
-        self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group')
+        self.params = Parameter.create(name=self.name, children=config.parameters[self.subfunc_name], type='group',
+                                       readonly=False)
 
         self.form = ParameterTree(showHeader=False)
         self.form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -203,7 +204,7 @@ class FunctionWidget(fw.FeatureWidget):
         Return the param dict of the FunctionWidget updated with proper types
         """
 
-        if self.defaults:
+        if hasattr(self, 'defaults'):
             param_dict = {}
             for key, val in self.param_dict.iteritems():
                 if type(val) is str and 'None' in val:
