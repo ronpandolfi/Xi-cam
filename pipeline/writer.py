@@ -5,7 +5,7 @@ import numpy as nx
 import numpy as np
 import scipy.ndimage
 from PySide import QtCore
-from xicam import debugtools
+from xicam import debugtools, dialogs
 import multiprocessing
 import time
 import os
@@ -87,7 +87,15 @@ def blockshaped(arr, factor):
     return np.array(secondslice)
 
 
-def writeimage(image, path, headers=None, suffix='',ext=None):
+def writeimage(image, path, mask=None, headers=None, suffix='',ext=None, dialog=False):
+    if dialog:
+        filename,ok = dialogs.savedatadialog(guesspath=path,caption="Save data to "+ext)
+        if filename and ok:
+            writeimage(image, filename, headers)
+            if mask is not None:
+                maskname = ''.join(os.path.splitext(filename)[:-1]) + "_mask" + os.path.splitext(filename)[-1]
+                writeimage(mask, maskname, headers)
+
     if headers is None: headers = dict()
     if ext is None: ext = os.path.splitext(path)[-1]
 
@@ -123,6 +131,5 @@ def writearray(data, path, headers=None, suffix=''):
 
 def notexitsoroverwrite(path):
     if os.path.isfile(path):
-        # if not dialogs.checkoverwrite(): return False
-        return True
+        if not dialogs.checkoverwrite(path): return False
     return True

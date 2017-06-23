@@ -211,7 +211,7 @@ class ArcROI(pg.ROI):
         radius = pg.Point(self.innerhandle.pos()).length()
         # r2 = radius[1]
         # r3 = r2[0]
-        return radius / self.getRadius() * .5
+        return radius
 
     def boundingRect(self):
         r = self.getRadius()
@@ -256,7 +256,7 @@ class ArcROI(pg.ROI):
         p.drawArc(r, -(self.startangle) * 16, -(self.arclength) * 16)
 
         # pos = self.mapFromView(self.innerhandle.pos())
-        radius = self.getInnerRadius()
+        radius = self.getInnerRadius()/self.getRadius()*.5
 
         r = QCircRectF()
 
@@ -287,11 +287,14 @@ class ArcROI(pg.ROI):
         w = arr.shape[0]
         h = arr.shape[1]
         ## generate an ellipsoidal mask
-        qmask = config.activeExperiment.AI.qArray(shape=arr.shape)
+        q = (config.activeExperiment.AI.qArray(shape=arr.shape[::-1])/10.).T
+
+        qmask = np.bitwise_and(q>self.getInnerRadius(), q<self.getRadius())
+        center = config.activeExperiment.center
         chimask = np.fromfunction(
             lambda x, y:
-                         ((np.degrees(np.arctan2(y, x)) - self.startangle) % 360 > 0) &
-                         ((np.degrees(np.arctan2(y, x)) - self.startangle) % 360 < self.arclength)
+                         ((np.degrees(np.arctan2(y-center[1], x-center[0])) - self.startangle) % 360 > 0) &
+                         ((np.degrees(np.arctan2(y-center[1], x-center[0])) - self.startangle) % 360 < self.arclength)
             , (w, h))
 
 

@@ -4,7 +4,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools
+from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools, writer
 from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
@@ -163,6 +163,13 @@ class dimgViewer(QtGui.QWidget):
         self.coordslabel.enterEvent = self.graphicslayoutwidget.enterEvent
         self.coordslabel.setMouseTracking(True)
 
+        menu = self.viewbox.menu
+        setcenter = QtGui.QAction('Set Center',menu)
+        setcenter.setObjectName('setcenter')
+        setcenter.triggered.connect(self.setcenter)
+        menu.addAction(setcenter)
+
+
         self.centerplot = pg.ScatterPlotItem()
         self.centerplot.setData([0], [0], pen=None, symbol='o',
                                 brush=pg.mkBrush('#FFA500'))
@@ -197,15 +204,6 @@ class dimgViewer(QtGui.QWidget):
         self.calibrantoverlay = pg.ImageItem(opacity=.25)
         self.viewbox.addItem(self.calibrantoverlay)
 
-        # import ROI
-        # self.arc=ROI.ArcROI((620.,29.),500.)
-        # self.viewbox.addItem(self.arc)
-        # print self.dimg.data
-        # print self.imageitem
-
-
-        # self.viewbox.addItem(pg.SpiralROI((0,0),1))
-
         try:
             energy = self.dimg.headers['Beamline Energy']
             if energy is not None:
@@ -233,6 +231,16 @@ class dimgViewer(QtGui.QWidget):
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
+
+
+    def mousePressEvent(self,ev):
+        super(dimgViewer, self).mousePressEvent(ev)
+        self.lastclick = self.imageitem.mapFromScene(ev.pos())
+
+    def setcenter(self,*args,**kwargs):
+        config.activeExperiment.center=self.lastclick.x(),self.lastclick.y()
+        self.redrawimage()
+        self.replot()
 
     def loadLUT(self):
 
@@ -307,24 +315,24 @@ class dimgViewer(QtGui.QWidget):
                     # print x,y,self.dimg.data[int(x),int(y)],self.getq(x,y),self.getq(None,y),self.getq(x,None,),np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (y - self.dimg.experiment.center[1]) ** 2)
                     self.coordslabel.setText(u"<div style='font-size: 12pt;background-color:#111111;'>x=%0.1f,"
                                              u"   <span style=''>y=%0.1f</span>,   <span style=''>I=%0.0f</span>,"
-                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,"
-                                             u"  q=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
+                                             u"  q=%0.3f \u212B\u207B\u00B9,"
+                                             u"  q<sub>\u2225\u2225</sub>=%0.3f \u212B\u207B\u00B9,  q<sub>z</sub>=%0.3f \u212B\u207B\u00B9,"
                                              u"  d=%0.3f nm,"
                                              u"  \u03B8=%.2f</div>" % (
                                                  pixx,
                                                  pixy,
                                                  data[int(pixx),
                                                       int(pixy)],
-                                                 qpar ** 2 + qz ** 2,
+                                                 np.sqrt(qpar ** 2 + qz ** 2),
                                                  qpar,
                                                  qz,
-                                                 2 * np.pi / (qpar ** 2 + qz ** 2) / 10,
+                                                 2 * np.pi / np.sqrt(qpar ** 2 + qz ** 2) / 10,
                                                  360. / (2 * np.pi) * np.arctan2(qz, qpar)))
                     # np.sqrt((x - self.dimg.experiment.center[0]) ** 2 + (
                     # y - self.dimg.experiment.center[1]) ** 2)))
                     # ,  r=%0.1f
                     if self.plotwidget is not None:  # for timeline
-                        self.plotwidget.movPosLine(qpar ** 2 + qz ** 2,
+                        self.plotwidget.movPosLine(np.sqrt(qpar ** 2 + qz ** 2),
                                                    qpar,
                                                    qz)
 
@@ -918,7 +926,7 @@ class dimgViewer(QtGui.QWidget):
     def exportimage(self):
         data = self.imageitem.image
         guesspath = self.paths[0]
-        dialogs.savedatadialog(data=data, guesspath=guesspath, headers=self.dimg.headers)
+        writer.writeimage(data, path=guesspath, headers=self.dimg.headers,dialog=True)
 
     def capture(self):
         captureroi = None
@@ -958,7 +966,7 @@ class dimgViewer(QtGui.QWidget):
             qvrt_max = self.getq(*topright, mode='z') * 10
 
             headers = {'qpar_min': qpar_min, 'qpar_max': qpar_max, 'qvrt_min': qvrt_min, 'qvrt_max': qvrt_max}
-            dialogs.savedatadialog(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath)
+            writer.writeimage(data=dataregion, mask=maskregion, headers=headers, guesspath=guesspath, dialog=True)
 
             # Remove the ROI
             self.viewbox.removeItem(self.captureROI)
@@ -1290,6 +1298,7 @@ class integrationsubwidget(pg.PlotWidget):
                 continue
 
             cut = (roi.getArrayRegion(np.ones_like(dimg.transformdata), imageitem)).T
+            np.save('cut',np.rot90(cut))
             msg.logMessage(('Cut:', cut.shape), msg.DEBUG)
 
             if cut is not None:

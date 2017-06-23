@@ -274,7 +274,17 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    img = loadimage(path)
+
+    # Do extra rotations/transposition
+    if config.settings['Image Load Transpose']:
+        img=img.transpose()
+    if config.settings['Image Load Rotations']:
+        img=np.rot90(img,config.settings['Image Load Rotations'])
+
+
+    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
+    return img
 
 
 def loadxfs(path):
@@ -430,8 +440,6 @@ class diffimage():
 
     def finddetector(self):
         for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
-            # print detector
-            # print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
                 if detector.MAX_SHAPE == self.data.shape[::-1]:  #
