@@ -159,7 +159,7 @@ def chi_2Dintegrate(imgdata, cen, mu, mask=None, chires=30):
 def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None):
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
-        AI = config.activeExperiment.getAI()
+        AI = config.activeExperiment.AI
         # p1 = AI.get_poni1()
         # p2 = AI.get_poni2()
         # msg.logMessage(('poni:', p1, p2),msg.DEBUG)
@@ -288,7 +288,7 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
 def cake(imgdata, experiment, mask=None,  xres=config.settings['Integration Bins (chi)'], yres=config.settings['Integration Bins (q)']):
     if mask is None:
         mask = np.zeros_like(imgdata)
-    AI = experiment.getAI()
+    AI = experiment.AI
     """:type : pyFAI.AzimuthalIntegrator"""
 
     return AI.integrate2d(imgdata.T, xres, yres, mask=1-mask.T)
@@ -327,7 +327,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    chi = np.arange(-180,180,360/config.settings['Integration Bins (chi)'])
+    chi = np.arange(-180,180,360./config.settings['Integration Bins (chi)'])
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     xprofile = np.ma.average(maskeddata, axis=1)

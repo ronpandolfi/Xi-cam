@@ -440,6 +440,13 @@ class dimgViewer(QtGui.QWidget):
                                   pos=pos,
                                   scale=(scale, scale))
 
+        if self.iscake: # TODO: until cake axes are ready, hide axes in cake mode
+            self.axesItem.hideAxis('bottom')
+            self.axesItem.hideAxis('left')
+        else:
+            self.axesItem.showAxis('bottom')
+            self.axesItem.showAxis('left')
+
         self.replot()
 
         if self.ismaskshown:
