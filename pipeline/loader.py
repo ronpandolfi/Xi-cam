@@ -915,21 +915,6 @@ class PStack(object):
             arr = arr[0]
         return np.squeeze(arr)
 
-        # this is a hack to work around pyqtgraph expecting a
-        # non-proxy object that it can progress
-        # if (isinstance(indx, list) and
-        #         all(isinstance(ind, slice) for ind in indx)):
-        #     indx = 0
-        # # in all other cases pass through
-        # return self._gi(indx)
-
-    def _gi(self, indx):
-        """guts of __getitem__
-
-        Split this like so because pyqtgraph throws lists at us
-        which lru can not hash!
-        """
-        return self.primary[indx]
 
     @property
     def rawdata(self):
