@@ -840,6 +840,13 @@ class PStack(object):
         self.flats = flat
         self.dtype = projections.pixel_type
         self.header = hdr
+        self.frames = [str(j) for j in range(len(self.projections))]
+
+        for pim in (self.sino, self.darks, self.flats, self.primary):
+            pim.frames = [str(j) for j in range(len(pim))]
+
+    def __len__(self):
+        return len(self.primary)
 
     # shim because this is expected a few other places in
     # the code.
@@ -868,14 +875,48 @@ class PStack(object):
     def transpose(self, ax):
         return self
 
-    def __getitem__(self, indx):
+    def __getitem__(self, item):
+
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item,)
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self.primary[i][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
         # this is a hack to work around pyqtgraph expecting a
         # non-proxy object that it can progress
-        if (isinstance(indx, list) and
-                all(isinstance(ind, slice) for ind in indx)):
-            indx = 0
-        # in all other cases pass through
-        return self._gi(indx)
+        # if (isinstance(indx, list) and
+        #         all(isinstance(ind, slice) for ind in indx)):
+        #     indx = 0
+        # # in all other cases pass through
+        # return self._gi(indx)
 
     def _gi(self, indx):
         """guts of __getitem__
@@ -887,10 +928,14 @@ class PStack(object):
 
     @property
     def rawdata(self):
-        # this is required else where in the code base.
-        # the existing implementations seem to just cache
-        # what ever the 'current frame' is !?!
         return self[0]
+
+    def getframe(self, frame=0):
+        self.data = self.primary[frame]
+        return self.data
+
+    def close(self):
+        pass
 
 
 class StackImage(object):

@@ -245,14 +245,7 @@ class TomoViewer(QtGui.QWidget):
                                     stream_name='background')
             sinogram = db.db.get_images(h, 'sinogram',
                                         stream_name='sinogram')
-
-            # this is required because code else where expects it
-            for pim in (projection, dark, flat, sinogram):
-                pim.frames = [str(j) for j in range(len(pim))]
-            for pim in (projection, sinogram):
-                pim.flat_frames = {j: str(j) for j in range(len(flat))}
-                pim.dark_frames = {j: str(j) for j in range(len(dark))}
-            return PStack(projection, dark, flat, sinogram, h.start)
+            return ProjectionStack(data=PStack(projection, dark, flat, sinogram, h.start))
 
         if raw:
             return ProjectionStack(paths)

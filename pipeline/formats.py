@@ -99,8 +99,9 @@ class ALS832H5image(fabioimage):
 
     @staticmethod
     def validate(f, frame=None):
-        h5 = h5py.File(f, 'r')
+        h5 = h5py.File(f, 'r+')
         header = dict(h5.attrs)
+        h5.close()
         if type(header['facility'])!=str:
             assert header['facility'].decode('UTF-8') == 'als'
         else:
