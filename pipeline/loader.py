@@ -60,7 +60,11 @@ def loadimage(path):
             data,mask = loadstitched('','',data1=ev1['image'],data2=ev2['image'],paras1=ev1,paras2=ev2)
             return data, mask
         else:
-            data = np.array(db.db.get_images(h, img_names[0])).squeeze()
+            data = db.db.get_images(h, img_names[0])[0]
+
+            # converting to np.array takes too long - is it necessary to do this?
+            # if so, comment out line above and uncomment line below
+            # data = np.array(db.db.get_images(h, img_names[0]).squeeze()
             if data.ndim>2:
                 data =np.transpose(data,[1,2,0])
             return data
