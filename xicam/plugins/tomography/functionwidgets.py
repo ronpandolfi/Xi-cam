@@ -203,7 +203,7 @@ class FunctionWidget(fw.FeatureWidget):
         Return the param dict of the FunctionWidget updated with proper types
         """
 
-        if self.defaults:
+        if hasattr(self, 'defaults'):
             param_dict = {}
             for key, val in self.param_dict.iteritems():
                 if type(val) is str and 'None' in val:
