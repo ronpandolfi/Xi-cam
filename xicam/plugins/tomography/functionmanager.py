@@ -479,6 +479,8 @@ class FunctionManager(fw.FeatureManager):
             function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center'])) - slc_offset
             self.resetCenterCorrection()
         elif name == 'Sino 360 to 180':
+            # since this parameter needs the COR (which can change), loading must be done here
+            # instead of done earlier
             tomo = data_dict['tomo']
             if tomo.shape[0]%2>0:
                 function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'] -0.5))*2)
@@ -671,13 +673,13 @@ class FunctionManager(fw.FeatureManager):
 
         # save function pipeline as runnable
         path = datawidget.path
-        # yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
-        # runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
-        # try:
-        #     with open(python_file, 'w') as py:
-        #         py.write(runnable)
-        # except NameError or IOError:
-        #     yield "Error: pipeline python script not written - path could not be found"
+        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
+        runnable = self.extractPipelineRunnable(run_dict, theta, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
+        try:
+            with open(python_file, 'w') as py:
+                py.write(runnable)
+        except NameError or IOError:
+            yield "Error: pipeline python script not written - path could not be found"
 
         # save yaml in reconstruction folder
         for key in yaml_pipe.iterkeys(): # special case for 'center' param
@@ -1090,7 +1092,8 @@ class FunctionManager(fw.FeatureManager):
                     funcWidget.updateParamsDict()
         self.sigPipelineChanged.emit()
 
-    def extractPipelineRunnable(self, run_state, params, proj, sino, sino_p_chunk, width, path, ncore=None):
+    def extractPipelineRunnable(self, runnable_pipe, center, params,
+                                proj, sino, sino_p_chunk, width, path, ncore=None):
         """
         Saves the function pipeline as a runnable (Python) file.
 
@@ -1105,10 +1108,8 @@ class FunctionManager(fw.FeatureManager):
                     "import numpy as np\nimport numexpr as ne\n\n"
 
         # set up function pipeline
-        runnable_pipe = run_state[3][1]
         func_dict = runnable_pipe['func']
         subfunc_dict = runnable_pipe['subfunc']
-        center = run_state[2]
 
         signature += "def main():\n\n"
         signature += "\t# offset and scale factors in case of padding, upsampling, or downsampling\n"

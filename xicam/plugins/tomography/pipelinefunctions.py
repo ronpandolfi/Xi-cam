@@ -319,7 +319,7 @@ def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0
 
 def sino_360_to_180(data, overlap=0, rotation='left'):
     """
-    Wrapper for tomopy sino_360_to_180 function to handle even/odd shaped data
+    Wrapper for 360_to_180 function (see below) to handle even/odd shaped data
     """
 
     if data.shape[0]%2>0:
