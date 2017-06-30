@@ -660,7 +660,7 @@ class TomographyPlugin(base.plugin):
         currentWidget = self.centerwidget.widget(self.currentIndex())
         self.manager.updateParameters()
 
-        run_state = self.manager.saveState(currentWidget)
+        func_dict, theta, center, pipeline_dict, run_dict = self.manager.saveState(currentWidget)
         recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
                             interrupt_signal=self.bottom.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
@@ -684,7 +684,8 @@ class TomographyPlugin(base.plugin):
             sino_chunk = cpu_count()*5
             width = (None, None, None)
 
-        args = (currentWidget, run_state, proj, sino, sino_chunk, proj_chunk, width, cpu_count())
+        dims = (proj, sino, width, sino_chunk, proj_chunk, cpu_count())
+        args = (currentWidget, func_dict, theta, center, pipeline_dict, run_dict, dims)
 
         self.queue_widget.recon_queue.append([recon_iter, args])
         self.queue_widget.addRecon(args)

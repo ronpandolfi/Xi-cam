@@ -489,7 +489,7 @@ class ReconManager(QtGui.QSplitter):
         widget.sigDelete.connect(self.reconDeleted)
 
         form = DataTreeWidget()
-        data = args[1][3][0]
+        data = args[4]
         form.setData(data, hideRoot=True)
         form.header().hide()
         form.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)

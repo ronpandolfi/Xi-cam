@@ -342,7 +342,7 @@ class FunctionManager(fw.FeatureManager):
         """
 
         # extract function pipeline
-        lst = []; theta = []
+        d = OrderedDict(); theta = []
         for function in self.features:
             if not function.enabled or 'Reader' in function.name:
                 continue
@@ -365,7 +365,7 @@ class FunctionManager(fw.FeatureManager):
                 fpartial.keywords.pop('folder name', None)
                 fpartial.keywords.pop('file name', None)
 
-            lst.append((fpartial, function.name))
+            d[function.name] = fpartial
 
             if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
                 for param,ipf in function.input_functions.iteritems():
@@ -391,8 +391,8 @@ class FunctionManager(fw.FeatureManager):
                     if 'theta' in param:
                         theta = ipf.partial()
 
-        extract = (config.extract_pipeline_dict(self.features), config.extract_runnable_dict(self.features))
-        return [lst, theta, center, extract]
+        return [d, theta, center, config.extract_pipeline_dict(self.features),
+                config.extract_runnable_dict(self.features)]
 
     def loadDataDictionary(self, datawidget, theta, center, slc = None):
         """
@@ -543,12 +543,12 @@ class FunctionManager(fw.FeatureManager):
         partial_stack = []
         self.lockParams(True)
 
-        func_pipeline, theta, center, yaml_pipe = self.saveState(datawidget)
+        func_dict, theta, center, yaml_pipe, python_pipe = self.saveState(datawidget)
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
-        for tuple in func_pipeline:
-            params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
+        for name, fpartial in list(func_dict.items()):
+            params_dict['{}'.format(name)] = dict(fpartial.keywords)
 
         # load data dictionary
         data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
@@ -603,8 +603,8 @@ class FunctionManager(fw.FeatureManager):
 
 
 
-    def reconGenerator(self, datawidget, run_state, proj, sino, sino_p_chunk, proj_p_chunk,
-                       width, ncore = None):
+    def reconGenerator(self, datawidget, func_dict, theta, center, yaml_pipe,
+                       run_dict, dims, ncore = None):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
@@ -639,6 +639,7 @@ class FunctionManager(fw.FeatureManager):
         """
 
         start_time = time.time()
+        proj, sino, width, sino_p_chunk, proj_p_chunk, cpu_count = dims
         write_start = sino[0]
 
         num_proj_per_chunk = np.minimum(proj_p_chunk, proj[1] - proj[0])
@@ -647,23 +648,18 @@ class FunctionManager(fw.FeatureManager):
         numsinochunks = (sino[1]-sino[0]-1)//num_sino_per_chunk+1
         numprojused = (proj[1] - proj[0])//proj[2]
         numsinoused = (sino[1] - sino[0])//sino[2]
-        keepvalues = None
-
-        func_pipeline, theta, center, extract = run_state
-        yaml_pipe = extract[0]
-
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
-        for tuple in func_pipeline:
-            params_dict['{}'.format(tuple[1])] = dict(tuple[0].keywords)
+        for name, fpartial in list(func_dict.items()):
+            params_dict['{}'.format(name)] = dict(fpartial.keywords)
 
 
         # get save names for pipeline yaml/runnable files
         dir = ""
-        for function_tuple in func_pipeline:
-            if 'fname' in function_tuple[0].keywords:
-                fname = function_tuple[0].keywords['fname']
+        for name, fpartial in list(func_dict.items()):
+            if 'fname' in fpartial.keywords:
+                fname = fpartial.keywords['fname']
                 for item in fname.split('/')[:-1]:
                     dir += item + '/'
                 yml_file = fname + '.yml'
@@ -675,8 +671,8 @@ class FunctionManager(fw.FeatureManager):
 
         # save function pipeline as runnable
         path = datawidget.path
-        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
-        runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
+        # yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
+        # runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
         # try:
         #     with open(python_file, 'w') as py:
         #         py.write(runnable)
@@ -691,15 +687,15 @@ class FunctionManager(fw.FeatureManager):
                         yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
 
 
-        # try:
-        #     with open(yml_file, 'w') as yml:
-        #         yamlmod.ordered_dump(yaml_pipe, yml)
-        # except NameError or IOError:
-        #     yield "Error: function pipeline yaml not written - path could not be found"
-        #
-        # # determine which direction to slice in first
-        for func in func_pipeline:
-            subfunc = func[1].split('(')[-1].split(')')[0]
+        try:
+            with open(yml_file, 'w') as yml:
+                yamlmod.ordered_dump(yaml_pipe, yml)
+        except NameError or IOError:
+            yield "Error: function pipeline yaml not written - path could not be found"
+
+        # determine which direction to slice in first
+        for name in list(func_dict.keys()):
+            subfunc = name.split('(')[-1].split(')')[0]
             if self.slice_dir[subfunc] != 'both':
                 axis = self.slice_dir[subfunc]
                 break
@@ -723,28 +719,28 @@ class FunctionManager(fw.FeatureManager):
                     else:
                         slc = (slice(*proj), slice(y*num_sino_per_chunk+sino[0], np.minimum((y+1)*num_sino_per_chunk
                                 + sino[0], sino[1]), sino[2]), slice(*width))
-                    d = self.loadDataDictionary(datawidget, theta, center, slc=slc)
-                    d['num_proj_per_chunk'] = num_proj_per_chunk
-                    d['num_sino_per_chunk'] = num_sino_per_chunk
-                    d['numprojchunks'] = numprojchunks; d['numsinochunks'] = numsinochunks
-                    d['numprojused'] = numprojused; d['numsinoused'] = numsinoused
-                    d['proj'] = proj; d['width'] = width
-                    d['keepvalues'] = None
+                    d = self.loadDataDictionary(datawidget, theta, center,  slc=slc)
+                    d.update({'num_proj_per_chunk': num_proj_per_chunk, 'num_sino_per_chunk':
+                        num_sino_per_chunk, 'numprojchunks': numprojchunks, 'numsinochunks':
+                        numsinochunks, 'numprojused': numprojused, 'numsinoused': numsinoused,
+                        'proj': proj, 'width': width, 'keepvalues': None})
                 else:
                     if axis=='proj':
                         start, end = y * d['num_proj_per_chunk'], np.minimum((y + 1)*d['num_proj_per_chunk'], d['numprojused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((start, end, 1), (0, sino[1]-sino[0], 1), (0, width[1]-width[0], 1)))
+                                slc=((start, end, 1), (0, numsinoused, 1),
+                                     (0, (width[1]-width[0])//width[2], 1)))
                     else:
                         start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1)*d['num_sino_per_chunk'], numsinoused)
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((0, proj[1]-proj[0], 1), (start, end, 1), (0, width[1]-width[0], 1)))
+                                slc=((0, numprojused, 1), (start, end, 1),
+                                     (0, (width[1]-width[0])//width[2], 1)))
                     d['tomo'] = tomo
                 dofunc = curfunc
                 d['start'] = write_start
                 while True:
-                    function_tuple = func_pipeline[dofunc]
-                    subfunc = function_tuple[1].split('(')[-1].split(')')[0]
+                    func_name = func_dict.keys()[dofunc]
+                    subfunc = func_name.split('(')[-1].split(')')[0]
                     newaxis = self.slice_dir[subfunc]
                     if newaxis != 'both' and newaxis != axis:
                         # we have to switch the axis, so flush to disk
@@ -757,28 +753,27 @@ class FunctionManager(fw.FeatureManager):
                         dxchange.write_hdf5(d['tomo'], fname=tempfilenames[1-curtemp], gname='tmp', dname='tmp',
                                             overwrite=False, appendaxis=appendaxis)
                         break
-                    yield "{}: ".format(function_tuple[1])
+                    yield "{}: ".format(func_name)
                     curtime = time.time()
-                    function, write = self.updatePartial(function_tuple[0], function_tuple[1], d,
-                                                         params_dict[function_tuple[1]], slc)
+                    function, write = self.updatePartial(func_dict[func_name], func_name, d,
+                                                         params_dict[func_name], slc)
                     d[write] = function()
-                    self.updateDataDict(d, function_tuple[0], function_tuple[1])
-
+                    self.updateDataDict(d, func_dict[func_name], func_name)
 
                     yield 'Finished in {:2f} seconds\n'.format(time.time()-curtime)
                     dofunc += 1
-                    if dofunc == len(func_pipeline):
+                    if dofunc == len(func_dict):
                         break
-                if y < niter - 1 and keepvalues:
+                if y < niter - 1 and d['keepvalues']:
                     proj, num_proj_per_chunk, numprojchunks, numprojused, width = d['keepvalues']
                 if axis == 'sino':
                     write_start += num_sino_per_chunk
             curtemp = 1 - curtemp
             curfunc = dofunc
-            if curfunc == len(func_pipeline):
+            if curfunc == len(func_dict):
                 break
 
-            axis = self.slice_dir[func_pipeline[curfunc][1].split('(')[-1].split(')')[0]]
+            axis = self.slice_dir[func_dict.keys()[curfunc].split('(')[-1].split(')')[0]]
         yield "cleaning up temp files"
         for tmpfile in tempfilenames:
             try:
@@ -808,7 +803,6 @@ class FunctionManager(fw.FeatureManager):
         for tuple in partial_stack:
             function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
             data_dict[write] = function()
-
 
         return data_dict['tomo']
 
