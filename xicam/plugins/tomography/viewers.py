@@ -1053,8 +1053,13 @@ class ProjectionViewer(QtGui.QWidget):
         """
         # self.roi_histogram.setLevels(0,1)
         if val and not self.normalized:
-            self.flat = np.median(self.data.flats, axis=0).transpose()
-            self.dark = np.median(self.data.darks, axis=0).transpose()
+            if not hasattr(self.data, 'flats') or not hasattr(self.data, 'darks'):
+                msg.showMessage('Must load flats and darks to normalize dataset', timeout=10)
+                return
+            flats = np.array(self.data.flats.values())
+            darks = np.array(self.data.darks.values())
+            self.flat = np.median(flats, axis=0).transpose()
+            self.dark = np.median(darks, axis=0).transpose()
 
             proj = (self.imageItem.image - self.dark)/(self.flat - self.dark)
             overlay = self.imgoverlay_roi.currentImage
@@ -1065,27 +1070,18 @@ class ProjectionViewer(QtGui.QWidget):
                 overlay = np.flipud(overlay)
             self.imgoverlay_roi.currentImage = overlay
 
-            # TODO: change roi default levels during normalization to prevent washed out color
-            # if not self.bounds:
-            #     hist = self.imgoverlay_roi.imageItem.getHistogram()
-            #     arr1, arr2 = self.imgoverlay_roi.remove_outlier(hist[1], hist[0], sp.integrate.trapz(hist[1],hist[0]),
-            #                                                     thresh=0.4)
-            #     print len(arr1), ", ", len(arr2)
-            #     self.bounds = [arr2[0],arr2[-1]]
-            #     print self.bounds
-
             self.imgoverlay_roi.updateImage(autolevels=True)
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
-            self.roi_histogram.setLevels(-1,1) # lazy solution, could be improved with some sampling methods
+            self.roi_histogram.setLevels(-1, 1) # lazy solution, could be improved with some sampling methods
+            self.roi_histogram.vb.setRange(yRange=(-1.5, 1.5))
             self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
             self.stackViewer.resetImage()
             self.imgoverlay_roi.resetImage()
             min, max = self.stackViewer.quickMinMax(self.imgoverlay_roi.imageItem.image)
             self.roi_histogram.setLevels(min, max)
-            self.normalized = False
             self.normalized = False
             self.normCheckBox.setChecked(False)
 
