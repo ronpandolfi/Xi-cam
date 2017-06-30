@@ -258,8 +258,6 @@ Beam Tilt:
     - pipelinefunctions
 Sino 360 to 180:
   parameters:
-    - name: overlap
-      type: int
     - name: rotation
       type: list
       values:
@@ -273,7 +271,7 @@ Sino 360 to 180:
         - dark
   name:
     - sino_360_to_180
-    - tomopy
+    - pipelinefunctions
 Padding:
   conversions:
     als:

@@ -109,6 +109,7 @@ class TomographyPlugin(base.plugin):
         # self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
 
         # DRAG-DROP
+        # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
         self.centerwidget.dropEvent = self.dropEvent

@@ -13,6 +13,7 @@ __status__ = "Beta"
 import numpy as np
 import numexpr as ne
 import concurrent.futures as cf
+import tomopy
 from tomopy.util import mproc
 import scipy.ndimage.filters as snf
 import skimage.transform as st
@@ -316,6 +317,56 @@ def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0
 
     return arr
 
+def sino_360_to_180(data, overlap=0, rotation='left'):
+    """
+    Wrapper for tomopy sino_360_to_180 function to handle even/odd shaped data
+    """
+
+    if data.shape[0]%2>0:
+        return do360_to_180(data[0:-1,:,:], overlap=overlap, rotation=rotation)
+    else:
+        return do360_to_180(data[:,:,:], overlap=overlap, rotation=rotation)
+
+
+def do360_to_180(data, overlap=0, rotation='left'):
+    """
+    Converts 0-360 degrees sinogram to a 0-180 sinogram.
+
+    Parameters
+    ----------
+    data : ndarray
+        Input 3D data.
+
+    overlap : scalar, optional
+        Overlapping number of pixels.
+
+    rotation : string, optional
+        Left if rotation center is close to the left of the
+        field-of-view, right otherwise.
+
+    Returns
+    -------
+    ndarray
+    Output 3D data.
+    """
+    dx, dy, dz = data.shape
+    lo = overlap // 2
+    ro = overlap - lo
+    n = dx // 2
+    out = np.zeros((n, dy, 2*dz - overlap), dtype=data.dtype)
+    if rotation == 'left':
+        weights = (np.arange(overlap) + 0.5) / overlap
+        out[:, :, -dz + overlap:] = data[:n, :, overlap:]
+        out[:, :, :dz - overlap] = data[n:2 * n, :, overlap:][:, :, ::-1]
+        out[:, :, dz - overlap:dz] = weights * data[:n, :, :overlap] + (weights * data[n:2 * n, :, :overlap])[:, :,
+                                                                       ::-1]
+    elif rotation == 'right':
+        weights = (np.arange(overlap)[::-1] + 0.5) / overlap
+        out[:, :, :dz - overlap] = data[:n, :, :-overlap]
+        out[:, :, -dz + overlap:] = data[n:2 * n, :, :-overlap][:, :, ::-1]
+        out[:, :, dz - overlap:dz] = weights * data[:n, :, -overlap:] + (weights * data[n:2 * n, :, -overlap:])[:, :,
+                                                                        ::-1]
+    return out
 
 
 if __name__ == '__main__':
@@ -325,8 +376,8 @@ if __name__ == '__main__':
     # d = np.array(d[0], dtype=np.float32)
     d = d[0]
     c = convert_data(d, imin=0, imax=0)
-    print d.dtype
-    print c.dtype
+    print(d.dtype)
+    print(c.dtype)
     figure(0)
     imshow(d[0])
     figure(1)

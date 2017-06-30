@@ -26,6 +26,7 @@ import reconpkg
 import functionwidgets as fc
 from xicam.widgets import featurewidgets as fw
 import dxchange
+import tomopy
 
 
 class FunctionManager(fw.FeatureManager):
@@ -79,12 +80,12 @@ class FunctionManager(fw.FeatureManager):
         'Fourier-Wavelet': 'sino',
         'Titarenko': 'sino',
         'Smoothing Filter': 'sino',
-        'do_360_to_180': 'sino',
-        # 'correcttilt': 'proj',
+        'Sino 360 to 180': 'sino',
+        'correcttilt': 'proj',
         'Phase Retrieval': 'proj',
         'Gridrec': 'sino', 'FBP': 'sino', 'ART': 'sino', 'BART': 'sino', 'MLEM': 'sino', 'OSEm': 'sino',
         'OSPML Hybrid': 'sino', 'OSPML Quad': 'sino', 'PML Hybrid': 'sino', 'PML Quad': 'sino', 'SIRT': 'sino',
-        'BP': 'sino', 'FBP_astra': 'sino', 'SIRT': 'sino', 'SART': 'sino', 'ART': 'sino', 'CGLS': 'sino', 'BP_CUDA': 'sino',
+        'BP': 'sino', 'FBP_astra': 'sino', 'SIRT_astra': 'sino', 'SART': 'sino', 'ART_astra': 'sino', 'CGLS': 'sino', 'BP_CUDA': 'sino',
         'FBP_CUDA': 'sino', 'SIRT_CUDA': 'sino', 'SART_CUDA': 'sino', 'CGLS_CUDA': 'sino', 'Gridrec Tomocam': 'sino',
         'SIRT TomoCam': 'sino', 'MBIR TomoCam': 'sino',
         'Polar Mean Filter': 'sino',
@@ -439,70 +440,6 @@ class FunctionManager(fw.FeatureManager):
         return data_dict
 
 
-    def updateFunctionPartial(self, funcwidget, datawidget, stack_dict=None, slc=None):
-        """
-        Updates the given FunctionWidget's partial
-
-
-        Parameters
-        ----------
-        funcwidget : FunctionWidget
-            Widget whos partial is to be updated
-        datawidget
-            Class holding the input dataset
-        stack_dict : dict, optional
-            Copy FunctionWidget's param_dict
-        slc : slice
-            Slice object to extract flat/dark fields when appropriate
-
-        Returns
-        -------
-        functools.partial
-            partial object with updated keywords
-        """
-
-        fpartial = funcwidget.partial
-
-        for argname in funcwidget.missing_args: # find a more elegant way to point to the flats and darks
-            if argname in 'flats':
-                fpartial.keywords[argname] = datawidget.getflats(slc=slc)
-            if argname in 'darks':
-                fpartial.keywords[argname] = datawidget.getdarks(slc=slc)
-            if argname in 'flat_loc': # I don't like this at all
-                if slc is not None and slc[0].start is not None:
-                    slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
-                            else slc[0])
-                    fpartial.keywords[argname] = map_loc(slc_, datawidget.data.fabimage.flatindices())
-                else:
-                    fpartial.keywords[argname] = datawidget.data.fabimage.flatindices()
-
-        for param, ipf in funcwidget.input_functions.iteritems():
-            args = []
-            if not ipf.enabled:
-                continue
-            if param == 'center':
-                if ipf.subfunc_name in FunctionManager.center_func_slc:
-                    map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
-                else:
-                    args.append(datawidget.getsino())
-
-                if ipf.subfunc_name == 'Nelder Mead':
-                    ipf.partial.keywords['theta'] = funcwidget.input_functions['theta'].partial()
-            fpartial.keywords[param] = ipf.partial(*args)
-
-            if stack_dict and param in stack_dict:  # update the stack dict with new kwargs
-                stack_dict[param] = fpartial.keywords[param]
-
-
-        if funcwidget.func_name in ('Padding', 'Downsample', 'Upsample'):
-            self.setCenterCorrection(funcwidget.func_name, fpartial.keywords)
-        elif 'Reconstruction' in funcwidget.func_name:
-            fpartial.keywords['center'] = self.cor_offset(self.cor_scale(fpartial.keywords['center']))
-            self.resetCenterCorrection()
-
-        return fpartial
-
 
     def updatePartial(self, function, name, data_dict, param_dict, slc=None):
         """
@@ -537,13 +474,38 @@ class FunctionManager(fw.FeatureManager):
                     write = val
                 function.keywords[key] = data_dict[val]
 
-        if name in ('Padding', 'Downsample', 'Upsample'):
-            self.setCenterCorrection(name, function.keywords)
         if 'Reconstruction' in name:
             slc_offset = 0 if (not slc or not slc[2].start) else slc[2].start
             function.keywords['center'] = self.cor_offset(self.cor_scale(function.keywords['center'])) - slc_offset
             self.resetCenterCorrection()
+        elif name == 'Sino 360 to 180':
+            tomo = data_dict['tomo']
+            if tomo.shape[0]%2>0:
+                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'] -0.5))*2)
+            else:
+                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center']))*2)
         return function, write
+
+    def updateDataDict(self, data_dict, function, name):
+
+        # used after function has been performed
+        if name in ('Padding', 'Downsample', 'Upsample'):
+            self.setCenterCorrection(name, function.keywords)
+
+        if 'Sino 360 to 180' in name:
+            data_dict['keepvalues'] = [data_dict['proj'], data_dict['num_proj_per_chunk'], data_dict['numprojchunks'],
+                                       data_dict['numprojused'], data_dict['width']]
+            proj = data_dict['proj']
+            numangles = int(proj[1]-proj[0]) / 2
+            data_dict['proj'] = (0, numangles - 1, proj[2])
+            data_dict['num_proj_per_chunk'] = np.minimum(data_dict['num_proj_per_chunk'],
+                                                         data_dict['proj'][1] - data_dict['proj'][0])
+            data_dict['numprojchunks'] = (data_dict['proj'][1]-data_dict['proj'][0]-1) // data_dict['num_proj_per_chunk'] + 1
+            data_dict['numprojused'] = (data_dict['proj'][1] - data_dict['proj'][0]) // data_dict['proj'][2]
+            data_dict['width'] = (data_dict['width'][0], data_dict['width'][1] + data_dict['tomo'].shape[2],
+                                  data_dict['width'][2])
+            min_angle = data_dict['theta'][-1]; max_angle = data_dict['theta'][0]
+            data_dict['theta'] = tomopy.angles(numangles, np.rad2deg(max_angle), np.rad2deg(min_angle))
 
     def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write', 'Reader'],
                         fixed_func=None, prange=None):
@@ -685,9 +647,11 @@ class FunctionManager(fw.FeatureManager):
         numsinochunks = (sino[1]-sino[0]-1)//num_sino_per_chunk+1
         numprojused = (proj[1] - proj[0])//proj[2]
         numsinoused = (sino[1] - sino[0])//sino[2]
+        keepvalues = None
 
         func_pipeline, theta, center, extract = run_state
         yaml_pipe = extract[0]
+
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
@@ -711,12 +675,13 @@ class FunctionManager(fw.FeatureManager):
 
         # save function pipeline as runnable
         path = datawidget.path
+        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
         runnable = self.extractPipelineRunnable(run_state, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
-        try:
-            with open(python_file, 'w') as py:
-                py.write(runnable)
-        except NameError or IOError:
-            yield "Error: pipeline python script not written - path could not be found"
+        # try:
+        #     with open(python_file, 'w') as py:
+        #         py.write(runnable)
+        # except NameError or IOError:
+        #     yield "Error: pipeline python script not written - path could not be found"
 
         # save yaml in reconstruction folder
         for key in yaml_pipe.iterkeys(): # special case for 'center' param
@@ -726,13 +691,13 @@ class FunctionManager(fw.FeatureManager):
                         yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
 
 
-        try:
-            with open(yml_file, 'w') as yml:
-                yamlmod.ordered_dump(yaml_pipe, yml)
-        except NameError or IOError:
-            yield "Error: function pipeline yaml not written - path could not be found"
-
-        # determine which direction to slice in first
+        # try:
+        #     with open(yml_file, 'w') as yml:
+        #         yamlmod.ordered_dump(yaml_pipe, yml)
+        # except NameError or IOError:
+        #     yield "Error: function pipeline yaml not written - path could not be found"
+        #
+        # # determine which direction to slice in first
         for func in func_pipeline:
             subfunc = func[1].split('(')[-1].split(')')[0]
             if self.slice_dir[subfunc] != 'both':
@@ -743,7 +708,6 @@ class FunctionManager(fw.FeatureManager):
         curtemp = 0
         tempfilenames = [os.path.join(os.path.dirname(path), 'tmp0.h5'),
                          os.path.join(os.path.dirname(path), 'tmp1.h5')]
-        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
 
         while True:
             if axis=='proj':
@@ -751,7 +715,7 @@ class FunctionManager(fw.FeatureManager):
             else:
                 niter = numsinochunks
             for y in range(niter):
-                yield "\n{} chunk {} of {}\n".format(axis, y+1, niter)
+                yield "{} chunk {} of {}".format(axis, y+1, niter)
                 if curfunc==0:
                     if axis=='proj':
                         slc = (slice(y*num_proj_per_chunk+proj[0], np.minimum((y+1)*num_proj_per_chunk+proj[0], proj[1]),
@@ -759,19 +723,25 @@ class FunctionManager(fw.FeatureManager):
                     else:
                         slc = (slice(*proj), slice(y*num_sino_per_chunk+sino[0], np.minimum((y+1)*num_sino_per_chunk
                                 + sino[0], sino[1]), sino[2]), slice(*width))
-                    data_dict = self.loadDataDictionary(datawidget, theta, center, slc=slc)
+                    d = self.loadDataDictionary(datawidget, theta, center, slc=slc)
+                    d['num_proj_per_chunk'] = num_proj_per_chunk
+                    d['num_sino_per_chunk'] = num_sino_per_chunk
+                    d['numprojchunks'] = numprojchunks; d['numsinochunks'] = numsinochunks
+                    d['numprojused'] = numprojused; d['numsinoused'] = numsinoused
+                    d['proj'] = proj; d['width'] = width
+                    d['keepvalues'] = None
                 else:
                     if axis=='proj':
-                        start, end = y * num_proj_per_chunk, np.minimum((y + 1)*num_proj_per_chunk, numprojused)
+                        start, end = y * d['num_proj_per_chunk'], np.minimum((y + 1)*d['num_proj_per_chunk'], d['numprojused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
                                 slc=((start, end, 1), (0, sino[1]-sino[0], 1), (0, width[1]-width[0], 1)))
                     else:
-                        start, end = y * num_sino_per_chunk, np.minimum((y + 1)*num_sino_per_chunk, numsinoused)
+                        start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1)*d['num_sino_per_chunk'], numsinoused)
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
                                 slc=((0, proj[1]-proj[0], 1), (start, end, 1), (0, width[1]-width[0], 1)))
-                    data_dict['tomo'] = tomo
+                    d['tomo'] = tomo
                 dofunc = curfunc
-                data_dict['start'] = write_start
+                d['start'] = write_start
                 while True:
                     function_tuple = func_pipeline[dofunc]
                     subfunc = function_tuple[1].split('(')[-1].split(')')[0]
@@ -784,18 +754,23 @@ class FunctionManager(fw.FeatureManager):
                             except OSError:
                                 pass
                         appendaxis = 1 if axis=='sino' else 0
-                        dxchange.write_hdf5(data_dict['tomo'], fname=tempfilenames[1-curtemp], gname='tmp', dname='tmp',
+                        dxchange.write_hdf5(d['tomo'], fname=tempfilenames[1-curtemp], gname='tmp', dname='tmp',
                                             overwrite=False, appendaxis=appendaxis)
                         break
                     yield "{}: ".format(function_tuple[1])
                     curtime = time.time()
-                    function, write = self.updatePartial(function_tuple[0], function_tuple[1], data_dict,
+                    function, write = self.updatePartial(function_tuple[0], function_tuple[1], d,
                                                          params_dict[function_tuple[1]], slc)
-                    data_dict[write] = function()
+                    d[write] = function()
+                    self.updateDataDict(d, function_tuple[0], function_tuple[1])
+
+
                     yield 'Finished in {:2f} seconds\n'.format(time.time()-curtime)
                     dofunc += 1
                     if dofunc == len(func_pipeline):
                         break
+                if y < niter - 1 and keepvalues:
+                    proj, num_proj_per_chunk, numprojchunks, numprojused, width = d['keepvalues']
                 if axis == 'sino':
                     write_start += num_sino_per_chunk
             curtemp = 1 - curtemp
