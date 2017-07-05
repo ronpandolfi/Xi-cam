@@ -634,7 +634,8 @@ class ReadFunctionWidget(FunctionWidget):
 
     @property
     def width(self):
-        return (self.params.child('start_width').value(), self.params.child('end_width').value(), None)
+        return (self.params.child('start_width').value(), self.params.child('end_width').value(),
+                self.params.child('step_width').value())
 
 
 class WriteFunctionWidget(FunctionWidget):

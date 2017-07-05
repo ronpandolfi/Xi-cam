@@ -486,6 +486,8 @@ class FunctionManager(fw.FeatureManager):
                 function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'] -0.5))*2)
             else:
                 function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center']))*2)
+        elif name == 'Write (Tiff Stack)':
+            function.keywords['start'] = data_dict['y']*data_dict['num_sino_per_chunk'] + data_dict['sino'][0]
         return function, write
 
     def updateDataDict(self, data_dict, function, name):
@@ -707,12 +709,18 @@ class FunctionManager(fw.FeatureManager):
         tempfilenames = [os.path.join(os.path.dirname(path), 'tmp0.h5'),
                          os.path.join(os.path.dirname(path), 'tmp1.h5')]
 
+        d = {'num_proj_per_chunk': num_proj_per_chunk, 'num_sino_per_chunk':
+                    num_sino_per_chunk, 'numprojchunks': numprojchunks, 'numsinochunks': numsinochunks,
+                    'numprojused': numprojused, 'numsinoused': numsinoused,
+                    'proj': proj, 'sino': sino, 'width': width, 'keepvalues': None}
+
         while True:
             if axis=='proj':
-                niter = numprojchunks
+                niter = d['numprojchunks']
             else:
-                niter = numsinochunks
+                niter = d['numsinochunks']
             for y in range(niter):
+                d['y'] = y
                 yield "{} chunk {} of {}".format(axis, y+1, niter)
                 if curfunc==0:
                     if axis=='proj':
@@ -721,25 +729,24 @@ class FunctionManager(fw.FeatureManager):
                     else:
                         slc = (slice(*proj), slice(y*num_sino_per_chunk+sino[0], np.minimum((y+1)*num_sino_per_chunk
                                 + sino[0], sino[1]), sino[2]), slice(*width))
-                    d = self.loadDataDictionary(datawidget, theta, center,  slc=slc)
-                    d.update({'num_proj_per_chunk': num_proj_per_chunk, 'num_sino_per_chunk':
-                        num_sino_per_chunk, 'numprojchunks': numprojchunks, 'numsinochunks':
-                        numsinochunks, 'numprojused': numprojused, 'numsinoused': numsinoused,
-                        'proj': proj, 'width': width, 'keepvalues': None})
+                    tmp_d = self.loadDataDictionary(datawidget, theta, center,  slc=slc)
+                    d.update(tmp_d)
+
                 else:
                     if axis=='proj':
                         start, end = y * d['num_proj_per_chunk'], np.minimum((y + 1)*d['num_proj_per_chunk'], d['numprojused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((start, end, 1), (0, numsinoused, 1),
-                                     (0, (width[1]-width[0])//width[2], 1)))
+                                slc=((start, end, 1), (0, d['numsinoused'], 1),
+                                     (0, (d['width'][1]-d['width'][0])//d['width'][2], 1)))
                     else:
-                        start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1)*d['num_sino_per_chunk'], numsinoused)
+                        start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1)*d['num_sino_per_chunk'], d['numsinoused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((0, numprojused, 1), (start, end, 1),
-                                     (0, (width[1]-width[0])//width[2], 1)))
+                                slc=((0, d['numprojused'], 1), (start, end, 1),
+                                     (0, (d['width'][1]-d['width'][0])//d['width'][2], 1)))
                     d['tomo'] = tomo
                 dofunc = curfunc
                 d['start'] = write_start
+                d['keepvalues'] = None
                 while True:
                     func_name = func_dict.keys()[dofunc]
                     subfunc = func_name.split('(')[-1].split(')')[0]
@@ -767,7 +774,7 @@ class FunctionManager(fw.FeatureManager):
                     if dofunc == len(func_dict):
                         break
                 if y < niter - 1 and d['keepvalues']:
-                    proj, num_proj_per_chunk, numprojchunks, numprojused, width = d['keepvalues']
+                    d['proj'], d['num_proj_per_chunk'], d['numprojchunks'], d['numprojused'], d['width'] = d['keepvalues']
                 if axis == 'sino':
                     write_start += num_sino_per_chunk
             curtemp = 1 - curtemp

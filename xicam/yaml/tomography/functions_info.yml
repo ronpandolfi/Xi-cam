@@ -171,6 +171,8 @@ Read Data:
       type: int
     - name: end_width
       type: int
+    - name: step_width
+      type: int
     - name: sinograms_per_chunk
       type: int
     - name: projections_per_chunk

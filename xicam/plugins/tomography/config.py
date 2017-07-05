@@ -222,12 +222,13 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
 def set_reader_defaults(reader_widget, shape, cpu):
     reader_widget.params.child('start_sinogram').setLimits([0, shape[2]])
     reader_widget.params.child('end_sinogram').setLimits([0, shape[2]])
-    reader_widget.params.child('step_sinogram').setLimits([0, shape[2] + 1])
+    reader_widget.params.child('step_sinogram').setLimits([1, shape[2] + 1])
     reader_widget.params.child('start_projection').setLimits([0, shape[0]])
     reader_widget.params.child('end_projection').setLimits([0, shape[0]])
-    reader_widget.params.child('step_projection').setLimits([0, shape[0] + 1])
+    reader_widget.params.child('step_projection').setLimits([1, shape[0] + 1])
     reader_widget.params.child('start_width').setLimits([0, shape[1]])
     reader_widget.params.child('end_width').setLimits([0, shape[1]])
+    reader_widget.params.child('step_width').setLimits([1, shape[2] + 1])
 
     reader_widget.params.child('end_sinogram').setValue(shape[2])
     reader_widget.params.child('end_sinogram').setDefault(shape[2])
