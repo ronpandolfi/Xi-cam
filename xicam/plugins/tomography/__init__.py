@@ -164,7 +164,7 @@ class TomographyPlugin(base.plugin):
         try:
             if type(paths) is list:
                 paths = paths[0]
-            widget = TomoViewer(paths=paths)
+            widget = TomoViewer(toolbar=self.toolbar, paths=paths)
         except Exception as e:
             msg.showMessage('Unable to load file. Check log for details.', timeout=10)
             raise e

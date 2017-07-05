@@ -67,7 +67,7 @@ class TomoViewer(QtGui.QWidget):
 
     sigSetDefaults = QtCore.Signal(dict)
 
-    def __init__(self, paths=None, data=None, *args, **kwargs):
+    def __init__(self, paths=None, toolbar=None, data=None, *args, **kwargs):
         if paths is None and data is None:
             raise ValueError('Either data or path to file must be provided')
 
@@ -78,6 +78,7 @@ class TomoViewer(QtGui.QWidget):
 
         # set path as field of TomoViewer
         self.path = paths
+        self.toolbar = toolbar
 
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
@@ -104,7 +105,7 @@ class TomoViewer(QtGui.QWidget):
             else:
                 self.data = self.loaddata(paths)
 
-        self.projectionViewer = ProjectionViewer(self.data, parent=self)
+        self.projectionViewer = ProjectionViewer(self.data, self.toolbar, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
         self.projectionViewer.stackViewer.connectImageToName(self.data.fabimage.frames)
         self.viewstack.addWidget(self.projectionViewer)
@@ -753,12 +754,13 @@ class ProjectionViewer(QtGui.QWidget):
     sigCORChanged = QtCore.Signal(bool)
     sigROIWidgetChanged = QtCore.Signal(pg.ROI)
 
-    def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
+    def __init__(self, data, toolbar=None, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
         self.setMinimumHeight(200)
 
         self.stackViewer = StackViewer(data, view_label=view_label)
+        self.toolbar = toolbar
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
@@ -899,14 +901,15 @@ class ProjectionViewer(QtGui.QWidget):
         # self.normalize(True)
 
     def updateCORChoice(self, boolean):
-        if boolean:
-            self.cor_box.setCurrentWidget(self.auto_cor_widget)
-            self.stackViewer.hide()
-            self.auto_cor_button.setChecked(True)
-        else:
-            self.cor_box.setCurrentWidget(self.cor_widget)
-            self.stackViewer.show()
-            self.manual_cor_button.setChecked(True)
+        if self.toolbar and self.toolbar.actionCenter.isChecked():
+            if boolean:
+                self.cor_box.setCurrentWidget(self.auto_cor_widget)
+                self.stackViewer.hide()
+                self.auto_cor_button.setChecked(True)
+            else:
+                self.cor_box.setCurrentWidget(self.cor_widget)
+                self.stackViewer.show()
+                self.manual_cor_button.setChecked(True)
 
     def writeCOR(self):
         cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',
