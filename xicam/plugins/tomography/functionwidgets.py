@@ -723,3 +723,65 @@ class WriteFunctionWidget(FunctionWidget):
                                 if param.name() != 'Browse'})  # skip the Browse parameter!
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
+
+
+class CORSelectionWidget(QtGui.QWidget):
+
+    cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
+    sigCORFuncChanged = QtCore.Signal(str, QtGui.QWidget)
+
+    def __init__(self, subname='Phase Correlation', parent=None):
+        super(CORSelectionWidget, self).__init__(parent=parent)
+
+        self.layout = QtGui.QVBoxLayout()
+        self.function = fc.FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params, showTop=False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.method_box = QtGui.QComboBox()
+        self.method_box.currentIndexChanged.connect(self.changeFunction)
+        for item in self.cor_detection_funcs:
+            self.method_box.addItem(item)
+        self.method_box.currentIndexChanged.connect(self.corFuncChanged)
+
+        label = QtGui.QLabel('COR detection function: ')
+        method_layout = QtGui.QHBoxLayout()
+        method_layout.addWidget(label)
+        method_layout.addWidget(self.method_box)
+
+        self.layout.addLayout(method_layout)
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)
+
+    def corFuncChanged(self, index):
+        self.sigCORFuncChanged.emit(self.cor_detection_funcs[index], self)
+
+    def changeFunction(self, index):
+        subname = self.method_box.itemText(index)
+        self.layout.removeWidget(self.param_tree)
+
+        self.function = fc.FunctionWidget(name="Center Detection", subname=subname,
+                                package=reconpkg.packages[config.names[subname][1]])
+        self.params = pg.parametertree.Parameter.create(name=self.function.name,
+                                             children=config.parameters[self.function.subfunc_name], type='group')
+        self.param_tree = pg.parametertree.ParameterTree()
+        self.param_tree.setMinimumHeight(200)
+        self.param_tree.setMinimumWidth(200)
+        self.param_tree.setParameters(self.params,showTop = False)
+        for key, val in self.function.param_dict.iteritems():
+            if key in [p.name() for p in self.params.children()]:
+                self.params.child(key).setValue(val)
+                self.params.child(key).setDefault(val)
+
+        self.layout.addWidget(self.param_tree)
+        self.setLayout(self.layout)

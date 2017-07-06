@@ -337,6 +337,7 @@ class TomographyPlugin(base.plugin):
                         path = widget.path, shape=widget.data.shape)
             # if widget.data.fabimage.classname == 'GeneralAPSH5image':
             else:
+                # TODO: loading pipeline breaks recursion limit after xi-cam loads, but not starting up xi-cam
                 self.manager.setPipelineFromYAML(config.load_pipeline(APS_PIPELINE_YAML))
                 config.set_aps_defaults(widget.data.header, funcwidget_list=self.manager.features,
                         path = widget.path, shape=widget.data.shape)

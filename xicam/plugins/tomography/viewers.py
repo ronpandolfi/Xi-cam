@@ -787,7 +787,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
-        self.auto_cor_widget = functionmanager.CORSelectionWidget(parent=self)
+        self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
         self.cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         self.auto_cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         self.cor_widget.setMinimumHeight(50)
