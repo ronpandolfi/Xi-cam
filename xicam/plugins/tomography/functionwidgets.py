@@ -681,6 +681,7 @@ class WriteFunctionWidget(FunctionWidget):
         self.file.sigValueChanged.connect(self.pathChanged)
 
         # set full file name as read only
+        # this line causes the 'invalid keyword argument - readonly' error during a reconstructin preview
         self.params.param('fname').setReadonly()
 
         # self.fname.sigValueChanged.connect(self.fileChanged)

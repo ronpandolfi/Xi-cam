@@ -423,6 +423,14 @@ class FunctionManager(fw.FeatureManager):
         if datawidget.data.darks is not None:
             data_dict['dark'] = datawidget.getdarks(slc=slc)
 
+        # this ensures that if slc has '1' as its middle dimension, the array will be 3D
+        # this is only necessary for slice previews, so we can assume that the middle axis
+        # will be the dimension in question
+        for key in ['tomo', 'flats', 'dark']:
+            if len(data_dict[key].shape) < 3:
+                data_dict[key] = data_dict[key][:, np.newaxis, :]
+
+
         try:
             if slc is not None and slc[0].start is not None:
                 slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
@@ -511,7 +519,7 @@ class FunctionManager(fw.FeatureManager):
             min_angle = data_dict['theta'][-1]; max_angle = data_dict['theta'][0]
             data_dict['theta'] = tomopy.angles(numangles, np.rad2deg(max_angle), np.rad2deg(min_angle))
 
-    def loadPreviewData(self, datawidget, slc=None, ncore=None, skip_names=['Write', 'Reader'],
+    def loadPreviewData(self, datawidget, dims=None, ncore=None, skip_names=['Write', 'Reader'],
                         fixed_func=None, prange=None):
         """
         Create the function stack and summary dictionary used for running slice previews and 3D previews
@@ -544,10 +552,14 @@ class FunctionManager(fw.FeatureManager):
         """
 
         stack_dict = OrderedDict()
-        partial_stack = []
         self.lockParams(True)
 
         func_dict, theta, center, yaml_pipe, python_pipe = self.saveState(datawidget)
+        keys = [key.split(' (')[0] for key in list(func_dict.keys())]
+        for name in skip_names:
+            if name in list(keys):
+                ind = keys.index(name)
+                func_dict.pop(list(func_dict.keys())[ind])
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
@@ -555,6 +567,8 @@ class FunctionManager(fw.FeatureManager):
             params_dict['{}'.format(name)] = dict(fpartial.keywords)
 
         # load data dictionary
+        proj, sino, width, proj_p_chunk, sino_p_chunk, cpu_count = dims
+        slc = (slice(*proj), slice(*sino), slice(*width))
         data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
 
         count = 1
@@ -577,20 +591,6 @@ class FunctionManager(fw.FeatureManager):
             stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
             count += 1
 
-            # load partial_stack
-            fpartial = func.partial
-            for arg in inspect.getargspec(func._function)[0]:
-                if arg not in fpartial.keywords.iterkeys() or arg in 'center':
-                    fpartial.keywords[arg] = '{}'.format(arg)
-            # get rid of degenerate keyword arguments
-            if 'arr' in fpartial.keywords and 'tomo' in fpartial.keywords:
-                fpartial.keywords['tomo'] = fpartial.keywords['arr']
-                fpartial.keywords.pop('arr', None)
-
-            # if 'ncore' in fpartial.keywords:
-            #     fpartial.keywords['ncore'] = ncore
-            partial_stack.append((fpartial, name, params_dict[name]))
-
             for param, ipf in func.input_functions.iteritems():
                 if ipf.enabled:
                     if 'Input Functions' not in stack_dict[func_name][func.subfunc_name]:
@@ -603,12 +603,12 @@ class FunctionManager(fw.FeatureManager):
                         stack_dict[func_name][func.subfunc_name][param] = data_dict[param]
 
         self.lockParams(False)
-        return partial_stack, stack_dict, data_dict, prange
+        return datawidget, func_dict, theta, center, stack_dict, prange, dims
 
 
 
     def reconGenerator(self, datawidget, func_dict, theta, center, yaml_pipe,
-                       run_dict, dims, ncore = None):
+                       run_dict, dims, ncore = None, reconType='Full'):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction
@@ -645,6 +645,8 @@ class FunctionManager(fw.FeatureManager):
         start_time = time.time()
         proj, sino, width, sino_p_chunk, proj_p_chunk, cpu_count = dims
         write_start = sino[0]
+        path = datawidget.path
+        preview_slices = []
 
         num_proj_per_chunk = np.minimum(proj_p_chunk, proj[1] - proj[0])
         numprojchunks = (proj[1] - proj[0] - 1)//num_proj_per_chunk+1
@@ -659,43 +661,43 @@ class FunctionManager(fw.FeatureManager):
             params_dict['{}'.format(name)] = dict(fpartial.keywords)
 
 
-        # get save names for pipeline yaml/runnable files
-        dir = ""
-        for name, fpartial in list(func_dict.items()):
-            if 'fname' in fpartial.keywords:
-                fname = fpartial.keywords['fname']
-                for item in fname.split('/')[:-1]:
-                    dir += item + '/'
-                yml_file = fname + '.yml'
-                python_file = fname + '.py'
+        if reconType == 'Full':
+            # get save names for pipeline yaml/runnable files
+            dir = ""
+            for name, fpartial in list(func_dict.items()):
+                if 'fname' in fpartial.keywords:
+                    fname = fpartial.keywords['fname']
+                    for item in fname.split('/')[:-1]:
+                        dir += item + '/'
+                    yml_file = fname + '.yml'
+                    python_file = fname + '.py'
 
-        # make project directory if it isn't made already
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+            # make project directory if it isn't made already
+            if not os.path.exists(dir):
+                os.makedirs(dir)
 
-        # save function pipeline as runnable
-        path = datawidget.path
-        yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
-        runnable = self.extractPipelineRunnable(run_dict, theta, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
-        try:
-            with open(python_file, 'w') as py:
-                py.write(runnable)
-        except NameError or IOError:
-            yield "Error: pipeline python script not written - path could not be found"
+            # save function pipeline as runnable
+            yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
+            runnable = self.extractPipelineRunnable(run_dict, theta, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
+            try:
+                with open(python_file, 'w') as py:
+                    py.write(runnable)
+            except NameError or IOError:
+                yield "Error: pipeline python script not written - path could not be found"
 
-        # save yaml in reconstruction folder
-        for key in yaml_pipe.iterkeys(): # special case for 'center' param
-            if 'Recon' in key:
-                for subfunc in yaml_pipe[key].iterkeys():
-                    if 'Parameters' in yaml_pipe[key][subfunc].iterkeys():
-                        yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
+            # save yaml in reconstruction folder
+            for key in yaml_pipe.iterkeys(): # special case for 'center' param
+                if 'Recon' in key:
+                    for subfunc in yaml_pipe[key].iterkeys():
+                        if 'Parameters' in yaml_pipe[key][subfunc].iterkeys():
+                            yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
 
 
-        try:
-            with open(yml_file, 'w') as yml:
-                yamlmod.ordered_dump(yaml_pipe, yml)
-        except NameError or IOError:
-            yield "Error: function pipeline yaml not written - path could not be found"
+            try:
+                with open(yml_file, 'w') as yml:
+                    yamlmod.ordered_dump(yaml_pipe, yml)
+            except NameError or IOError:
+                yield "Error: function pipeline yaml not written - path could not be found"
 
         # determine which direction to slice in first
         for name in list(func_dict.keys()):
@@ -720,6 +722,9 @@ class FunctionManager(fw.FeatureManager):
             else:
                 niter = d['numsinochunks']
             for y in range(niter):
+                # reset COR change for downsampling in 3D recon previews
+                if axis != 'proj' and reconType == '3D':
+                    self.cor_scale = lambda x: x // width[2]
                 d['y'] = y
                 yield "{} chunk {} of {}".format(axis, y+1, niter)
                 if curfunc==0:
@@ -772,6 +777,7 @@ class FunctionManager(fw.FeatureManager):
                     yield 'Finished in {:2f} seconds\n'.format(time.time()-curtime)
                     dofunc += 1
                     if dofunc == len(func_dict):
+                        preview_slices.append(d['tomo']) # append to list for previews
                         break
                 if y < niter - 1 and d['keepvalues']:
                     d['proj'], d['num_proj_per_chunk'], d['numprojchunks'], d['numprojused'], d['width'] = d['keepvalues']
@@ -781,7 +787,6 @@ class FunctionManager(fw.FeatureManager):
             curfunc = dofunc
             if curfunc == len(func_dict):
                 break
-
             axis = self.slice_dir[func_dict.keys()[curfunc].split('(')[-1].split(')')[0]]
         yield "cleaning up temp files"
         for tmpfile in tempfilenames:
@@ -789,6 +794,10 @@ class FunctionManager(fw.FeatureManager):
                 os.remove(tmpfile)
             except OSError:
                 pass
+        # for the reconstruction previews
+        if reconType == '3D' or reconType == 'Slice':
+            d['tomo'] = np.vstack(preview_slices)
+            yield d['tomo']
         yield "End Time: " + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
         yield "It took {:3f} s to process {}".format(time.time() - start_time, path)
 
@@ -836,154 +845,6 @@ class FunctionManager(fw.FeatureManager):
 
         return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
 
-
-    def previewFunctionStack(self, datawidget, slc=None, ncore=None, skip_names=['Write'], fixed_func=None):
-
-        """
-        Create the function stack and summary dictionary used for running slice previews and 3D previews
-
-        Deprecated : functionality replaced by self.loadPreviewData
-
-
-        Parameters
-        ----------
-        datawidget
-            Class holding the input dataset
-        slc slice
-            Slice object to extract tomography/flat/dark data when appropriate
-        ncore : int
-            number of cores to set the appropriate functions to run on
-        skip_names : list of str, optional
-            Names of functions to skip when running but still add to the dict representing the pipeline to run.
-            Currently only the Writing functions are skipped as writing is not necessary in previews.
-        fixed_func : type class
-            A dynamic class with only the necessary attributes to be run in a workflow pipeline. This is used for
-            parameter range tests to create the class with the parameter to be run and send it to a background thread.
-            See testParameterRange for more details
-
-        Returns
-        -------
-        list of partials:
-            List with function partials needed to run preview
-        dict
-            Dictionary summarizing functions and parameters representing the pipeline (used for the list of partials)
-        """
-
-        self.stack_dict = OrderedDict()
-        partial_stack = []
-        self.lockParams(True)
-
-
-        for func in self.features:
-            if not func.enabled:
-                continue
-            elif func.func_name in skip_names:
-                self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-                continue
-            elif fixed_func is not None and func.func_name == fixed_func.func_name:
-                func = fixed_func  # replace the function with the fixed function
-            self.stack_dict[func.func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
-            p = self.updateFunctionPartial(func, datawidget, self.stack_dict[func.func_name][func.subfunc_name], slc)
-            if 'ncore' in p.keywords:
-                p.keywords['ncore'] = ncore
-            partial_stack.append(p)
-            for param, ipf in func.input_functions.iteritems():
-                if ipf.enabled:
-                    if 'Input Functions' not in self.stack_dict[func.func_name][func.subfunc_name]:
-                        self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'] = {}
-                    ipf_dict = {param: {ipf.func_name: {ipf.subfunc_name: ipf.exposed_param_dict}}}
-                    self.stack_dict[func.func_name][func.subfunc_name]['Input Functions'].update(ipf_dict)
-
-        self.lockParams(False)
-        return partial_stack, self.stack_dict
-
-
-    def functionStackGenerator(self, datawidget, pipeline_dict, proj, sino, sino_p_chunk, ncore=None):
-        """
-        Generator for running full reconstruction. Yields messages representing the status of reconstruction
-        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
-
-        Deprecated : functionality replaced by self.reconGenerator
-
-
-        Parameters
-        ----------
-        datawidget
-        proj : tuple of int
-            Projection range indices (start, end, step)
-        sino : tuple of int
-            Sinogram range indices (start, end, step)
-        sino_p_chunk : int
-            Number of sinograms per chunk
-        ncore : int
-            Number of cores to run functions
-        pipeline_dict: dictionary
-            Dictionary of parameters referenced during reconstruction
-
-        Yields
-        -------
-        str
-            Message of current status of function
-        """
-
-        start_time = time.time()
-        write_start = sino[0]
-        nchunk = ((sino[1] - sino[0]) // sino[2] - 1) // sino_p_chunk + 1
-        total_sino = (sino[1] - sino[0] - 1) // sino[2] + 1
-        if total_sino < sino_p_chunk:
-            sino_p_chunk = total_sino
-
-
-        for i in range(nchunk):
-            init = True
-            start, end = i * sino[2] * sino_p_chunk + sino[0], (i + 1) * sino[2] * sino_p_chunk + sino[0]
-            end = end if end < sino[1] else sino[1]
-
-
-
-            for function in self.features:
-                # if not function.enabled:
-                if not pipeline_dict[function.name]['enabled']:
-                    continue
-                ts = time.time()
-                yield 'Running {0} on slices {1} to {2} from a total of {3} slices...'.format(function.name, start,
-                                                                                              end, total_sino)
-
-                fpartial = self.updateFunctionPartial(function, datawidget, pipeline_dict,
-                                                      slc=(slice(*proj), slice(start, end, sino[2]),
-                                                           slice(None, None, None)))
-                if init:
-                    tomo = datawidget.getsino(slc=(slice(*proj), slice(start, end, sino[2]),
-                                                   slice(None, None, None)))
-                    init = False
-                elif 'Tiff' in function.name:
-                    fpartial.keywords.pop('parent folder', None)
-                    fpartial.keywords.pop('folder name', None)
-                    fpartial.keywords.pop('file name', None)
-                    fpartial.keywords['start'] = write_start
-                    write_start += tomo.shape[0]
-                # elif 'Reconstruction' in fname:
-                #     # Reset input_partials to None so that centers and angle vectors are not computed in every iteration
-                #     # and set the reconstruction partial to the updated one.
-                #     if ipartials is not None:
-                #         ind = next((i for i, names in enumerate(fpartials) if fname in names), None)
-                #         fpartials[ind][0], fpartials[ind][4] = fpartial, None
-                #     tomo = fpartial(tomo)
-                tomo = fpartial(tomo)
-                yield ' Finished in {:.3f} s\n'.format(time.time() - ts)
-
-        # save yaml in reconstruction folder
-        for key in pipeline_dict.iterkeys():
-            if 'Write' in key:
-                save_file = pipeline_dict[key]['fname'] + '.yml'
-        try:
-            with open(save_file, 'w') as yml:
-                yamlmod.ordered_dump(pipeline_dict['pipeline_for_yaml'], yml)
-        except NameError:
-            yield "Error: function pipeline yaml not written - path could not be found"
-
-        # print final 'finished with recon' message
-        yield 'Reconstruction complete. Run time: {:.2f} s'.format(time.time()-start_time)
 
 
     def testParameterRange(self, function, parameter, prange):

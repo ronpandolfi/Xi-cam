@@ -326,6 +326,9 @@ class TomoViewer(QtGui.QWidget):
             Sinogram/slice number reconstructed
 
         """
+        if type(recon) == str:
+            return
+
         if slice_no is None:
             slice_num = self.sinogramViewer.view_spinBox.value()
             self.previewViewer.addPreview(np.rot90(recon[0],1), params, slice_num)
@@ -379,6 +382,8 @@ class TomoViewer(QtGui.QWidget):
             Reconstructed array
 
         """
+        if type(recon) == str:
+            return
 
         recon = np.flipud(recon)
         self.viewstack.setCurrentWidget(self.preview3DViewer)
@@ -1439,12 +1444,15 @@ class RunConsole(QtGui.QTabWidget):
         a function like this for the added console.
         """
         text = self.local_console.toPlainText()
-        if '\n' not in msg:
-            self.local_console.setText(msg + '\n\n' + text)
-        else:
-            topline = text.splitlines()[0]
-            tail = '\n'.join(text.splitlines()[1:])
-            self.local_console.setText(topline + msg + tail)
+        try:
+            if '\n' not in msg:
+                self.local_console.setText(msg + '\n\n' + text)
+            else:
+                topline = text.splitlines()[0]
+                tail = '\n'.join(text.splitlines()[1:])
+                self.local_console.setText(topline + msg + tail)
+        except Exception:
+            pass
 
 
 class ArrayDeque(deque):

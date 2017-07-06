@@ -463,8 +463,12 @@ class TomographyPlugin(base.plugin):
         """
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
+            prev_slice = self.centerwidget.currentWidget().sinogramViewer.currentIndex
+            dims = self.get_reader_dims(sino=(prev_slice, prev_slice + 1, 1))
+            dims += (0,)
             self.preview_slices = self.centerwidget.widget(self.currentIndex()).sinogramViewer.currentIndex
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func, prange=prange)
+            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+                                      fixed_func=fixed_func, prange=prange)
 
     def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
 
@@ -482,18 +486,44 @@ class TomographyPlugin(base.plugin):
                 if self.checkPipeline():
                     msg.showMessage(message, timeout=0)
                     if value[0] == value[1]:
+                        dims = self.get_reader_dims(sino = (value[1], value[1] + 1, 1))
+                        dims += (0,)
                         self.preview_slices = value[1]
                         self.centerwidget.widget(self.currentIndex()).sinogramViewer.setIndex(self.preview_slices)
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+                                                  fixed_func=fixed_func)
                     else:
+                        dims = self.get_reader_dims(sino=(value[0], value[1] + 1, 1))
+                        dims += (0,)
                         self.preview_slices = [value[0],value[1]]
-                        slc = (slice(None,None,None), slice(value[0],value[1]+1,1), slice(None,None,None))
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), slc=slc, fixed_func=fixed_func)
+                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+                                                  fixed_func=fixed_func)
         except AttributeError:
             pass
 
+    def preview3DAction(self):
+        """
+        Called when a reconstruction 3D preview is requested either by the toolbar button.
+        The process is almost equivalent to running a slice preview except a different slice object is passed to extract
+        a subsampled array from the raw tomographic array
+        """
 
-    def runSlicePreview(self, partial_stack, stack_dict, data_dict, prange=None):
+        if self.checkPipeline():
+
+            window = QtGui.QInputDialog(self.centerwidget)
+            window.setIntValue(8)
+            window.setWindowTitle('3D Preview subsample factor')
+            window.setLabelText('Choose a subsample factor for the 3D preview: ')
+            window.exec_()
+            val = window.intValue()
+
+            msg.showMessage('Computing 3D preview...', timeout=0)
+            dims = self.get_reader_dims(sino = (None, None, val), width=(None, None, val))
+            dims += (0,)
+            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), dims=dims)
+
+
+    def runSlicePreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.previewViewer
@@ -507,29 +537,17 @@ class TomographyPlugin(base.plugin):
             the viewer.TomoViewer.previewViewer
         """
 
-        initializer = self.centerwidget.widget(self.currentIndex()).getsino()
-        # slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
-        callback = partial(self.centerwidget.widget(self.currentIndex()).addSlicePreview, stack_dict,
-                           slice_no=self.preview_slices, prange=prange)
-        message = 'Unable to compute slice preview. Check log for details.'
-        self.foldPreviewStack(partial_stack, initializer, data_dict, callback, message)
+        callback = partial(self.centerwidget.currentWidget().addSlicePreview, stack_dict, slice_no=self.preview_slices,
+                           prange=prange)
+        err_message = 'Unable to compute slice preview. Check log for details.'
 
-    def preview3DAction(self):
-        """
-        Called when a reconstruction 3D preview is requested either by the toolbar button.
-        The process is almost equivalent to running a slice preview except a different slice object is passed to extract
-        a subsampled array from the raw tomographic array
-        """
-
-        if self.checkPipeline():
-            msg.showMessage('Computing 3D preview...', timeout=0)
-            slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-            self.manager.cor_scale = lambda x: x // 8
-            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+        except_slot = lambda: msg.showMessage(err_message)
+        bg_fold = threads.iterator(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
+                                 except_slot=except_slot)
+        bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, 'Slice')
 
 
-
-    def run3DPreview(self, partial_stack, stack_dict, data_dict, prange=None):
+    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
@@ -547,17 +565,16 @@ class TomographyPlugin(base.plugin):
             list of values to be iterated over in reconstruction preview. Not used in 3D previews
         """
 
-        slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
-
-        # this step takes quite a bit, think of running a thread
-        initializer = self.centerwidget.widget(self.currentIndex()).getsino(slc)
         self.manager.updateParameters()
         callback = partial(self.centerwidget.widget(self.currentIndex()).add3DPreview, stack_dict)
         err_message = 'Unable to compute 3D preview. Check log for details.'
-        # self.foldPreviewStack(partial_stack, initializer, callback, err_message)
-        self.foldPreviewStack(partial_stack, initializer, data_dict, callback, err_message)
+        except_slot = lambda: msg.showMessage(err_message)
+        bg_fold = threads.iterator(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
+                                   except_slot=except_slot)
+        bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, '3D')
 
-    def processFunctionStack(self, callback, finished=None, slc=None, fixed_func=None, prange=None):
+
+    def processFunctionStack(self, callback, finished=None, dims=None, fixed_func=None, prange=None):
         """
         Runs the FunctionManager's loadPreviewData on a background thread to create the partial function stack and
         corresponding dictionary for running slice previews and 3D previews.
@@ -578,32 +595,8 @@ class TomographyPlugin(base.plugin):
         """
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
-        bg_functionstack(self.centerwidget.widget(self.currentIndex()), slc=slc,
+        bg_functionstack(self.centerwidget.widget(self.currentIndex()), dims=dims,
                          ncore=cpu_count(), fixed_func=fixed_func, prange=prange)
-
-    def foldPreviewStack(self, partial_stack, initializer, data_dict, callback, error_message):
-        """
-        Calls the managers foldFunctionStack on a background thread. This is what tells the manager to compute a
-        slice preview or a 3D preview from a specified workflow pipeline
-
-        Parameters
-        ----------
-        partial_stack : list of functools.partial
-            List of partials that require only the input array to run.
-        initializer : ndarray
-            Array to use as initializer for folding operation
-        callback : function
-            function to be called with the return value of the fold (ie the resulting reconstruction).
-            This is the current TomoViewers addSlicePreview or add3DPreview methods
-        error_message : str
-            Message to log/display if the fold process raises an exception
-        """
-
-        except_slot = lambda: msg.showMessage(error_message)
-        bg_fold = threads.method(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
-                                 except_slot=except_slot)
-        # bg_fold(self.manager.foldFunctionStack)(partial_stack, initializer)
-        bg_fold(self.manager.foldSliceStack)(partial_stack, data_dict)
 
     def runFullReconstruction(self):
         """
@@ -661,28 +654,11 @@ class TomographyPlugin(base.plugin):
         self.manager.updateParameters()
 
         func_dict, theta, center, pipeline_dict, run_dict = self.manager.saveState(currentWidget)
-        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
+        recon_iter = threads.iterator(callback_slot=self.bottom.log2local, except_slot=self.reconstructionFinished,
                             interrupt_signal=self.bottom.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
 
-        proj = None
-        sino = None
-        sino_chunk = None
-        proj_chunk = None
-        width = None
-        for f in self.manager.features:
-            if 'Reader' in f.name:
-                proj = f.projections
-                sino = f.sinograms
-                sino_chunk = f.sino_chunk
-                proj_chunk = f.proj_chunk
-                width = f.width
-
-        if (not proj and not sino and not sino_chunk) or (not proj[1] and not sino[1] and not sino_chunk):
-            sino = (0, currentWidget.data.shape[2], 1)
-            proj = (0, currentWidget.data.shape[0], 1)
-            sino_chunk = cpu_count()*5
-            width = (None, None, None)
+        proj, sino, width, proj_chunk, sino_chunk = self.get_reader_dims()
 
         dims = (proj, sino, width, sino_chunk, proj_chunk, cpu_count())
         args = (currentWidget, func_dict, theta, center, pipeline_dict, run_dict, dims)
@@ -722,8 +698,49 @@ class TomographyPlugin(base.plugin):
         msg.showMessage('Reconstruction complete.', timeout=10)
 
         self.queue_widget.removeRecon(0)
+        if len(self.queue_widget.recon_queue) > 0:
+            self.bottom.log2local('------- Beginning next reconstruction -------')
         self.recon_running = False
         self.runReconstruction()
+
+
+    def get_reader_dims(self, proj=None, sino=None, width=None):
+        """
+        Get dimensions for data to be reconstructed based on ReaderWidget (or other) input
+        Proj, sino, width are all three-tuples in the form some combination of int and None values, ex:
+        (int, int, int), (None, None, int), etc.
+        """
+
+        sino_chunk = None
+        proj_chunk = None
+        reader = None
+        for f in self.manager.features:
+            if 'Reader' in f.name:
+                reader = [f.projections, f.width, f.sinograms]
+                if not proj: proj = reader[0]
+                if not sino: sino = reader[2]
+                if not width: width = reader[1]
+                sino_chunk = f.sino_chunk
+                proj_chunk = f.proj_chunk
+
+        dims = [proj, width, sino]
+        for i, dim in enumerate(dims):
+            if not dim:
+                dim = (0, self.centerwidget.currentWidget().data.shape[i])
+            else:
+                if not dim[0]: dim = (0 if not reader else reader[i][0], dim[1], dim[2])
+                if not dim[1]: dim = (dim[0], self.centerwidget.currentWidget().data.shape[i] if not reader
+                                      else reader[i][1], dim[2])
+                if not dim[2]: dim = (dim[0], dim[1], 1 if not reader else reader[i][2])
+            dims[i] = dim
+        proj, width, sino = dims
+
+        if not sino_chunk:
+            sino_chunk = cpu_count()*5
+        if not proj_chunk:
+            proj_chunk = cpu_count()*5
+
+        return proj, sino, width, proj_chunk, sino_chunk
 
 
 
