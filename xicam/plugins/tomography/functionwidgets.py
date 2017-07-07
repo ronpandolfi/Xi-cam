@@ -734,7 +734,7 @@ class CORSelectionWidget(QtGui.QWidget):
         super(CORSelectionWidget, self).__init__(parent=parent)
 
         self.layout = QtGui.QVBoxLayout()
-        self.function = fc.FunctionWidget(name="Center Detection", subname=subname,
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
                                 package=reconpkg.packages[config.names[subname][1]])
         self.params = pg.parametertree.Parameter.create(name=self.function.name,
                                              children=config.parameters[self.function.subfunc_name], type='group')
@@ -770,7 +770,7 @@ class CORSelectionWidget(QtGui.QWidget):
         subname = self.method_box.itemText(index)
         self.layout.removeWidget(self.param_tree)
 
-        self.function = fc.FunctionWidget(name="Center Detection", subname=subname,
+        self.function = FunctionWidget(name="Center Detection", subname=subname,
                                 package=reconpkg.packages[config.names[subname][1]])
         self.params = pg.parametertree.Parameter.create(name=self.function.name,
                                              children=config.parameters[self.function.subfunc_name], type='group')
