@@ -1,4 +1,4 @@
-from xicam.plugins import base
+from . import base
 import paws
 from paws import api as pawsapi
 from paws import ui as pawsui
