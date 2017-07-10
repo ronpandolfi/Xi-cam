@@ -177,8 +177,10 @@ class TomoViewer(QtGui.QWidget):
                     self.data.flats[frame] = np.squeeze(np.copy(flats._dgroup[frame])).transpose()
                 self.flatViewer.setData(self.data.flats)
                 del flats
-            except IOError:
+            except Exception as e:
                 QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
+                msg.showMessage('Unable to load flats. Check log for details.', timeout=10)
+                raise e
         msg.clearMessage()
 
     def openDarks(self):
@@ -196,8 +198,10 @@ class TomoViewer(QtGui.QWidget):
                     self.data.darks[frame] = np.squeeze(np.copy(darks._dgroup[frame])).transpose()
                 self.darkViewer.setData(self.data.darks)
                 del darks
-            except IOError:
+            except Exception as e:
                 QtGui.QMessageBox.warning(self, 'Warning', 'Darks not loaded.')
+                msg.showMessage('Unable to load darks. Check log for details.', timeout=10)
+                raise e
         msg.clearMessage()
 
     @staticmethod
