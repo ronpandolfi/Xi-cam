@@ -131,6 +131,8 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
                 Arguments are the same as setData()
                 """
 
+        self.lastargs=args
+
         ## deal with non-keyword arguments
         if len(args) == 1:
             kargs['spots'] = args[0]
@@ -185,6 +187,7 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
             spots = kargs['spots']
             for i in range(len(spots)):
                 spot = spots[i]
+
                 for k in spot:
                     if k == 'pos':
                         pos = spot[k]
@@ -201,7 +204,8 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
                     elif k in ['x', 'y', 'size', 'symbol', 'brush', 'data']:
                         newData[i][k] = spot[k]
                     else:
-                        raise Exception("Unknown spot parameter: %s" % k)
+                        pass
+                        # raise Exception("Unknown spot parameter: %s" % k)
         elif 'y' in kargs:
             newData['x'] = kargs['x']
             newData['y'] = kargs['y']
@@ -254,30 +258,52 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
         if not fn.eq(levels, self.levels):
             self.levels = levels
             self._effectiveLut = None
-            if update:
-                self.setData(spots=self.data)
+            if update and hasattr(self,'lastargs'):
+                self.setData(*self.lastargs)
 
+
+#                if not isinstance(spot,dict): setattr(spot,'__iter__',iter(zip(*spot.dtype.descr)[0]))
 
 class ScatterHistogramLUTWidget(pg.HistogramLUTWidget):
     def __init__(self,*args,**kwargs):
         super(ScatterHistogramLUTWidget, self).__init__(*args,**kwargs)
         self.item = ScatterHistogramLUTItem(*args, **kwargs)
         self.setCentralItem(self.item)
+        self.autoLevel=True
 
 class ScatterHistogramLUTItem(pg.HistogramLUTItem):
+    def __init__(self,*args,**kwargs):
+
+        super(ScatterHistogramLUTItem, self).__init__(*args,**kwargs)
+        reset = QAction('Reset', self.vb.menu)
+        self.vb.menu.addAction(reset)
+        reset.triggered.connect(self.reset)
+
+    def reset(self):
+        self.autoLevel=True
+        self.plotChanged(autoLevel=True)
+
     def setScatterItem(self, plt):
         """Set a ScatterPlotItem to have its levels and LUT automatically controlled
         by this HistogramLUTItem.
         """
         self.plotItem = weakref.ref(plt)
-        plt.sigPlotChanged.connect(self.plotChanged)
+        plt.sigPlotChanged.connect(lambda s: self.plotChanged())
         plt.setColorMap(self.getColorMap)  ## send function pointer, not the result
         #self.gradientChanged()
         self.regionChanged()
+        self.autoLevel = True
         self.plotChanged(autoLevel=True)
         #self.vb.autoRange()
 
+    def gradientChanged(self):
+        if self.plotItem() is not None:
+            self.plotItem().setLevels(self.region.getRegion())
+        self.lut = None
+        self.sigLookupTableChanged.emit(self)
+
     def regionChanged(self):
+        self.autoLevel = False
         if self.plotItem() is not None:
             self.plotItem().setLevels(self.region.getRegion())
         self.sigLevelChangeFinished.emit(self)
@@ -285,17 +311,19 @@ class ScatterHistogramLUTItem(pg.HistogramLUTItem):
 
     def plotChanged(self, autoLevel=False, autoRange=False):
         # profiler = debug.Profiler()
-        h = [None] #self.plotItem().getHistogram() # TODO: histogram scatter values
-        # profiler('get histogram')
-        if h[0] is None:
-            return
-        self.plot.setData(*h)
-        # profiler('set plot')
-        if autoLevel:
-            mn = h[0][0]
-            mx = h[0][-1]
-            self.region.setRegion([mn, mx])
-            # profiler('set region')
+        data=self.plotItem().data['data']
+        if len(data):
+            hist, bins = np.histogram(data,100) #self.plotItem().getHistogram() # TODO: histogram scatter values
+            # profiler('get histogram')
+            if hist[0] is None:
+                return
+            self.plot.setData(bins[:-1],hist)
+            # profiler('set plot')
+            if autoLevel or self.autoLevel:
+                mn = bins[0]
+                mx = bins[-1]
+                self.region.setRegion([mn, mx])
+                # profiler('set region')
 
     def getColorMap(self, plt=None, n=None, alpha=None):
         """Return a lookup table from the color gradient defined by this
