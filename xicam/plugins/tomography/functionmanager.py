@@ -266,6 +266,14 @@ class FunctionManager(fw.FeatureManager):
             function.updateParamsDict()
 
     def adjustReaderParams(self, roi_widget):
+        """
+        Adjusts reader functionwidget parameter based on dimensions specified by roi_widget parameter
+
+        Parameters
+        ----------
+        roi_widget: pyqtgraph.ROI
+            ROI to select dimensions for reader functionwidget
+        """
         for feature in self.features:
             if 'Reader' in feature.name:
                 pos = roi_widget.pos()

@@ -28,10 +28,10 @@ from xicam.plugins import base
 from xicam.widgets.customwidgets import sliceDialog
 from pipeline import msg
 from xicam import threads
-from viewers import TomoViewer
-import ui
-import config
-from functionmanager import FunctionManager
+from .viewers import TomoViewer
+from . import ui
+from . import config
+from .functionmanager import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline

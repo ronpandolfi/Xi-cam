@@ -340,6 +340,11 @@ class FunctionWidget(fw.FeatureWidget):
 
 class AnglesFunctionWidget(FunctionWidget):
 
+    """
+    Custom functionwidget to handle the calculation of projection angles from custom parameters (ang1 and range vs
+    ang1 and ang2
+    """
+
     @property
     def updated_param_dict(self):
 
@@ -351,6 +356,22 @@ class AnglesFunctionWidget(FunctionWidget):
         return param_dict
 
 class NormalizeFunctionWidget(FunctionWidget):
+
+    """
+    Custom functionwidget class for normalization functions, particularly for the special case 'tomopy.normalize_roi'
+
+    Attributes
+    ----------
+    selection_roi: pyqtgraph.ROI
+        ROI to select normalization area
+
+    Signals
+    -------
+    sigROIAdded(pyqtgraph.ROI)
+        emitted when user adds an ROI to projection stack
+    sigROIChanged
+        emitted when ROI changes dimensions or location
+    """
 
     sigROIAdded = QtCore.Signal(pg.ROI)
     sigROIChanged = QtCore.Signal()
@@ -368,6 +389,9 @@ class NormalizeFunctionWidget(FunctionWidget):
 
     @property
     def updated_param_dict(self):
+        """
+        Returns usual param dict unless the function is normalizing from ROI
+        """
         param_dict = FunctionWidget.updated_param_dict.fget(self)
         if self.subfunc_name == 'ROI':
             param_dict.update({'roi': [self.params.child('p11').value(), self.params.child('p12').value(),
@@ -391,6 +415,9 @@ class NormalizeFunctionWidget(FunctionWidget):
 
 
     def setRoi(self):
+        """
+        Adds pyqtgraph.ROI to projection images so user can select ROI from which to normalize
+        """
         if self.selection_roi:
             del(self.selection_roi)
 
@@ -405,6 +432,10 @@ class NormalizeFunctionWidget(FunctionWidget):
         self.params.child('p22').setValue(200)
 
     def adjustParams(self, func_manager):
+        """
+        Adjusts parameters in functionwidget based on location of ROI. Also ensures values do not become negative
+        or larger than image size
+        """
         x_max, y_max = None, None
         for feature in func_manager.features:
             if 'Reader' in feature.name:
@@ -826,6 +857,24 @@ class WriteFunctionWidget(FunctionWidget):
 
 
 class CORSelectionWidget(QtGui.QWidget):
+
+    """
+    Widget holding functions to auto calculate COR and these functions' parameters
+
+    Attributes
+    ----------
+    function: FunctionWidget
+        functionwidget representing function to calculate COR. Can be 'Phase Correlation', 'Vo', or 'Nelder-Mead'
+    params: pyqtgraph.Parameter
+        contains parameters used to calculate COR associated with 'function' attribute
+    method_box: QtGui.ComboBox
+        used to select auto COR function
+
+    Signals
+    -------
+    sigCORFuncChanged(str, QtGui.QWidget)
+        emitted when user selects another COR function from 'method_box' attribute
+    """
 
     cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
     sigCORFuncChanged = QtCore.Signal(str, QtGui.QWidget)
