@@ -9,10 +9,11 @@ import pyqtgraph as pg
 from PySide.QtGui import *
 from PySide.QtCore import *
 import pandas as pd
-
+import weakref
 import numpy as np
+from pyqtgraph import functions as fn
 
-class WaferView(pg.PlotWidget):
+class WaferView(QWidget):
     sigPlot = Signal(object) # emits 2-d cake array
 
     csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}  # TODO: add mappings for other keys
@@ -20,8 +21,26 @@ class WaferView(pg.PlotWidget):
     def __init__(self):
         super(WaferView, self).__init__()
 
-        self.waferplotitem = pg.ScatterPlotItem(size=10, pen=pg.mkPen('w'), cmap = 'jet')
-        self.addItem(self.waferplotitem)
+        self.layout = QHBoxLayout()
+        self.setLayout(self.layout)
+        self.WaferPlot = pg.PlotWidget()
+        self.layout.addWidget(self.WaferPlot)
+        self.HLUT=ScatterHistogramLUTWidget()
+        self.layout.addWidget(self.HLUT)
+        ## wrap functions from histogram
+        for fn in ['setHistogramRange', 'autoHistogramRange', 'getLookupTable', 'getLevels']:
+            setattr(self, fn, getattr(self.HLUT, fn))
+
+        # self.imageItem = weakref.ref(img)
+        # img.sigImageChanged.connect(self.imageChanged)
+        # img.setLookupTable(self.getLookupTable)  ## send function pointer, not the result
+        # #self.gradientChanged()
+        # self.regionChanged()
+        # self.imageChanged(autoLevel=True)
+
+        self.waferplotitem = LUTScatterPlotItem(size=10, pen=pg.mkPen('w'), cmap = 'viridis')
+        self.WaferPlot.addItem(self.waferplotitem)
+        self.HLUT.setScatterItem(self.waferplotitem)
         ## Make all plots clickable
         self.lastClicked = None
 
@@ -36,7 +55,7 @@ class WaferView(pg.PlotWidget):
 
         self.waferplotitem.sigClicked.connect(clicked)
 
-        self.scene().sigMouseClicked.connect(self.mouseClicked)
+        self.WaferPlot.scene().sigMouseClicked.connect(self.mouseClicked)
 
 
     def mouseClicked(self,event):
@@ -83,16 +102,208 @@ class WaferView(pg.PlotWidget):
         zrange = np.ptp(z)
         z = np.nan_to_num((z-zmin)/zrange *256)
 
+        viridisposs = [0.0,0.25,0.5,0.75,1.0]
+        viridiscolors = [(68, 1, 84, 255),(58, 82, 139, 255),(32, 144, 140, 255),(94, 201, 97, 255),(253, 231, 36, 255)]
+        viridismap = pg.ColorMap(viridisposs,viridiscolors,mode=pg.ColorMap.RGB)
+
+
         points = [{'pos':(x[i],y[i]),
-                   'data':z[i]*100,
+                   'data':z[i],
                    'size':30,
-                   'brush': pg.intColor(z[i], 256),
-                   'pen':pg.mkPen(width=0,color=pg.intColor(z[i], 256))
+                   # 'brush': viridismap.map(z[i]),
+                   # 'pen':pg.mkPen(width=0,color=viridismap.map(z[i]))
                    } for i in range(len(z))]
 
         self.waferplotitem.setPoints(points)
-        self.autoRange()
+        self.WaferPlot.autoRange()
 
+class LUTScatterPlotItem(pg.ScatterPlotItem):
+    def __init__(self,*args,**kwargs):
+        super(LUTScatterPlotItem, self).__init__(*args,**kwargs)
+        self.levels=[0,1]
+
+    def setColorMap(self,cmap):
+        self.cmap = cmap
+
+    def addPoints(self,*args,**kargs):
+        """
+                Add new points to the scatter plot.
+                Arguments are the same as setData()
+                """
+
+        ## deal with non-keyword arguments
+        if len(args) == 1:
+            kargs['spots'] = args[0]
+        elif len(args) == 2:
+            kargs['x'] = args[0]
+            kargs['y'] = args[1]
+        elif len(args) > 2:
+            raise Exception('Only accepts up to two non-keyword arguments.')
+
+        ## convert 'pos' argument to 'x' and 'y'
+        if 'pos' in kargs:
+            pos = kargs['pos']
+            if isinstance(pos, np.ndarray):
+                kargs['x'] = pos[:, 0]
+                kargs['y'] = pos[:, 1]
+            else:
+                x = []
+                y = []
+                for p in pos:
+                    if isinstance(p, QPointF):
+                        x.append(p.x())
+                        y.append(p.y())
+                    else:
+                        x.append(p[0])
+                        y.append(p[1])
+                kargs['x'] = x
+                kargs['y'] = y
+
+        ## determine how many spots we have
+        if 'spots' in kargs:
+            numPts = len(kargs['spots'])
+        elif 'y' in kargs and kargs['y'] is not None:
+            numPts = len(kargs['y'])
+        else:
+            kargs['x'] = []
+            kargs['y'] = []
+            numPts = 0
+
+        ## Extend record array
+        oldData = self.data
+        self.data = np.empty(len(oldData) + numPts, dtype=self.data.dtype)
+        ## note that np.empty initializes object fields to None and string fields to ''
+
+        self.data[:len(oldData)] = oldData
+        # for i in range(len(oldData)):
+        # oldData[i]['item']._data = self.data[i]  ## Make sure items have proper reference to new array
+
+        newData = self.data[len(oldData):]
+        newData['size'] = -1  ## indicates to use default size
+
+        if 'spots' in kargs:
+            spots = kargs['spots']
+            for i in range(len(spots)):
+                spot = spots[i]
+                for k in spot:
+                    if k == 'pos':
+                        pos = spot[k]
+                        if isinstance(pos, QPointF):
+                            x, y = pos.x(), pos.y()
+                        else:
+                            x, y = pos[0], pos[1]
+                        newData[i]['x'] = x
+                        newData[i]['y'] = y
+                    elif k == 'pen':
+                        newData[i][k] = fn.mkPen(spot[k])
+                    elif k == 'brush':
+                        newData[i][k] = fn.mkBrush(spot[k])
+                    elif k in ['x', 'y', 'size', 'symbol', 'brush', 'data']:
+                        newData[i][k] = spot[k]
+                    else:
+                        raise Exception("Unknown spot parameter: %s" % k)
+        elif 'y' in kargs:
+            newData['x'] = kargs['x']
+            newData['y'] = kargs['y']
+
+        if 'pxMode' in kargs:
+            self.setPxMode(kargs['pxMode'])
+        if 'antialias' in kargs:
+            self.opts['antialias'] = kargs['antialias']
+
+        ## Set any extra parameters provided in keyword arguments
+        for k in ['pen', 'brush', 'symbol', 'size']:
+            if k in kargs:
+                setMethod = getattr(self, 'set' + k[0].upper() + k[1:])
+                setMethod(kargs[k], update=False, dataSet=newData, mask=kargs.get('mask', None))
+
+        if 'data' in kargs:
+            self.setPointData(kargs['data'], dataSet=newData)
+
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+        self.bounds = [None, None]
+        newData = self.colorSpots(newData)
+        self.invalidate()
+        self.updateSpots(newData)
+        self.sigPlotChanged.emit(self)
+
+    def colorSpots(self,newData):
+        if hasattr(self,'cmap'):
+            colormap = self.cmap()()
+            l = self.levels
+            for p in newData:
+                c=colormap.map((p['data']-l[0])/(l[1]-l[0]))
+                p['brush']=fn.mkBrush(c)
+                p['pen']=fn.mkPen(c)
+
+        return newData
+
+    def setLevels(self, levels, update=True):
+        """
+        Set image scaling levels. Can be one of:
+
+        * [blackLevel, whiteLevel]
+        * [[minRed, maxRed], [minGreen, maxGreen], [minBlue, maxBlue]]
+
+        Only the first format is compatible with lookup tables. See :func:`makeARGB <pyqtgraph.makeARGB>`
+        for more details on how levels are applied.
+        """
+        if levels is not None:
+            levels = np.asarray(levels)
+        if not fn.eq(levels, self.levels):
+            self.levels = levels
+            self._effectiveLut = None
+            if update:
+                self.setData(spots=self.data)
+
+
+class ScatterHistogramLUTWidget(pg.HistogramLUTWidget):
+    def __init__(self,*args,**kwargs):
+        super(ScatterHistogramLUTWidget, self).__init__(*args,**kwargs)
+        self.item = ScatterHistogramLUTItem(*args, **kwargs)
+        self.setCentralItem(self.item)
+
+class ScatterHistogramLUTItem(pg.HistogramLUTItem):
+    def setScatterItem(self, plt):
+        """Set a ScatterPlotItem to have its levels and LUT automatically controlled
+        by this HistogramLUTItem.
+        """
+        self.plotItem = weakref.ref(plt)
+        plt.sigPlotChanged.connect(self.plotChanged)
+        plt.setColorMap(self.getColorMap)  ## send function pointer, not the result
+        #self.gradientChanged()
+        self.regionChanged()
+        self.plotChanged(autoLevel=True)
+        #self.vb.autoRange()
+
+    def regionChanged(self):
+        if self.plotItem() is not None:
+            self.plotItem().setLevels(self.region.getRegion())
+        self.sigLevelChangeFinished.emit(self)
+        #self.update()
+
+    def plotChanged(self, autoLevel=False, autoRange=False):
+        # profiler = debug.Profiler()
+        h = [None] #self.plotItem().getHistogram() # TODO: histogram scatter values
+        # profiler('get histogram')
+        if h[0] is None:
+            return
+        self.plot.setData(*h)
+        # profiler('set plot')
+        if autoLevel:
+            mn = h[0][0]
+            mx = h[0][-1]
+            self.region.setRegion([mn, mx])
+            # profiler('set region')
+
+    def getColorMap(self, plt=None, n=None, alpha=None):
+        """Return a lookup table from the color gradient defined by this
+        HistogramLUTItem.
+        """
+        if self.lut is None:
+            self.lut = self.gradient.colorMap
+        return self.lut
 
 
 class LocalView(QTabWidget):

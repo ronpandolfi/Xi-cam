@@ -22,11 +22,11 @@ def data_reduction(imArray, d_in_pixel, Rot, tilt, lamda, x0, y0, PP):
     d = d_in_pixel*pixelsize*0.001  # measured in milimeters
     p = pyFAI.AzimuthalIntegrator(wavelength=lamda)
     p.setFit2D(d, x0, y0, tilt, Rot, pixelsize, pixelsize)
-    cake, Q, chi = p.integrate2d(imArray, 1000, 1000, mask=detector_mask, polarization_factor=PP)
+    cake, Q, chi = p.integrate2d(imArray, 1000, 1000, mask=detector_mask, polarization_factor=PP, method='csr_ocl')
     Q = Q * 10e8
     chi = chi + 90
 
-    Qlist, IntAve = p.integrate1d(imArray, 1000, mask=detector_mask, polarization_factor=PP)
+    Qlist, IntAve = p.integrate1d(imArray, 1000, mask=detector_mask, polarization_factor=PP, method='csr_ocl')
 
     Qlist = Qlist * 10e8
 

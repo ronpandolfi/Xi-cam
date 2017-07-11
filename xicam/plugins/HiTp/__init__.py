@@ -15,6 +15,7 @@ from xicam.widgets import daemonwidget
 
 from on_the_fly import run
 import os.path
+from modpkgs import pyqtgraphmod
 
 def runtest():
     #EZTest.bottomwidget.clear()
@@ -33,6 +34,8 @@ def openfiles(filepaths):
     filepaths : list
         list of filepaths
     """
+    print(filepaths)
+
     # calibration
     detect_dist_pix = HiTpPlugin.parameters.param('detect_dist_pix').value()
     bcenter_x_pix = HiTpPlugin.parameters.param('bcenter_x_pix').value()
