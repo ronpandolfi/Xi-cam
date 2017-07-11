@@ -12,8 +12,9 @@ import os.path
 
 def save_texture_plot_csv(Q, chi, cake, imageFilename, save_path):
     Q, chi = np.meshgrid(Q, chi)
-    plt.figure(3)
-    plt.title('texture')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_title('texture')
     
     keep = (cake != 0)
     chi = chi*np.pi/180
@@ -33,12 +34,11 @@ def save_texture_plot_csv(Q, chi, cake, imageFilename, save_path):
     Qlen = int(np.max(Q)/step+1)
     Qlist_texture = [i*step for i in range(Qlen)]
     
-    plt.plot(Qlist_texture, texture)
-    plt.xlabel('Q')
-    plt.ylabel('Texture')
+    ax.plot(Qlist_texture, texture)
+    ax.set_xlabel('Q')
+    ax.set_ylabel('Texture')
     #plt.xlim((0.7, 6.4))
-    plt.savefig(os.path.join(save_path, imageFilename[:-4] + '_texture'))
-    plt.close()
+    fig.savefig(os.path.join(save_path, imageFilename[:-4] + '_texture'))
     
     data = np.concatenate(([Qlist_texture], [texture]))
     np.savetxt(os.path.join(save_path, imageFilename[:-4]+'_texture.csv'), data.T, delimiter=',')
