@@ -623,7 +623,7 @@ Regular:
       type: float
   name:
     - normalize
-    - tomopy
+    - pipelinefunctions
 Nearest Flats:
   parameters:
     - name: cutoff
@@ -649,18 +649,37 @@ Projection Angles:
       default: 90
     range:
       default: 180
-Region of Interest:
+ROI:
   name:
     - normalize_roi
     - tomopy
-ROI:
   parameters:
-    - name: roi
-    - type: str
+    - name: p11
+      type: int
+    - name: p12
+      type: int
+    - name: p21
+      type: int
+    - name: p22
+      type: int
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: Select roi
+      type: action
 Background Intensity:
   parameters:
     - name: air
       type: int
+    - name: tomo
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
   name:
     - normalize_bg
     - tomopy

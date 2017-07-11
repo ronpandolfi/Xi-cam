@@ -4,7 +4,7 @@ Functions:
             F3D MM Erosion, F3D MM Dilation, F3D MM Opening, F3D MM Closing]
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
-  Normalization: [Regular, Background Intensity, Nearest Flats]
+  Normalization: [Regular, Background Intensity, Nearest Flats, ROI]
   Padding: [Padding]
   Phase Retrieval: [Phase Retrieval]
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
