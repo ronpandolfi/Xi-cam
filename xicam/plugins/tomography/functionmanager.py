@@ -65,6 +65,7 @@ class FunctionManager(fw.FeatureManager):
     sigPipelineChanged = QtCore.Signal()
     sigCORDetectChanged = QtCore.Signal(bool)
     sigFuncAdded = QtCore.Signal()
+    sigNormFuncAdded = QtCore.Signal(QtGui.QWidget)
 
     center_func_slc = {'Phase Correlation': (0, -1)}  # slice parameters for center functions
     mask_functions = ['F3D Mask Filter', 'F3D MM Erosion', 'F3D MM Dilation', 'F3D MM Opening', 'F3D MM Closing']
@@ -75,6 +76,7 @@ class FunctionManager(fw.FeatureManager):
         'Nearest Flats': 'sino',
         'Regular': 'both',
         'Background Intensity': 'proj',
+        'ROI': 'both',
         'Beam Hardening': 'both',
         'Negative Logarithm': 'both',
         'Fourier-Wavelet': 'sino',
@@ -137,6 +139,9 @@ class FunctionManager(fw.FeatureManager):
             self.recon_function = func_widget
             func_widget.input_functions['center'].previewButton.clicked.connect(self.CORChoiceUpdated)
             self.sigPipelineChanged.emit()
+        elif function == 'Normalization':
+            func_widget = fc.NormalizeFunctionWidget(function, subfunction, package)
+            self.sigNormFuncAdded.emit(func_widget)
         elif function == 'Filter' and subfunction in self.mask_functions:
             func_widget = fc.MaskFunctionWidget(function, subfunction, package)
         elif function == 'Reader':
@@ -259,9 +264,6 @@ class FunctionManager(fw.FeatureManager):
         """
         for function in self.features:
             function.updateParamsDict()
-
-    def connectReaderROI(self, roi_widget):
-        roi_widget.sigRegionChanged.connect(self.adjustReaderParams)
 
     def adjustReaderParams(self, roi_widget):
         for feature in self.features:

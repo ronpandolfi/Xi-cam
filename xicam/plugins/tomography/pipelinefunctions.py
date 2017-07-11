@@ -368,6 +368,13 @@ def do360_to_180(data, overlap=0, rotation='left'):
                                                                         ::-1]
     return out
 
+def normalize(tomo, flats, dark, cutoff=None, ncore=None):
+    """
+    Wrapper for tomopy.normalize.normalize function (make more similar to nearest flats norm function
+    """
+
+    return tomopy.normalize(arr=tomo, flat=flats, dark=dark, cutoff=cutoff, ncore=ncore)
+
 
 if __name__ == '__main__':
     import tomopy

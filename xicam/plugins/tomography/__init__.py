@@ -171,11 +171,21 @@ class TomographyPlugin(base.plugin):
 
         # connect signals
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
-        widget.projectionViewer.sigROIWidgetChanged.connect(self.manager.connectReaderROI)
-        self.wireCORWidgets(widget)
+        widget.projectionViewer.sigROIWidgetChanged.connect(lambda x:
+                                x.sigRegionChanged.connect(self.manager.adjustReaderParams))
 
+        # complicated way of connecting the ROI params to the functionwidget
+        # is there a better way to do this?
+        self.manager.sigNormFuncAdded.connect(lambda x:
+                                x.sigROIAdded.connect(widget.projectionViewer.stackViewer.view.addItem))
+        self.manager.sigNormFuncAdded.connect(lambda x: x.sigROIAdded.connect(
+                                lambda y: y.sigRegionChanged.connect(lambda z: x.adjustParams(self.manager))
+        ))
+
+        self.wireCORWidgets(widget)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
+
 
     def wireCORWidgets(self, widget):
         widget.wireupCenterSelection(self.manager.recon_function)

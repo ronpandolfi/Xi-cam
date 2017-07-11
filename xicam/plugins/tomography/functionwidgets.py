@@ -27,7 +27,7 @@ import config
 import reconpkg
 import ui
 from xicam.widgets import featurewidgets as fw
-from functionmanager import TestRangeDialog
+from .functionmanager import TestRangeDialog
 
 
 class FunctionWidget(fw.FeatureWidget):
@@ -349,6 +349,106 @@ class AnglesFunctionWidget(FunctionWidget):
         param_dict['nang'] = self.param_dict['nang']
 
         return param_dict
+
+class NormalizeFunctionWidget(FunctionWidget):
+
+    sigROIAdded = QtCore.Signal(pg.ROI)
+    sigROIChanged = QtCore.Signal()
+
+    def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
+        super(NormalizeFunctionWidget, self).__init__(name=name, subname=subname, package=package,
+                                        input_functions=input_functions, checkable=checkable, closeable=closeable,
+                                        parent=parent)
+
+        if subname == 'ROI':
+            self.selection_roi = pg.ROI([0, 0], [200, 200])
+            self.params.child('Select roi').sigActivated.connect(self.setRoi)
+            # self.previewButton.focusInEvent = lambda x: self.focusInEvent(x)
+            # self.previewButton.focusOutEvent = lambda x: self.focusOutEvent(x)
+
+    @property
+    def updated_param_dict(self):
+        param_dict = FunctionWidget.updated_param_dict.fget(self)
+        if self.subfunc_name == 'ROI':
+            param_dict.update({'roi': [self.params.child('p11').value(), self.params.child('p12').value(),
+                                  self.params.child('p21').value(), self.params.child('p22').value()]})
+            for param in ['p11', 'p12', 'p21', 'p22', 'Select roi']:
+                try:
+                    param_dict.pop(param)
+                except KeyError:
+                    pass
+        return param_dict
+
+    # TODO: make this code work
+    # it should hide the ROI when you click away from the functionwidget
+    # def focusInEvent(self, event):
+    #     if hasattr(self, 'selection_roi'):
+    #         self.selection_roi.show()
+    #
+    # def focusOutEvent(self, event):
+    #     if hasattr(self, 'selection_roi'):
+    #         self.selection_roi.hide()
+
+
+    def setRoi(self):
+        if self.selection_roi:
+            del(self.selection_roi)
+
+        self.selection_roi = pg.ROI([0, 0], [200, 200], pen=QtGui.QPen('y'), removable=True)
+        self.selection_roi.addScaleHandle([1, 1], [0, 0])
+        self.selection_roi.addScaleHandle([0, 0], [1, 1])
+        self.sigROIAdded.emit(self.selection_roi)
+
+        self.params.child('p11').setValue(0)
+        self.params.child('p12').setValue(200)
+        self.params.child('p21').setValue(0)
+        self.params.child('p22').setValue(200)
+
+    def adjustParams(self, func_manager):
+        x_max, y_max = None, None
+        for feature in func_manager.features:
+            if 'Reader' in feature.name:
+                x_max = feature.params.child('end_width').defaultValue()
+                y_max = feature.params.child('end_sinogram').defaultValue()
+
+        pos = self.selection_roi.pos()
+        size = self.selection_roi.size()
+
+        # there has to be a better way to do this
+        if 0 < pos[0] < x_max:
+            x1 = int(pos[0])
+        elif pos[0] < 0:
+            x1 = 0
+        else:
+            x1 = x_max
+
+        if 0 < pos[0] + size[0] < x_max:
+            x2 = int(pos[0] + size[0])
+        elif pos[0] + size[0] < 0:
+            x2 = 0
+        else:
+            x2 = x_max
+
+        if 0 < pos[1] < y_max:
+            y1 = int(pos[1])
+        elif pos[1] < 0:
+            y1 = 0
+        else:
+            y1 = y_max
+
+        if 0 < pos[1] + size[1] < y_max:
+            y2 = int(pos[1] + size[1])
+        elif pos[1] + size[1] < 0:
+            y2 = 0
+        else:
+            y2 = y_max
+
+        self.params.child('p11').setValue(x1)
+        self.params.child('p12').setValue(x2)
+        self.params.child('p21').setValue(y1)
+        self.params.child('p22').setValue(y2)
+
+
 
 class TomoPyReconFunctionWidget(FunctionWidget):
     """
