@@ -57,6 +57,8 @@ class WaferView(QWidget):
 
         self.WaferPlot.scene().sigMouseClicked.connect(self.mouseClicked)
 
+        self.lastcsv=None
+        self.mode='SNR'
 
     def mouseClicked(self,event):
         '''
@@ -66,7 +68,7 @@ class WaferView(QWidget):
         event : QMouseEvent
 
         '''
-        print event.pos()
+        print(event.pos())
         #get cake data from file
         #...
         #emit cake data
@@ -74,37 +76,41 @@ class WaferView(QWidget):
         self.sigPlot.emit(cake)
         event.accept()
 
+    @Slot(int)
+    def setMode(self,modeindex):
+        self.mode=self.csvkeys.keys()[modeindex]
+        self.redrawfromCSV()
+
     @Slot(str,str)
-    def redrawfromCSV(self,csv,mode='peaks'):
+    def redrawfromCSV(self,csv=None):
         '''
 
         Parameters
         ----------
         csv : str
             filepath reference to CSV file to be displayed
-        mode : str
-            display mode; one of 'SNR','NND','TEXTURE','MAX','AVG','MAX/AVG','#PEAKS','FWHM'
-
         '''
+        if not csv: csv=self.lastcsv
+        self.lastcsv=csv
         #print csv
         #print 'loading csv into dataframe'
         p = pd.read_csv(csv)
         #print list(p)
         x=np.nan_to_num(p['p_x'])
         y=np.nan_to_num(p['p_y'])
-        z = np.nan_to_num(p[self.csvkeys[mode]])
+        z = np.nan_to_num(p[self.csvkeys[self.mode]])
         #print x, y
         d=(x+y).argsort()
         x,y,z = (x[d],
                  y[d],
                  z[d])
-        zmin = min(z)
-        zrange = np.ptp(z)
-        z = np.nan_to_num((z-zmin)/zrange *256)
+        # zmin = min(z)
+        # zrange = np.ptp(z)
+        # z = np.nan_to_num((z-zmin)/zrange *256)
 
-        viridisposs = [0.0,0.25,0.5,0.75,1.0]
-        viridiscolors = [(68, 1, 84, 255),(58, 82, 139, 255),(32, 144, 140, 255),(94, 201, 97, 255),(253, 231, 36, 255)]
-        viridismap = pg.ColorMap(viridisposs,viridiscolors,mode=pg.ColorMap.RGB)
+        # viridisposs = [0.0,0.25,0.5,0.75,1.0]
+        # viridiscolors = [(68, 1, 84, 255),(58, 82, 139, 255),(32, 144, 140, 255),(94, 201, 97, 255),(253, 231, 36, 255)]
+        # viridismap = pg.ColorMap(viridisposs,viridiscolors,mode=pg.ColorMap.RGB)
 
 
         points = [{'pos':(x[i],y[i]),
@@ -303,7 +309,7 @@ class ScatterHistogramLUTItem(pg.HistogramLUTItem):
         self.sigLookupTableChanged.emit(self)
 
     def regionChanged(self):
-        self.autoLevel = False
+        self.autoLevel = False  # TODO: fix autoleveling being reset?
         if self.plotItem() is not None:
             self.plotItem().setLevels(self.region.getRegion())
         self.sigLevelChangeFinished.emit(self)
@@ -313,12 +319,13 @@ class ScatterHistogramLUTItem(pg.HistogramLUTItem):
         # profiler = debug.Profiler()
         data=self.plotItem().data['data']
         if len(data):
-            hist, bins = np.histogram(data,100) #self.plotItem().getHistogram() # TODO: histogram scatter values
+            hist, bins = np.histogram(data,100)
             # profiler('get histogram')
             if hist[0] is None:
                 return
             self.plot.setData(bins[:-1],hist)
             # profiler('set plot')
+            print('autolevel:',self.autoLevel)
             if autoLevel or self.autoLevel:
                 mn = bins[0]
                 mx = bins[-1]

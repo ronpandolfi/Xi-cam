@@ -4,16 +4,18 @@ Created on Apr 2017
 @author: Ron Pandolfi, Fang Ren
 """
 
+from PySide.QtGui import *
+from PySide.QtCore import *
 
 from .. import base
-import widgets
+from xicam.plugins.HiTp import widgets
 from xicam import threads
 from xicam import plugins
 
 import numpy as np
 from xicam.widgets import daemonwidget
 
-from on_the_fly import run
+from xicam.plugins.HiTp.on_the_fly import run
 import os.path
 from modpkgs import pyqtgraphmod
 
@@ -22,7 +24,7 @@ def runtest():
     pass
 
 def redrawfromCSV(csvpath):
-    print csvpath
+    print(csvpath)
     plugins.plugins['HiTp'].instance.centerwidget.redrawfromCSV(csvpath)
 
 @threads.method(redrawfromCSV)
@@ -105,4 +107,9 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)
 
+modes=csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}
 
+mode = QComboBox(HiTpPlugin.toolbar)
+mode.addItems(modes.keys())
+HiTpPlugin.toolbar.addWidget(mode)
+mode.currentIndexChanged.connect(HiTpPlugin.centerwidget.setMode)
