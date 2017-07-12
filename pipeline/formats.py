@@ -454,7 +454,7 @@ class tomotifimage(fabioimage):
         return self
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[frame].transpose()
+        self.data = self._dgroup[frame]
         return self.data
 
     def __getitem__(self, item):
