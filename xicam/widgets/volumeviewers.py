@@ -48,6 +48,8 @@ class VolumeViewer(QtGui.QWidget):
         # ly.addWidget(self.HistogramLUTWidget)
 
         self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.setMaximumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
+        self.setButton.setMinimumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
         self.setButton.connectToHistWidget(self.HistogramLUTWidget)
         v.addWidget(self.setButton)
         ly.addLayout(v)
