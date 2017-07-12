@@ -528,10 +528,11 @@ class TomographyPlugin(base.plugin):
             window.exec_()
             val = window.intValue()
 
-            msg.showMessage('Computing 3D preview...', timeout=0)
-            dims = self.get_reader_dims(sino = (None, None, val), width=(None, None, val))
-            dims += (0,)
-            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), dims=dims)
+            if window.result():
+                msg.showMessage('Computing 3D preview...', timeout=0)
+                dims = self.get_reader_dims(sino = (None, None, val), width=(None, None, val))
+                dims += (0,)
+                self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), dims=dims)
 
 
     def runSlicePreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
