@@ -350,6 +350,7 @@ class FunctionManager(fw.FeatureManager):
             * center: the center of rotation of the data
             * a string of function names and parameters to be later written into a yaml file
         """
+        self.lockParams(True)
 
         # extract function pipeline
         d = OrderedDict(); theta = []
@@ -400,6 +401,7 @@ class FunctionManager(fw.FeatureManager):
                     # extract theta values
                     if 'theta' in param:
                         theta = ipf.partial()
+        self.lockParams(True)
 
         return [d, theta, center, config.extract_pipeline_dict(self.features),
                 config.extract_runnable_dict(self.features)]
@@ -587,11 +589,6 @@ class FunctionManager(fw.FeatureManager):
                 ind = keys.index(name)
                 func_dict.pop(list(func_dict.keys())[ind])
 
-        # set up dictionary of function keywords
-        params_dict = OrderedDict()
-        for name, fpartial in list(func_dict.items()):
-            params_dict['{}'.format(name)] = dict(fpartial.keywords)
-
         # load data dictionary
         proj, sino, width, proj_p_chunk, sino_p_chunk, cpu_count = dims
         slc = (slice(*proj), slice(*sino), slice(*width))
@@ -611,9 +608,9 @@ class FunctionManager(fw.FeatureManager):
                 func = fixed_func
                 for key, val in func.exposed_param_dict.iteritems():
                     if key in 'center':
-                        data_dict[key] = val
-                    elif key in params_dict[name].iterkeys() and key not in 'center':
-                        params_dict[name][key] = val
+                        center = func.exposed_param_dict[key]
+                    elif key in func_dict[name].keywords.iterkeys() and key not in 'center':
+                        func_dict[name].keywords[key] = val
             stack_dict[func_name] = {func.subfunc_name: deepcopy(func.exposed_param_dict)}
             count += 1
 
@@ -890,6 +887,8 @@ class FunctionManager(fw.FeatureManager):
         self.updateParameters()
         if function.func_name in 'Reader':
             return
+        if 'Reconstruction' in function.func_name and parameter == 'center':
+            function.input_functions['center'].enabled = False
         for i in prange:
             function.param_dict[parameter] = i
             # Dynamic FixedFunc "dummed down" FuncWidget class. cool.
@@ -902,7 +901,6 @@ class FunctionManager(fw.FeatureManager):
                                                 '_function': function._function})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func, {'function': function.func_name, parameter: prange})
-
 
 
     def setPipelineFromYAML(self, pipeline, setdefaults=False, config_dict=config.names):

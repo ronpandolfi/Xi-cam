@@ -187,7 +187,7 @@ class FunctionWidget(fw.FeatureWidget):
         """
         Parameter dictionary with only the parameters that are shown in GUI
         """
-        param_dict = {key: val for (key, val) in self.param_dict.iteritems()
+        param_dict = {key: val for (key, val) in self.updated_param_dict.iteritems()
                       if key in [param.name() for param in self.params.children()]}
         return param_dict
 
