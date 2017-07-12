@@ -824,13 +824,15 @@ class WriteFunctionWidget(FunctionWidget):
         Uses result of browse button in 'parent folder' and 'folder name' fields
         """
 
-        path = str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as',self.folder.value())[0])
+        path = str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as', dir=self.parent.value())[0])
+        try:
+            folder = path.split('/')[-1]
+            parent = path.split(folder)[0]
 
-        folder = path.split('/')[-1]
-        parent = path.split(folder)[0]
-
-        self.parent.setValue(parent)
-        self.folder.setValue(folder)
+            self.parent.setValue(parent)
+            self.folder.setValue(folder)
+        except ValueError:
+            pass
 
 
     def pathChanged(self):
