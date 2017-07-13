@@ -1,8 +1,9 @@
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -150,8 +151,9 @@ def array_operation_div(arr, value=1):
 def array_operation_max(arr, value=0):
     return np.maximum(arr, value)
 
+
 def reader(start_sinogram=0, end_sinogram=0, step_sinogram=1, start_projection=0, end_projection=0, step_projection=1,
-           sinograms_per_chunk=0):
+           sinograms_per_chunk=0, projections_per_chunk=0):
 
     """
     Function to expose input tomography array parameters in function pipeline GUI
@@ -180,7 +182,7 @@ def reader(start_sinogram=0, end_sinogram=0, step_sinogram=1, start_projection=0
     """
 
     return (start_projection, end_projection, step_projection), (start_sinogram, end_sinogram, step_sinogram), \
-           sinograms_per_chunk
+           sinograms_per_chunk, projections_per_chunk
 
 def slicer(arr, p11=0, p12=0, p21=0, p22=0, p31=0, p32=0):
     """
@@ -221,6 +223,7 @@ def remove_outlier1d(arr, dif, size=3, axis=0, ncore=None, out=None):
     """
     Remove high intensity bright spots (and dark spots) from an array, using a one-dimensional
     median filter along the specified axis
+
     Parameters
     ----------
     arr : ndarray
@@ -370,7 +373,7 @@ def do360_to_180(data, overlap=0, rotation='left'):
 
 def normalize(tomo, flats, dark, cutoff=None, ncore=None):
     """
-    Wrapper for tomopy.normalize.normalize function (make more similar to nearest flats norm function
+    Wrapper for tomopy.normalize.normalize function (make more similar to nearest flats norm function)
     """
 
     return tomopy.normalize(arr=tomo, flat=flats, dark=dark, cutoff=cutoff, ncore=ncore)

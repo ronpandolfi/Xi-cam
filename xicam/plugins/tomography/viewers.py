@@ -14,7 +14,7 @@ from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
 __license__ = ""
@@ -47,6 +47,15 @@ class TomoViewer(QtGui.QWidget):
     pipeline : OrderedDict
         Dictionary to hold parameters for reconstruction, referenced by the iterations
         of the reconstruction function
+    prange : list
+        List of values used in TestParameterRange previews
+    path : str
+        Path to dataset being represented
+    toolbar : ui.Toolbar
+        Tomography plugin's toolbar
+    preview_holder : list
+        Holds slice preview data, including parameters and tomography data
+
 
     Signals
     -------
@@ -163,6 +172,9 @@ class TomoViewer(QtGui.QWidget):
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
 
     def openFlats(self):
+        """
+        Opens new 'flats' for dataset from path taken from user via QtGui.QFileDialog
+        """
 
         flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select flats for this dataset: ")
         path = flat_dialog[0]
@@ -184,7 +196,9 @@ class TomoViewer(QtGui.QWidget):
         msg.clearMessage()
 
     def openDarks(self):
-
+        """
+        Opens new 'darks' for dataset from path taken from user via QtGui.QFileDialog
+        """
         dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select darks for this dataset: ")
         path = dark_dialog[0]
 
@@ -326,9 +340,10 @@ class TomoViewer(QtGui.QWidget):
             Pipeline dictionary
         recon : ndarry
             Reconstructed slice
-        slice_no :
+        slice_no : int, optional
             Sinogram/slice number reconstructed
-
+        prange : dict, optional
+            Dictionary of parameter being tested in TestParameterRange, and the functino it belongs to
         """
         if type(recon) == str:
             return
@@ -422,7 +437,9 @@ class TomoViewer(QtGui.QWidget):
             self.projectionViewer.hideCenterDetection()
 
     def onMBIR(self, active):
-
+        """
+        Slot to activate MBIR slurm generation menu. Not currently in use.
+        """
 
         if active:
             self.viewstack.setCurrentWidget(self.projectionViewer)
@@ -448,6 +465,9 @@ class TomoViewer(QtGui.QWidget):
 
 
 class MBIRViewer(QtGui.QWidget):
+    """
+    Widget to generate .slurm files used in NERSC-based MBIR
+    """
 
 
     def __init__(self, data, path, *args, **kwargs):
@@ -523,19 +543,6 @@ class MBIRViewer(QtGui.QWidget):
         cor_method_layout.addWidget(cor_method_label)
         cor_method_layout.addWidget(self.cor_method_box)
 
-        # import inspect
-        # for item in self.cor_detection_funcs:
-        #     func = functionwidgets.FunctionWidget(name="Center Detection", subname=item,
-        #                         package=reconpkg.packages[config.names[item][1]])
-        #     print item
-        #     print func.param_dict
-        #     print func.exposed_param_dict
-        #     print inspect.getargspec(func._function)[0]
-        #     print "======================="
-
-        # for param in self.params.children():
-            # param.sigValueChanged.connect(self.paramChanged)
-
         self.auto_tab_layout.addLayout(cor_method_layout)
         self.auto_tab_layout.addWidget(self.cor_param_tree)
         self.auto_tab.setLayout(self.auto_tab_layout)
@@ -593,6 +600,9 @@ class MBIRViewer(QtGui.QWidget):
         self.setLayout(h)
 
     def changeCORfunction(self, index):
+        """
+        Changes COR auto-detect function used based on index of combobox
+        """
 
         subname = self.cor_method_box.itemText(index)
         self.auto_tab_layout.removeWidget(self.cor_param_tree)
@@ -616,13 +626,18 @@ class MBIRViewer(QtGui.QWidget):
 
 
     def manualCOR(self):
+        """Slot to receive signal when manual COR detection is chosen"""
         self.cor_Value.setCurrentWidget(self.manual_tab)
 
     def autoCOR(self):
+        """Slot to receive signal when automatic COR detection is chosen"""
         self.cor_Value.setCurrentWidget(self.auto_tab)
 
     def loadCOR(self):
-
+        """
+        Get dataset COR, either automatically or from user-entered value
+        :return:
+        """
 
         widget = self.cor_Value.currentWidget()
         if widget is self.manual_tab:
@@ -634,6 +649,8 @@ class MBIRViewer(QtGui.QWidget):
                 return -1
 
     def find_COR(self, cor_function):
+        """Auto-detect COr based on 'cor_function' parameter"""
+
         if not cor_function in self.cor_detection_funcs:
             return -1
         else:
@@ -727,18 +744,24 @@ class ProjectionViewer(QtGui.QWidget):
         widgets.StackViewer used to display the data
     data : loader.StackImage
         Image data
-    flat : ndarray
-        Median of flat field data
-    dark : ndarray
-        Median of dark field data
     imageoverlay_roi : widgets.ROIImageOverlay
         Widget used in the cor_widget for manual center detection
     selection_roi : pyqtgragh.ROI
-        ROI for selecting region to reconstruct (Not implemented)
+        ROI for selecting region to reconstruct
     cor_widget : QtGui.QWidget
         Widget used in manual center detection
     setCenterButton : QtGui.QToolButton
         Button for setting center value from cor_widget to reconstruction function in pipeline
+    roi_histogram : pyqtgraph.HistogramLUTWidget
+        Histogram for imageoverlay
+    mbir_viewer : MBIRViewer
+        Menu for generating slurm files for NERSC-based MBIR jobs
+    cor_box : QtGui.QStackWidget
+        Widget for holding COR - related widgets
+    cor_widget : QtGui.QWidget
+        Widget for holding manual COR-related widgets
+    auto_cor_widget : QtGui.QWidget
+        Widget for holding automatic COR-related widgets
 
     Signals
     -------
@@ -773,8 +796,6 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem = self.stackViewer.imageItem
         self.data = self.stackViewer.data
         self.normalized = False
-        # self.flat = np.median(self.data.flats, axis=0).transpose()
-        # self.dark = np.median(self.data.darks, axis=0).transpose()
         self.imgoverlay_roi = ROImageOverlay(self.data, self.imageItem, [0, 0], parent=self.stackViewer.view)
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
@@ -848,7 +869,6 @@ class ProjectionViewer(QtGui.QWidget):
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
-        #TODO data shape seems to be on larger than the return from slicing it with [:-1]
         spinBox.setRange(0, data.shape[0]-1)
         slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
         slider.setRange(0, data.shape[0]-1)
@@ -910,6 +930,10 @@ class ProjectionViewer(QtGui.QWidget):
         # self.normalize(True)
 
     def updateCORChoice(self, boolean):
+        """
+        Slot to receive signal emitted when user chooses to use either automatic or manual COR detection in
+        function pipeline
+        """
         if self.toolbar and self.toolbar.actionCenter.isChecked():
             if boolean:
                 self.cor_box.setCurrentWidget(self.auto_cor_widget)
@@ -921,6 +945,9 @@ class ProjectionViewer(QtGui.QWidget):
                 self.manual_cor_button.setChecked(True)
 
     def writeCOR(self):
+        """
+        Writes COR value acquired from user to metadata of input file
+        """
         cor = QtGui.QInputDialog.getDouble(self.cor_box, 'Write COR value to file',
                                            'Write COR value to file',self.data.shape[1]/2)
         if cor[1]:
@@ -928,11 +955,17 @@ class ProjectionViewer(QtGui.QWidget):
 
 
     def manualCOR(self):
+        """
+        Slot to receive signal when manual COR detection button is clicked in CORSelectionWidget
+        """
         self.cor_box.setCurrentWidget(self.cor_widget)
         self.stackViewer.show()
         self.sigCORChanged.emit(False)
 
     def autoCOR(self):
+        """
+        Slot to receive signal when auto COR detection button is clicked in CORSelectionWidget
+        """
         self.cor_box.setCurrentWidget(self.auto_cor_widget)
         self.stackViewer.hide()
         self.sigCORChanged.emit(True)
@@ -993,12 +1026,19 @@ class ProjectionViewer(QtGui.QWidget):
             self.stackViewer.show()
 
     def showMBIR(self):
+        """
+        Slot to receive signal and show MBIR menu when it is requested
+        """
+
         self.mbir_viewer.show()
         self.cor_button_holder.hide()
         # self.hideCenterDetection()
         self.stackViewer.hide()
 
     def hideMBIR(self):
+        """
+        Slot to receive signal and show MBIR menu when it is requested
+        """
         self.mbir_viewer.hide()
         self.stackViewer.show()
 

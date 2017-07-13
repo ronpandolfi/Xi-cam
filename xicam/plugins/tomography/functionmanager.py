@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -18,11 +19,9 @@ from collections import OrderedDict
 from copy import deepcopy
 from modpkgs import yamlmod
 import numpy as np
-import pyqtgraph as pg
 from PySide import QtCore, QtGui
-from pyqtgraph.parametertree import Parameter
-import config
-import reconpkg
+from . import config
+from . import reconpkg
 import functionwidgets as fc
 from xicam.widgets import featurewidgets as fw
 import dxchange
@@ -39,10 +38,14 @@ class FunctionManager(fw.FeatureManager):
         function to correct for an offset in the COR location. As when padding the input array
     corr_scale : function/lambda
         function to correct for a scaling in the COR location. As when subsampling the input array
-
     recon_function : FunctionWidget
         FunctionWidget representing the Reconstruction Function in worflow pipeline
-
+    slice_dir : dict
+        Dictionary containing the axis that the function 'acts on'. Used for chunking and processing in reconstructions
+    cor_func : functionwidgets.FunctionWidget
+        FunctionWidget representing current COR detection widget in pipeline
+    cor_widget : functionwidgets.CORSelectionWidget
+        Widget for selecting method of COR detection (automatic/manual) and which function is used (in automatic case)
     Parameters
     ----------
     list_layout : QtGui.QLayout
@@ -57,8 +60,15 @@ class FunctionManager(fw.FeatureManager):
     Signals
     -------
     sigTestRange(str, object, dict)
+        Emitted when request for TestParameterRange is submitted
     sigPipelineChanged()
         Emitted when the pipeline changes or the reconstruction function is changed
+    sigCORDetectChanged(boo)
+        Emitted when user toggles the COR detection method (between either automatic or manual detection)
+    sigFuncAdded()
+        Emitted when function is added to pipeline
+    sigNormFuncAdded(QtGui.QWidget)
+        Emitted when normalization function is added to pipeline
     """
 
     sigTestRange = QtCore.Signal(str, object, dict)
@@ -161,6 +171,9 @@ class FunctionManager(fw.FeatureManager):
 
 
     def setFunctionValues(self, funcwidget, params, setDefault=False):
+        """
+        Sets a functionwidget's values based parameters in 'params'
+        """
         for param, value in params.iteritems():
             try:
                 funcwidget.params.child(param).setValue(value)
@@ -171,6 +184,10 @@ class FunctionManager(fw.FeatureManager):
 
 
     def connectCropPad(self):
+        """
+        Connects 'Crop' and 'Pad' functions in pipeline, if they are both present, so that # of pixels added by
+        padding matches the number removed by crop if either parameter is changed by the user
+        """
         names = [func.name for func in self.features]
         if 'Padding' in names and 'Crop' in names:
             for feature in self.features:
@@ -216,11 +233,31 @@ class FunctionManager(fw.FeatureManager):
         return ipf_widget
 
     def updateCORChoice(self, boolean):
+        """
+        Enables/disables the COR detection function in pipeline based on 'boolean' parameter, which is emitted when
+        the user toggles the same option in the COR widget
+
+        Parameters
+        ----------
+        boolean: bool
+            'True' if automatic COR detection is enabled, 'False' otherwise
+        """
+
         for feature in self.features:
             if 'center' in feature.input_functions:
                 feature.input_functions['center'].enabled = boolean
 
     def updateCORFunc(self, func, widget):
+        """
+        Updates the COR detection function in the pipeline based on which function is selected in the COR widget
+
+        Parameters
+        ----------
+        func : str
+            Name of COR detection function chosen
+        widget : FunctionWidget
+            New COR detection FunctionWidget, located in COR widget
+        """
         for feature in self.features:
             if 'center' in feature.input_functions:
                 feature.removeInputFunction('center')
@@ -234,29 +271,40 @@ class FunctionManager(fw.FeatureManager):
                     child.sigValueChanged.connect(self.updateCORWidget)
 
 
-    # slot for connecting cor widget and pipeline cor
     def updateCORPipeline(self, param):
+        """
+        Slot for connecting COR widget and pipeline COR functions - emitted when parameter in COR widget is changed,
+        so that it can be changed in function pipeline as well
+
+        Parameters
+        ----------
+        param : pyqtgraph.Parameter
+            Parameter changed by user in COR widget
+        """
         child = self.cor_func.params.child(param.name())
         child.setValue(param.value())
 
     # slot for connecting cor widget and pipeline cor
     def updateCORWidget(self, param):
+        """
+        Slot for connecting COR widget and pipeline COr functions - emitted when function in COR widget is changed, so
+        it can be changed in pipeline can be changed
+        """
+
         child = self.cor_widget.params.child(param.name())
         child.setValue(param.value())
 
 
     def CORChoiceUpdated(self):
+        """
+        Slot to receive signal when COR detection method is changed (auto/manual). Emits signal to reflect this
+        in function pipeline
+        """
+
         for feature in self.features:
             if 'center' in feature.input_functions:
                 self.sigCORDetectChanged.emit(feature.input_functions['center'].enabled)
-    #
-    # if parameter in self.input_functions:  # Check to see if parameter already has input function
-    #     if functionwidget.subfunc_name == self.input_functions[parameter].subfunc_name:
-    #         raise AttributeError('Input function already exists')  # skip if the input function already exists
-    #     self.removeInputFunction(parameter)  # Remove it if it will be replaced
-    # self.input_functions[parameter] = functionwidget
-    # self.addSubFeature(functionwidget)
-    # functionwidget.sigDelete.connect(lambda: self.removeInputFunction(parameter))
+
 
     def updateParameters(self):
         """
@@ -344,11 +392,16 @@ class FunctionManager(fw.FeatureManager):
 
         Returns
         -------
-        run_state : list of four elements representing data necessary for reconstruction
-            * lst: list of functools.partial which represent the function pipeline
-            * theta: array of 'theta' values which represent the angles at which tomography data was taken
-            * center: the center of rotation of the data
-            * a string of function names and parameters to be later written into a yaml file
+        d : OrderedDict
+            Dictionary of function names and corresponding partials
+        theta : list
+            array of angle values at which projection data was taken
+        center : float
+            Dataset center of rotation
+        dict
+            Dictionary used to write python file representing function pipeline
+        dict
+            Dictionary used to write yaml file representing function pipeline
         """
         self.lockParams(True)
 
@@ -470,6 +523,8 @@ class FunctionManager(fw.FeatureManager):
 
         func_tuple : functools.partial
             functools.partial of a function in the processing pipeline
+        name :str
+            Name of function being updated
         data_dict : dict
             Dictionary which contains all information relevant to a reconstruction - its elements are loaded into the
             functools.partial's keyword arguments
@@ -634,8 +689,14 @@ class FunctionManager(fw.FeatureManager):
                        run_dict, dims, ncore = None, reconType='Full'):
 
         """
-        Generator for running full reconstruction. Yields messages representing the status of reconstruction
-        This is ideally used as a threads.method or the corresponding threads.RunnableIterator.
+        Generator for running full reconstruction. Yields messages representing the status of reconstruction or the
+        tomography data itself. This function chunks the data into portions of either sinograms of projections. The
+        chunking is necessary because datasets are often too large to fit entirely into memory. The alternating between
+        sinograms and projections is necessary because some functions need *all*  of the dataset's sinograms/projections
+        to work properly (for example, phase retrieval needs all of the dataset's sinograms, so it chunks the dataset's
+        projections).
+
+        See https://bitbucket.org/berkeleylab/als-microct-python for script on which this function is based
 
         Parameters
         ----------
@@ -663,6 +724,8 @@ class FunctionManager(fw.FeatureManager):
         -------
         str
             Message of current status of function
+        d['tomo'] : np.ndarray
+            Tomography data after all processing is complete
         """
 
         start_time = time.time()
@@ -817,57 +880,14 @@ class FunctionManager(fw.FeatureManager):
                 os.remove(tmpfile)
             except OSError:
                 pass
+
         # for the reconstruction previews
         if reconType == '3D' or reconType == 'Slice':
             d['tomo'] = np.vstack(preview_slices)
             yield d['tomo']
+
         yield "End Time: " + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
         yield "It took {:3f} s to process {}".format(time.time() - start_time, path)
-
-
-    def foldSliceStack(self, partial_stack, data_dict):
-        """
-        Method to run a reconstruction given a list of function partials and the data for functions to act on
-
-        Parameters
-        ----------
-         partial_stack : list of 3-tuples
-            Contains: a list of tuples, each of which have as elements: functools.partial of full keywords to run,
-            the name of the associated function, and a copy of the params belonging to that function
-        data_dict : dict
-            Dictionary containing all data needed to run a reconstruction
-
-        Returns
-        -------
-        Returns the 'tomo' data in the data_dict, which has been acted on by all functions in the partial_stack
-        """
-        for tuple in partial_stack:
-            function, write = self.updatePartial(tuple[0], tuple[1], data_dict, tuple[2])
-            data_dict[write] = function()
-
-        return data_dict['tomo']
-
-
-    @staticmethod
-    def foldFunctionStack(partial_stack, initializer):
-        """
-        Static class method to fold a partial function stack given an initializer
-
-        Parameters
-        ----------
-        partial_stack : list of functools.partial
-            List of partials that require only the input array to run.
-        initializer : ndarray
-            Array to use as initializer for folding operation
-
-        Returns
-        -------
-        Return value of last partial in stack
-            Result of folding operation
-        """
-
-        return reduce(lambda f1, f2: f2(f1), partial_stack, initializer)
-
 
 
     def testParameterRange(self, function, parameter, prange):
@@ -987,12 +1007,9 @@ class FunctionManager(fw.FeatureManager):
     def extractPipelineRunnable(self, runnable_pipe, center, params,
                                 proj, sino, sino_p_chunk, width, path, ncore=None):
         """
-        Saves the function pipeline as a runnable (Python) file.
+        Saves the function pipeline as a runnable (Python) file. This needs more work.
 
-        Parameters
-        ----------
-        pipeline : dict
-            Dictionary of functions and their necessary parameters to write the function information
+        # TODO: make new backend pipeline compatible with python script
         """
 
 

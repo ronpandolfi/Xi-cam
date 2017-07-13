@@ -1,9 +1,10 @@
 #! /usr#! /usr/bin/env python
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -18,8 +19,6 @@ op_sys = platform.system()
 #     from Foundation import NSURL
 
 import os
-import time
-import numpy as np
 from functools import partial
 from PySide import QtGui, QtCore
 from collections import OrderedDict
@@ -105,10 +104,7 @@ class TomographyPlugin(base.plugin):
 
         # queue for recon jobs
         self.queue_widget = self.ui.queue
-        # self.queue_widget.sigReconSwapped.connect(self.manager.swapQueue)
-        # self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
 
-        # DRAG-DROP
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
@@ -132,6 +128,9 @@ class TomographyPlugin(base.plugin):
         self.leftwidget.resize(300, 480)
 
     def dropEvent(self, e):
+        """
+        Event handler for drop events
+        """
         for url in e.mimeData().urls():
             if op_sys == 'Darwin':
                 fname = str(NSURL.URLWithString_(str(url.toString())).filePathURL().path())
@@ -188,8 +187,17 @@ class TomographyPlugin(base.plugin):
 
 
     def wireCORWidgets(self, widget):
-        widget.wireupCenterSelection(self.manager.recon_function)
+        """
+        Handles various wiring of signals between COR widget (which handles how the COR of the dataset if calculated)
+        and the function manager
 
+        Parameters
+        ----------
+        widget: TomoViewer
+            viewer for single dataset and all its attributes
+        """
+
+        widget.wireupCenterSelection(self.manager.recon_function)
 
         # add COR func to pipeline to connect signals
         self.manager.updateCORFunc("Phase Correlation", widget.projectionViewer.auto_cor_widget)
@@ -205,6 +213,18 @@ class TomographyPlugin(base.plugin):
 
 
     def opendirectory(self, files, operation=None):
+        """
+        Override opendirectory method in base plugin. Used to open a tomography dataset from the recognized file formats
+        and instantiate a viewer.TomoViewer tab.
+
+        Currently not completely implemented
+
+        Parameters
+        ----------
+        paths : str/list
+            Path to dir
+        """
+
         msg.showMessage('Loading directory...', timeout=10)
         self.activate()
         try:
@@ -221,16 +241,25 @@ class TomographyPlugin(base.plugin):
         self.centerwidget.setCurrentWidget(widget)
 
     def openFlats(self):
+        """
+        Opens new 'flats' portion of dataset
+        """
 
-        currentWidget = self.centerwidget.widget(self.currentIndex())
+        currentWidget = self.centerwidget.currentWidget()
         currentWidget.openFlats()
 
     def openDarks(self):
+        """
+        Opens new 'darks' portion of dataset
+        """
 
-        currentWidget = self.centerwidget.widget(self.currentIndex())
+        currentWidget = self.centerwidget.currentWidget()
         currentWidget.openDarks()
 
     def currentIndex(self):
+        """
+        Returns the index of the current widget (viewer.TomoViewer) from the centerwidgets tab
+        """
 
         try:
             return self.centerwidget.currentIndex()
@@ -311,24 +340,6 @@ class TomographyPlugin(base.plugin):
             self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
         self.setPipelineValues()
         self.manager.updateParameters()
-
-    # def setPipelineValues(self):
-    #     """
-    #     Sets up the metadata table and default values in configuration parameters and functions based on the selected
-    #     dataset
-    #     """
-    #
-    #     widget = self.currentWidget()
-    #     if widget is not None:
-    #         self.ui.property_table.setData(widget.data.header.items())
-    #         self.ui.property_table.setHorizontalHeaderLabels(['Parameter', 'Value'])
-    #         self.ui.property_table.show()
-    #         self.ui.setConfigParams(widget.data.shape[0], widget.data.shape[2])
-    #         config.set_als832_defaults(widget.data.header, funcwidget_list=self.manager.features)
-    #         recon_funcs = [func for func in self.manager.features if func.func_name == 'Reconstruction']
-    #         for rfunc in recon_funcs:
-    #             rfunc.params.child('center').setValue(widget.data.shape[1]/2)
-    #             rfunc.input_functions['theta'].params.child('nang').setValue(widget.data.shape[0])
 
     def setPipelineValues(self):
         """
@@ -413,15 +424,15 @@ class TomographyPlugin(base.plugin):
 
     def roiSelection(self):
         """
-        Slot to receive signal from roi button in toolbar. Simply calls onROIselection from current widget
+        Slot to receive signal from roi button in toolbar. Simply calls onROIselection method from current widget
         """
 
         self.centerwidget.widget(self.currentIndex()).onROIselection()
 
     def manualCenter(self, value):
         """
-        Slot to receive signal from center detection button in toolbar. Simply calls onManualCenter(value) from current
-        widgetpipe
+        Slot to receive signal from center detection button in toolbar. Simply calls onManualCenter(value) method from
+        current widgetpipe
         """
 
         if self.ui.toolbar.actionMBIR.isChecked():
@@ -432,16 +443,16 @@ class TomographyPlugin(base.plugin):
 
     def mbir(self, value):
 
+        """
+        Calls on current widget's (viewers.TomoViewer) onMBIR method, which shows the MBIR slurm generation
+        window. Not currently used
+        """
+
         if self.ui.toolbar.actionCenter.isChecked():
             self.ui.toolbar.actionCenter.setChecked(False)
 
         self.ui.toolbar.actionMBIR.setChecked(value)
         self.centerwidget.widget(self.currentIndex()).onMBIR(value)
-
-
-
-            # if self.checkPipeline():
-        #     msg.showMessage('Computing MBIR preview...', timeout=0)
 
 
     def checkPipeline(self):
@@ -471,6 +482,8 @@ class TomographyPlugin(base.plugin):
             A dynamic class with only the necessary attributes to be run in a workflow pipeline. This is used for
             parameter range tests to create the class with the parameter to be run and send it to a background thread.
             See FunctionManager.testParameterRange for more details
+        prange : dict, optional
+            Dictionary containing parameter being tested for TestParamRange, and the function the parameter belongs to
         """
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
@@ -481,7 +494,15 @@ class TomographyPlugin(base.plugin):
             self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
                                       fixed_func=fixed_func, prange=prange)
 
-    def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
+    def multiSlicePreviewAction(self, message='Computing multi-slice preview...'):
+        """
+        Called when a multiple slice reconstructin preview is requested by the toolbar buttong
+
+        Parameters
+        ----------
+        message : str, optional
+            Message to log. Test Parameters log a different message than the default
+        """
 
         slice_no = self.centerwidget.widget(self.currentIndex()).sinogramViewer.currentIndex
         maximum = self.centerwidget.widget(self.currentIndex()).sinogramViewer.data.shape[0]-1
@@ -502,13 +523,13 @@ class TomographyPlugin(base.plugin):
                         self.preview_slices = value[1]
                         self.centerwidget.widget(self.currentIndex()).sinogramViewer.setIndex(self.preview_slices)
                         self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
-                                                  fixed_func=fixed_func)
+                                                  fixed_func=None)
                     else:
                         dims = self.get_reader_dims(sino=(value[0], value[1] + 1, 1))
                         dims += (0,)
                         self.preview_slices = [value[0],value[1]]
                         self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
-                                                  fixed_func=fixed_func)
+                                                  fixed_func=None)
         except AttributeError:
             pass
 
@@ -516,7 +537,7 @@ class TomographyPlugin(base.plugin):
         """
         Called when a reconstruction 3D preview is requested either by the toolbar button.
         The process is almost equivalent to running a slice preview except a different slice object is passed to extract
-        a subsampled array from the raw tomographic array
+        a subsampled array from the raw tomographic array. User chooses subsample factor from pop-up window.
         """
 
         if self.checkPipeline():
@@ -537,16 +558,26 @@ class TomographyPlugin(base.plugin):
 
     def runSlicePreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
-        Callback function that receives the partial stack and corresponding dictionary required to run a preview and
+        Callback function that receives the necessary widgets/information required to run a preview and
         add it to the viewer.TomoViewer.previewViewer
 
         Parameters
         ----------
-        partial_stack : list of functools.partial
-            List of partials that require only the input array to run.
+        datawidget : viewers.TomoViewer
+            Widget containing dataset
+        func_dict: dict
+            Dictionary of function names and partials with keywords for the reconstruction
+        theta: list
+            List of values representing angular location of camera (for reconstruction)
+        center: float
+            Center of rotation of dataset
         stack_dict : dict
             Dictionary describing the workflow pipeline being run. This is displayed to the left of the preview image in
             the viewer.TomoViewer.previewViewer
+        prange: dict, optional
+            Dictionary containing parameter being tested for TestParamRange, and the function the parameter belongs to
+        dims : tuple, optional
+            Tuple containing dimensions of dataset to be reconstructed
         """
 
         callback = partial(self.centerwidget.currentWidget().addSlicePreview, stack_dict, slice_no=self.preview_slices,
@@ -559,22 +590,26 @@ class TomographyPlugin(base.plugin):
         bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, 'Slice')
 
 
-    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
+    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, dims=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer
 
         Parameters
         ----------
-        partial_stack : list of functools.partial
-            List of partials that require only the input array to run.
+        datawidget : viewers.TomoViewer
+            Widget containing dataset
+        func_dict: dict
+            Dictionary of function names and partials with keywords for the reconstruction
+        theta: list
+            List of values representing angular location of camera (for reconstruction)
+        center: float
+            Center of rotation of dataset
         stack_dict : dict
             Dictionary describing the workflow pipeline being run. This is displayed to the left of the preview image in
             the viewer.TomoViewer.previewViewer
-        data_dict: dict
-            Dictionary of data to be reconstructed
-        prange: list
-            list of values to be iterated over in reconstruction preview. Not used in 3D previews
+        dims : tuple, optional
+            Tuple containing dimensions of dataset to be reconstructed
         """
 
         self.manager.updateParameters()
@@ -598,47 +633,25 @@ class TomographyPlugin(base.plugin):
             This function is either self.run3DPreview or self.runSlicePreview
         finished : function/QtCore.Slot, optional
             Slot to receive the background threads finished signal
-        slc : slice
-            slice object specifying the slices to take from the input tomographic array
+        dims : typle, optional
+            Tuple containing dimensions of dataset to be reconstructed
         fixed_func : type class
             A dynamic class with only the necessary attributes to be run in a workflow pipeline. This is used for
             parameter range tests to create the class with the parameter to be run and send it to a background thread.
             See FunctionManager.testParameterRange for more details
+        prange: dict, optional
+            Dictionary containing parameter being tested for TestParamRange, and the function the parameter belongs to
         """
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentIndex()), dims=dims,
                          ncore=cpu_count(), fixed_func=fixed_func, prange=prange)
 
-    def runFullReconstruction(self):
-        """
-        Sets up a full reconstruction to be run in a background thread for the current dataset based on the current
-        workflow pipeline and configuration parameters. Called when the corresponding toolbar button is clicked.
-
-        Deprecated by loadFullReconstruction and runReconstruction
-        """
-        if not self.checkPipeline():
-            return
-
-        value = QtGui.QMessageBox.question(None, 'Run Full Reconstruction',
-                                           'You are about to run a full reconstruction. '
-                                           'This step can take some minutes. Do you want to continue?',
-                                   (QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel))
-        if value is QtGui.QMessageBox.Cancel:
-            return
-
-        name = self.centerwidget.tabText(self.centerwidget.currentIndex())
-        msg.showMessage('Computing reconstruction for {}...'.format(name),timeout = 0)
-        self.bottom.local_console.clear()
-        self.manager.updateParameters()
-        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
-                                    interrupt_signal=self.bottom.local_cancelButton.clicked,
-                                    finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
-
     def freeRecon(self):
         """
         Frees plugin to run reconstruction and run next in queue when job is canceled
         """
+
         msg.showMessage("Reconstruction interrupted.", timeout=0)
         self.bottom.log2local('---------- RECONSTRUCTION INTERRUPTED ----------')
         self.queue_widget.removeRecon(0)
@@ -662,7 +675,7 @@ class TomographyPlugin(base.plugin):
         if value is QtGui.QMessageBox.Cancel:
             return
 
-        currentWidget = self.centerwidget.widget(self.currentIndex())
+        currentWidget = self.centerwidget.currentWidget()
         self.manager.updateParameters()
 
         func_dict, theta, center, pipeline_dict, run_dict = self.manager.saveState(currentWidget)
@@ -670,6 +683,7 @@ class TomographyPlugin(base.plugin):
                             interrupt_signal=self.bottom.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
 
+        # set up information for reconstruction
         proj, sino, width, proj_chunk, sino_chunk = self.get_reader_dims()
 
         dims = (proj, sino, width, sino_chunk, proj_chunk, cpu_count())
@@ -721,6 +735,15 @@ class TomographyPlugin(base.plugin):
         Get dimensions for data to be reconstructed based on ReaderWidget (or other) input
         Proj, sino, width are all three-tuples in the form some combination of int and None values, ex:
         (int, int, int), (None, None, int), etc.
+
+        Returns
+        -------
+        proj : tuple
+            3-tuple indicating projection slicing
+        sino : tuple
+            3-tuple indicating sinogram slicing
+        width : tuple
+            3-tuple indicating width (x direction) slicing
         """
 
         sino_chunk = None

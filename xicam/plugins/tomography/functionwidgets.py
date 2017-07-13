@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -157,10 +158,13 @@ class FunctionWidget(fw.FeatureWidget):
 
         self.allowed_types = {'str': str, 'int': int, 'float': float, 'bool': bool, 'unicode': unicode}
 
+        # set widgets to never hide their subfunctions
         self.expand()
 
-    # make it so function widgets never collapse
     def collapse(self):
+        """
+        This catches all "collapse" requests and passes them, so that FunctionWidgets are not collapsable
+        """
         pass
 
     @property
@@ -403,8 +407,9 @@ class NormalizeFunctionWidget(FunctionWidget):
                     pass
         return param_dict
 
-    # TODO: make this code work
-    # it should hide the ROI when you click away from the functionwidget
+    # TODO : make this code work. It should hide the ROI when you click away from the functionwidget and show it
+    # TODO : again when you click back onto it
+
     # def focusInEvent(self, event):
     #     if hasattr(self, 'selection_roi'):
     #         self.selection_roi.show()
@@ -418,6 +423,7 @@ class NormalizeFunctionWidget(FunctionWidget):
         """
         Adds pyqtgraph.ROI to projection images so user can select ROI from which to normalize
         """
+
         if self.selection_roi:
             del(self.selection_roi)
 
@@ -436,6 +442,7 @@ class NormalizeFunctionWidget(FunctionWidget):
         Adjusts parameters in functionwidget based on location of ROI. Also ensures values do not become negative
         or larger than image size
         """
+
         x_max, y_max = None, None
         for feature in func_manager.features:
             if 'Reader' in feature.name:
@@ -551,17 +558,6 @@ class TomoPyReconFunctionWidget(FunctionWidget):
             param_dict['filter_par'] = list((param_dict.pop('cutoff'), param_dict.pop('order')))
         return param_dict
 
-    # @property
-    # def partial(self):
-    #     """
-    #     Overrides partial property to do some cleanup before creating the partial
-    #     """
-    #     kwargs = deepcopy(self.param_dict)
-    #     # 'cutoff' and 'order' are not passed into the tomopy recon function as {'filter_par': [cutoff, order]}
-    #     if 'cutoff' in kwargs.keys() and 'order' in kwargs.keys():
-    #         kwargs['filter_par'] = list((kwargs.pop('cutoff'), kwargs.pop('order')))
-    #     self._partial = partial(self._function, **kwargs)
-    #     return self._partial
 
     def addCenterDetectFunction(self, name, subname, package=reconpkg.packages['tomopy']):
         """
@@ -597,15 +593,12 @@ class TomoPyReconFunctionWidget(FunctionWidget):
 
 class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
     """
-    Subclass of tomopy FunctionWidget used for TomoCam recon functions
+    Subclass of tomopy FunctionWidget used for TomoCam recon functions. Necessary to load keywords into list, as
+    required by TomoCam API
     """
 
     @property
-    def partial(self):
-        return partial(self._function, **self.reorganized_param_dict)
-
-    @property
-    def reorganized_param_dict(self):
+    def updated_param_dict(self):
         param_dict = dict(self.param_dict)
         input_params = {}
         input_params['gpu_device'] = 0
@@ -707,6 +700,11 @@ class MaskFunctionWidget(FunctionWidget):
         self.params.child('mask path').hide()
 
     def showOptions(self):
+        """
+        Slot to receive signal when mask is added to function parameters. Shows mask path when this parameter is
+        filled, otherwise hides that parameter
+        """
+
         if self.params.child('mask').value() == 'custom mask':
             self.params.child('mask path').show()
         else:
@@ -717,6 +715,9 @@ class MaskFunctionWidget(FunctionWidget):
                 self.params.child('L').hide()
 
     def setBrowse(self):
+        """
+        Opens a QtGui.QFileDialog to get path to mask
+        """
         path = str(QtGui.QFileDialog.getOpenFileName(None, 'Choose mask image')[0])
         try:
             self.mask_image = fabio.open(path).data
@@ -740,7 +741,7 @@ class MaskFunctionWidget(FunctionWidget):
 
 class ReadFunctionWidget(FunctionWidget):
     """
-    Subclass of FunctionWidget for reader functions. Mostly necessary so that reader can't be removed
+    Subclass of FunctionWidget for reader functions.
     """
     def __init__(self, name, subname, package):
         super(ReadFunctionWidget, self).__init__(name, subname, package, checkable=False,)
@@ -821,7 +822,7 @@ class WriteFunctionWidget(FunctionWidget):
 
     def setBrowse(self):
         """
-        Uses result of browse button in 'parent folder' and 'folder name' fields
+        Uses result of browse button in 'parent folder' and 'folder name' fields to get write-out name
         """
 
         path = str(QtGui.QFileDialog.getSaveFileName(None, 'Save reconstruction as', dir=self.parent.value())[0])
@@ -837,7 +838,8 @@ class WriteFunctionWidget(FunctionWidget):
 
     def pathChanged(self):
         """
-        Changes write name when one of parent/folder/file fields is changed
+        Slot to receive signal when one of parent/folder attributes is changed. This function adjusts the final
+        'fname' parameter accordinly
         """
 
         self.params.param('fname').setValue(os.path.join(self.parent.value(), self.folder.value(),
@@ -848,7 +850,7 @@ class WriteFunctionWidget(FunctionWidget):
 
     def updateParamsDict(self):
         """
-        Overrides updating the parameter_dict to avoid adding the 'Browse' action
+        Overrides parent method of updateParamsDict to avoid adding the 'Browse' action as a parameter
         """
 
 
@@ -871,6 +873,8 @@ class CORSelectionWidget(QtGui.QWidget):
         contains parameters used to calculate COR associated with 'function' attribute
     method_box: QtGui.ComboBox
         used to select auto COR function
+    cor_detection_funcs : list
+        List of available COR detection functions. Used to set options in self.method_box
 
     Signals
     -------
@@ -915,9 +919,17 @@ class CORSelectionWidget(QtGui.QWidget):
         self.setLayout(self.layout)
 
     def corFuncChanged(self, index):
+        """
+        Slot to receive signal when self.method_box changes values. Emits new COR function name to be connected to
+        a slot in FunctionManager
+        """
+
         self.sigCORFuncChanged.emit(self.cor_detection_funcs[index], self)
 
     def changeFunction(self, index):
+        """
+        Slot to receive signal when self.method_box changes values. Changes COR function.
+        """
         subname = self.method_box.itemText(index)
         self.layout.removeWidget(self.param_tree)
 

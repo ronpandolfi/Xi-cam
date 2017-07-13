@@ -1,7 +1,8 @@
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -23,6 +24,7 @@ PARAM_TYPES = {'int': int, 'float': float}
 with open('xicam/yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
+# load various function dictionaries from function_info.yml file
 parameters = {}; als832defaults = {}; aps_defaults = {}; names = {}; function_defaults = {}
 with open('xicam/yaml/tomography/functions_info.yml', 'r') as stream:
     info = yaml.load(stream)
@@ -220,6 +222,9 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
 
 
 def set_reader_defaults(reader_widget, shape, cpu):
+    """
+    Sets defaults for reader widget based on dataset size
+    """
     reader_widget.params.child('start_sinogram').setLimits([0, shape[2]])
     reader_widget.params.child('end_sinogram').setLimits([0, shape[2]])
     reader_widget.params.child('step_sinogram').setLimits([1, shape[2] + 1])

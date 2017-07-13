@@ -1,8 +1,9 @@
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -116,26 +117,6 @@ class UIform(object):
         self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue), (logwidget, icon_log),
                           (self.property_table, icon_properties)]
 
-        # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
-        #
-        # configtree = pt.ParameterTree()
-        # configtree.setMinimumHeight(230)
-        #
-        # params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
-        #           {'name': 'End Sinogram', 'type': 'int'},
-        #           {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-        #           {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-        #           {'name': 'End Projection', 'type': 'int'},
-        #           {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-        #           {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
-        #           {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
-        #            'limits':[1, cpu_count()]}]
-        #
-        # self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
-        # configtree.setParameters(self.config_params, showTop=False)
-        # rightwidget.addWidget(configtree)
-
-
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
         """
@@ -163,18 +144,6 @@ class UIform(object):
         self.functionwidget.moveDownButton.clicked.connect(moveup)
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
-    #
-    # def setConfigParams(self, proj, sino):
-    #     self.config_params.child('End Sinogram').setLimits([0, sino])
-    #     self.config_params.child('Start Sinogram').setLimits([0, sino])
-    #     self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
-    #     self.config_params.child('End Sinogram').setValue(sino)
-    #     self.config_params.child('End Sinogram').setDefault(sino)
-    #     self.config_params.child('End Projection').setLimits([0, proj])
-    #     self.config_params.child('Start Projection').setLimits([0, proj])
-    #     self.config_params.child('Step Projection').setLimits([0, proj + 1])
-    #     self.config_params.child('End Projection').setValue(proj)
-    #     self.config_params.child('End Projection').setDefault(proj)
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):
@@ -364,7 +333,6 @@ class Toolbar(QtGui.QToolBar):
         self.addWidget(self.openButton)
 
         # mbir functionality should be replaced by remote workflow (dask)
-        # TODO: remove all references to MBIR toolbutton + functionality
         # self.addAction(self.actionMBIR)
 
         # self.addAction(toolbuttonMaskingAction)
@@ -400,14 +368,16 @@ class Toolbar(QtGui.QToolBar):
 
 class ReconManager(QtGui.QSplitter):
     """
-    Widget to show reconstruction queue on leftwidget tab
+    Widget to show reconstruction queue on leftwidget tab. Also has actual queue used to hold recon jobs
 
     Attributes
     ----------
-    queue_form: QtTui.QStackedWidget
+    queue_form : QtTui.QStackedWidget
         widget to show dictionary representation of pipeline for each reconstruction in queue
-    queue: featurewidgets.FeatureManager
+    queue : featurewidgets.FeatureManager
         widget to hold featurewidgets representing reconstruction jobs
+    manager : featurewidgets.FeatureManager
+        Widget for holding recon jobs and keeping their order
 
     """
 
@@ -469,6 +439,8 @@ class ReconManager(QtGui.QSplitter):
 
     def addRecon(self, args):
         """
+        Adds reconstruction job to queue. Renders parameters and function pipeline in a data tree
+
         Parameters
         ----------
         args: 7-tuple
@@ -554,13 +526,3 @@ class ReconManager(QtGui.QSplitter):
         else:
             self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature)
             self.swapQueue(idx1, idx2)
-
-
-
-
-
-
-
-
-
-
