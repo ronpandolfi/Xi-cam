@@ -1,9 +1,12 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import os
 import string
 from PySide import QtGui
 import sys
 import re
-import msg
+from . import msg
 from appdirs import *
 
 user_config_dir=user_config_dir('xicam')
@@ -40,6 +43,6 @@ def getRoot():
     elif sys.platform == 'win32':
         return QtGui.QFileSystemModel().myComputer()
     else:
-        print 'WARNING: Unknown platform "' + sys.platform + '"'
+        print('WARNING: Unknown platform "' + sys.platform + '"')
 
     return None

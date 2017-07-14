@@ -1,5 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
+from builtins import object
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -10,7 +13,7 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
-import threads
+from . import threads
 import client
 from pipeline import msg
 
@@ -22,6 +25,7 @@ HPC_SYSTEM_ADDRESSES = {'Cori': 'cori.nersc.gov', 'Edison': 'edison.nersc.gov', 
 sftp_client = client.sftp.SFTPClient
 globus_client = client.globus.GlobusClient
 ssh_client = client.ssh.SSHClient
+DB_client = client.databroker.DataBrokerClient
 
 # Singleton instance of spot_client
 spot_client = client.spot.SpotClient()
@@ -30,6 +34,7 @@ spot_client = client.spot.SpotClient()
 sftp_clients = {}
 globus_clients = {}
 ssh_clients = {}
+databroker_clients = {}
 
 
 def login_wrapper(client_login):
@@ -68,6 +73,9 @@ def add_globus_client(endpoint, client, callback):
     globus_clients[endpoint] = client
     callback(client)
 
+def add_DB_client(host, client, callback):
+    databroker_clients[host] = client
+    callback(client)
 
 def logout(client_obj, callback=None):
     """Logout client on a background thread"""

@@ -6,18 +6,21 @@
 
 
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import os
 
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-from xicam import config
-import watcher
+from . import config
+from . import watcher
 #import daemon
 import pipeline
 import qdarkstyle
-import plugins
+from . import plugins
 from xicam import xglobals
 import numpy as np
 
@@ -25,7 +28,7 @@ import numpy as np
 # import client.dask_local_scheduler
 # import client.dask_remote_scheduler
 # import client.dask_active_executor
-import threads
+from . import threads
 from pipeline import msg
 
 class ComboBoxAction(QtGui.QWidgetAction):
@@ -75,10 +78,10 @@ class Login(QtGui.QDialog):
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
-        print 'Gui:\t\t\t', QtGui.QApplication.instance().thread()
+        print('Gui:\t\t\t', QtGui.QApplication.instance().thread())
         QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
-        import plugins
+        from . import plugins
 
         config.activate()
 
@@ -325,7 +328,7 @@ class MyMainWindow(QtCore.QObject):
 
         if filenames is not u'':
             if config.activeExperiment.iscalibrated or len(filenames) > 1:
-                import plugins
+                from . import plugins
 
                 self.ui.statusbar.showMessage('Loading images from folder...')
                 self.app.processEvents()
@@ -349,7 +352,7 @@ class MyMainWindow(QtCore.QObject):
         build a new tab, add it to the tab view, and display it
         """
 
-        import plugins
+        from . import plugins
 
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()

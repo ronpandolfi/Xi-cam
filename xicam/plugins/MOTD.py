@@ -1,9 +1,11 @@
-import base
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from . import base
 from PySide import QtGui
 import os
 from xicam import xglobals
 
-import widgets
+from . import widgets
 
 
 class MOTDPlugin(base.plugin):

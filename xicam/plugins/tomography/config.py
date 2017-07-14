@@ -1,4 +1,8 @@
+from __future__ import unicode_literals
+from __future__ import division
 
+from builtins import str
+from past.utils import old_div
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -20,7 +24,7 @@ from modpkgs import yamlmod
 PARAM_TYPES = {'int': int, 'float': float}
 
 # Load yaml with names of all available functions in pipeline
-with open('yaml/tomography/functions.yml','r') as stream:
+with open('xicam/yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
 # Load parameter data for available functions
@@ -28,15 +32,16 @@ parameter_files = ('tomopy_function_parameters.yml',
                    'aux_function_parameters.yml',
                    'dataexchange_function_parameters.yml',
                    'astra_function_parameters.yml',
-                   'mbir_function_parameters.yml')
+                   'mbir_function_parameters.yml',
+                   'f3d_function_parameters.yml')
 parameters = {}
 
 for file in parameter_files:
-    with open('yaml/tomography/'+file ,'r') as stream:
+    with open('xicam/yaml/tomography/'+file ,'r') as stream:
         parameters.update(yaml.load(stream))
 
 # Load dictionary with pipeline names and function names
-with open('yaml/tomography/function_names.yml','r') as stream:
+with open('xicam/yaml/tomography/function_names.yml','r') as stream:
     names=yaml.load(stream)
 
 # Add reconstruction methods to function name dictionary, but include the package the method is in
@@ -50,13 +55,13 @@ for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
     names[algorithm] = ['recon','mbir']
 
 # Load dictionary with function parameters to be retrieved from metadatas
-with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/als832_function_defaults.yml','r') as stream:
     als832defaults = yaml.load(stream)
-with open('yaml/tomography/aps_function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/aps_function_defaults.yml','r') as stream:
     aps_defaults = yaml.load(stream)
 
 # Load dictionary for astra recon functions
-with open('yaml/tomography/function_defaults.yml','r') as stream:
+with open('xicam/yaml/tomography/function_defaults.yml','r') as stream:
     function_defaults=yaml.load(stream)
 
 
@@ -119,16 +124,16 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
                         p.setDefault(v)
                         p.setValue(v)
                     except KeyError as e:
-                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), str(e)),
                                        level=40)
-        elif f.func_name == 'Reader': #dataset specific read values
+        elif f.__name__ == 'Reader': #dataset specific read values
             set_reader_defaults(f, shape, cpu_count())
 
-        elif f.func_name == 'Write': #dataset specific write values
+        elif f.__name__ == 'Write': #dataset specific write values
             data_folders = {'bl832data-raw':'bl832data-scratch', 'data-raw':'data-scratch'}
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
-            for key in data_folders.keys():
+            for key in list(data_folders.keys()):
                 if key in working_dir:
                     user = working_dir.split('/' + key)[-1].split('/')[1]
                     mount = working_dir.split(key)[0]
@@ -143,7 +148,7 @@ def set_als832_defaults(mdata, funcwidget_list, path, shape):
             f.params.child('fname').setValue(outname)
             f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
+            set_als832_defaults(mdata, funcwidget_list=list(f.input_functions.values()), path=path, shape=shape)
 
 def set_aps_defaults(mdata, funcwidget_list, path, shape):
     """
@@ -177,17 +182,17 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
                         p.setDefault(v)
                         p.setValue(v)
                     except KeyError as e:
-                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), e.message),
+                        msg.logMessage('Key {} not found in metadata. Error: {}'.format(p.name(), str(e)),
                                        level=40)
-        elif f.func_name == 'Reader':  # dataset specific read values
+        elif f.__name__ == 'Reader':  # dataset specific read values
             set_reader_defaults(f, shape, cpu_count())
 
-        elif f.func_name == 'Padding':
-            pad = int(np.ceil((shape[2] * np.sqrt(2) - shape[2]) / 2))
+        elif f.__name__ == 'Padding':
+            pad = int(np.ceil(old_div((shape[2] * np.sqrt(2) - shape[2]), 2)))
             f.params.child('npad').setValue(pad)
             f.params.child('npad').setDefault(pad)
-        elif f.func_name == 'Crop':
-            pad = int(np.ceil((shape[2] * np.sqrt(2) - shape[2]) / 2))
+        elif f.__name__ == 'Crop':
+            pad = int(np.ceil(old_div((shape[2] * np.sqrt(2) - shape[2]), 2)))
             f.params.child('p11').setValue(pad)
             f.params.child('p11').setDefault(pad)
             f.params.child('p12').setValue(pad)
@@ -197,11 +202,11 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
             f.params.child('p22').setValue(pad)
             f.params.child('p22').setDefault(pad)
 
-        elif f.func_name == 'Write':  # dataset specific write values
+        elif f.__name__ == 'Write':  # dataset specific write values
             data_folders = {'bl832data-raw': 'bl832data-scratch', 'data-raw': 'data-scratch'}
             file_name = path.split("/")[-1].split(".")[0]
             working_dir = path.split(file_name)[0]
-            for key in data_folders.keys():
+            for key in list(data_folders.keys()):
                 if key in working_dir:
                     user = working_dir.split('/' + key)[-1].split('/')[1]
                     mount = working_dir.split(key)[0]
@@ -216,7 +221,7 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
             f.params.child('fname').setValue(outname)
             f.params.child('fname').setDefault(outname)
         if f.input_functions:
-            set_als832_defaults(mdata, funcwidget_list=f.input_functions.values(), path=path, shape=shape)
+            set_als832_defaults(mdata, funcwidget_list=list(f.input_functions.values()), path=path, shape=shape)
 
 
 def set_reader_defaults(reader_widget, shape, cpu):
@@ -226,12 +231,18 @@ def set_reader_defaults(reader_widget, shape, cpu):
     reader_widget.params.child('start_projection').setLimits([0, shape[0]])
     reader_widget.params.child('end_projection').setLimits([0, shape[0]])
     reader_widget.params.child('step_projection').setLimits([0, shape[0] + 1])
+    reader_widget.params.child('start_width').setLimits([0, shape[1]])
+    reader_widget.params.child('end_width').setLimits([0, shape[1]])
+
     reader_widget.params.child('end_sinogram').setValue(shape[2])
     reader_widget.params.child('end_sinogram').setDefault(shape[2])
     reader_widget.params.child('end_projection').setValue(shape[0])
     reader_widget.params.child('end_projection').setDefault(shape[0])
+    reader_widget.params.child('end_width').setValue(shape[1])
+    reader_widget.params.child('end_width').setDefault(shape[1])
     reader_widget.params.child('sinograms_per_chunk').setValue(cpu * 5)
     reader_widget.params.child('sinograms_per_chunk').setDefault(cpu * 5)
+
 
 
 def extract_pipeline_dict(funwidget_list):
@@ -256,8 +267,8 @@ def extract_pipeline_dict(funwidget_list):
     count = 1
     for f in funwidget_list:
         # a bunch of special cases for the write function
-        func_name = str(count) + ". " + f.func_name
-        if "Write" in f.func_name:
+        func_name = str(count) + ". " + f.__name__
+        if "Write" in f.__name__:
             write_dict = OrderedDict()
             d[func_name] = OrderedDict({f.subfunc_name: write_dict})
             for child in f.params.children():
@@ -270,12 +281,12 @@ def extract_pipeline_dict(funwidget_list):
         else:
             d[func_name] = {f.subfunc_name: {'Parameters': {p.name(): p.value() for p in f.params.children()}}}
         d[func_name][f.subfunc_name]['Enabled'] = f.enabled
-        if f.func_name == 'Reconstruction':
+        if f.__name__ == 'Reconstruction':
             d[func_name][f.subfunc_name].update({'Package': f.packagename})
-        for param, ipf in f.input_functions.iteritems():
+        for param, ipf in f.input_functions.items():
             if 'Input Functions' not in d[func_name][f.subfunc_name]:
                 d[func_name][f.subfunc_name]['Input Functions'] = {}
-            id = {ipf.func_name: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
+            id = {ipf.__name__: {ipf.subfunc_name: {'Parameters': {p.name(): p.value() for p in ipf.params.children()}}}}
             d[func_name][f.subfunc_name]['Input Functions'][param] = id
         count += 1
     return d
@@ -305,14 +316,14 @@ def extract_runnable_dict(funwidget_list):
         if not f.enabled or 'Reader' in f.name:
             continue
 
-        func = "{}.{}".format(f.package, f._function.func_name)
+        func = "{}.{}".format(f.package, f._function.__name__)
         if 'xicam' in func:
             func = func.split(".")[-1]
         fpartial = f.partial
-        for key, val in fpartial.keywords.iteritems():
+        for key, val in fpartial.keywords.items():
             keywords[key] = val
         for arg in inspect.getargspec(f._function)[0]:
-            if arg not in f.partial.keywords.iterkeys() or 'center' in arg:
+            if arg not in iter(f.partial.keywords.keys()) or 'center' in arg:
                 keywords[arg] = arg
 
 
@@ -331,15 +342,15 @@ def extract_runnable_dict(funwidget_list):
 
 
         if 'Reconstruction' in f.name:
-            for param, ipf in f.input_functions.iteritems():
+            for param, ipf in f.input_functions.items():
                 if 'theta' in param or 'center' in param:
-                    subfunc = "{}.{}(".format(ipf.package,ipf._function.func_name)
-                    for key, val in ipf.partial.keywords.iteritems():
+                    subfunc = "{}.{}(".format(ipf.package,ipf._function.__name__)
+                    for key, val in ipf.partial.keywords.items():
                         subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
                             else '{}=\'{}\','.format(key, val)
-                    for cor_func in center_functions.iterkeys():
-                        if ipf._function.func_name == cor_func:
-                            for k, v in center_functions[cor_func].iteritems():
+                    for cor_func in center_functions.keys():
+                        if ipf._function.__name__ == cor_func:
+                            for k, v in center_functions[cor_func].items():
                                 subfunc += "{}={},".format(k, v)
                     subfunc += ")"
                     subfuncs[param] = subfunc

@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import map
+from builtins import str
+from past.utils import old_div
 import numpy as np  # Import important packages
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
@@ -13,7 +20,7 @@ def calcscale(imv):  # Defines calcscale function
     """
     image = imv.getProcessedImage()
 
-    scale = imv.scalemax / float(image[imv.currentIndex].shape[1])
+    scale = old_div(imv.scalemax, float(image[imv.currentIndex].shape[1]))
     return scale
 
 
@@ -36,11 +43,11 @@ class imagetimeline(list):  # Sets up the image so it will fin the the viewer
 
     @property
     def max(self):
-        return max(map(np.max, self))
+        return max(list(map(np.max, self)))
 
     @property
     def min(self):
-        return min(map(np.min, self))
+        return min(list(map(np.min, self)))
 
     @property
     def dtype(self):
@@ -53,7 +60,7 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
         self.scalemax = scalemax
 
     def quickMinMax(self, data):  # Defines quickMinMax functon
-        return min(map(np.min, data)), max(map(np.max, data))
+        return min(list(map(np.min, data))), max(list(map(np.max, data)))
 
     def updateImage(self, autoHistogramRange=True):  # Defines updateImage functon
         if self.image is None:
@@ -72,8 +79,8 @@ class TimelineView(pg.ImageView):  # Beginnings the class Timelineview
 
         self.imageItem.resetTransform()  # Resets the scale up below
         self.imageItem.scale(scale, scale)  # Scales up by the factor of scale
-        print 'Image shape' + str(image.shape)
-        print 'Scale set to: ' + str(scale)
+        print('Image shape' + str(image.shape))
+        print('Scale set to: ' + str(scale))
 
 
 class rmcView(QtGui.QTabWidget):
@@ -84,11 +91,11 @@ class rmcView(QtGui.QTabWidget):
         paths = glob.glob(os.path.join(root,
                                        '[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_model.tif'))
 
-        indices = dict(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths]))
+        indices = dict(list(zip(paths, [re.findall('\d{4}', os.path.basename(path)) for path in paths])))
 
         tiles = dict()
 
-        for path, ind in indices.iteritems():
+        for path, ind in indices.items():
             if int(ind[1]) in tiles:
                 tiles[int(ind[1])].append(path)
             else:
@@ -101,14 +108,14 @@ class rmcView(QtGui.QTabWidget):
                 img = Image.open(path).convert('L')
                 img = np.array(img)
 
-                print path  # Prints the path
-                print img.shape  # Prints the shape of the array
+                print(path)  # Prints the path
+                print(img.shape)  # Prints the shape of the array
 
                 images.append(img)
 
             data = imagetimeline(images)
 
-            sizemax = max(map(np.shape, data))[0]
+            sizemax = max(list(map(np.shape, data)))[0]
 
             view = TimelineView(sizemax)
             view.setImage(data)

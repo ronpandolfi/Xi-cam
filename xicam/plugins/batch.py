@@ -1,6 +1,10 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 # avg dphi correlation (mask normalized) for each q
 
-import base
+from builtins import str
+from builtins import range
+from . import base
 from PySide import QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -12,7 +16,7 @@ import numpy as np
 from xicam import xglobals
 import re
 
-import widgets
+from . import widgets
 from pipeline import msg
 
 
@@ -45,7 +49,7 @@ class BatchPlugin(base.plugin):
 
     def processfiles(self):
         pathlist = self.fileslistwidget.paths
-        paths = [pathlist.item(index).text() for index in xrange(pathlist.count())]
+        paths = [pathlist.item(index).text() for index in range(pathlist.count())]
 
         if self.exportformat.value()=='None':
             imageext=None

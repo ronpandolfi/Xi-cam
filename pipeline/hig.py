@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from builtins import map
+from builtins import object
 def load(path):
     with open(path) as f:
         content = f.read()
@@ -27,7 +32,7 @@ def dict2str(d, depth=0):
             content += u'{0}{1} = {2},\n'.format(u'\t' * depth, key, '[ ' + ' '.join(map(str, d[key])) + ' ]')
         elif type(d[key]) is list:
             content += u'{0}{1} = {2},\n'.format(u'\t' * depth, key, '[ ' + ' '.join(map(str, d[key])) + ' ]')
-        elif type(d[key]) is unicode:
+        elif type(d[key]) is str:
             content += u'{0}{1} = "{2}",\n'.format(u'\t' * depth, key, str(d[key]))
         elif type(d[key]) is str:
             content += u'{0}{1} = "{2}",\n'.format(u'\t' * depth, key, str(d[key]))
@@ -39,7 +44,7 @@ def dict2str(d, depth=0):
     return content
 
 
-class hig:
+class hig(object):
     def __init__(self, **d):
         self.__dict__.update(d)
 
@@ -67,4 +72,4 @@ if __name__ == '__main__':
                                          'numstepsfactor': 1000,
                                          'scalefactor': 32}}}
     h = hig(**d)
-    print h
+    print(h)

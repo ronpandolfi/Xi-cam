@@ -1,5 +1,10 @@
 # --coding: utf-8 --
-
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
@@ -355,18 +360,18 @@ class dimgViewer(QtGui.QWidget):
                 elif mode == 'z':
                     return cakeq[int(y)] * np.cos(np.radians(cakechi[int(x)])) / 10.
             else:
-                return cakeq[int(y)] / 10.
+                return old_div(cakeq[int(y)], 10.)
 
         elif isremesh:
             remeshqpar = self.dimg.remeshqx
             remeshqz = self.dimg.remeshqy
             if mode is not None:
                 if mode == 'parallel':
-                    return remeshqpar[int(x), int(y)] / 10.
+                    return old_div(remeshqpar[int(x), int(y)], 10.)
                 elif mode == 'z':
-                    return -remeshqz[int(x), int(y)] / 10.
+                    return old_div(-remeshqz[int(x), int(y)], 10.)
             else:
-                return np.sqrt(remeshqz[int(x), int(y)] ** 2 + remeshqpar[int(x), int(y)] ** 2) / 10.
+                return old_div(np.sqrt(remeshqz[int(x), int(y)] ** 2 + remeshqpar[int(x), int(y)] ** 2), 10.)
 
         else:
             center = config.activeExperiment.center
@@ -380,7 +385,7 @@ class dimgViewer(QtGui.QWidget):
             theta = np.arctan2(r * config.activeExperiment.getvalue('Pixel Size X'),
                                config.activeExperiment.getvalue('Detector Distance'))
             wavelength = config.activeExperiment.getvalue('Wavelength')
-            q = 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+            q = 4 * np.pi / wavelength * np.sin(old_div(theta, 2)) * 1e-10
             if mode == 'parallel' and x < center[0]:
                 return -q
             if mode == 'z' and y < center[1]:
@@ -440,7 +445,7 @@ class dimgViewer(QtGui.QWidget):
             remeshqz = self.dimg.remeshqx
             q = remeshqpar ** 2 + remeshqz ** 2
             center = np.where(q == q.min())
-            return zip(*center)[0]
+            return list(zip(*center))[0]
         else:
             return config.activeExperiment.center
 
@@ -855,7 +860,7 @@ class dimgViewer(QtGui.QWidget):
 
     def thresholdmask(self):
         threshold, ok = QtGui.QInputDialog.getInt(self, 'Threshold value','Input intensity threshold:',3,0,10000000)
-        print 'threshold:',threshold
+        print('threshold:',threshold)
 
         if ok and threshold:
             kernelsize, ok = QtGui.QInputDialog.getInt(self, 'Neighborhood size', 'Neighborhood size (binary closing kernel size):', 2, 0,
@@ -1029,7 +1034,7 @@ class timelineViewer(dimgViewer):
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
         operationcombo.setObjectName('operationcombo')
-        operationcombo.addItems(variationoperators.operations.keys())
+        operationcombo.addItems(list(variationoperators.operations.keys()))
         operationcombo.currentIndexChanged.connect(self.setvariationmode)
         opwidgetaction = QtGui.QWidgetAction(menu)
         opwidgetaction.setDefaultWidget(operationcombo)
@@ -1068,6 +1073,8 @@ class timelineViewer(dimgViewer):
         paths = [os.path.join(d, path) for path in paths]
         self.simg.appendimages(paths)
 
+    def addTimelineData(self,*args,**kwargs):
+        self.sigAddTimelineData.emit(*args,**kwargs)
 
 
     def rescan(self):
@@ -1084,7 +1091,7 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
+        bg_variation = threads.iterator(callback_slot=self.addTimelineData,
                                         finished_slot=self.processingfinished,
                                         parent=self)(variation.variationiterator)
         bg_variation(self.simg, self.operationindex)
@@ -1307,6 +1314,8 @@ class integrationsubwidget(pg.PlotWidget):
     def plotresult(self, x, y, color, requestkey): #x, y, color, requestkey
         # print 'RESULT:',x, y, color, requestkey #x, y, color, requestkey, QtCore.QThread.currentThread()
 
+        x,y = map(np.array,(x,y))
+
         if requestkey == self.requestkey:
             if not self.iscleared:
                 self.plotItem.clear()
@@ -1314,6 +1323,7 @@ class integrationsubwidget(pg.PlotWidget):
                 self.iscleared = True
             if color is None:
                 color = [255, 255, 255]
+            y=y.astype(np.float)
             y[y<=0]=1.E-9
             curve = self.plotItem.plot(np.array(x), np.nan_to_num(np.array(y).astype(float)), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))
@@ -1458,8 +1468,8 @@ def getHistogram(self, bins='auto', step='auto', targetImageSize=None, targetHis
     if not targetImageSize: targetImageSize = min(200, self.image.shape[0], self.image.shape[1])
 
     if step == 'auto':
-        step = (np.ceil(self.image.shape[0] / targetImageSize),
-                np.ceil(self.image.shape[1] / targetImageSize))
+        step = (np.ceil(old_div(self.image.shape[0], targetImageSize)),
+                np.ceil(old_div(self.image.shape[1], targetImageSize)))
     if np.isscalar(step):
         step = (step, step)
     stepData = self.image[::int(step[0]), ::int(step[1])]
@@ -1468,7 +1478,7 @@ def getHistogram(self, bins='auto', step='auto', targetImageSize=None, targetHis
         if stepData.dtype.kind in "ui":
             mn = stepData.min()
             mx = stepData.max()
-            step = np.ceil((mx - mn) / 500.)
+            step = np.ceil(old_div((mx - mn), 500.))
             bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
             if len(bins) == 0:
                 bins = [mn, mx]
@@ -1592,7 +1602,7 @@ class pluginModeWidget(QtGui.QWidget):
             del w
             w = self.layout().takeAt(0)
 
-        for key, plugin in self.plugins.items():
+        for key, plugin in list(self.plugins.items()):
             if plugin.enabled:
                 if plugin.instance.hidden:
                     continue
@@ -1605,7 +1615,7 @@ class pluginModeWidget(QtGui.QWidget):
                 button.setCheckable(True)
                 button.setAutoExclusive(True)
                 button.clicked.connect(plugin.activate)
-                if plugin is self.plugins.values()[0]:
+                if plugin is list(self.plugins.values())[0]:
                     button.setChecked(True)
                 self.layout().addWidget(button)
                 label = QtGui.QLabel('|')
@@ -1644,8 +1654,8 @@ class previewwidget(pg.GraphicsLayoutWidget):
         # self.textitem.dataBounds = textItemBounds
 
     def loaditem(self, item):
-        if isinstance(item, str) or isinstance(item, unicode):
-            if os.path.isfile(item) or os.path.isdir(item):
+        if isinstance(item, str):
+            if os.path.isfile(item) or os.path.isdir(item) or item[:3]=='DB:':
                 item = loader.loadimage(item)
             else:
                 self.setText(item)
@@ -1770,7 +1780,7 @@ class frameproptable(pg.TableWidget):
         super(frameproptable, self).setData(data)
 
     def sizeHint(self):
-        return QtCore.QSize(self.parent().width(),self.parent().height()/2)
+        return QtCore.QSize(self.parent().width(),old_div(self.parent().height(),2))
 
     def useAsI1(self):
         config.activeExperiment.setHeaderMap('I1 AI',self.getSelectedKey())
@@ -1797,7 +1807,7 @@ def pixel2q(x, y, experiment):
     theta = np.arctan2(r * experiment.getvalue('Pixel Size X'),
                        experiment.getvalue('Detector Distance'))
     wavelength = experiment.getvalue('Wavelength')
-    return 4 * np.pi / wavelength * np.sin(theta / 2) * 1e-10
+    return 4 * np.pi / wavelength * np.sin(old_div(theta, 2)) * 1e-10
 
 
 class filesListWidget(QtGui.QWidget):

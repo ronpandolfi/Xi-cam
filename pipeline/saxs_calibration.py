@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import warnings
 import threading
 
@@ -67,7 +72,7 @@ def _error_function(parameter, arguments):
     geometry, d_spacings, maxima, selected_parameter = arguments
     mask = [sel in selected_parameter for sel in FIT_PARAMETER]
     param = numpy.array(get_fit2d(geometry))
-    print 'update:',param
+    print('update:',param)
     param[numpy.array(mask)] = parameter[numpy.array(mask)]
     set_fit2d(geometry,*param)
     return peak_distance(geometry, d_spacings, maxima)
@@ -77,7 +82,7 @@ def get_fit2d(geometry):
     return [geometry.get_wavelength()*1e-10,gdict['directDist'],gdict['centerX'],gdict['centerY'],gdict['tilt'],gdict['tiltPlanRotation']]
 
 def set_fit2d(geometry, wavelength, distance, center_x, center_y, tilt, rotation):
-    geometry.set_wavelength(wavelength / 1e-10)
+    geometry.set_wavelength(old_div(wavelength, 1e-10))
     geometry.setFit2D(distance, center_x, center_y, tilt, rotation)
     return geometry
 
@@ -101,15 +106,15 @@ def fit_geometry(geometry, maxima, d_spacings, selected_parameter):
     info_out = {'calls': info['nfev'],
                 'dof': dof,
                 'sum_chi_square': chisq}
-    info_out['variance_residuals'] = chisq / float(dof)
+    info_out['variance_residuals'] = old_div(chisq, float(dof))
 
     for i, name in enumerate(selected_parameter):
         if cov_x is not None:
-            ase = numpy.sqrt(cov_x[i, i]) * numpy.sqrt(chisq / float(dof))
+            ase = numpy.sqrt(cov_x[i, i]) * numpy.sqrt(old_div(chisq, float(dof)))
         else:
             ase = numpy.NAN
         info_out['ase_%s' % name] = ase
-        percent_ase = round(ase / (abs(fit_parameter[i]) * 0.01), 3)
+        percent_ase = round(old_div(ase, (abs(fit_parameter[i]) * 0.01)), 3)
         info_out['percent_ase_%s' % name] = percent_ase
         info_out[name] = fit_parameter[i]
 
@@ -133,15 +138,15 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
     '''
 
     # calculate circle positions along the ring with step_size
-    tth = 2 * numpy.arcsin(geometry.get_wavelength() / (2e-10 * d_spacing))
-    radius = (geometry.get_dist() * numpy.tan(tth)) / geometry.get_pixel1()
+    tth = 2 * numpy.arcsin(old_div(geometry.get_wavelength(), (2e-10 * d_spacing)))
+    radius = old_div((geometry.get_dist() * numpy.tan(tth)), geometry.get_pixel1())
     center = (geometry.getFit2D()['centerX'], geometry.getFit2D()['centerY'])
-    alpha = numpy.arange(0, numpy.pi * 2, step_size / float(radius))
+    alpha = numpy.arange(0, numpy.pi * 2, old_div(step_size, float(radius)))
     circle_x = numpy.round(center[1] + numpy.sin(alpha) * radius)
     circle_y = numpy.round(center[0] + numpy.cos(alpha) * radius)
 
     # calculate roi coordinates    
-    half_step = int(numpy.ceil(step_size / 2.))
+    half_step = int(numpy.ceil(old_div(step_size, 2.)))
     x_0 = circle_x - half_step
     x_1 = circle_x + half_step
     y_0 = circle_y - half_step
@@ -178,7 +183,7 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
         #pylab.gca().add_patch(rect)
 
         # calculate the pixel position of the maximum
-        scale = float(maximum / radius)
+        scale = float(old_div(maximum, radius))
         maxima_x.append(center[1] + (x_0[i] + half_step - center[1]) * scale)
         maxima_y.append(center[0] + (y_0[i] + half_step - center[0]) * scale)
 
@@ -189,13 +194,14 @@ def ring_maxima(geometry, d_spacing, image, radial_pos, step_size):
     return numpy.array(maxima_x), numpy.array(maxima_y), radial_pos
 
 
-def peak_distance(geometry, d_spacings, (x_peaks, y_peaks)):
+def peak_distance(geometry, d_spacings, xxx_todo_changeme):
     """
     Returns the minimum distances in 2*theta between given peaks in pixel and a 
     d_spacings in angstrom using the pyFAI geometry.
     """
+    (x_peaks, y_peaks) = xxx_todo_changeme
     wavelength = geometry.get_wavelength()
-    tth_rings = 2 * numpy.arcsin(wavelength / (2.0e-10 * d_spacings))
+    tth_rings = 2 * numpy.arcsin(old_div(wavelength, (2.0e-10 * d_spacings)))
     distance = [numpy.abs(tth_rings - tth).min() \
                 for tth in geometry.tth(y_peaks, x_peaks)]
     return numpy.array(distance)
@@ -234,7 +240,7 @@ def quick_calibration(wavelength, pixel_size, d_spacing, x_array, y_array):
     Returns pyFAI geometry by fitting a circle to a d-spacing ring.  
     '''
     center, radius = fit_circle(x_array, y_array)
-    tth = 2 * numpy.arcsin(wavelength / (2.0e-10 * d_spacing))
+    tth = 2 * numpy.arcsin(old_div(wavelength, (2.0e-10 * d_spacing)))
     sdd = pixel_size[0] * radius * numpy.cos(tth) * 1. / numpy.sin(tth)
     return PyFAIGeometry(sdd,
                          center[1] * pixel_size[1],
@@ -353,7 +359,7 @@ def dpdak_saxs_calibration(img, geometry, d_spacings, fit_param, step_size):
     fit_thread = FitThread(geometry, d_spacings, img, fit_param, step_size)
     fit_thread.start()
     params = geometry.get_fit2d()
-    return params[1] / 1000., [params[2], params[3]]
+    return old_div(params[1], 1000.), [params[2], params[3]]
 
 
 def saxs_calibration(img, agb):
@@ -384,7 +390,7 @@ def saxs_calibration(img, agb):
 
     # Update calibrated data
     params = geometry.get_fit2d()
-    agb.setSDD(params[1] / 1000.)
+    agb.setSDD(old_div(params[1], 1000.))
     agb.setCenter(params[2:4])
     return agb
 

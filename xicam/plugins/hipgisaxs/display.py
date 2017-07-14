@@ -1,11 +1,17 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import map
+from builtins import range
+from past.utils import old_div
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 from OpenGL.GL import *
-import latvec
+from . import latvec
 import numpy as np
 from PySide import QtGui
-import featuremanager
-import customwidgets
+from . import featuremanager
+from . import customwidgets
 
 viewWidget = None
 
@@ -39,10 +45,10 @@ class orthoGLViewWidget(gl.GLViewWidget):
         # convert screen coordinates (region) to normalized device coordinates
         # Xnd = (Xw - X0) * 2/width - 1
         ## Note that X0 and width in these equations must be the values used in viewport
-        left = r * ((region[0] - x0) * (2.0 / w) - 1)
-        right = r * ((region[0] + region[2] - x0) * (2.0 / w) - 1)
-        bottom = t * ((region[1] - y0) * (2.0 / h) - 1)
-        top = t * ((region[1] + region[3] - y0) * (2.0 / h) - 1)
+        left = r * ((region[0] - x0) * (old_div(2.0, w)) - 1)
+        right = r * ((region[0] + region[2] - x0) * (old_div(2.0, w)) - 1)
+        bottom = t * ((region[1] - y0) * (old_div(2.0, h)) - 1)
+        top = t * ((region[1] + region[3] - y0) * (old_div(2.0, h)) - 1)
 
         tr = QtGui.QMatrix4x4()
         tr.ortho(left * 2000, right * 2000, bottom * 2000, top * 2000, -10, farClip)
@@ -108,13 +114,13 @@ def showLattice(a, b, c, orders=7, basis=None, shape='Sphere', z0=0, xrot=0, yro
     for basisvec in basis:
         for vec in vecs:
             if shape=='Sphere':
-                addSphere(np.sum([map(np.add,vec,[0,0,z0]), basisvec], axis=0),[kwargs['radius']]*3,xrot,yrot,zrot)
+                addSphere(np.sum([list(map(np.add,vec,[0,0,z0])), basisvec], axis=0),[kwargs['radius']]*3,xrot,yrot,zrot)
                 linez=kwargs['radius']
             elif shape=='Box':
-                addBox(np.sum([map(np.add,vec,[0,0,z0]), basisvec], axis=0),[kwargs['length'],kwargs['width'],kwargs['height']],xrot,yrot,zrot)
+                addBox(np.sum([list(map(np.add,vec,[0,0,z0])), basisvec], axis=0),[kwargs['length'],kwargs['width'],kwargs['height']],xrot,yrot,zrot)
                 linez=kwargs['height']
             elif shape == 'Cylinder':
-                addCylinder(np.sum([map(np.add, vec, [0, 0, z0]), basisvec], axis=0),
+                addCylinder(np.sum([list(map(np.add, vec, [0, 0, z0])), basisvec], axis=0),
                        [kwargs['radius'], kwargs['radius'], kwargs['height']],xrot,yrot,zrot)
                 linez = kwargs['height']
 
@@ -159,7 +165,7 @@ def cylinder(rows, cols, radius=[1.0, 1.0], length=1.0, offset=False):
     r = np.linspace(radius[0], radius[1], num=rows + 1, endpoint=True).reshape(rows + 1, 1)  # radius as a function of z
     verts[..., 2] = np.linspace(0, length, num=rows + 1, endpoint=True).reshape(rows + 1, 1)  # z
     if offset:
-        th = th + ((np.pi / cols) * np.arange(rows + 1).reshape(rows + 1, 1))  ## rotate each row by 1/2 column
+        th = th + ((old_div(np.pi, cols)) * np.arange(rows + 1).reshape(rows + 1, 1))  ## rotate each row by 1/2 column
     verts[..., 0] = r * np.cos(th)  # x = r cos(th)
     verts[..., 1] = r * np.sin(th)  # y = r sin(th)
     verts = verts.reshape((rows + 1) * cols, 3)  # just reshape: no redundant vertices...
@@ -185,7 +191,7 @@ def addCylinder(center, scale, xrot, yrot, zrot):
     md = cylinder(rows=1, cols=20)
     alpha = .3
     cyl = gl.GLMeshItem(meshdata=md, smooth=True, color=(1, 0, 1, alpha), shader='shaded')
-    cyl.translate(0, 0, -scale[2] / 2.)
+    cyl.translate(0, 0, old_div(-scale[2], 2.))
     cyl.rotate(xrot, 1, 0, 0)
     cyl.rotate(yrot, 0, 1, 0)
     cyl.rotate(zrot, 0, 0, 1)
@@ -233,8 +239,8 @@ def redraw(*args,**kwargs):
             layerz+=feature.Thickness.value()*1.e9
         elif type(feature) is customwidgets.particle:
             basis = [vecparam.value() for vecparam in feature.structure.Basis.children()]
-            showLattice(map(float, feature.structure.LatticeA.value()), map(float, feature.structure.LatticeB.value()),
-                            map(float, feature.structure.LatticeC.value()), basis=basis, z0=particlez,
+            showLattice(list(map(float, feature.structure.LatticeA.value())), list(map(float, feature.structure.LatticeB.value())),
+                            list(map(float, feature.structure.LatticeC.value())), basis=basis, z0=particlez,
                         shape=feature.Type.value(), radius=feature.Radius.Value.value(), height=feature.Height.Value.value(),
                         width=feature.Width.Value.value(), length=feature.Length.Value.value(), baseangle=feature.BaseAngle.Value.value(),
                         xrot=feature.XRotation.value(),yrot=feature.YRotation.value(),zrot=feature.ZRotation.value(),

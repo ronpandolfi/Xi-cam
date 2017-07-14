@@ -7,6 +7,9 @@
 #
 # WARNING! All changes made in this file will be lost!
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import str
 import json
 from PySide import QtCore, QtGui
 from PySide.QtUiTools import QUiLoader
@@ -15,10 +18,10 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 import numpy as np
 from pyFAI import detectors
-import hig
-import featuremanager
-import ui
-import display
+from . import hig
+from . import featuremanager
+from . import ui
+from . import display
 from modpkgs.collectionsmod import UnsortableOrderedDict
 
 try:
@@ -964,7 +967,7 @@ class detector(form):
     @property
     def form(self):
         if self._form is None:
-            detectornames = ['Custom...'] + [detector().name for detector in detectors.ALL_DETECTORS.values()]
+            detectornames = ['Custom...'] + [detector().name for detector in list(detectors.ALL_DETECTORS.values())]
             self.DetectorChoice = pTypes.ListParameter(name='Detector Model', values=detectornames, value='Custom...')
             self.DetectorChoice.sigValueChanged.connect(self.changeDetector)
 
@@ -1005,9 +1008,9 @@ class detector(form):
     def changeDetector(self, _, choice):
         if not choice == 'Custom...':
             self.setConnected(False)
-            detectornames = [detector().name for detector in detectors.ALL_DETECTORS.values()]
+            detectornames = [detector().name for detector in list(detectors.ALL_DETECTORS.values())]
             detectorindex = detectornames.index(choice)
-            detector = detectors.ALL_DETECTORS.values()[detectorindex]()
+            detector = list(detectors.ALL_DETECTORS.values())[detectorindex]()
             self.Width.setValue(detector.MAX_SHAPE[1])
             self.Height.setValue(detector.MAX_SHAPE[0])
             self.setConnected(True)

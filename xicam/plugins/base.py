@@ -1,6 +1,10 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import zip
+from builtins import range
 from PySide import QtCore, QtGui
 
-import widgets
+from . import widgets
 from xicam.widgets import explorer, login
 
 activeplugin = None
@@ -143,7 +147,7 @@ class plugin(QtCore.QObject):
         global leftwidget, rightwidget  # if these will become attributes then the check will need to be different
         if self.leftwidget is leftwidget:
             if self.leftwidget.count() > 1:
-                for idx in reversed(range(self.leftwidget.count() - 1)):
+                for idx in reversed(list(range(self.leftwidget.count() - 1))):
                     self.leftwidget.removeTab(idx + 1)
             if hasattr(self, 'leftmodes'):
                 for widget, icon in self.leftmodes:
@@ -153,7 +157,7 @@ class plugin(QtCore.QObject):
                 self.leftwidget.tabBar().hide()
 
         if self.rightwidget is rightwidget:
-            for idx in reversed(range(self.rightwidget.count())):
+            for idx in reversed(list(range(self.rightwidget.count()))):
                 self.rightwidget.removeTab(idx)
             if hasattr(self, 'rightmodes'):
                 for widget, icon in self.rightmodes:

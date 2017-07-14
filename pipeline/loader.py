@@ -1,5 +1,13 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 
 import fabio
@@ -11,7 +19,7 @@ from pyFAI import detectors
 import pyFAI
 import glob
 import re
-import writer
+from . import writer
 from xicam import debugtools, config
 from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
@@ -24,7 +32,7 @@ from pipeline import msg
 
 import numpy as nx
 
-import detectors  # injects pyFAI with custom detectors
+from . import detectors  # injects pyFAI with custom detectors
 
 acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
@@ -34,9 +42,36 @@ imagecache = dict()
 def loadsingle(path):
     return loadimage(path), loadparas(path)
 
-
 def loadimage(path):
     data = None
+    if path.startswith('DB:'):
+        from xicam import clientmanager
+        dc = clientmanager.databroker_clients
+        host, _, uid = path[3:].partition('/')
+        db = dc[host]
+        h = db[uid]
+
+        img_names = [k for d in h.descriptors if d['name'] == 'primary'
+                    for k, v in d['data_keys'].items() if v['dtype'] == 'array']
+
+        # For tiled data
+        if h.start.get('mode') == 'tiled':
+            ev1, ev2 = [doc['data'] for name, doc in h.stream('primary', fill=True) if name == 'event']
+            data,mask = loadstitched('','',data1=ev1['image'],data2=ev2['image'],paras1=ev1,paras2=ev2)
+            return data, mask
+        else:
+            data = db.db.get_images(h, img_names[0])[0]
+
+            # converting to np.array takes too long - is it necessary to do this?
+            # if so, comment out line above and uncomment line below
+            # data = np.array(db.db.get_images(h, img_names[0]).squeeze()
+            if data.ndim>2:
+                data =np.transpose(data,[1,2,0])
+            return data
+
+
+
+
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
@@ -56,6 +91,7 @@ def loadimage(path):
         msg.logMessage('IO Error loading: ' + path,msg.ERROR)
     except TypeError:
         msg.logMessage('The selected file is not a type understood by fabIO.',msg.ERROR)
+
 
     return data
 
@@ -135,6 +171,14 @@ def loadparas(path):
             fimg = fabio.open(path)
             return fimg.header
 
+        elif path.startswith('DB:'):
+            from xicam import clientmanager
+            dc = clientmanager.databroker_clients
+            host, _, uid = path[3:].partition('/')
+            db = dc[host]
+            h = db[uid]
+            return h
+
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
@@ -166,8 +210,8 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
         I1 = float(paras1[config.activeExperiment.mapHeader('I1 AI')])
         I2 = float(paras2[config.activeExperiment.mapHeader('I1 AI')])
 
-    deltaX = round((positionX2 - positionX1) / 0.172)
-    deltaY = round((positionY2 - positionY1) / 0.172)
+    deltaX = round(old_div((positionX2 - positionX1), 0.172))
+    deltaY = round(old_div((positionY2 - positionY1), 0.172))
     padtop2 = 0
     padbottom1 = 0
     padtop1 = 0
@@ -203,7 +247,7 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
                       'constant')
 
     with np.errstate(divide='ignore',invalid='ignore'):
-        data = (d1 / I1 + d2 / I2) / (mask2 + mask1) * (I1 + I2) / 2.
+        data = (old_div(d1, I1) + old_div(d2, I2)) / (mask2 + mask1) * (I1 + I2) / 2.
         data[np.isnan(data)] = 0
     return data, np.logical_or(mask2, mask1).astype(np.int)
 
@@ -278,11 +322,16 @@ def loadpath(path):
 
     # Do extra rotations/transposition
     if config.settings['Image Load Transpose']:
-        img=img.transpose()
+        img = img.transpose()
     if config.settings['Image Load Rotations']:
-        img=np.rot90(img,config.settings['Image Load Rotations'])
+        img = np.rot90(img, config.settings['Image Load Rotations'])
 
-    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
+
+
+    if not isinstance(img, tuple):
+        mask = finddetectorbyfilename(path).calc_mask()
+        if mask is None: mask = np.zeros_like(img)
+        img = (img, 1 - mask)
     return img
 
 
@@ -297,7 +346,7 @@ def convertto8bit(image):
     # image = np.array(image, copy=False)
     # image.clip(display_min, display_max, out=image)
     # image -= display_min
-    np.true_divide(image, (display_max - display_min + 1) / 256., out=image, casting='unsafe')
+    np.true_divide(image, old_div((display_max - display_min + 1), 256.), out=image, casting='unsafe')
     return image.astype(np.uint8)
 
 
@@ -323,10 +372,10 @@ def loadimageseries(pattern):
     return data
 
 
-import integration, remesh, center_approx, variation, pathtools
+from . import integration, remesh, center_approx, variation, pathtools
 
 
-class diffimage():
+class diffimage(object):
     def __init__(self, filepath=None, data=None, detector=None, experiment=None):
         """
         Image class for diffraction images that caches and validates cache
@@ -338,7 +387,7 @@ class diffimage():
 
         msg.logMessage('diffimage is deprecated. Migrate this to diffimage2',msg.WARNING)
 
-        msg.logMessage('Loading ' + unicode(filepath) + '...')
+        msg.logMessage('Loading ' + str(filepath) + '...')
 
         self._data = data
 
@@ -438,7 +487,7 @@ class diffimage():
         return self._detector
 
     def finddetector(self):
-        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.items()):
             # print detector
             # print 'det:',name, detector
             if hasattr(detector, 'MAX_SHAPE'):
@@ -449,8 +498,8 @@ class diffimage():
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                for binning in detector.BINNED_PIXEL_SIZE.keys():
-                    if self.data.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                for binning in list(detector.BINNED_PIXEL_SIZE.keys()):
+                    if self.data.shape[::-1] == tuple(old_div(np.array(detector.MAX_SHAPE), binning)):
                         detector = detector()
                         msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
@@ -613,7 +662,7 @@ class diffimage():
 
     @property
     def radialintegration(self):
-        if 'radialintegration' in self.cache.keys():
+        if 'radialintegration' in list(self.cache.keys()):
             self.cache['radialintegration'] = integration.radialintegrate(self)
 
         return self.cache['radialintegration']
@@ -625,7 +674,7 @@ class diffimage():
             raise AttributeError('diffimage has no attribute: ' + name)
 
 
-class imageseries():
+class imageseries(object):
     def __init__(self, paths, experiment=None):
         self.paths = dict()
         self.variation = dict()
@@ -661,7 +710,7 @@ class imageseries():
             return diffimage(data=np.zeros((2, 2)), experiment=self.experiment)
 
     def __getitem__(self, item):
-        return self.getDiffImage(self.paths.keys()[item])
+        return self.getDiffImage(list(self.paths.keys())[item])
 
     def getDiffImage(self, key):
         # print self.paths.keys()
@@ -695,12 +744,12 @@ class imageseries():
         variation = dict()
 
         # get the first frame's profile
-        keys = self.paths.keys()
+        keys = list(self.paths.keys())
 
         if roi is not None:
             roi = writer.thumbnail(roi.T)
 
-        for key, index in zip(keys, range(self.__len__())):
+        for key, index in zip(keys, list(range(self.__len__()))):
             variationx = self.path2frame(self.paths[key])
             variationy = self.calcVariation(index, operationindex, roi)
 
@@ -718,8 +767,8 @@ class imageseries():
         thumbs = self.thumbs
         try:
             if operationindex == 7:
-                return variation.variationoperators.operations.values()[operationindex](self[i].data, i, roi)
-            return variation.variationoperators.operations.values()[operationindex](thumbs, i, roi)
+                return list(variation.variationoperators.operations.values())[operationindex](self[i].data, i, roi)
+            return list(variation.variationoperators.operations.values())[operationindex](thumbs, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
@@ -753,7 +802,7 @@ class imageseries():
 from PIL import Image
 
 
-class jpegimageset():
+class jpegimageset(object):
     def __init__(self, jpegs):
         self.jpegs = jpegs
 
@@ -789,9 +838,104 @@ class jpegimageset():
             return np.array([self.jpegs[i] for i in item])
 
 
+class PStack(object):
+    ndim = 3
+
+    def __init__(self, projections, dark, flat, sino, hdr):
+        self.primary = projections
+        self.projections = projections
+        self.sino = sino
+        self.darks = dark
+        self.flats = flat
+        self.dtype = projections.pixel_type
+        self.header = hdr
+        self.frames = [str(j) for j in range(len(self.projections))]
+
+        for pim in (self.sino, self.darks, self.flats, self.primary):
+            pim.frames = [str(j) for j in range(len(pim))]
+
+    def __len__(self):
+        return len(self.primary)
+
+    # shim because this is expected a few other places in
+    # the code.
+    @property
+    def fabimage(self):
+        return self.primary
+
+    # these are required because this object gets passed
+    # into pyqtgraph which tries to down sample / scale
+    @property
+    def max(self):
+        return self[0].max()
+
+    @property
+    def min(self):
+        return self[0].min()
+
+    @property
+    def shape(self):
+        return (len(self.primary), ) + self.primary.frame_shape
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
+
+    def transpose(self, ax):
+        return self
+
+    def __getitem__(self, item):
+
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item,)
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self.primary[i][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+
+    @property
+    def rawdata(self):
+        return self[0]
+
+    def getframe(self, frame=0):
+        self.data = self.primary[frame]
+        return self.data
+
+    def close(self):
+        pass
+
+
 class StackImage(object):
-    """
-    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """Class for displaying a Image Stack in a pyqtgraph ImageView and be
+    able to scroll through the various Images
+
     """
 
     ndim = 3
@@ -804,10 +948,6 @@ class StackImage(object):
         if filepath is not None:
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
-            if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
-            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -835,32 +975,36 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
-    def transpose(self, ax): # transposing is handled internally
+    def transpose(self, ax):
+        # TODO: find a good way to do this
+        # TODO: annoying because of the way hdfs are stored
         return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
-            img = self._getimage(j)[::level, ::level].transpose()
+            img = self._getimage(j)[::level, ::level]
             if i == 0:  # allocate array:
-                shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
+                shape = (np.ceil(old_div(float(self.shape[0]), level)), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
             vol[i] = img
         return vol
 
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
-        if frame is None: frame = self.currentframe
+        if frame is None:
+            frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
         # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
-            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
+            if len(self._framecache) > self._cachesize:
+                del self._framecache[list(self._framecache.keys())[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return self.fabimage.getframe(frame).transpose()
+        return self.fabimage.getframe(frame)
 
     def invalidatecache(self):
         self.cache = dict()
@@ -1047,7 +1191,7 @@ class diffimage2(object):
         return self._detector
 
     def finddetector(self):
-        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+        for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.items()):
             if hasattr(detector, 'MAX_SHAPE'):
                 # print name, detector.MAX_SHAPE, self.rawdata.shape[::-1]
                 if detector.MAX_SHAPE == self.rawdata.shape[::-1]:  #
@@ -1056,8 +1200,8 @@ class diffimage2(object):
                     return name, detector
             if hasattr(detector, 'BINNED_PIXEL_SIZE'):
                 # print detector.BINNED_PIXEL_SIZE.keys()
-                for binning in detector.BINNED_PIXEL_SIZE.keys():
-                    if self.rawdata.shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                for binning in list(detector.BINNED_PIXEL_SIZE.keys()):
+                    if self.rawdata.shape[::-1] == tuple(old_div(np.array(detector.MAX_SHAPE), binning)):
                         detector = detector()
                         msg.logMessage('Detector found with binning: ' + name)
                         detector.set_binning(binning)
@@ -1066,6 +1210,7 @@ class diffimage2(object):
 
     @detector.setter
     def detector(self, value):
+
         if type(value) == str:
             try:
                 self._detector = pyFAI.detectors.ALL_DETECTORS[value]
@@ -1326,7 +1471,8 @@ class multifilediffimage2(diffimage2):
     ndim = 3
 
     def __init__(self, filepaths, detector=None, experiment=None):
-        self.filepaths = sorted(list(filepaths))
+        self.filepaths=filepaths
+        if not filepaths[0].startswith('DB:'): self.filepaths = sorted(list(self.filepaths))
         self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
@@ -1363,7 +1509,10 @@ class multifilediffimage2(diffimage2):
         if self._xvals is None:
             timekey = config.activeExperiment.headermap['Timeline Axis']
             if timekey:
-                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                try:
+                    self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                except KeyError: # TODO: allow DB headers to be keyed without .start
+                    self._xvals = np.array([float(self.iHeaders(i).start[timekey]) for i in range(len(self.filepaths))])
             else:
                 self._xvals = np.arange(len(self.filepaths))
         return self._xvals
@@ -1423,7 +1572,7 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            return self.xvals('')[i], list(variation.variationoperators.operations.values())[operationindex](self, i, roi)
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
@@ -1503,7 +1652,7 @@ class stackdiffimage2(diffimage2):
         frame = min(frame, len(self))
         self.currentframe = frame
         if frame not in self._framecache:
-            if len(self._framecache) > 2: del self._framecache[self._framecache.keys()[0]]  # del the first cached item
+            if len(self._framecache) > 2: del self._framecache[list(self._framecache.keys())[0]]  # del the first cached item
             self._framecache[frame] = np.rot90(self.fabimage.getframe(frame).data, 3)
         return self._framecache[frame]
 
@@ -1512,7 +1661,7 @@ class stackdiffimage2(diffimage2):
 
 
 def loaddiffimage(src):
-    if type(src) in [unicode, str]:
+    if type(src) in [str, str]:
         return singlefilediffimage2(src)
     elif type(src) is list and len(src) == 1 and os.path.splitext(src[0])[-1] == '.h5':
         return stackdiffimage2(src[0])

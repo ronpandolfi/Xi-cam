@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
 import os
 from PySide import QtGui, QtCore
 from xicam.plugins import base
@@ -13,7 +20,7 @@ import time
 from xicam import threads
 from daemon.daemon import daemon
 import multiprocessing
-import Queue
+import queue
 import glob
 
 # TODO: Remove LUT bar from RMC Timeline (its binary anyways)
@@ -63,7 +70,7 @@ class plugin(base.plugin):
         self.centerwidget.tabCloseRequested.connect(self.tabClose)
         self.rightwidget = None
 
-        self.threadWorker = threads.Worker(Queue.Queue())
+        self.threadWorker = threads.Worker(queue.Queue())
         self.threadWorker.pool.setExpiryTimeout(1)
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
@@ -250,7 +257,7 @@ class inOutViewer(QtGui.QWidget, ):
             self.orig_view.setImage(self.orig_image)
             self.orig_view.autoRange()
             try:
-                start_size = max(self.orig_image.shape)/10
+                start_size = old_div(max(self.orig_image.shape),10)
             except ValueError:
                 msg.showMessage("Image must be 2-D")
 
@@ -363,12 +370,12 @@ class inOutViewer(QtGui.QWidget, ):
         xdim = int(image.shape[0])
         ydim = int(image.shape[1])
 
-        newx = xdim + 2*abs(self.cameraLocation[0]-xdim/2)
-        newy = ydim + 2*abs(self.cameraLocation[1]-ydim/2)
+        newx = xdim + 2*abs(self.cameraLocation[0]-old_div(xdim,2))
+        newy = ydim + 2*abs(self.cameraLocation[1]-old_div(ydim,2))
         self.new_dim = max(newx,newy)
 
         self.edited_image = np.ones((self.new_dim,self.new_dim),dtype = np.int)
-        new_center = (self.new_dim/2,self.new_dim/2)
+        new_center = (old_div(self.new_dim,2),old_div(self.new_dim,2))
 
         lowleft_corner_x = int(new_center[0]-self.cameraLocation[0])
         lowleft_corner_y = int(new_center[1]-self.cameraLocation[1])

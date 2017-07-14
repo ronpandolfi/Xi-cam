@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from copy import copy
-from pipeline.loader import StackImage
-
+from pipeline.loader import StackImage, PStack
+import numpy as np
 __author__ = "Luis Barroso-Luque"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -32,12 +33,16 @@ class ProjectionStack(StackImage):
         except AttributeError:
             self.flats, self.darks = None, None
 
-
+    def _getframe(self, frame=None):
+        return super(ProjectionStack, self)._getframe(frame=frame).transpose()
 
 
 class SinogramStack(StackImage):
     """
     Simply subclass of StackImage for Tomography Sinogram stacks.
+
+    TODO:
+      - make sure flats / darks are handled correctly
     """
 
     def __init__(self, filepath=None, data=None):
@@ -61,7 +66,6 @@ class SinogramStack(StackImage):
         SinogramStack
             Object cast into SinogramStack
         """
-
         new_obj = copy(obj)
         new_obj.__class__ = cls
         new_obj.shape = new_obj.shape[2], new_obj.shape[0], new_obj.shape[1]
@@ -71,4 +75,8 @@ class SinogramStack(StackImage):
         """
         Override method from base class to read along sinogram dimension
         """
-        return self.fabimage[:, frame, :].transpose()
+        return self.fabimage[:, frame, :]
+
+
+    def _getframe(self, frame=None):
+        return super(SinogramStack, self)._getframe(frame=frame).transpose()

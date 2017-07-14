@@ -1,3 +1,8 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import itertools
 
@@ -8,13 +13,13 @@ def reciprocalvectors(a, b, c, order=2):
     mrb = 2 * np.pi / V * np.cross(c, a)
     mrc = 2 * np.pi / V * np.cross(a, b)
     mi = np.vstack([mra, mrb, mrc])
-    combs = itertools.product(range(-order, order + 1), repeat=3)
+    combs = itertools.product(list(range(-order, order + 1)), repeat=3)
     vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]
     return vecs
 
 def combs_generator(x,y,z):
-    for i in range(-x/2,x/2+1):
-        for j in range(-y/2,y/2+1):
+    for i in range(old_div(-x,2),old_div(x,2)+1):
+        for j in range(old_div(-y,2),old_div(y,2)+1):
             for k in range(0,z+1):
                 yield (i,j,k)
 
@@ -57,7 +62,7 @@ def vecs2angles(v):
 
 if __name__ == '__main__':
     a = [1, 0, 0]
-    b = [.5, np.sqrt(3) / 2, 0]
+    b = [.5, old_div(np.sqrt(3), 2), 0]
     c = [0, 0, 1]
     recipvecs = np.array(reciprocalvectors(a, b, c))
 

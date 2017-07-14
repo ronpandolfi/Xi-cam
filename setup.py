@@ -4,6 +4,8 @@ Usage: python setup.py install
        python setup.py sdist bdist_egg
        twine upload dist/*
 """
+from __future__ import print_function
+from __future__ import unicode_literals
 
 # if __name__ == "__main__":
 #     print 'You should run his with pip instead!\n Try this:\n\tpip install .\n...or...\n\tpip install xicam'
@@ -12,7 +14,7 @@ Usage: python setup.py install
 try:
     import numpy as np
 except ImportError:
-    print 'Error: Numpy is not installed. Install numpy first!'
+    print('Error: Numpy is not installed. Install numpy first!')
     exit(1)
 
 from setuptools import setup, find_packages
@@ -91,7 +93,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'Shiboken', 'PySide', 'pyqtgraph', 'QDarkStyle',
+    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'pyqtgraph', 'QDarkStyle',
                       'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
 
     setup_requires=['numpy', 'cython'],
@@ -109,7 +111,7 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-         'xicam': ['gui/*'],
+         'xicam': ['gui/*', 'yaml/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
@@ -128,6 +130,6 @@ setup(
         ],
     },
 
-    ext_modules=[EXT],
+    #ext_modules=[EXT],
     include_package_data=True
 )

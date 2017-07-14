@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from PySide import QtCore
 from PySide.QtCore import Qt
-import featuremanager
+from . import featuremanager
 
 
 class featuresModel(QtCore.QAbstractListModel):

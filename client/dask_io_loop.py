@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+from builtins import object
 import distributed 
 from tornado.ioloop import IOLoop
 from threading import Thread
@@ -9,7 +11,7 @@ distributed.core.logging.propagate = False
 
 __ioloop__ = IOLoop()
 
-class DaskLoop():
+class DaskLoop(object):
   def __init__(self):
     self.loop = __ioloop__
     self.t = Thread(target=self.loop.start)

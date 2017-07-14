@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import platform
 from fabio import edfimage
 
@@ -6,11 +13,11 @@ op_sys = platform.system()
 # if op_sys == 'Darwin':
 #     from Foundation import NSURL
 
-import base
+from . import base
 from PySide import QtGui
 import os
 
-import widgets
+from . import widgets
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
@@ -98,7 +105,7 @@ class XASPlugin(base.plugin):
         """
         Launch a tab as a div operation
         """
-        operation = lambda m: m[0] / m[1]
+        operation = lambda m: old_div(m[0], m[1])
         self.launchmultimode(operation, 'Division')
 
     def averagemode(self):
@@ -135,7 +142,7 @@ class XASPlugin(base.plugin):
         try:
             self.getCurrentTab().redrawimage()
         except AttributeError:
-            print "Using hack to bypass strange qsignal behavior. Fix this!"
+            print("Using hack to bypass strange qsignal behavior. Fix this!")
 
     def remeshmode(self):
         self.getCurrentTab().redrawimage()
@@ -202,9 +209,9 @@ class XASPlugin(base.plugin):
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
         dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
-                                   directory=unicode(os.path.dirname(self.getCurrentTab().paths[0])),
+                                   directory=str(os.path.dirname(self.getCurrentTab().paths[0])),
                                    filter=u"EDF (*.edf)")
-        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().paths[0])))
+        dialog.selectFile(str(os.path.dirname(self.getCurrentTab().paths[0])))
         filename, ok = dialog.getSaveFileName()
         if ok and filename:
             fabimg.write(filename)

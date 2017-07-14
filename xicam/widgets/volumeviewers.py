@@ -1,5 +1,9 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
 
 
+from past.utils import old_div
 __author__ = "Ronald J Pandolfi"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -18,6 +22,7 @@ from PySide import QtCore, QtGui
 from vispy import scene
 from vispy.color import Colormap
 from pipeline import loader
+from xicam.widgets.customwidgets import histDialogButton
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -41,7 +46,15 @@ class VolumeViewer(QtGui.QWidget):
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        ly.addWidget(self.HistogramLUTWidget)
+        v = QtGui.QVBoxLayout()
+        v.addWidget(self.HistogramLUTWidget)
+
+        # ly.addWidget(self.HistogramLUTWidget)
+
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.HistogramLUTWidget)
+        v.addWidget(self.setButton)
+        ly.addLayout(v)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -77,7 +90,7 @@ class VolumeViewer(QtGui.QWidget):
     def setVolume(self, vol=None, path=None, slicevol=True):
         if slicevol:
             sliceobj = self.getSlice()
-            print 'Got slice', sliceobj
+            print('Got slice', sliceobj)
         else:
             sliceobj = 3*(slice(0, None),)
 
@@ -89,7 +102,7 @@ class VolumeViewer(QtGui.QWidget):
                 try:
                     region.item.region.setRegion([0, vol.shape[i]])
                 except RuntimeError as e:
-                    print e.message
+                    print(e)
 
     def moveGradientTick(self, idx, pos):
         tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]
@@ -108,7 +121,7 @@ class VolumeViewer(QtGui.QWidget):
 
     def setLookupTable(self, lut=None, update=True):
         try:
-            table = self.HistogramLUTWidget.item.gradient.colorMap().color/256.
+            table = old_div(self.HistogramLUTWidget.item.gradient.colorMap().color,256.)
             pos = self.HistogramLUTWidget.item.gradient.colorMap().pos
             #table=np.clip(table*(self.levels[1]-self.levels[0])+self.levels[0],0.,1.)
             table[:, 3] = pos
@@ -116,7 +129,7 @@ class VolumeViewer(QtGui.QWidget):
             pos = np.hstack([[0], pos*(self.levels[1] - self.levels[0]) + self.levels[0], [1]])
             self.volumeRenderWidget.volume.cmap = Colormap(table, controls=pos)
         except AttributeError as ex:
-            print ex
+            print(ex)
 
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=100, targetHistogramSize=500, **kwds):
@@ -140,8 +153,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (np.ceil(float(self.vol.shape[0]) / targetImageSize),
-                    np.ceil(float(self.vol.shape[1]) / targetImageSize))
+            step = (np.ceil(old_div(float(self.vol.shape[0]), targetImageSize)),
+                    np.ceil(old_div(float(self.vol.shape[1]), targetImageSize)))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
@@ -150,7 +163,7 @@ class VolumeViewer(QtGui.QWidget):
             if stepData.dtype.kind in "ui":
                 mn = stepData.min()
                 mx = stepData.max()
-                step = np.ceil((mx-mn) / 500.)
+                step = np.ceil(old_div((mx-mn), 500.))
                 bins = np.arange(mn, mx+1.01*step, step, dtype=np.int)
                 if len(bins) == 0:
                     bins = [mn, mx]
@@ -200,7 +213,7 @@ class VolumeVisual(scene.visuals.Volume):
         # Apply clim
         vol = np.array(vol, dtype='float32', copy=False)
         vol -= self._clim[0]
-        vol *= 1./(self._clim[1] - self._clim[0])
+        vol *= old_div(1.,(self._clim[1] - self._clim[0]))
 
         # Apply to texture
         self._tex.set_data(vol)  # will be efficient if vol is same shape
@@ -300,8 +313,8 @@ class VolumeRenderWidget(scene.SceneCanvas):
             self.volume._create_vertex_data() #TODO: Try using this instead of slicing array?
 
         # Translate the volume into the center of the view (axes are in strange order for unkown )
-        scale = 3*(2.0/self.vol.shape[1],)
-        translate = map(lambda x: -scale[0]*x/2, reversed(vol.shape))
+        scale = 3*(old_div(2.0,self.vol.shape[1]),)
+        translate = [-scale[0]*x/2 for x in reversed(vol.shape)]
         self.volume.transform = scene.STTransform(translate=translate, scale=scale)
 
     # Implement key presses

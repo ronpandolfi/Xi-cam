@@ -1,16 +1,21 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import str
+from builtins import object
 import os
 import h5py
 import numpy as np
 import pipeline
-import viewer
+from . import viewer
 from pipeline import loader
 from PySide import QtCore, QtGui
 from xicam import xglobals
 
 
-class SPOT_H5DSet:
+class SPOT_H5DSet(object):
     def __init__(self, dat, txt):
         self.data = dat
         tmp = dat.attrs
@@ -25,7 +30,7 @@ class SPOT_H5DSet:
         if not isinstance(grp, h5py._hl.group.Group):
             raise TypeError('argument must of a h5py Group')
 
-        keys = grp.keys()
+        keys = list(grp.keys())
         if not len(keys) == 2:
             raise ValueError('Wrong h5py Group passed')
 
@@ -39,18 +44,18 @@ class SPOT_H5DSet:
             return cls(edf, txt)
 
 
-class SPOT_H5Node:
+class SPOT_H5Node(object):
     def __init__(self, grp):
         if not isinstance(grp, h5py._hl.group.Group):
             raise TypeError('argument must of a h5py Group')
-        keys = grp.keys()
+        keys = list(grp.keys())
         if not len(keys) == 3:
             raise ValueError('Wrong h5py Group passed')
 
         txt = None
         edf = None
         for key in keys:
-            if key == unicode('calibration'):
+            if key == str('calibration'):
                 self.calibration = SPOT_H5DSet.calibration(grp[key])
             if str(key).endswith('.edf'):
                 edf = grp[key]
@@ -61,7 +66,7 @@ class SPOT_H5Node:
         self.data = SPOT_H5DSet(edf, txt)
 
 
-class SPOT_H5:
+class SPOT_H5(object):
     def __init__(self, filename):
         if not os.path.splitext(filename)[1] == '.h5':
             raise IOError('File extension must be .h5')
@@ -69,14 +74,14 @@ class SPOT_H5:
         self.h5 = h5py.File(filename)
         self.metadata = self.h5.attrs
         self.isTiled = False
-        node = self.h5.values()[0].values()[0]
-        keys = node.keys()
+        node = list(self.h5.values())[0].values()[0]
+        keys = list(node.keys())
 
-        if len(keys) == 2 and unicode('high') in keys:
+        if len(keys) == 2 and str('high') in keys:
             self.isTiled = True
             self.high = SPOT_H5Node(node['high'])
             self.node = SPOT_H5Node(node['low'])
-        elif len(keys) == 3 and unicode('calibration') in keys:
+        elif len(keys) == 3 and str('calibration') in keys:
             self.node = SPOT_H5Node(node)
 
     def getCalibrationImg(self):
@@ -135,7 +140,7 @@ if __name__ == '__main__':
     foo = SPOT_H5('/Users/dkumar/Downloads/20151004_234826_PorRun5_283.h5')
 
     txt = foo.getText()
-    print txt
+    print(txt)
     dat = foo.getCalibrationImg()
     # saveedf("AgB_000.edf", dat, hdr)
     

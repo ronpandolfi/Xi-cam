@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+from builtins import zip
 import pyqtgraph as pg
 from PySide import QtGui, QtCore
 import numpy as np
@@ -153,7 +155,7 @@ class LineROI(pg.LineROI):
         rr, cc = polygon(vecs[0], vecs[1])
         mask = np.zeros_like(data)
         rrcc = [[r, c] for r, c in zip(rr, cc) if r < mask.shape[0] and c < mask.shape[1]]
-        rr, cc = zip(*rrcc)
+        rr, cc = list(zip(*rrcc))
         mask[rr, cc] = 1
 
         return (data * mask).T.copy()

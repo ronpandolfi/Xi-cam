@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import importlib
 from pipeline import msg
 from PySide import QtGui
@@ -10,9 +12,9 @@ def import_module(modname,packagename=None):
     except ImportError as ex:
         msg.logMessage('Module could not be loaded: ' + modname)
 
-        missingpackage = ex.message.replace('No module named ', '')
+        missingpackage = ex.args[0].replace('No module named ', '')
 
-        import config
+        from . import config
         if config.settings['ignoredmodules']:
             if missingpackage in config.settings['ignoredmodules']:
                 return None
@@ -62,7 +64,7 @@ def import_module(modname,packagename=None):
                     if response == QtGui.QMessageBox.No:
                         exit(1)
         elif response == QtGui.QMessageBox.Ignore and modname.strip('.') != 'MOTD':
-            import config
+            from . import config
             if config.settings['ignoredmodules']:
                 config.settings['ignoredmodules'].append(missingpackage)
             else:

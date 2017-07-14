@@ -1,6 +1,12 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import os
 import time
-import process
+from . import process
 from PySide import QtCore
 import multiprocessing
 from xicam import debugtools
@@ -52,7 +58,7 @@ class daemon(QtCore.QThread):
 
         files = [f for f in files if not os.path.splitext(f)[1] == '.hdf']
         if files:
-            print os.path.splitext(path)[1]
+            print(os.path.splitext(path)[1])
 
             jobs = []
             p = None
@@ -84,8 +90,8 @@ def chunks(l, n):
     """
     Yield successive n chunks from l.
     """
-    chunksize = int(len(l) / n)
-    for i in xrange(0, n, 1):
+    chunksize = int(old_div(len(l), n))
+    for i in range(0, n, 1):
         yield l[i * chunksize:(i + 1) * chunksize]
 
 

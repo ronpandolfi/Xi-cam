@@ -1,12 +1,16 @@
 # --coding: utf-8 --
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import str
+from builtins import zip
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
 from PySide import QtCore, QtGui
 import pyqtgraph as pg
-import spacegrp_peaks
+from . import spacegrp_peaks
 import numpy as np
 from xicam import config
-import msg
+from . import msg
 
 # TODO: Add index of refraction to interface and backend
 # TODO: Add q,twotheta, alphaf to tooltip
@@ -153,7 +157,7 @@ class peakoverlay(pg.ScatterPlotItem):
         self.centerx = 0
         self.centery = 0
         if len(peaks):
-            x, y = zip(*[[p.x, p.y] for p in peaks])
+            x, y = list(zip(*[[p.x, p.y] for p in peaks]))
             symbols = ['s' if p.mode == 'Transmission' else 'o' for p in peaks]
             colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in peaks]
             super(peakoverlay, self).__init__(x, y, size=10, brush=None, pen=colors, symbol=symbols)
@@ -171,7 +175,7 @@ class peakoverlay(pg.ScatterPlotItem):
         self.displayRelative()
 
     def displayRelative(self):
-        px, py = zip(*[[p.x, p.y] for p in self.peaks])
+        px, py = list(zip(*[[p.x, p.y] for p in self.peaks]))
 
         symbols = ['s' if p.mode == 'Transmission' else 'o' for p in self.peaks]
         colors = [pg.mkPen(0, 255, 0, 255) if p.mode == 'Transmission' else pg.mkPen(255, 0, 255, 255) for p in self.peaks]
@@ -225,7 +229,7 @@ class peakoverlay(pg.ScatterPlotItem):
             #print points
             for peak in peaks:
                     if s != u'': s += '\n\n'
-                    s += unicode(peak)
+                    s += str(peak)
 
             self.display_text.setText(s)
             self.display_text.setPos(pos)
@@ -312,7 +316,7 @@ class spacegroupwidget(ParameterTree):
                                           activelatticetype.beta.value(), activelatticetype.gamma.value(),
                                           normal=self._getRotationVector(), norm_type=['xyz','hkl','uvw'][self._getRotationType()], refdelta=refdelta,refbeta=refbeta,order=5,unitcell=None,space_grp=SG)
         for peak in peaks:
-            msg.logMessage(unicode(peak),msg.DEBUG)
+            msg.logMessage(str(peak),msg.DEBUG)
 
 
         #     print key + " -> " + str(peaks[key])
@@ -510,7 +514,7 @@ cubicspacegroupnames = ['P23', 'F23', 'I23', u'P2₁3', u'I2₁3', 'Pm-3', 'Pn-3
                         'F432', u'F4₁32', 'I432', u'P4₃32', u'P4₁32', u'I4₁32', 'P-43m', 'F-43m', 'I-43m', 'P-43n',
                         'F-43c', 'I-43d',
                         'Pm-3m', 'Pn-3n', 'Pm-3n', 'Pn-3m', 'Fm-3m', 'Fm-3c', 'Fd-3m', 'Fd-3c', 'Im-3m', 'Ia-3d']
-import sgexclusions
-spacegroupnames = [sgexclusions.Triclinic.conditions.keys(), sgexclusions.Monoclinic.conditions.keys(), sgexclusions.Orthorhombic.conditions.keys(),
-                   sgexclusions.Tetragonal.conditions.keys(), sgexclusions.Trigonal.conditions.keys(), sgexclusions.Hexagonal.conditions.keys(), sgexclusions.Cubic.conditions.keys()]
+from . import sgexclusions
+spacegroupnames = [list(sgexclusions.Triclinic.conditions.keys()), list(sgexclusions.Monoclinic.conditions.keys()), list(sgexclusions.Orthorhombic.conditions.keys()),
+                   list(sgexclusions.Tetragonal.conditions.keys()), list(sgexclusions.Trigonal.conditions.keys()), list(sgexclusions.Hexagonal.conditions.keys()), list(sgexclusions.Cubic.conditions.keys())]
 spacegrouptypes = ['Triclinic', 'Monoclinic', 'Orthorhombic', 'Tetragonal', 'Trigonal', 'Hexagonal', 'Cubic']

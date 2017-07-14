@@ -1,16 +1,19 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import object
 import json
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 import yaml
 from modpkgs.collectionsmod import UnsortableOrderedDict
-import ui
-import featuremanager
-import display
-import customwidgets
+from . import ui
+from . import featuremanager
+from . import display
+from . import customwidgets
 
 
-class mainwindow():
+class mainwindow(object):
     def __init__(self, app):
         self.app = app
 
