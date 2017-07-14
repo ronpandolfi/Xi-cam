@@ -764,12 +764,14 @@ class FunctionManager(fw.FeatureManager):
 
             # save function pipeline as runnable
             yield "Start {} at: ".format(path) + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
-            runnable = self.extractPipelineRunnable(run_dict, theta, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
-            try:
-                with open(python_file, 'w') as py:
-                    py.write(runnable)
-            except NameError or IOError:
-                yield "Error: pipeline python script not written - path could not be found"
+
+            # for now, do not write out python script on reconstruction
+            # runnable = self.extractPipelineRunnable(run_dict, theta, params_dict, proj, sino, sino_p_chunk, width, path, ncore)
+            # try:
+            #     with open(python_file, 'w') as py:
+            #         py.write(runnable)
+            # except NameError or IOError:
+            #     yield "Error: pipeline python script not written - path could not be found"
 
             # save yaml in reconstruction folder
             for key in yaml_pipe.iterkeys(): # special case for 'center' param
