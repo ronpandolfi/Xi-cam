@@ -1,6 +1,7 @@
 from PySide import QtGui
 import sys
-import base
+from . import base
+from xicam.widgets import explorer
 import viewer
 
 
@@ -15,7 +16,29 @@ class LibraryPlugin(base.plugin):
         else:
             libraryview = LibraryWidget(self, pipeline.pathtools.getRoot())
 
-        self.centerwidget = libraryview
+        self.centerwidget = QtGui.QTabWidget()
+        self.tabBar = explorer.TabBarPlus()
+        self.centerwidget.setTabBar(self.tabBar)
+        self.centerwidget.addTab(libraryview, 'Local')
+        self.tabBar.plusClicked.connect(self.createNewLibrary)
+
+        self.newtabmenu = QtGui.QMenu(None)
+        adddatabroker = QtGui.QAction('Data Broker', self.newtabmenu)
+        addspot = QtGui.QAction('SPOT', self.newtabmenu)
+        addcori = QtGui.QAction('Cori', self.newtabmenu)
+        addedison = QtGui.QAction('Edison', self.newtabmenu)
+        addbragg = QtGui.QAction('Bragg', self.newtabmenu)
+        # addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
+        # showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
+
+        self.newtabmenu.addActions([adddatabroker, addspot, addcori, addedison, addbragg])
+        adddatabroker.triggered.connect(self.addDataBrokerTab)
+        addspot.triggered.connect(self.addSPOTTab)
+        addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
+        addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
+        addbragg.triggered.connect(lambda: self.addHPCTab('Bragg'))
+        # addsftp.triggered.connect(self.addSFTPTab)
+        # showjobtab.triggered.connect(lambda: self.addTab(self.jobtab, 'Jobs'))
 
         self.rightwidget = None
 
@@ -25,10 +48,21 @@ class LibraryPlugin(base.plugin):
 
         self.toolbar = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(LibraryPlugin, self).__init__(*args, **kwargs)
 
         # self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
 
+    def createNewLibrary(self):
+        self.newtabmenu.popup(QtGui.QCursor.pos())
+
+    def addDataBrokerTab(self):
+        print('databroker')
+
+    def addSPOTTab(self):
+        print('spot')
+
+    def addHPCTab(self, system):
+        print(system)
 
 from PySide import QtGui
 from PySide import QtCore
@@ -205,7 +239,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.fileicon = QtGui.QImage()
         self.fileicon.load('xicam/gui/post-360412-0-09676400-1365986245.png')
 
-        print 'Library widget generated for ' + path
+        print('Library widget generated for ' + path)
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -229,7 +263,7 @@ class thumbwidgetitem(QtGui.QFrame):
 
             try:
                 self.thumb = np.rot90(np.log(dimg.thumbnail * (dimg.thumbnail > 0) + (dimg.thumbnail < 1))).copy()
-                print 'thumbmax:', np.max(self.thumb)
+                print('thumbmax:', np.max(self.thumb))
                 self.thumb *= 255. / np.max(self.thumb)
 
 
@@ -239,7 +273,7 @@ class thumbwidgetitem(QtGui.QFrame):
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             except Exception as ex:
-                print ex.message
+                print(ex.message)
 
                 self.image = self.fileicon
 
