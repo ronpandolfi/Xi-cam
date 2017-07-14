@@ -454,7 +454,7 @@ class FunctionManager(fw.FeatureManager):
                     # extract theta values
                     if 'theta' in param:
                         theta = ipf.partial()
-        self.lockParams(True)
+        self.lockParams(False)
 
         return [d, theta, center, config.extract_pipeline_dict(self.features),
                 config.extract_runnable_dict(self.features)]
