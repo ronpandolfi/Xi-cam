@@ -1,25 +1,22 @@
 import __future__
 import os, sys, time
+import glob
 import simulation, fitting, cdsaxs
-from scipy.fftpack import *
-from  numpy.fft import *
 from scipy.signal import resample
-import platform
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
 from pipeline import loader, hig, msg
 import numpy as np
 from xicam.plugins import base, widgets
-import subprocess
-from xicam import threads, ROI
+from xicam import threads, ROI, debugtools, config
 from modpkgs import guiinvoker
-import matplotlib.pyplot as plt
+from functools import partial
+
+from operator import itemgetter
 
 from PySide import QtGui, QtCore
-from xicam import debugtools
 
 from pipeline.spacegroups import spacegroupwidget
-from xicam import config
 
 from xicam.widgets.calibrationpanel import calibrationpanel
 from pipeline import integration, center_approx
@@ -39,7 +36,7 @@ import psutil
 import multiprocessing
 from collections import deque
 from itertools import repeat
-# import pandas as pd
+import pandas as pd
 import emcee
 import deap.base as deap_base
 from deap import creator, tools
@@ -48,62 +45,52 @@ from deap import cma as cmaes
 creator.create('FitnessMin', deap_base.Fitness, weights=(-1.0,))  # want to minimize fitness
 creator.create('Individual', list, fitness=creator.FitnessMin)
 
-exp_data = None
-Qxfit = None
-Q__z = None
-q = None
+intensity = None
+Q_x = None
+Q_z = None
 
 def residual(p, test='False', plot_mode=False):
     simp = fittingp_to_simp(p)
     if simp is None:
         return fix_fitness_cmaes(np.inf)
-    DW = simp[0]
-    I0 = simp[1]
-    Bkg = simp[2]
-    H = simp[3]
-    LL = simp[4]
-    Beta = simp[5:]
-
-    Beta = np.array(Beta)
-
-    print(H, LL, Beta)
+    DW, I0, Bkg, H, LL, Beta = simp[0], simp[1], simp[2], simp[3], simp[4], np.array(simp[5:])
 
     Qxfit =SL_model1(H, LL, Beta, DW, I0, Bkg)
 
     res = 0
-    for i in range(0, len(exp_data), 1):
-        res += fitting.log_error(exp_data[i],Qxfit[i])
+    for i in range(0, len(intensity), 1):
+        res += fitting.log_error(intensity[i],Qxfit[i])
 
     return fix_fitness_cmaes(res)
 
 def fittingp_to_simp(fittingp):
-    # DW, I0, Bk, H, LL, *Beta[5] = simp
     # values assume initial fittingp centered at 0 and std. dev. of 100
-    #multiples = np.array([0.001, 0.1, 0.1, 0.2, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4])
-    multiples = [0.0001, 0.01, 0.01, 0.02, 0.03] + [0.04] * (len(adds)-5)
-    simp = np.asarray(multiples) * np.asarray(fittingp) + adds
+
+    multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
+    simp = multiples * np.asarray(fittingp) + adds
+
+    '''
     if np.any(simp[:5] < 0):
         return None
     if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
         return None
+    '''
     return simp
 
-def SL_model1(H, LL, Beta, DW_factor=0, I0=1, Bk=0):
-    qy = Q__z
-    qz = q
+def SL_model1(H, LL, Beta, DW_factor=0.11, I0=1, Bk=1):
+    #langle = np.asarray(Beta)
+    #rangle = np.asarray(Beta)
     langle = np.deg2rad(np.asarray(Beta))
     rangle = np.deg2rad(np.asarray(Beta))
     Qxfit = []
-    Qxfitc = []
-    for i in range(len(qz)):
-        Qxfit.append(simulation.stacked_trapezoids(qz[i], qy[i], 0, LL, H, langle, rangle))
+    for i in range(len(Q_z)):
+        Qxfit.append(simulation.stacked_trapezoids(Q_z[i], Q_x[i], 0, LL, H, langle, rangle))
 
-    Qxfitc = fitting.corrections_DWI0Bk(Qxfit, DW_factor, I0, Bk, q, Q__z)
+    Qxfitc = fitting.corrections_DWI0Bk(Qxfit, DW_factor, I0, Bk, Q_x, Q_z)
     return Qxfitc
 
 def fix_fitness_cmaes(fitness):
     """cmaes accepts the individuals with the lowest fitness, doesn't matter degree to which they are lower"""
-
     return fitness
 
 def fix_fitness_mcmc(fitness):
@@ -140,6 +127,7 @@ class plugin(base.plugin):
                 {'name': 'Phi_min', 'type': 'float'},
                 {'name': 'Phi_max', 'type': 'float'},
                 {'name': 'Phi_step', 'type': 'float'},
+                {'name': 'Pitch', 'type': 'float'},
                 {'name': 'H', 'type': 'float'},
                 {'name': 'w0', 'type': 'float'},
                 {'name': 'Beta', 'type': 'float'},
@@ -185,9 +173,9 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
 
-        Phi_min, Phi_max, Phi_step = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param[
-            'test', 'Phi_step']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(Phi_min, Phi_max, Phi_step))
+        Phi_min, Phi_max, Phi_step, Pitch = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param[
+            'test', 'Phi_step'], self.param['test', 'Pitch']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(Phi_min, Phi_max, Phi_step, Pitch))
         threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
@@ -226,119 +214,91 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         self.src = src
 
-        # self.loadRAW()
+    def loadRAW(self, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100):
 
-    def loadRAW(self, Phi_min=-45, Phi_max=45, Phi_step=1):
-        center = [552, 225]
-        maxR, minR = 250, 0
-        nb_pixel = maxR - minR
-        maxy, miny = -40, 40
+        pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.09184
+        substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
+        self.qx, self.qz, self.I = [], [], []
 
-        data = []
-        profiles = []
-        x, y = np.indices(loader.loadimage(self.src[0]).shape)
-        x_1, y_1 = x - center[0], y - center[1]
-        rmincut = (y_1 > minR)
-        rmaxcut = (y_1 < maxR)
-        thetamincut = (x_1 > -10)
-        thetamaxcut = (x_1 < 10)
-        cutmask = (rmincut * rmaxcut * thetamincut * thetamaxcut).T
+        file = [val for val in self.src]
+        phi = [np.deg2rad(Phi_min + i * Phi_step) for i in range(0, int((1 + Phi_max - Phi_min)/Phi_step), 1)]
 
-        for file in self.src:
-            img = np.rot90(loader.loadimage(file), 1)
-            profile = np.sum(cutmask * img, axis=1)
-            # profile = cutmask * img
-            profiles.append(profile[center[1] + minR: center[1] + maxR])
-            # profiles.append(profile[center[1]:])
-            data.append(img)
+        # Parallelization
+        pool = multiprocessing.Pool()
+        func = partial(cdsaxs.test, wavelength, substratethickness, substrateattenuation, Pitch)
+        a = zip(file,phi)
+        b = [list(elem) for elem in a]
+        I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*pool.map(func, b))
+        pool.close()
 
-        data = np.stack(data)
+        data = np.stack(img1)
         data = np.log(data - data.min() + 1.)
-
-        self.maskimage = pg.ImageItem(opacity=.25)
-        self.CDRawWidget.view.addItem(self.maskimage)
-        invmask = 1 - cutmask
-        self.maskimage.setImage(
-            np.dstack((invmask, np.zeros_like(invmask), np.zeros_like(invmask), invmask)).astype(np.float), opacity=.5)
         self.CDRawWidget.setImage(data)
 
-        # 1Conversion to q spqce
-        pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.09184
-        self.QxyiData = cdsaxs.generate_carto(profiles, nb_pixel, Phi_min, Phi_step, pixel_size,
-                                              sample_detector_distance, wavelength, center[0])
+        I_peaks = [np.array(I_peaks)[:,i] for i in range(len(np.array(I_peaks)[0]))]
 
-        # Intensity correction
-        substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
-        self.QxyiDatacor = cdsaxs.correc_Iexp(self.QxyiData, substratethickness, substrateattenuation)
+        threshold = max(map(max, np.array(I_peaks)))[0] /1000.
+        column_max = map(max, I_peaks)
+        ind = np.where(np.array([item for sublist in column_max for item in sublist]) > threshold)
 
-        # interpolation and Plotting carthography
+        for i in ind[0]:
+            self.qx.append(np.array([item for sublist in np.array(Qxexp)[:, i] for item in np.array(sublist)]))
+            self.qz.append(np.array([item for sublist in np.array(Q__Z)[:, i] for item in np.array(sublist)]))
+            self.I.append(np.array([item for sublist in np.array(I_peaks)[i, :] for item in np.array(sublist)]))
+
         sampling_size = (400, 400)
-        # img = cdsaxs.inter_carto(self.QxyiData)
-        self.img, qk_shift = cdsaxs.interpolation(self.QxyiDatacor, sampling_size)
-        np.save('/Users/guillaumefreychet/Desktop/carto_cxro.npy', self.img)
+        qx_carto = np.array([item for sublist in q_x for item in sublist])
+        qz_carto = np.array([item for sublist in q_z for item in sublist])
+        profiles = np.array([item for sublist in I_cor for item in sublist])
+
+        self.img = cdsaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
         self.CDCartoWidget.setImage(self.img)
 
-        # Definition of the variables
-        self.q = []
-        self.Qxexp = []
-        self.Qxfit = []
-        self.Q__Z = []
+        # set globals
+        global Q_x, Q_z, intensity, adds
+        Q_x = self.qx
+        Q_z = self.qz
+        intensity = self.I
 
-        # Extraction of nb of profile + their positions
-        profile_carto = np.mean(np.nan_to_num(self.img), axis=1)
-        self.q, self.Qxexp, self.Q__Z = cdsaxs.find_peaks(profile_carto, self.QxyiDatacor, wavelength, nb_pixel,
-                                                          pixel_size, sample_detector_distance)
-
-        np.save('/Users/guillaumefreychet/Desktop/test', self.Qxexp)
+        #Display the experimental profiles
         self.update_profile_ini()
-        self.SL_model1(10, 40, np.array([95]))
+        self.Qxfit = SL_model1(50, 40, np.array([70]))
+        self.update_profile(plot = 'True')
         self.maxres = 0
 
-    def fitting_test1(self, H=10, LL=20, Beta1=70, Num_trap=5, DW=0.1, I0=1, Bk=0):  # these are simp not fittingp
+    def fitting_test1(self, H=10, LL=20, Beta1=70, Num_trap=5, DW=0.11, I0=1, Bk=1):  # these are simp not fittingp
 
         self.number_trapezoid = int(Num_trap)
-        beta = []
-        for i in range(0, self.number_trapezoid, 1):
-            beta.append(Beta1)
-        Beta = np.array(beta)
-
-        initiale_value = [DW, I0, Bk]
-        initiale_value.append(int(H))
-        initiale_value.append(int(LL))
-
-        for i in Beta:
-            initiale_value.append(int(i))
-
+        initiale_value = [DW, I0, Bk, int(H), int(LL)] + [int(Beta1) for i in range(0, self.number_trapezoid,1)]
         self.adds = np.asarray(initiale_value)
+        print(self.adds)
 
         # set globals
-        global q, Q__z, exp_data, adds, Qxfit
-
+        global adds, Qxfit
         adds = self.adds
-        exp_data = self.Qxexp
-        q = self.q
-        Q__z = self.Q__Z
 
         self.fix_fitness = fix_fitness_cmaes
-        self.residual(np.zeros(len(initiale_value)), test='True')
-        #self.cmaes(sigma=200, ngen=200, popsize=100, mu=10, N=len(initiale_value), restarts=0, verbose=False, tolhistfun=5e-5, ftarget=None)
-        self.cmaes(sigma = 100, ngen = 100, popsize = 100, mu = 10, N = len(initiale_value), restarts = 0, verbose = False, tolhistfun = 5e-5, ftarget = None)
-        self.residual(self.best_uncorr, test='False')
-        self.residual(self.best_uncorr, test='True')
+        Qxfit = SL_model1(H, LL, np.array([int(Beta1) for i in range(0, self.number_trapezoid,1)]))
+        self.update_profile(plot='True')
 
-
+        self.cmaes(sigma=200, ngen=200, popsize=100, mu=10, N=len(initiale_value), restarts=0, verbose=False, tolhistfun=5e-5, ftarget=None)
 
         print(self.best_uncorr)
-        print(self.best_corr)
+
+        #self.Qxfit = SL_model1(self.best_corr[3], self.best_corr[4], np.array([self.best_corr[i+5] for i in range(0, self.number_trapezoid,1)]), self.best_corr[0], self.best_corr[1], self.best_corr[2])
+        self.residual(self.best_uncorr, test='True')
+        self.update_profile(plot='True')
 
         print('OK')
+        '''
         #initiale_value1 = [self.best_corr[0], self.best_corr[1], self.best_corr[2], self.best_corr[3], self.best_corr[4], self.best_corr[5], self.best_corr[6], self.best_corr[7], self.best_corr[8], self.best_corr[9]]
         #self.adds = np.asarray(initiale_value1)
-        '''
         self.fix_fitness = fix_fitness_mcmc
         self.mcmc(N=len(self.best_corr), sigma=1000, nsteps=1000, nwalkers=100, use_mh='MH', parallel=True, seed=None,
                   verbose=True)
-        #self.residual(self.best_corr, test='True')
+        #self.Qxfit = SL_model1(self.best_corr[3], self.best_corr[4], np.array([self.best_corr[i+5] for i in range(0, self.number_trapezoid,1)]), self.best_corr[0], self.best_corr[1], self.best_corr[2])
+        self.residual(self.best_uncorr, test='True')
+        self.update_profile(plot='True')
         print('Done')
         '''
         '''
@@ -355,57 +315,50 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.sigDrawParam.emit(self)
 
     def update_profile_ini(self):
-        for order in range(0, len(self.Qxexp), 1):
-            self.Qxexp[order] -= min(self.Qxexp[order])
-            self.Qxexp[order] /= max(self.Qxexp[order])
-            self.Qxexp[order] += order + 1
 
-            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.Q__Z[order],
-                                             np.log(self.Qxexp[order]))
+        for order in range(0, len(self.I), 1):
+            self.I[order] -= min(self.I[order])
+            self.I[order] /= max(self.I[order])
+            self.I[order] += order + 1
+
+            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.qz[order], np.log(self.I[order]))
 
     def update_profile(self, plot='False'):
-        for order in range(0, len(self.Qxexp), 1):
-            self.Qxexp[order] -= min(self.Qxexp[order])
-            self.Qxexp[order] /= max(self.Qxexp[order])
-            self.Qxexp[order] += order + 1
+        for order in range(0, len(self.I), 1):
+            self.I[order] -= min(self.I[order])
+            self.I[order] /= max(self.I[order])
+            self.I[order] += order + 1
 
             self.Qxfit[order] -= min(self.Qxfit[order])
             self.Qxfit[order] /= max(self.Qxfit[order])
             self.Qxfit[order] += order + 1
 
             if plot == 'True':
-                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.Q__Z[order],
-                                                 np.log(self.Qxexp[order]))
-                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders1[order].setData, self.Q__Z[order],
+                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.qz[order],
+                                                 np.log(self.I[order]))
+                guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders1[order].setData, self.qz[order],
                                                  np.log(self.Qxfit[order]))
 
     # @debugtools.timeit
     def residual(self, p, test='False', plot_mode=False):
-        simp = fittingp_to_simp(p)
+        simp = self.fittingp_to_simp(p)
         if simp is None:
-            return fix_fitness_cmaes(np.inf)
-        DW = simp[0]
-        I0 = simp[1]
-        Bkg = simp[2]
-        H = simp[3]
-        LL = simp[4]
-        Beta = simp[5:]
+            return self.fix_fitness(np.inf)
+        DW, I0, Bkg, H, LL, Beta = simp[0], simp[1], simp[2], simp[3], simp[4], np.array(simp[5:])
+        print(H, LL, Beta)
 
-        Beta = np.array(Beta)
-
-        self.Qxfit = SL_model1(H, LL, Beta, DW, I0, Bkg)
+        self.Qxfit = self.SL_model1(H, LL, Beta, DW, I0, Bkg)
         self.update_profile(test)
 
         res = 0
+        for i in range(0, len(self.I), 1):
+            res += fitting.log_error(self.I[i], self.Qxfit[i])
 
-        for i in range(0, len(self.Qxexp), 1):
-            res += fitting.log_error(self.Qxexp[i], self.Qxfit[i])
-
-        return fix_fitness_cmaes(res)
+        return self.fix_fitness(res)
 
     def SL_model1(self, H, LL, Beta, DW_factor=0, I0=1, Bk=0):
-        qy = self.Q__Z
-        qz = self.q
+        qy = self.qz
+        qz = self.qx
         langle = np.deg2rad(np.asarray(Beta))
         rangle = np.deg2rad(np.asarray(Beta))
         self.Qxfit = []
@@ -413,23 +366,19 @@ class CDSAXSWidget(QtGui.QTabWidget):
         for i in range(len(qz)):
             self.Qxfit.append(simulation.stacked_trapezoids(qz[i], qy[i], 0, LL, H, langle, rangle))
 
-        self.Qxfitc = fitting.corrections_DWI0Bk(self.Qxfit, DW_factor, I0, Bk, self.q, self.Q__Z)
+        self.Qxfitc = fitting.corrections_DWI0Bk(self.Qxfit, DW_factor, I0, Bk, qy, qz)
         return self.Qxfitc
 
-    @staticmethod
-    def fix_fitness_cmaes(fitness):
-        """cmaes accepts the individuals with the lowest fitness, doesn't matter degree to which they are lower"""
-        return fitness,
-
     def fittingp_to_simp(self, fittingp):
-        # DW, I0, Bk, H, LL, *Beta[5] = simp
         # values assume initial fittingp centered at 0 and std. dev. of 100
-        multiples = [0.0001, 0.01, 0.01, 0.02, 0.03] + [0.04] * (len(self.adds) - 5)
-        simp = np.asarray(multiples) * np.asarray(fittingp) + self.adds
+        multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(self.adds) - 5), 1)])
+        simp = multiples * np.asarray(fittingp) + self.adds
+        '''
         if np.any(simp[:5] < 0):
             return None
         if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
             return None
+        '''
         return simp
 
     def cmaes(self, sigma, ngen, popsize, mu, N, restarts, verbose, tolhistfun, ftarget, restart_from_best=False):
@@ -440,6 +389,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
             logbook: list of dicts, length ngen, contains stats for each generation
         """
         toolbox = deap_base.Toolbox()
+
         toolbox.register('evaluate', self.residual)
         #parallel = multiprocessing.cpu_count()
         #pool = multiprocessing.Pool(parallel)
@@ -556,7 +506,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
                     # simulate best individual one more time to print fitness and save sim_list
                     # optionally plot sim and exp, plot trapezoids of best individual
                     # self.fitness_individual(self.best_uncorr, plot_on=False, print_fitness=True)
-                    residual(self.Qxexp, self.q, self.Q__Z)(self.best_uncorr)
+                    residual(self.I, self.qx, self.qz)(self.best_uncorr)
 
                     # make population dataframe, order of rows is first generation for all children, then second generation for all children...
                     # make and print best individual series
@@ -583,15 +533,19 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.best_uncorr = halloffame[0]  # np.abs(halloffame[0])
         self.best_fitness = halloffame[0].fitness.values[0]
         self.best_corr = fittingp_to_simp(self.best_uncorr)
-        self.residual(self.best_corr, test='True')
+        #self.residual(self.best_corr, test='True')
         print(self.best_corr, self.best_fitness)
+        '''
         # make population dataframe, order of rows is first generation for all children, then second generation for all children...
-        self.population_array = np.array(
-            [list(individual) for generation in population_list for individual in generation])
+        self.population_array = np.array([list(individual) for generation in population_list for individual in generation])
+        print('poparr1', np.shape(self.population_array))
         self.population_array = self.fittingp_to_simp(self.population_array)
-        self.fitness_array = np.array(
-            [individual.fitness.values[0] for generation in population_list for individual in generation])
-        # self.population_frame = pd.DataFrame(np.column_stack((self.population_array, self.fitness_array)))
+        print('poparr2', np.shape(self.population_array))
+        np.save('/Users/guillaumefreychet/Desktop/poparr.npy', self.population_array)
+        self.fitness_array = np.array([individual.fitness.values[0] for generation in population_list for individual in generation])
+        print('popfit', np.shape(self.fitness_array))
+        self.population_frame = pd.DataFrame(np.column_stack((self.population_array, self.fitness_array)))
+        '''
 
     def mcmc(self, N, sigma, nsteps, nwalkers, use_mh=False, parallel=True, seed=None, verbose=True):
         """Fit with emcee package's implementation of MCMC algorithm and place into instance of self
@@ -720,12 +674,14 @@ class CDSAXSWidget(QtGui.QTabWidget):
         best_index = np.argmin(flatfitness)
         self.best_fitness = flatfitness[best_index]
         self.best_uncorr = flatchain[best_index]
-        self.best_corr = self.fittingp_to_simp(self.best_uncorr)
+        self.best_corr = fittingp_to_simp(self.best_uncorr)
         self.residual(self.best_uncorr, test='True')
         # can't make sampler attribute before run_mcmc, pickling error
         self.sampler = samplers if use_mh == 'MH' else sampler
-        self.population_array = self.fittingp_to_simp(flatchain)
-        '''
+        self.population_array = fittingp_to_simp(flatchain)
+        np.save('/Users/guillaumefreychet/Desktop/poparr2.npy', self.population_array)
+        #self.population_array = flatchain
+
         self.population_frame = pd.DataFrame(np.column_stack((self.population_array, flatfitness)))
         gen_start = 0
         gen_stop = len(flatfitness)
@@ -736,9 +692,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
             index.extend(list(range(i * popsize, (i + 1) * popsize)))
         resampled_frame = self.population_frame.iloc[index]
         self.stats = resampled_frame.describe()
-        self.stats.to_csv('C:/Users/cdl/Desktop/test.csv')
-        '''
-
+        self.stats.to_csv('/Users/guillaumefreychet/Desktop/test.csv')
 
 class CDRawWidget(pg.ImageView):
     pass
