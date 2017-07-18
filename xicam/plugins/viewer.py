@@ -81,6 +81,7 @@ class ViewerPlugin(base.plugin):
         calicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_28.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.calibrationPanel, calicon))
         self.calibrationPanel.sigCalibrate.connect(self.calibrate)
+        self.calibrationPanel.sigSimulateCalibrant.connect(self.simulatecalibrant)
 
         super(ViewerPlugin, self).__init__(*args, **kwargs)
 
@@ -127,6 +128,9 @@ class ViewerPlugin(base.plugin):
 
     def drawsgoverlay(self, peakoverlay):
         self.getCurrentTab().drawsgoverlay(peakoverlay)
+
+    def simulatecalibrant(self,calibrant):
+        self.getCurrentTab().simulatecalibrant(calibrant)
 
     def addmode(self):
         """

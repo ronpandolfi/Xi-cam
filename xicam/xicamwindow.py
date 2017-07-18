@@ -12,7 +12,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-import config
+from xicam import config
 import watcher
 #import daemon
 import pipeline
@@ -75,7 +75,7 @@ class Login(QtGui.QDialog):
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
-
+        print 'Gui:\t\t\t', QtGui.QApplication.instance().thread()
         QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
         import plugins
@@ -107,6 +107,9 @@ class MyMainWindow(QtCore.QObject):
         # ACTIONS
         # Wire up action buttons
         self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.findChild(QtGui.QAction, 'actionSettings').triggered.connect(self.settingsopen)
+        self.ui.findChild(QtGui.QAction, 'actionQuit').triggered.connect(QtGui.QApplication.instance().quit)
+
         self.ui.actionExport_Image.triggered.connect(self.exportimage)
 
         # Grab status bar
@@ -454,3 +457,6 @@ class MyMainWindow(QtCore.QObject):
             #     self.loadplugin(hiprmc)
             #
             # def loadplugin(self,module):
+
+    def settingsopen(self):
+        config.settings.showEditor()

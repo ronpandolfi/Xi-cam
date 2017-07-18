@@ -24,8 +24,7 @@ Upon opening Xi-cam, you will be greeted with a default screen. Click on the tom
     :width: 900 px
 
 
-These are the main panels and toolbars that are visible in the tomography plugin (see image :ref:`opening_screen`
-below):
+These are the main panels and toolbars that are visible in the tomography plugin:
 
 * Left panel, tab 1: **file browser**. If you click on a file, a thumbnail appears in the upper left panel. If you
   double-click a file, it will be loaded (see :ref:`filebrowser`)
@@ -35,14 +34,12 @@ below):
   divided during a reconstruction.
 * Left panel, tab 4: **metadata viewer**. Shows the metadata for the currently loaded data set
 * Center upper panel: shows different views and previews of the raw data and tomographic reconstruction
-  (see:ref:`main_viewing_panel`)
+  (see :ref:`main_viewing_panel`)
 * Center lower panel: shows a log for various processes
 * Center top: **toolbar** with buttons to run and preview reconstructions and to open the manual center of rotation
   detection overlay module (see :ref:`toolbar`)
 
 In most cases, the bar separating any two components can be dragged to resize the window.
-
-.. _opening_screen:
 
 .. image:: images/tomography_2.png
     :width: 900 px
@@ -164,7 +161,7 @@ clears that preview from the display. The checkmark button sets the pipeline to 
 used for that preview. NOTE: when you click the checkmark, if there were functions in the pipeline that were unchecked,
 they will be removed from the pipeline completely; they can always be re-added.
 
-Only 10 preview reconstructions are kept in memory, older ones are automatically deleted as more than 10 are added.
+Only 40 preview reconstructions are kept in memory, older ones are automatically deleted as more than 40 are added.
 
 .. _toolbar:
 

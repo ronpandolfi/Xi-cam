@@ -14,12 +14,13 @@ class InvokeEvent(QtCore.QEvent):
 class Invoker(QtCore.QObject):
     def event(self, event):
         event.fn(*event.args, **event.kwargs)
-
         return True
 
 _invoker = Invoker()
 
 
 def invoke_in_main_thread(fn, *args, **kwargs):
+    # print 'attempt invoke:',fn,args,kwargs
     QtCore.QCoreApplication.postEvent(_invoker,
         InvokeEvent(fn, *args, **kwargs))
+    # print 'successful invoke:',fn,args,kwargs

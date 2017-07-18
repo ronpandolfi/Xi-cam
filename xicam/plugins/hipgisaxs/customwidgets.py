@@ -45,6 +45,8 @@ class vector(QtGui.QWidget):
     def __init__(self):
         super(vector, self).__init__()
 
+        self.makeValues()
+
         self.horizontalLayout = QtGui.QHBoxLayout(self)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
@@ -54,32 +56,28 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1LeftParenthesis3D.setFont(font)
         self.UnitCellVec1LeftParenthesis3D.setObjectName(_fromUtf8("UnitCellVec1LeftParenthesis3D"))
         self.horizontalLayout.addWidget(self.UnitCellVec1LeftParenthesis3D)
-        self.value1 = QtGui.QDoubleSpinBox(self)
-        self.value1.setDecimals(3)
-        self.value1.setMinimum(-1000.0)
-        self.value1.setMaximum(1000.0)
-        self.value1.setSingleStep(0.5)
+        self.value1.setMinimum(-1000)
+        self.value1.setMaximum(1000)
+        self.value1.setSingleStep(1)
         self.value1.setProperty("value", 0.0)
         self.value1.setObjectName(_fromUtf8("value1"))
         self.horizontalLayout.addWidget(self.value1)
         self.UnitCellVec1Comma1 = QtGui.QLabel(self)
         self.UnitCellVec1Comma1.setObjectName(_fromUtf8("UnitCellVec1Comma1"))
         self.horizontalLayout.addWidget(self.UnitCellVec1Comma1)
-        self.value2 = QtGui.QDoubleSpinBox(self)
-        self.value2.setDecimals(3)
-        self.value2.setMinimum(-1000.0)
-        self.value2.setMaximum(1000.0)
-        self.value2.setSingleStep(0.5)
+        self.value2.setMinimum(-1000)
+        self.value2.setMaximum(1000)
+        self.value2.setSingleStep(1)
+        self.value2.setProperty("value", 0.0)
         self.value2.setObjectName(_fromUtf8("value2"))
         self.horizontalLayout.addWidget(self.value2)
         self.UnitCellVec1Comma2 = QtGui.QLabel(self)
         self.UnitCellVec1Comma2.setObjectName(_fromUtf8("UnitCellVec1Comma2"))
         self.horizontalLayout.addWidget(self.UnitCellVec1Comma2)
-        self.value3 = QtGui.QDoubleSpinBox(self)
-        self.value3.setDecimals(3)
-        self.value3.setMinimum(-1000.0)
-        self.value3.setMaximum(1000.0)
-        self.value3.setSingleStep(0.5)
+        self.value3.setMinimum(-1000)
+        self.value3.setMaximum(1000)
+        self.value3.setSingleStep(1)
+        self.value3.setProperty("value", 0.0)
         self.value3.setObjectName(_fromUtf8("value3"))
         self.horizontalLayout.addWidget(self.value3)
         self.UnitCellVec1RightParenthesis3D = QtGui.QLabel(self)
@@ -92,14 +90,24 @@ class vector(QtGui.QWidget):
         self.UnitCellVec1Comma2.setText(",")
         self.UnitCellVec1RightParenthesis3D.setText(")")
 
+        self.setValue([0,0,0])
+
         self.value1.valueChanged.connect(self.sigValueChanged)
         self.value2.valueChanged.connect(self.sigValueChanged)
         self.value3.valueChanged.connect(self.sigValueChanged)
+
+    def makeValues(self):
+        self.value1 = QtGui.QDoubleSpinBox()
+        self.value2 = QtGui.QDoubleSpinBox()
+        self.value3 = QtGui.QDoubleSpinBox()
+        for v in [self.value1,self.value2,self.value3]:
+            v.setDecimals(3)
 
     def value(self):
         return self.value1.value(), self.value2.value(), self.value3.value()
 
     def setValue(self, v):
+        if v is None: return
         self.value1.setValue(v[0])
         self.value2.setValue(v[1])
         self.value3.setValue(v[2])
@@ -108,6 +116,15 @@ class vector(QtGui.QWidget):
         self.value1.setEnabled(enabled)
         self.value2.setEnabled(enabled)
         self.value3.setEnabled(enabled)
+
+class intvector(vector):
+    sigValueChanged = QtCore.Signal()
+    sigChanged = sigValueChanged
+
+    def makeValues(self):
+        self.value1 = QtGui.QSpinBox()
+        self.value2 = QtGui.QSpinBox()
+        self.value3 = QtGui.QSpinBox()
 
 
 class ROlineEdit(QtGui.QLineEdit):
@@ -710,8 +727,8 @@ class structure(form):
             self.LatticeC = VectorParameter(name='C', value=(0, 0, 30))
             self.LatticeChoice = pTypes.ListParameter(name='Type', type='list',
                                                       values=["Custom...", "Simple Cubic", "Body Centered Cubic",
-                                                              'Face Centered Cubic', 'Hexagonal'])
-            self.Repetition = VectorParameter(name='Repetition', value=(2, 2, 2))
+                                                              'Face Centered Cubic', 'Hexagonal Planar'])
+            self.Repetition = IntVectorParameter(name='Repetition', value=(2, 2, 2), type=int,step=1)
             self.Scaling = pTypes.SimpleParameter(name='Scaling', value=1, type='float')
             self.Lattice = hideableGroupParameter(name='Lattice', children=[self.LatticeChoice,
                                                                             self.LatticeA,
@@ -808,24 +825,26 @@ class structure(form):
         self.setConnected(False)
 
         if choice == 'Simple Cubic':
-            self.LatticeA.setValue((10, 0, 0))
-            self.LatticeB.setValue((0, 10, 0))
-            self.LatticeC.setValue((0, 0, 10))
+            self.LatticeA.setValue((30, 0, 0))
+            self.LatticeB.setValue((0, 30, 0))
+            self.LatticeC.setValue((0, 0, 30))
 
         elif choice == 'Body Centered Cubic':
-            self.LatticeA.setValue((-5, 5, 5))
-            self.LatticeB.setValue((5, 5, 5))
-            self.LatticeC.setValue((-5, -5, 5))
+            self.LatticeA.setValue((-30, 30, 15))
+            self.LatticeB.setValue((30, 30, 30))
+            self.LatticeC.setValue((-30, -30, 30))
 
         elif choice == 'Face Centered Cubic':
-            self.LatticeA.setValue((5, 5, 0))
-            self.LatticeB.setValue((0, 5, 5))
-            self.LatticeC.setValue((5, 0, 5))
+            self.LatticeA.setValue((30, 30, 0))
+            self.LatticeB.setValue((0, 30, 30))
+            self.LatticeC.setValue((30, 0, 30))
 
-        elif choice == 'Hexagonal':
-            self.LatticeA.setValue((10, 0, 0))
-            self.LatticeB.setValue((5, 3 ** .5 * .5, 0))
-            self.LatticeC.setValue((0, 0, 10))
+        elif choice == 'Hexagonal Planar':
+            self.LatticeA.setValue((10*3, 0, 0))
+            self.LatticeB.setValue((5*3, 3 ** .5 * .5*10.*3, 0))
+            self.LatticeC.setValue((0, 0, 10*3))
+
+        # TODO: Add HCP
 
         #self.showUnitCell()
 
@@ -1015,20 +1034,23 @@ class detector(form):
 
 
 class VectorParameterItem(pTypes.WidgetParameterItem):
-    def makeWidget(self):
-        w = vector()
+    def makeWidget(self, cls = vector):
+        w = cls()
         opts = self.param.opts
         value = opts.get('value', None)
         if value is not None:
             w.setValue(value)
+        else:
+            w.setValue([0,0,0])
 
         self.value = w.value
         self.setValue = w.setValue
 
         return w
 
-    def valueChanged(self, *args, **kwargs):
-        super(VectorParameterItem, self).valueChanged(*args, **kwargs)
+class IntVectorParameterItem(VectorParameterItem):
+    def makeWidget(self):
+        return super(IntVectorParameterItem, self).makeWidget(cls=intvector)
 
 
 class VectorParameter(Parameter):
@@ -1040,6 +1062,8 @@ class VectorParameter(Parameter):
     def defaultValue(self):
         return (0, 0, 0)
 
+class IntVectorParameter(VectorParameter):
+    itemClass = IntVectorParameterItem
 
 registerParameterType('Vector', VectorParameter, override=True)
 
@@ -1062,7 +1086,7 @@ class ScalableGroup(hideableGroupParameter):
         pTypes.GroupParameter.__init__(self, **opts)
 
     def addNew(self):
-        self.addChild(dict(name="Point %d" % (len(self.childs) + 1), type='Vector', removable=True, renamable=True))
+        self.addChild(dict(name="Point %d" % (len(self.childs) + 1), type='Vector', removable=True, renamable=True, value=[0,0,0]))
 
     def toArray(self):
         return [list(child.value()) for child in self.children()]

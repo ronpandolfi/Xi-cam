@@ -91,14 +91,14 @@ def clear():
     for item in viewWidget.items:
         item._setView(None)
     grid = gl.GLGridItem(size=QtGui.QVector3D(200,200,0))
-    grid.setSpacing(10,10,10)
+    grid.setSize(10,10,10)
     viewWidget.items = [grid]
     addLayer(-20., 0.)
     viewWidget.update()
 
 
 def showLattice(a, b, c, orders=7, basis=None, shape='Sphere', z0=0, xrot=0, yrot=0, zrot=0, **kwargs):
-    vecs = latvec.latticevectors(a, b, c, kwargs['radius'], orders, maxr=100, maxz=30)
+    vecs = latvec.latticevectors(a, b, c, kwargs['radius'], maxreps=100, repetitions = kwargs['repetitions'], scaling=kwargs['scaling'])
 
     linez=0
 
@@ -119,7 +119,7 @@ def showLattice(a, b, c, orders=7, basis=None, shape='Sphere', z0=0, xrot=0, yro
                 linez = kwargs['height']
 
 
-    lines = latvec.latticelines(a, b, c, linez+z0, orders-1, maxr=100, maxz=30)
+    lines = latvec.latticelines(a, b, c, linez+z0, maxreps=100, repetitions=kwargs['repetitions'], scaling=kwargs['scaling'])
 
     viewWidget.addItem(latticeFrame(lines))
 
@@ -237,4 +237,5 @@ def redraw(*args,**kwargs):
                             map(float, feature.structure.LatticeC.value()), basis=basis, z0=particlez,
                         shape=feature.Type.value(), radius=feature.Radius.Value.value(), height=feature.Height.Value.value(),
                         width=feature.Width.Value.value(), length=feature.Length.Value.value(), baseangle=feature.BaseAngle.Value.value(),
-                        xrot=feature.XRotation.value(),yrot=feature.YRotation.value(),zrot=feature.ZRotation.value())
+                        xrot=feature.XRotation.value(),yrot=feature.YRotation.value(),zrot=feature.ZRotation.value(),
+                        repetitions=feature.structure.Repetition.value(),scaling=feature.structure.Scaling.value())

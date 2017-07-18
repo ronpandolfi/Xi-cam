@@ -13,7 +13,7 @@ import glob
 import re
 import writer
 from xicam import debugtools, config
-from pipeline.formats import TiffStack
+from pipeline.formats import TiffStack, CondensedTiffStack
 from PySide import QtGui
 from collections import OrderedDict
 from pipeline import msg
@@ -121,21 +121,7 @@ def loadparas(path):
             return head[0].header
 
         elif extension == '.edf':
-            txtpath = os.path.splitext(path)[0] + '.txt'
-            fimg = fabio.open(path)
-            if os.path.isfile(txtpath):
-                return merge_dicts(fimg.header, scanparas(txtpath))
-            else:
-                basename = os.path.splitext(path)[0]
-                obj = re.search('_\d+$', basename)
-                if obj is not None:
-                    iend = obj.start()
-                    token = basename[:iend] + '*txt'
-                    txtpath = glob.glob(token)[0]
-
-                    return merge_dicts(fimg.header, scanparas(txtpath))
-                else:
-                    return fimg.header
+            return fabio.open(path).header
 
         elif extension == '.gb':
             return {}
@@ -147,73 +133,14 @@ def loadparas(path):
 
         elif extension in ['.tif', '.img', '.tiff']:
             fimg = fabio.open(path)
-            try:
-                frame = int(re.search('\d+(?=.tif)', path).group(0))
-                paraspath = re.search('.+(?=_\d+.tif)', path).group(0)
-                textheader = scanparas(paraspath, frame)
-            except AttributeError:
-                textheader = dict()
+            return fimg.header
 
-            return merge_dicts(fimg.header, textheader)
 
     except IOError:
         msg.logMessage('Unexpected read error in loadparas',msg.ERROR)
     except IndexError:
         msg.logMessage('No txt file found in loadparas',msg.WARNING)
     return OrderedDict()
-
-
-def scanparas(path, frame=None):
-    if not os.path.isfile(path):
-        return dict()
-
-    with open(path, 'r') as f:
-        lines = f.readlines()
-
-    if lines[0][:2] == '#F':
-        paras = scanalesandroparaslines(lines, frame)
-    else:
-        paras = scanparaslines(lines)
-
-    return paras
-
-
-def scanparaslines(lines):
-    paras = OrderedDict()
-    keylesslines = 0
-    for line in lines:
-        cells = filter(None, re.split('[=:]+', line))
-
-        key = cells[0].strip()
-
-        if cells.__len__() == 2:
-            cells[1] = cells[1].split('/')[0]
-            paras[key] = cells[1].strip()
-        elif cells.__len__() == 1:
-            keylesslines += 1
-            paras['Keyless value #' + str(keylesslines)] = key
-
-    return paras
-
-
-def scanalesandroparaslines(lines, frame):
-    keys = []
-    values = []
-    correctframe = False
-    for line in lines:
-        token = line[:2]
-        if token == '#O':
-            keys.extend(line.split()[1:])
-        elif token == '#S':
-            if int(line.split()[1]) == frame:
-                correctframe = True
-            else:
-                correctframe = False
-        elif token == '#P' and correctframe:
-            values.extend(line.split()[1:])
-
-    return OrderedDict(zip(keys, values))
-
 
 def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, paras2=None):
     if data1 is None or data2 is None or paras1 is None or paras2 is None:
@@ -347,7 +274,16 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    img = loadimage(path)
+
+    # Do extra rotations/transposition
+    if config.settings['Image Load Transpose']:
+        img=img.transpose()
+    if config.settings['Image Load Rotations']:
+        img=np.rot90(img,config.settings['Image Load Rotations'])
+
+    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
+    return img
 
 
 def loadxfs(path):
@@ -498,7 +434,7 @@ class diffimage():
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -870,6 +806,8 @@ class StackImage(object):
                 filepath = filepath[0]
             if isinstance(filepath, list) or os.path.isdir(filepath):
                 self.fabimage = TiffStack(filepath)
+            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
+                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -896,6 +834,9 @@ class StackImage(object):
         if self._rawdata is None:
             self._rawdata = self._getframe()
         return self._rawdata
+
+    def transpose(self, ax): # transposing is handled internally
+        return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
@@ -1102,7 +1043,7 @@ class diffimage2(object):
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1247,6 +1188,11 @@ class diffimage2(object):
     def view(self, t):
         if t is np.ndarray:
             return self.displaydata
+
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            msg.logMessage('Conflict with newstyle pyqtgraph imageview; see line 669',level=msg.ERROR)
+        return self
 
     def __getitem__(self, item):
         return self.displaydata[item]
@@ -1394,6 +1340,7 @@ class multifilediffimage2(diffimage2):
 
     @property
     def currentframe(self):
+        if self._currentframe is None: return 0
         return self._currentframe
 
     @currentframe.setter
