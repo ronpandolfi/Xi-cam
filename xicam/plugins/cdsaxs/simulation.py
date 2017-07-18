@@ -13,7 +13,6 @@ def trapezoid_form_factor(qy, qz, y1, y2, langle, rangle, h):
         ff = (t4 - t3) / qy
     return ff
 
-
 def stacked_trapezoids(qy, qz, y1, y2, height, langle, rangle=None):
     if not isinstance(langle, np.ndarray):
         raise TypeError('anlges should be array')
@@ -35,7 +34,6 @@ def stacked_trapezoids(qy, qz, y1, y2, height, langle, rangle=None):
         y2 += height / m2
 
     return np.absolute(ff) ** 2
-
 
 def multipyramid(h, w, a, nx, ny):
     if nx % 2 == 1:

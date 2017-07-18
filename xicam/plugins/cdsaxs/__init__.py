@@ -45,11 +45,10 @@ from deap import cma as cmaes
 creator.create('FitnessMin', deap_base.Fitness, weights=(-1.0,))  # want to minimize fitness
 creator.create('Individual', list, fitness=creator.FitnessMin)
 
-intensity = None
-Q_x = None
-Q_z = None
+intensity, adds, Q_x, Q_z = None, None, None, None
 
 def residual(p, test='False', plot_mode=False):
+
     simp = fittingp_to_simp(p)
     if simp is None:
         return fix_fitness_cmaes(np.inf)
@@ -59,9 +58,12 @@ def residual(p, test='False', plot_mode=False):
 
     res = 0
     for i in range(0, len(intensity), 1):
+        Qxfit[i] -= min(Qxfit[i])
+        Qxfit[i] /= max(Qxfit[i])
+        Qxfit[i] += i + 1
         res += fitting.log_error(intensity[i],Qxfit[i])
 
-    return fix_fitness_cmaes(res)
+    return fix_fitness(res)
 
 def fittingp_to_simp(fittingp):
     # values assume initial fittingp centered at 0 and std. dev. of 100
@@ -69,22 +71,19 @@ def fittingp_to_simp(fittingp):
     multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
     simp = multiples * np.asarray(fittingp) + adds
 
-    '''
     if np.any(simp[:5] < 0):
         return None
     if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
         return None
-    '''
+
     return simp
 
-def SL_model1(H, LL, Beta, DW_factor=0.11, I0=1, Bk=1):
-    #langle = np.asarray(Beta)
-    #rangle = np.asarray(Beta)
+def SL_model1(H, LL, Beta, DW_factor=0.11, I0=3, Bk=3):
     langle = np.deg2rad(np.asarray(Beta))
     rangle = np.deg2rad(np.asarray(Beta))
     Qxfit = []
     for i in range(len(Q_z)):
-        Qxfit.append(simulation.stacked_trapezoids(Q_z[i], Q_x[i], 0, LL, H, langle, rangle))
+        Qxfit.append(simulation.stacked_trapezoids(Q_x[i], Q_z[i], 0, LL, H, langle, rangle))
 
     Qxfitc = fitting.corrections_DWI0Bk(Qxfit, DW_factor, I0, Bk, Q_x, Q_z)
     return Qxfitc
@@ -254,19 +253,20 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.img = cdsaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
         self.CDCartoWidget.setImage(self.img)
 
-        # set globals
         global Q_x, Q_z, intensity, adds
+        # set globals
         Q_x = self.qx
         Q_z = self.qz
         intensity = self.I
 
         #Display the experimental profiles
         self.update_profile_ini()
+
         self.Qxfit = SL_model1(50, 40, np.array([70]))
         self.update_profile(plot = 'True')
         self.maxres = 0
 
-    def fitting_test1(self, H=10, LL=20, Beta1=70, Num_trap=5, DW=0.11, I0=1, Bk=1):  # these are simp not fittingp
+    def fitting_test1(self, H=10, LL=20, Beta1=70, Num_trap=5, DW=0.11, I0=3, Bk=1):  # these are simp not fittingp
 
         self.number_trapezoid = int(Num_trap)
         initiale_value = [DW, I0, Bk, int(H), int(LL)] + [int(Beta1) for i in range(0, self.number_trapezoid,1)]
@@ -274,22 +274,22 @@ class CDSAXSWidget(QtGui.QTabWidget):
         print(self.adds)
 
         # set globals
-        global adds, Qxfit
+        global adds, fix_fitness
         adds = self.adds
 
-        self.fix_fitness = fix_fitness_cmaes
-        Qxfit = SL_model1(H, LL, np.array([int(Beta1) for i in range(0, self.number_trapezoid,1)]))
+        #self.fix_fitness = fitting.fix_fitness_cmaes
+        fix_fitness = fix_fitness_cmaes
+        self.Qxfit = SL_model1(H, LL, np.array([int(Beta1) for i in range(0, self.number_trapezoid,1)]))
         self.update_profile(plot='True')
 
         self.cmaes(sigma=200, ngen=200, popsize=100, mu=10, N=len(initiale_value), restarts=0, verbose=False, tolhistfun=5e-5, ftarget=None)
+        self.Qxfit = SL_model1(self.best_corr[3], self.best_corr[4], np.array([self.best_corr[i+5] for i in range(0, self.number_trapezoid,1)]))
 
-        print(self.best_uncorr)
-
-        #self.Qxfit = SL_model1(self.best_corr[3], self.best_corr[4], np.array([self.best_corr[i+5] for i in range(0, self.number_trapezoid,1)]), self.best_corr[0], self.best_corr[1], self.best_corr[2])
-        self.residual(self.best_uncorr, test='True')
+        #self.residual(self.best_uncorr, test='True')
         self.update_profile(plot='True')
 
         print('OK')
+
         '''
         #initiale_value1 = [self.best_corr[0], self.best_corr[1], self.best_corr[2], self.best_corr[3], self.best_corr[4], self.best_corr[5], self.best_corr[6], self.best_corr[7], self.best_corr[8], self.best_corr[9]]
         #self.adds = np.asarray(initiale_value1)
@@ -339,48 +339,6 @@ class CDSAXSWidget(QtGui.QTabWidget):
                 guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders1[order].setData, self.qz[order],
                                                  np.log(self.Qxfit[order]))
 
-    # @debugtools.timeit
-    def residual(self, p, test='False', plot_mode=False):
-        simp = self.fittingp_to_simp(p)
-        if simp is None:
-            return self.fix_fitness(np.inf)
-        DW, I0, Bkg, H, LL, Beta = simp[0], simp[1], simp[2], simp[3], simp[4], np.array(simp[5:])
-        print(H, LL, Beta)
-
-        self.Qxfit = self.SL_model1(H, LL, Beta, DW, I0, Bkg)
-        self.update_profile(test)
-
-        res = 0
-        for i in range(0, len(self.I), 1):
-            res += fitting.log_error(self.I[i], self.Qxfit[i])
-
-        return self.fix_fitness(res)
-
-    def SL_model1(self, H, LL, Beta, DW_factor=0, I0=1, Bk=0):
-        qy = self.qz
-        qz = self.qx
-        langle = np.deg2rad(np.asarray(Beta))
-        rangle = np.deg2rad(np.asarray(Beta))
-        self.Qxfit = []
-        self.Qxfitc = []
-        for i in range(len(qz)):
-            self.Qxfit.append(simulation.stacked_trapezoids(qz[i], qy[i], 0, LL, H, langle, rangle))
-
-        self.Qxfitc = fitting.corrections_DWI0Bk(self.Qxfit, DW_factor, I0, Bk, qy, qz)
-        return self.Qxfitc
-
-    def fittingp_to_simp(self, fittingp):
-        # values assume initial fittingp centered at 0 and std. dev. of 100
-        multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(self.adds) - 5), 1)])
-        simp = multiples * np.asarray(fittingp) + self.adds
-        '''
-        if np.any(simp[:5] < 0):
-            return None
-        if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
-            return None
-        '''
-        return simp
-
     def cmaes(self, sigma, ngen, popsize, mu, N, restarts, verbose, tolhistfun, ftarget, restart_from_best=False):
         """Modified from deap/algorithms.py to return population_list instead of final population and use additional termination criteria
 
@@ -390,10 +348,10 @@ class CDSAXSWidget(QtGui.QTabWidget):
         """
         toolbox = deap_base.Toolbox()
 
-        toolbox.register('evaluate', self.residual)
-        #parallel = multiprocessing.cpu_count()
-        #pool = multiprocessing.Pool(parallel)
-        #toolbox.register('map', pool.map)
+        toolbox.register('evaluate', residual)
+        parallel = multiprocessing.cpu_count()
+        pool = multiprocessing.Pool(parallel)
+        toolbox.register('map', pool.map)
         #last_time = time.perf_counter()
         process = psutil.Process()
         print('{} CPUs in node'.format(multiprocessing.cpu_count()))
@@ -506,7 +464,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
                     # simulate best individual one more time to print fitness and save sim_list
                     # optionally plot sim and exp, plot trapezoids of best individual
                     # self.fitness_individual(self.best_uncorr, plot_on=False, print_fitness=True)
-                    residual(self.I, self.qx, self.qz)(self.best_uncorr)
+                    #residual(self.I, self.qx, self.qz)(self.best_uncorr)
+                    residual(self.best_uncorr)
 
                     # make population dataframe, order of rows is first generation for all children, then second generation for all children...
                     # make and print best individual series
@@ -524,7 +483,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
             else:
                 print('Iteration terminated due to ngen criterion after {} gens'.format(cur_gen))
 
-        #pool.close()
+        pool.close()
         self.logbook = logbook
         self.morestats = morestats
         self.strategy = strategy
@@ -533,8 +492,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.best_uncorr = halloffame[0]  # np.abs(halloffame[0])
         self.best_fitness = halloffame[0].fitness.values[0]
         self.best_corr = fittingp_to_simp(self.best_uncorr)
-        #self.residual(self.best_corr, test='True')
-        print(self.best_corr, self.best_fitness)
+        print('best', self.best_corr, self.best_fitness)
+
         '''
         # make population dataframe, order of rows is first generation for all children, then second generation for all children...
         self.population_array = np.array([list(individual) for generation in population_list for individual in generation])
@@ -675,7 +634,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.best_fitness = flatfitness[best_index]
         self.best_uncorr = flatchain[best_index]
         self.best_corr = fittingp_to_simp(self.best_uncorr)
-        self.residual(self.best_uncorr, test='True')
+        #Warning, it was a self.residual
+        residual(self.best_uncorr, test='True')
         # can't make sampler attribute before run_mcmc, pickling error
         self.sampler = samplers if use_mh == 'MH' else sampler
         self.population_array = fittingp_to_simp(flatchain)

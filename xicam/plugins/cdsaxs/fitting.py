@@ -1,6 +1,6 @@
 import numpy as np
 from pyswarm import pso
-
+import __init__
 import simulation
 
 from pyevolve import G1DList
@@ -99,6 +99,8 @@ def residual(p, test = 'False', plot_mode=False):
     maxres = min(maxres, res)
     return res
 '''
+
+
 def corrections_DWI0Bk(Is, DW_factor, I0, Bk, qxs, qzs):
     I_corr = []
     for I, qx, qz in zip(Is, qxs, qzs):
