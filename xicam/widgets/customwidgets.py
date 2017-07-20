@@ -120,6 +120,10 @@ class ImageView(pg.ImageView):
             pass
 
 class histDialogButton(QtGui.QPushButton):
+    """
+    Button to connect to a pyqtgraph.HistogramLUTWidget. Sets the maximum and minimum hist value based on
+    values provided by user from popup dialog
+    """
 
     def __init__(self, label, *args, **kwargs):
         super(histDialogButton, self).__init__(label, *args, **kwargs)
