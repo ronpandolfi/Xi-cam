@@ -254,6 +254,8 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 
 def loadthumbnail(path):
     try:
+        # query the database here
+        # currently the assumption is that info is cached in nexus files
         if os.path.splitext(path)[1] in ['.nxs', '.hdf']:
             nxroot = nx.load(pathtools.path2nexus(path))
             # print nxroot.tree

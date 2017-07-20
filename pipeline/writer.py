@@ -60,14 +60,14 @@ def writenexus(nexroot, path):
         msg.logMessage('IOError: Check that you have write permissions.',msg.ERROR)
 
 
-@debugtools.timeit
+# @debugtools.timeit
 def thumbnail(img, factor=5):
     """
     Generate a thumbnail from an image
     """
 
     shape = img.shape[::-1]
-    img = Image.fromarray(img)
+    img = Image.fromarray(img).convert('I')
     img.thumbnail(np.divide(shape, factor))
     # print 'thumb:', shape, np.array(img).shape
     return np.array(img)

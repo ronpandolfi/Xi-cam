@@ -36,7 +36,7 @@ def path2nexus(path):
 
 
 def getRoot():
-    if sys.platform == 'linux2':
+    if sys.platform == 'linux':
         return '/'
     elif sys.platform == 'darwin':
         return '/Volumes'
