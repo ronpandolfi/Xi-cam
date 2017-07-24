@@ -25,7 +25,7 @@ from extract_signal_to_noise_ratio import extract_SNR
 from bckgrd_subtract import bckgrd_subtract
 from peak_fitting_GLS import peak_fitting_GLS
 
-def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A, bcenter_x_pix, bcenter_y_pix,
+def run(filepath, p,
             polarization, smpls_per_row,
             Imax_Iave_ratio_module,
             texture_module,
@@ -46,10 +46,6 @@ def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    # initializing parameters  # distance from sample to detector plane along beam direction in pixel space
-    Rot = (np.pi * 2 - detect_tilt_alpha_rad) / (2 * np.pi) * 360  # detector rotation
-    tilt = detect_tilt_beta_rad / (2 * np.pi) * 360  # detector tilt  # wavelength
-
     print 'processing image ' + filepath
     print("\r")
 
@@ -65,8 +61,7 @@ def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, 
         imArray = load_image(filepath)
 
     # data_reduction to generate Q-chi and 1D spectra, Q
-    Q, chi, cake, Qlist, IntAve = data_reduction(imArray, detect_dist_pix, Rot, tilt, wavelength_A,
-                                                           bcenter_x_pix, bcenter_y_pix, polarization)
+    Q, chi, cake, Qlist, IntAve = data_reduction(imArray, p, polarization)
 
     attributes = [['scan_num', index]]
 

@@ -6,15 +6,12 @@ Created on Apr 2017
 
 from PySide.QtGui import *
 from PySide.QtCore import *
-
 from .. import base
 from xicam.plugins.HiTp import widgets
 from xicam import threads
 from xicam import plugins
-
-import numpy as np
+from create_AIobject import create_AIobject
 from xicam.widgets import daemonwidget
-
 from xicam.plugins.HiTp.on_the_fly import run
 import os.path
 from modpkgs import pyqtgraphmod
@@ -36,7 +33,7 @@ def openfiles(filepaths):
     filepaths : list
         list of filepaths
     """
-    print(filepaths)
+    #print(filepaths)
 
     # calibration
     detect_dist_pix = HiTpPlugin.parameters.param('detect_dist_pix').value()
@@ -63,9 +60,11 @@ def openfiles(filepaths):
     background_subtract_module = HiTpPlugin.parameters.param('background_subtraction_module').value()
     peak_fitting_module = HiTpPlugin.parameters.param('peak_fitting_module').value()
 
+    # create an AI object for all the processing
+    p = create_AIobject(detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A, bcenter_x_pix, bcenter_y_pix)
+
     for filepath in sorted(filepaths):
-        run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A,
-            bcenter_x_pix, bcenter_y_pix,
+        run(filepath, p,
             polarization, smpls_per_row,
             Imax_Iave_ratio_module,
             texture_module,
@@ -78,7 +77,6 @@ def openfiles(filepaths):
         folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
         csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
     return csvpath
-
 
 
 HiTpPlugin=base.EZplugin(name='HiTp',
