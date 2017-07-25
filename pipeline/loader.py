@@ -841,7 +841,7 @@ class jpegimageset(object):
 class PStack(object):
     ndim = 3
 
-    def __init__(self, projections, dark, flat, sino, hdr):
+    def __init__(self, projections, dark, flat, sino, hdr, descriptors):
         self.primary = projections
         self.projections = projections
         self.sino = sino
@@ -849,6 +849,7 @@ class PStack(object):
         self.flats = flat
         self.dtype = projections.pixel_type
         self.header = hdr
+        self.descriptors = descriptors
         self.frames = [str(j) for j in range(len(self.projections))]
 
         for pim in (self.sino, self.darks, self.flats, self.primary):
@@ -856,12 +857,6 @@ class PStack(object):
 
     def __len__(self):
         return len(self.primary)
-
-    # shim because this is expected a few other places in
-    # the code.
-    @property
-    def fabimage(self):
-        return self.primary
 
     # these are required because this object gets passed
     # into pyqtgraph which tries to down sample / scale
@@ -918,6 +913,29 @@ class PStack(object):
         if arr.shape[0] == 1:
             arr = arr[0]
         return np.squeeze(arr)
+
+    def flatindices(self):
+
+        # looks through databroker descriptor
+        # TODO: find a better way to search through the doc
+        i0 = 0
+        for descriptor in self.descriptors:
+            try:
+                key = list(descriptor['configuration'].keys())[0]
+                if 'i0cycle' in descriptor['configuration'][key]['data']:
+                    i0 = int(descriptor['configuration'][key]['data']['i0cycle'])
+            except KeyError:
+                pass
+
+
+        nproj = len(self)
+        if i0 > 0:
+            indices = list(range(0, nproj, i0))
+            if indices[-1] != nproj - 1:
+                indices.append(nproj - 1)
+        elif i0 == 0:
+            indices = [0, nproj - 1]
+        return indices
 
 
     @property

@@ -245,7 +245,7 @@ class TomoViewer(QtGui.QWidget):
                                     stream_name='background')
             sinogram = db.db.get_images(h, 'sinogram',
                                         stream_name='sinogram')
-            return ProjectionStack(data=PStack(projection, dark, flat, sinogram, h.start))
+            return ProjectionStack(data=PStack(projection, dark, flat, sinogram, h.start, h.descriptors))
 
         if raw:
             return ProjectionStack(paths)
@@ -307,7 +307,11 @@ class TomoViewer(QtGui.QWidget):
             Array of flat field data
 
         """
-        flats = np.array(list(self.data.flats.values()))
+        if isinstance(self.data.flats, dict):
+            flats = np.array(list(self.data.flats.values()))
+        else:
+            flats = np.array(self.data.flats)
+
         if slc is None:
             return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
         else:
@@ -328,7 +332,11 @@ class TomoViewer(QtGui.QWidget):
             Array of dark field data
 
         """
-        darks = np.array(list(self.data.darks.values()))
+        if isinstance(self.data.darks, dict):
+            darks = np.array(list(self.data.darks.values()))
+        else:
+            darks = np.array(self.data.darks)
+
         if slc is None:
             return np.ascontiguousarray(darks[:, self.sinogramViewer.currentIndex, :])
         else:

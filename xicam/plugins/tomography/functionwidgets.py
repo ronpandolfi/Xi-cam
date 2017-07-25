@@ -37,8 +37,9 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from . import config
 from . import reconpkg
 from . import ui
-import queue
+from . import functionmanager as fm
 from xicam.widgets import featurewidgets as fw
+
 
 
 class FunctionWidget(fw.FeatureWidget):
@@ -342,9 +343,9 @@ class FunctionWidget(fw.FeatureWidget):
                 step = old_div((end - start), 3) + 1
             elif param.value() is not None:
                 start, end, step = old_div(param.value(), 2), 4 * (param.value()) / 2, old_div(param.value(), 2)
-            test = TestRangeDialog(param.type(), (start, end, step))
+            test = fm.TestRangeDialog(param.type(), (start, end, step))
         elif param.type() == 'list':
-            test = TestListRangeDialog(param.opts['values'])
+            test = fm.TestListRangeDialog(param.opts['values'])
         else:
             return
         if test.exec_():
