@@ -24,6 +24,35 @@ from xicam.widgets import explorer
 
 class LibraryPlugin(base.plugin):
 
+    """
+    Library plugin class. Plugin for viewing data and their attributes/metadata, some of which can be user
+    defined. In the future, the plugin will interface with a database (either remote or local) to cache
+    metadata/collections of image/thumbnails so users can organize and sort their data more easily.
+
+    Attributes
+    ----------
+    centerwidget : QtGui.QTabWidget
+        Contains interface for browsing data. The tabs separate interfaces for viewing different Databroker database
+        instances
+    tabBar : explorer.TabBarPlus
+        Tab bar for navigating between different database interfaces. Contains 'plus' (+) button to add interfaces
+        for other interfaces
+    newtabmenu : QtGui.QMenu
+        Menu containing different connections that can be selected by the user. Currently, 'Databroker' instance
+        is the only option
+
+    Signals
+    -------
+    sigUpdateTags: (str, str, object, str)
+        signal emitted when a user changes or adds metadata concerning a dataset. The objects emitted are:
+            1). a str representing the path or unique database ID of the dataset (for now, since there is no database
+                interaction, this str is always a path on the local machine)
+            2). a str representing the field being changed (ex. 'Rating', 'tags', 'keywords', etc.)
+            3). an object representing the new value of the field specified with the second str
+            4). a str representing the action to be performed on the data in the db. It is either 'replace', 'add',
+                or 'delete'
+    """
+
     name = 'Library'
 
     sigUpdateTags = QtCore.Signal(str, str, object, str)
@@ -76,21 +105,26 @@ class LibraryPlugin(base.plugin):
 
         super(LibraryPlugin, self).__init__(*args, **kwargs)
 
-        self.sigUpdateTags.connect(self.printit)
-
-
-        # self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
-
-
-    def printit(self, *x):
-        print(*x)
+        self.sigUpdateTags.connect(lambda *args: print(*args))
 
     def addDatabase(self, library, name):
+        """
+        Adds a database viewing interface to the Library plugin centerwidget
+
+        Parameters
+        ----------
+        library : LibraryWidget
+            LibraryWidget containing thumbwidgets
+        name : str
+            Name to be displayed on the top tab bar
+        """
+
         window = QtGui.QWidget()
 
         # set up thumbwidget library view
         stack = QtGui.QStackedWidget()
         stack.addWidget(library)
+        # connect signal to update tags from child widget's signal
         library.sigUpdateTags.connect(lambda w, x, y, z: self.sigUpdateTags.emit(w, x, y, z))
 
         # set up toolbar, connect signals
@@ -107,6 +141,7 @@ class LibraryPlugin(base.plugin):
         stack.addWidget(column_view)
         column_view.sigOpenFile.connect(self.addViewer)
 
+        # set up layout
         l = QtGui.QVBoxLayout()
         l.addWidget(stack)
         l.addWidget(toolbar)
@@ -114,19 +149,35 @@ class LibraryPlugin(base.plugin):
         self.centerwidget.addTab(window, name)
 
     def showGridWindow(self):
+        """
+        Show grid interface (thumbwidgetitems)
+        """
+
         self.currentStack().setCurrentWidget(self.currentStack().widget(0))
 
     def showImageWindow(self):
+        """
+        Show interface for a single dataset
+        """
+
         if self.currentStack().count() > 2:
             self.currentStack().setCurrentWidget(self.currentStack().widget(2))
 
     def showRowsWindow(self):
+        """
+        Show row interface (with sortable columns)
+        """
+
         columns = self.currentStack().widget(1)
         if not columns.populated:
             columns.populateFromThumbwidgets(self.currentStack().widget(0))
         self.currentStack().setCurrentWidget(columns)
 
     def checkAll(self):
+        """
+        Checks the checkboxes of all thumbwidgets in grid view (excludes folders)
+        """
+
         library = self.currentStack().widget(0)
         for child in library.widget().children(): # loop over all children of LibraryWidget
             if isinstance(child, thumbwidgetitem): # only look for checkbox if child is a thumbwidgetitem
@@ -136,6 +187,10 @@ class LibraryPlugin(base.plugin):
                     child.checkbox.setChecked(True)
 
     def uncheckAll(self):
+        """
+        Unchecks the checkboxes of all thumbwidgets in grid view (including folders)
+        """
+
         library = self.currentStack().widget(0)
         for child in library.widget().children(): # loop over all children of LibraryWidget
             if isinstance(child, thumbwidgetitem): # only look for checkbox if child is a thumbwidgetitem
@@ -143,6 +198,11 @@ class LibraryPlugin(base.plugin):
                     child.checkbox.setChecked(False)
 
     def addViewer(self, widget):
+        """
+        Adds viewer for a single dataset
+        """
+
+        # create image viewer from thumbwidgetitem
         view = LibraryItem(widget)
         view.sigUpdateTags.connect(lambda w, x, y, z: self.sigUpdateTags.emit(w, x, y, z))
         stack = self.currentStack()
@@ -156,11 +216,19 @@ class LibraryPlugin(base.plugin):
         stack.setCurrentWidget(view)
 
     def currentStack(self):
+        """
+        Returns the stack of interfaces (grid, row, image) currently selected
+        """
+
         return self.centerwidget.currentWidget().layout().itemAt(0).widget()
 
 
     # TODO: fill in next four functions to interface with remote databases
+    # TODO: SPOT and HPC interfaces may not be necessary, since we'll assume the databases are Databroker instances
     def createNewLibrary(self):
+        """
+        Exposes self.newtabmenu so user can add new database tab
+        """
         self.newtabmenu.popup(QtGui.QCursor.pos())
 
     def addDataBrokerTab(self):
@@ -173,6 +241,21 @@ class LibraryPlugin(base.plugin):
         print(system)
 
 class columnView(QtGui.QWidget):
+
+    """
+    Widget for viewing attributes of datasets in sortable columns
+
+    Attributes
+    ----------
+    addButton : QtGui.QPushButton
+        When pressed, triggers a dialog so user can select which attributes to sort by in columns
+    table : QtGui.QTableWidget
+        Displays dataset attributes
+    headers : list
+        List of categories in self.table by which data is sorted
+    populated : boolean
+        If False, a new table is generated based on current folder
+    """
 
     sigOpenFile = QtCore.Signal(QtGui.QWidget)
     sigUpdateTags = QtCore.Signal(str, str, object, str)
@@ -214,6 +297,9 @@ class columnView(QtGui.QWidget):
 
 
     def changeColumns(self):
+        """
+        Changes columns by which data is sorted
+        """
 
         # this dictionary should be generated in the __init___ by querying the database
         fields = {'Name': False, 'Thumb': False, 'Rating': False}
@@ -223,6 +309,7 @@ class columnView(QtGui.QWidget):
             if key in fields.keys():
                 fields[key] = True
 
+        # user selects headers to sort data by
         dialog = cw.checkBoxDialog(fields=fields, title='Select fields to sort by')
         headers, accepted = dialog.getHeaders()
 
@@ -247,9 +334,11 @@ class columnView(QtGui.QWidget):
 
 
     def sortColumn(self, index):
+        """
+        Allows normal sorting by column header except for certain headers (such as thumbnail widgets)
+        """
 
         # sort column by clicking on header, while ignoring image-based sorting (for thumbnails)
-
         if self.table.horizontalHeaderItem(index).text() != 'Thumb':
             if self.table.horizontalHeader().sortIndicatorOrder() == Qt.DescendingOrder:
                 self.table.sortItems(index, order = Qt.DescendingOrder)
@@ -257,6 +346,18 @@ class columnView(QtGui.QWidget):
                 self.table.sortItems(index, order = Qt.AscendingOrder)
 
     def setItem(self, widget, row, header_name):
+        """
+        Sets item in given row for a given column (provided by header_name)
+
+        Parameters
+        ----------
+        widget : thumbwidgetitem
+            Widget from grid (LibraryWidget) view
+        row : int
+            Row in which to set attribute
+        header_name : str
+            Name of header to set data (identifies the column to set)
+        """
 
         # TODO: this will have to be made more general in the future by querying the database for
         # TODO: values to be set for a row given a header_name
@@ -282,6 +383,9 @@ class columnView(QtGui.QWidget):
 
 
     def populateFromThumbwidgets(self, libraryWidget=None):
+        """
+        Populates self.table based on the provided LibraryWidget
+        """
 
         if libraryWidget:
             self.libraryWidget = libraryWidget
@@ -300,6 +404,9 @@ class columnView(QtGui.QWidget):
         self.populated = True
 
     def setUnpopulated(self, *args):
+        """
+        Removes all rows from self.table and sets self.populated to False. Triggered when changing directories.
+        """
         self.populated = False
         count = self.table.rowCount()
         if count > 0:
@@ -309,6 +416,23 @@ class columnView(QtGui.QWidget):
 
 
 class LibraryToolbar(QtGui.QWidget):
+
+    """
+    Widget containing buttons corresponding to various tools for the plugin
+
+    Attributes
+    ----------
+    grid_button : QtGui.QToolButton
+        Button user clicks to request the library grid view
+    image_button : QtGui.QToolButton
+        Button user clicks to request the image view (single image)
+    rows_button : QtGui.QToolButton
+        Button user clicks to request library row/column view
+    check_all : QtGui.QPushButton
+        Button pressed to request all files clicked
+    uncheck_all : QtGui.QPushButton
+        Button pressed to request all files and folders unclicked
+    """
 
     def __init__(self):
         super(LibraryToolbar, self).__init__()
@@ -514,6 +638,28 @@ class librarylayout(FlowLayout):
                 widget.deleteLater()
 
 class LibraryItem(QtGui.QSplitter):
+    """
+    Widget used for viewing thumbnails, histogram, and metadata of a dataset
+
+    Parameters
+    ----------
+    thumbwidget : thumbwidgetitem
+        Widget containing thumbnail, other info concerning dataset
+
+    Attributes
+    ----------
+    image : customwidgets.ImageView
+        displays thumbnail for dataset
+    hist : pyqtgraph.HistogramLUTWidget
+        displays histogram for self.image
+    attrs : attributeViewer
+        widget to display dataset metadata
+    keywords : keywordsWidget
+        widget to display key words, stars rating, and other user-generated metadata for dataset
+    metadata : QtGui.QTableWidget
+        widget to display experimental metadata (ex., camera information). Currently unpopulated. In future, this
+        will be filled by querying the database
+    """
 
     sigUpdateTags = QtCore.Signal(str, str, object, str)
 
@@ -572,6 +718,11 @@ class LibraryItem(QtGui.QSplitter):
 
 class attributeViewer(QtGui.QWidget):
 
+    """
+    Widget for displaying smaller widgets in a vertical 'tab' layout. By clicking the top 'tab', a smaller widget
+    is shown beneath the tab. Only one tab at a time is shown.
+    """
+
     def __init__(self):
         super(attributeViewer, self).__init__()
         self.layout = QtGui.QVBoxLayout()
@@ -581,7 +732,16 @@ class attributeViewer(QtGui.QWidget):
         self.attributes = []
 
     def addAttribute(self, name, attribute):
-        # attribute is type QtGui.QWidget
+        """
+        Adds tab and widget to attributes layout
+
+        Parameters
+        ----------
+        name : str
+            Name to display on tab
+        attribute : QtGui.QWidget
+            widget to display with tab specified by 'name'
+        """
 
         widget = attributeWidget(name)
         widget.previewButton.hide()
@@ -592,6 +752,9 @@ class attributeViewer(QtGui.QWidget):
         self.layout.addWidget(widget)
 
     def attributeClicked(self, attribute):
+        """
+        Shows the widget associated with the tab clicked
+        """
 
         hidden = attribute.hidden
 
@@ -604,6 +767,10 @@ class attributeViewer(QtGui.QWidget):
             attribute.expand()
 
     def collapseAllAttributes(self):
+        """
+        Hides all attributes so that only tabs are shown
+        """
+
         for attr in self.attributes:
             attr.collapse()
             if attr.subfeatures is not None:
@@ -613,8 +780,67 @@ class attributeViewer(QtGui.QWidget):
                     except AttributeError:
                         pass
 
+
+class attributeWidget(fw.FeatureWidget):
+    """
+    Widget used for displaying smaller widgets associated with this widget's name
+    """
+
+    def __init__(self, name='', checkable=True, closeable=True, subfeatures=None,
+                 parent=None):
+        super(attributeWidget, self).__init__(name=name, checkable=checkable,
+                                              closeable=closeable,
+                                              subfeatures=subfeatures, parent=parent)
+        self.hidden = False
+
+    def addSubFeature(self, subfeature):
+        """
+        Adds a subfeature to the widget
+
+        Parameters
+        ----------
+        subfeature : FeatureWidget/QWidget
+            Widget to add as a subfeature
+        """
+
+        h = QtGui.QHBoxLayout()
+        subfeature.destroyed.connect(h.deleteLater)
+        if isinstance(subfeature, QtGui.QLayout):
+            h.addLayout(subfeature)
+        elif isinstance(subfeature, QtGui.QWidget):
+            h.addWidget(subfeature)
+        self.subframe_layout.addLayout(h)
+        try:
+            subfeature.sigDelete.connect(self.removeSubFeature)
+        except AttributeError:
+            pass
+
+        self.sigSubFeature.emit(subfeature)
+        self.subfeatures.append(subfeature)
+
+    def collapse(self):
+        """
+        Collapses all expanded subfeatures
+        """
+
+        if self.subframe is not None:
+            self.subframe.hide()
+            self.hidden = True
+
+    def expand(self):
+        """
+        Expands subfeatures
+        """
+
+        if self.subframe is not None:
+            self.subframe.show()
+            self.hidden = False
+
 #TODO: this class should also be connected to the database since it can change metadata
 class keywordsWidget(QtGui.QWidget):
+    """
+    Widget to display keywords and other user-generated metadata
+    """
 
     sigUpdateTags = QtCore.Signal(str, str, object, str)
 
@@ -669,57 +895,6 @@ class keywordsWidget(QtGui.QWidget):
         self.sigUpdateTags.emit('', 'keywords', list(self.keywords), 'replace')
 
 
-class attributeWidget(fw.FeatureWidget):
-
-    def __init__(self, name='', checkable=True, closeable=True, subfeatures=None, parent=None):
-        super(attributeWidget, self).__init__(name=name, checkable=checkable, closeable=closeable,
-                                              subfeatures=subfeatures, parent=parent)
-        self.hidden = False
-
-    def addSubFeature(self, subfeature):
-        """
-        Adds a subfeature to the widget
-
-        Parameters
-        ----------
-        subfeature : FeatureWidget/QWidget
-            Widget to add as a subfeature
-        """
-
-        h = QtGui.QHBoxLayout()
-        subfeature.destroyed.connect(h.deleteLater)
-        if isinstance(subfeature, QtGui.QLayout):
-            h.addLayout(subfeature)
-        elif isinstance(subfeature, QtGui.QWidget):
-            h.addWidget(subfeature)
-        self.subframe_layout.addLayout(h)
-        try:
-            subfeature.sigDelete.connect(self.removeSubFeature)
-        except AttributeError:
-            pass
-
-        self.sigSubFeature.emit(subfeature)
-        self.subfeatures.append(subfeature)
-
-    def collapse(self):
-        """
-        Collapses all expanded subfeatures
-        """
-
-        if self.subframe is not None:
-            self.subframe.hide()
-            self.hidden = True
-
-    def expand(self):
-        """
-        Expands subfeatures
-        """
-
-        if self.subframe is not None:
-            self.subframe.show()
-            self.hidden = False
-
-
 
 
 class thumbwidgetitem(QtGui.QFrame):
@@ -761,6 +936,9 @@ class thumbwidgetitem(QtGui.QFrame):
         # print os.path.splitext(path)[1]
         if os.path.isdir(path):
             self.image = self.foldericon
+
+        # TODO: currently, these widgets are generated every time the user navigates to a folder
+        # TODO: in the future, the relevant info/thumbnails should be generated once and cached in the database
         elif os.path.splitext(path)[1] in pipeline.loader.acceptableexts:
 
 
@@ -842,12 +1020,9 @@ class thumbwidgetitem(QtGui.QFrame):
     # self.frame.setFrameStyle(QFrame.Sunken)
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
-        # self.sigOpenFile.emit(self)
-        #
         if os.path.isdir(self.path):
             self.sigChangeRoot.emit(self.path)
         else:
-            # self.sigOpenFile.emit(self.path)
             self.sigOpenFile.emit(self)
 
 
@@ -869,7 +1044,7 @@ class ScaledLabel(QtGui.QLabel):
 
 class ScaledColumnLabel(ScaledLabel):
     """
-    A label that scales with dimension; for thumbnails in COLUMN view (need specialized signal)
+    A label that scales with dimension; for thumbnails in COLUMN view (need specialized signal for a double-click event)
     """
 
     sigOpenFile = QtCore.Signal(QtGui.QWidget)
