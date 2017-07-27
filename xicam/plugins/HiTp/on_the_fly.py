@@ -98,7 +98,7 @@ def run(filepath, p,
 
     if neighbor_distance_module:
         # extract neighbor distances as attribute4
-        attribute4 = nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, save_path,
+        attribute4 = nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, imageFilename[:-8],
                                                     smpls_per_row)
         attributes = np.concatenate((attributes, attribute4))
 

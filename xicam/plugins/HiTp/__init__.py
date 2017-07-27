@@ -105,7 +105,7 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                      centerwidget=widgets.WaferView,
                      bottomwidget=widgets.LocalView)
 
-modes=csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}
+modes=csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances', 'Imax':'Imax'}
 
 mode = QComboBox(HiTpPlugin.toolbar)
 mode.addItems(modes.keys())
