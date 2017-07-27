@@ -83,8 +83,7 @@ class settingstracker(ptypes.GroupParameter):
             {'name':'Integration Bins (q)','value':1000,'type':'int','min':1},
             {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int','min':1},
             {'name':'Image Load Rotations','value':0,'type':'int'},
-            {'name':'Image Load Transpose','value':False,'type':'bool'},
-            {'name': 'Holden test error', 'value': 1, 'type':'int'}]}
+            {'name':'Image Load Transpose','value':False,'type':'bool'}]}
 
 
 settings=settingstracker()
