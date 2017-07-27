@@ -1,3 +1,32 @@
+# This yaml file contains information relevant to adding new functions to the Xi-cam tomography plugin pipeline.
+# Using PyYaml, the contents of this file are loaded into a dictionary in xicam/plugins/tomography/config.py that are
+# then used to configure the functionwidgets of each function. To add your own function, you must at minimum fill out
+# an entry in this file, in the xicam/yaml/tomography/functions.yml.
+#
+# In the xicam/yaml/tomography/functions.yml file, each function is listed with a corresponding 'sub-function.' A
+# function is a more general descriptor (for example, 'Stripe Removal'), while a sub-function identifies the method or
+# algorithm more specifically (for example, 'Fourier-Wavelet'). This allows for multiple implementations of equivalent
+# 'steps' in a processing pipeline. YOU MUST ADD YOUR FUNCTION TO THIS FILE WITH A CORRESPONDING SUBFUNCTION TO BE
+# USED IN THE TOMOGRAPHY PLUGIN.
+#
+# In the xicam/yaml/tomography/functions_info.yml file (this file), each function (referred to by its subfunction name)
+# has several subfields.
+#   - parameters : the parameters to be listed for this function's functionwidget. This section lists the name, suffix
+#                  (optional), type, and constrained values (optional) for each parameter. Parameters NOT listed in this
+#                  section but expected in the function's arguments will be evaluated based on their default value.
+#   - conversions : sets conversions between certain parameters and values in the dataset's metadata. The top entry is
+#                   is the name of the parameter. The 'name' field is the value in the metadata which will be used
+#                   in the conversion for the parameter. The 'conversion' and 'type' fields set the conversion factor
+#                   and final type, respectively, of the parameter in the functionwidget.
+#   - name : contains the function name and respective library for each function. For example, 'Phase Retrieval' is
+#            called from tomopy as 'tomopy.retrieve_phase'. Thus, the two entries under 'name' will be 'retrieve_phase'
+#            and 'tomopy'. If you're adding a custom function (rather than a function from a python library), add the
+#            code to the xicam/plugins/tomography/pipelinefunctions.py file.
+#
+# If the entries in the two yaml files are correctly filled, the function will be available to be added to the function
+# pipeline in the tomography plugin.
+#
+
 Phase Retrieval:
   conversions:
     als:
