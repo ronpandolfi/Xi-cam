@@ -64,23 +64,18 @@ def openfiles(filepaths):
     p = create_AIobject(detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, wavelength_A, bcenter_x_pix, bcenter_y_pix)
 
     for filepath in sorted(filepaths):
-        while 1:
-            try:
-                run(filepath, p,
-                    polarization, smpls_per_row,
-                    Imax_Iave_ratio_module,
-                    texture_module,
-                    signal_to_noise_module,
-                    neighbor_distance_module,
-                    add_feature_to_csv_module,
-                    background_subtract_module,
-                    peak_fitting_module)
+        run(filepath, p,
+            polarization, smpls_per_row,
+            Imax_Iave_ratio_module,
+            texture_module,
+            signal_to_noise_module,
+            neighbor_distance_module,
+            add_feature_to_csv_module,
+            background_subtract_module,
+            peak_fitting_module)
 
-                folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
-                csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
-                break
-            except (OSError, IOError, IndexError, ValueError):
-                continue
+        folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
+        csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
     return csvpath
 
 

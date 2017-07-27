@@ -63,7 +63,6 @@ def peak_fitting_GLS(imageFilename, processed_path, Qlist, IntAve, a1, a2):
         plt.plot(Qlist, IntAve)
         plt.plot( Qlist, fit, 'r--')
         plt.plot(Qlist[peaks], IntAve[peaks], 'o')
-
         for i in range(0, len(popt), 4):
             ctr1 = popt[i]
             amp1 = popt[i+1]

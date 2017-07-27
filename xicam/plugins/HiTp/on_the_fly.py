@@ -53,7 +53,7 @@ def run(filepath, p,
         # import image and convert it into an array
         imArray = load_image(filepath)
 
-    except (OSError, IOError, IndexError):
+    except (OSError, IOError, IndexError, ValueError):
         # The image was being created but not complete yet
         print 'waiting for image', filepath + ' to be ready...'
         # wait 1 second and try again
@@ -117,10 +117,4 @@ def run(filepath, p,
 
     if background_subtract_module and peak_fitting_module:
         peak_fitting_GLS(imageFilename, save_path, Qlist, bckgrd_subtracted, 5, 20)
-
-
-
-
-
-
 

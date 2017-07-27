@@ -30,5 +30,4 @@ def save_Qchi(Q, chi, cake, imageFilename, save_path):
              scipy.stats.scoreatpercentile(np.log(cake[inds]), 95))
     fig.colorbar(meshplot)
     fig.savefig(os.path.join(save_path, imageFilename[:-4]+'_Qchi'))
-
-
+    plt.close()
