@@ -91,8 +91,9 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'Shiboken', 'PySide', 'pyqtgraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp','requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
+    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
+                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
+                      'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
 
     setup_requires=['numpy', 'cython'],
 
@@ -109,7 +110,7 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-         'xicam': ['gui/*'],
+         'xicam': ['gui/*', 'yaml/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
