@@ -4,7 +4,6 @@ Created on Apr 2017
 @author: Ron Pandolfi
 """
 
-
 import pyqtgraph as pg
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -12,11 +11,14 @@ import pandas as pd
 import weakref
 import numpy as np
 from pyqtgraph import functions as fn
+import os.path
+import scipy
 
 class WaferView(QWidget):
-    sigPlot = Signal(object) # emits 2-d cake array
+    sigPlot = Signal(object,object,object)  # emits 2-d cake array, 1-D Q, 1-D chi
 
-    csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}  # TODO: add mappings for other keys
+    csvkeys = {'crystallinity': 'Imax/Iave', 'peaks': 'num_of_peaks', 'texture': 'texture_sum', 'SNR': 'SNR',
+               'NND': 'neighbor_distances'}  # TODO: add mappings for other keys
 
     def __init__(self):
         super(WaferView, self).__init__()
@@ -25,7 +27,7 @@ class WaferView(QWidget):
         self.setLayout(self.layout)
         self.WaferPlot = pg.PlotWidget()
         self.layout.addWidget(self.WaferPlot)
-        self.HLUT=ScatterHistogramLUTWidget()
+        self.HLUT = ScatterHistogramLUTWidget()
         self.layout.addWidget(self.HLUT)
         ## wrap functions from histogram
         for fn in ['setHistogramRange', 'autoHistogramRange', 'getLookupTable', 'getLevels']:
@@ -38,29 +40,43 @@ class WaferView(QWidget):
         # self.regionChanged()
         # self.imageChanged(autoLevel=True)
 
-        self.waferplotitem = LUTScatterPlotItem(size=10, pen=pg.mkPen('w'), cmap = 'viridis')
+        self.waferplotitem = LUTScatterPlotItem(size=10, pen=pg.mkPen('w'), cmap='viridis')
         self.WaferPlot.addItem(self.waferplotitem)
         self.HLUT.setScatterItem(self.waferplotitem)
         ## Make all plots clickable
-        self.lastClicked = None
+        # self.lastClicked = None
 
-        def clicked(plot, points):
+        # def clicked(plot, points):
+        #     p = self.lastClicked
+        #     if p: p.setPen(p.brush().color(), width=0)
+        #     p = points[0]
+        #     p.setPen('w', width=5)
+        #     self.lastClicked = p
 
-            global lastClicked
-            p =self.lastClicked
-            if p: p.setPen(p.brush().color(), width=0)
-            p=points[0]
-            p.setPen('w', width=5)
-            self.lastClicked = p
-
-        self.waferplotitem.sigClicked.connect(clicked)
+        # self.waferplotitem.sigClicked.connect(clicked)
 
         self.WaferPlot.scene().sigMouseClicked.connect(self.mouseClicked)
+        self.waferplotitem.sigPlotReduced.connect(self.itemClicked)
 
-        self.lastcsv=None
-        self.mode='SNR'
+        self.lastcsv = None
+        self.mode = 'SNR'
 
-    def mouseClicked(self,event):
+    def itemClicked(self, x, y):
+        d = pd.read_csv(self.lastcsv)
+        clickeditem = d.loc[(d['p_x'] == x) & (d['p_y'] == y)]
+        path = clickeditem.path.values[-1]
+        path = os.path.dirname(path) + '/Processed/' + os.path.splitext(os.path.basename(path))[0] + '_Qchi.mat'
+        mat = scipy.io.loadmat(path)
+        cake=mat['cake']
+        Q=mat['Q']
+        chi=mat['chi']
+
+        self.sigPlot.emit(cake,Q,chi)
+
+        # print('clicked:',x,y)
+
+
+    def mouseClicked(self, event):
         '''
 
         Parameters
@@ -69,20 +85,20 @@ class WaferView(QWidget):
 
         '''
         print(event.pos())
-        #get cake data from file
-        #...
-        #emit cake data
-        cake = np.zeros((10,10))
-        self.sigPlot.emit(cake)
+        # get cake data from file
+        # ...
+        # emit cake data
+        # cake = np.zeros((10, 10))
+        # self.sigPlot.emit(cake)
         event.accept()
 
     @Slot(int)
-    def setMode(self,modeindex):
-        self.mode=self.csvkeys.keys()[modeindex]
+    def setMode(self, modeindex):
+        self.mode = self.csvkeys.keys()[modeindex]
         self.redrawfromCSV()
 
-    @Slot(str,str)
-    def redrawfromCSV(self,csv=None):
+    @Slot(str)
+    def redrawfromCSV(self, csv=None):
         '''
 
         Parameters
@@ -90,20 +106,20 @@ class WaferView(QWidget):
         csv : str
             filepath reference to CSV file to be displayed
         '''
-        if not csv: csv=self.lastcsv
-        self.lastcsv=csv
-        #print csv
-        #print 'loading csv into dataframe'
+        if not csv: csv = self.lastcsv
+        self.lastcsv = csv
+        # print csv
+        # print 'loading csv into dataframe'
         p = pd.read_csv(csv)
-        #print list(p)
-        x=np.nan_to_num(p['p_x'])
-        y=np.nan_to_num(p['p_y'])
+        # print list(p)
+        x = np.nan_to_num(p['p_x'])
+        y = np.nan_to_num(p['p_y'])
         z = np.nan_to_num(p[self.csvkeys[self.mode]])
-        #print x, y
-        d=(x+y).argsort()
-        x,y,z = (x[d],
-                 y[d],
-                 z[d])
+        # print x, y
+        d = (x + y).argsort()
+        x, y, z = (x[d],
+                   y[d],
+                   z[d])
         # zmin = min(z)
         # zrange = np.ptp(z)
         # z = np.nan_to_num((z-zmin)/zrange *256)
@@ -113,9 +129,9 @@ class WaferView(QWidget):
         # viridismap = pg.ColorMap(viridisposs,viridiscolors,mode=pg.ColorMap.RGB)
 
 
-        points = [{'pos':(x[i],y[i]),
-                   'data':z[i],
-                   'size':30,
+        points = [{'pos': (x[i], y[i]),
+                   'data': z[i],
+                   'size': 30,
                    # 'brush': viridismap.map(z[i]),
                    # 'pen':pg.mkPen(width=0,color=viridismap.map(z[i]))
                    } for i in range(len(z))]
@@ -123,21 +139,35 @@ class WaferView(QWidget):
         self.waferplotitem.setPoints(points)
         self.WaferPlot.autoRange()
 
-class LUTScatterPlotItem(pg.ScatterPlotItem):
-    def __init__(self,*args,**kwargs):
-        super(LUTScatterPlotItem, self).__init__(*args,**kwargs)
-        self.levels=[0,1]
 
-    def setColorMap(self,cmap):
+class LUTScatterPlotItem(pg.ScatterPlotItem):
+    sigPlotReduced = Signal(float,float)
+
+    def __init__(self, *args, **kwargs):
+        super(LUTScatterPlotItem, self).__init__(*args, **kwargs)
+        self.levels = [0, 1]
+        self.lastClicked=None
+
+    def mouseClickEvent(self,ev):
+        super(LUTScatterPlotItem, self).mouseClickEvent(ev)
+        if ev.isAccepted():
+            p = self.lastClicked
+            if p: p.setPen(p.brush().color(), width=0)
+            p = self.ptsClicked[0]
+            p.setPen('w', width=5)
+            self.lastClicked = p
+            self.sigPlotReduced.emit(p._data[0],p._data[1])
+
+    def setColorMap(self, cmap):
         self.cmap = cmap
 
-    def addPoints(self,*args,**kargs):
+    def addPoints(self, *args, **kargs):
         """
                 Add new points to the scatter plot.
                 Arguments are the same as setData()
                 """
 
-        self.lastargs=args
+        self.lastargs = args
 
         ## deal with non-keyword arguments
         if len(args) == 1:
@@ -238,14 +268,14 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
         self.updateSpots(newData)
         self.sigPlotChanged.emit(self)
 
-    def colorSpots(self,newData):
-        if hasattr(self,'cmap'):
+    def colorSpots(self, newData):
+        if hasattr(self, 'cmap'):
             colormap = self.cmap()()
             l = self.levels
             for p in newData:
-                c=colormap.map((p['data']-l[0])/(l[1]-l[0]))
-                p['brush']=fn.mkBrush(c)
-                p['pen']=fn.mkPen(c)
+                c = colormap.map((p['data'] - l[0]) / (l[1] - l[0]))
+                p['brush'] = fn.mkBrush(c)
+                p['pen'] = fn.mkPen(c)
 
         return newData
 
@@ -264,29 +294,30 @@ class LUTScatterPlotItem(pg.ScatterPlotItem):
         if not fn.eq(levels, self.levels):
             self.levels = levels
             self._effectiveLut = None
-            if update and hasattr(self,'lastargs'):
+            if update and hasattr(self, 'lastargs'):
                 self.setData(*self.lastargs)
 
 
-#                if not isinstance(spot,dict): setattr(spot,'__iter__',iter(zip(*spot.dtype.descr)[0]))
+# if not isinstance(spot,dict): setattr(spot,'__iter__',iter(zip(*spot.dtype.descr)[0]))
 
 class ScatterHistogramLUTWidget(pg.HistogramLUTWidget):
-    def __init__(self,*args,**kwargs):
-        super(ScatterHistogramLUTWidget, self).__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(ScatterHistogramLUTWidget, self).__init__(*args, **kwargs)
         self.item = ScatterHistogramLUTItem(*args, **kwargs)
         self.setCentralItem(self.item)
-        self.autoLevel=True
+        self.autoLevel = True
+
 
 class ScatterHistogramLUTItem(pg.HistogramLUTItem):
-    def __init__(self,*args,**kwargs):
+    def __init__(self, *args, **kwargs):
 
-        super(ScatterHistogramLUTItem, self).__init__(*args,**kwargs)
+        super(ScatterHistogramLUTItem, self).__init__(*args, **kwargs)
         reset = QAction('Reset', self.vb.menu)
         self.vb.menu.addAction(reset)
         reset.triggered.connect(self.reset)
 
     def reset(self):
-        self.autoLevel=True
+        self.autoLevel = True
         self.plotChanged(autoLevel=True)
 
     def setScatterItem(self, plt):
@@ -296,11 +327,11 @@ class ScatterHistogramLUTItem(pg.HistogramLUTItem):
         self.plotItem = weakref.ref(plt)
         plt.sigPlotChanged.connect(lambda s: self.plotChanged())
         plt.setColorMap(self.getColorMap)  ## send function pointer, not the result
-        #self.gradientChanged()
+        # self.gradientChanged()
         self.regionChanged()
         self.autoLevel = True
         self.plotChanged(autoLevel=True)
-        #self.vb.autoRange()
+        # self.vb.autoRange()
 
     def gradientChanged(self):
         if self.plotItem() is not None:
@@ -313,19 +344,19 @@ class ScatterHistogramLUTItem(pg.HistogramLUTItem):
         if self.plotItem() is not None:
             self.plotItem().setLevels(self.region.getRegion())
         self.sigLevelChangeFinished.emit(self)
-        #self.update()
+        # self.update()
 
     def plotChanged(self, autoLevel=False, autoRange=False):
         # profiler = debug.Profiler()
-        data=self.plotItem().data['data']
+        data = self.plotItem().data['data']
         if len(data):
-            hist, bins = np.histogram(data,100)
+            hist, bins = np.histogram(data, 100)
             # profiler('get histogram')
             if hist[0] is None:
                 return
-            self.plot.setData(bins[:-1],hist)
+            self.plot.setData(bins[:-1], hist)
             # profiler('set plot')
-            print('autolevel:',self.autoLevel)
+            print('autolevel:', self.autoLevel)
             if autoLevel or self.autoLevel:
                 mn = bins[0]
                 mx = bins[-1]
@@ -348,14 +379,14 @@ class LocalView(QTabWidget):
         self.view1D = pg.PlotWidget()
         self.view2D = pg.ImageView()
 
-        self.addTab(self.view1D,'1D')
-        self.addTab(self.view2D,'Cake')
+        self.addTab(self.view1D, '1D')
+        self.addTab(self.view2D, 'Cake')
 
         self.setTabPosition(self.West)
         self.setTabShape(self.Triangular)
 
-    @Slot(object)
-    def plot(self,cake):
+    @Slot(object,object,object)
+    def plot(self, cake, Q, chi):
         '''
 
         Parameters
@@ -364,8 +395,11 @@ class LocalView(QTabWidget):
             The caked image array to be displayed
 
         '''
-        #display cake and 1D in views
-        pass
+        # display cake and 1D in views
+        self.view1D.clear()
+        self.view1D.plot(Q.flatten(),np.sum(cake,axis=0))
+        self.view2D.setImage(cake)
+
 
 ## Start Qt event loop unless running in interactive mode.
 if __name__ == '__main__':
@@ -388,7 +422,7 @@ if __name__ == '__main__':
 
     w = WaferView()
     # TODO: Looks like the three lines here are not necessary
-    #csv = '/home/rp/data/HiTp/Sample14_master_metadata_high.csv'
+    # csv = '/home/rp/data/HiTp/Sample14_master_metadata_high.csv'
     # csv = 'C:\\Research_FangRen\\Data\\Apr2016\\Jan_samples\\Sample1\\Sample14_master_metadata_high.csv'
     # w.redrawfromCSV(csv)
 

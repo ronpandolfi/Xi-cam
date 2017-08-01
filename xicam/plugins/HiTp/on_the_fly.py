@@ -112,6 +112,9 @@ def run(filepath, detect_dist_pix, detect_tilt_alpha_rad, detect_tilt_beta_rad, 
         attribute5 = extract_SNR(IntAve)
         attributes = np.concatenate((attributes, attribute5))
 
+    # add filepath to attributes
+    attributes = np.concatenate((attributes,[['path',filepath]]))
+
     # print attributes
 
     if add_feature_to_csv_module:

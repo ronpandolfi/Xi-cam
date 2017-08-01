@@ -79,7 +79,8 @@ def openfiles(filepaths):
         csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
     return csvpath
 
-
+LocalView = widgets.LocalView
+WaferView = widgets.WaferView
 
 HiTpPlugin=base.EZplugin(name='HiTp',
                      toolbuttons=[],#('xicam/gui/icons_34.png',runtest)
@@ -104,8 +105,10 @@ HiTpPlugin=base.EZplugin(name='HiTp',
                                  {'name': 'peak_fitting_module', 'value': False, 'type': 'bool'},
                                  daemonwidget.DaemonParameter(openfiles,filter='*.tif')],
                      openfileshandler=openfiles,
-                     centerwidget=widgets.WaferView,
-                     bottomwidget=widgets.LocalView)
+                     centerwidget=WaferView,
+                     bottomwidget=LocalView)
+
+
 
 modes=csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances'}
 
@@ -113,3 +116,4 @@ mode = QComboBox(HiTpPlugin.toolbar)
 mode.addItems(modes.keys())
 HiTpPlugin.toolbar.addWidget(mode)
 mode.currentIndexChanged.connect(HiTpPlugin.centerwidget.setMode)
+HiTpPlugin.centerwidget.sigPlot.connect(HiTpPlugin.bottomwidget.plot)
