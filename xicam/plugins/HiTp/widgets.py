@@ -17,8 +17,7 @@ import scipy
 class WaferView(QWidget):
     sigPlot = Signal(object,object,object)  # emits 2-d cake array, 1-D Q, 1-D chi
 
-    csvkeys = {'crystallinity': 'Imax/Iave', 'peaks': 'num_of_peaks', 'texture': 'texture_sum', 'SNR': 'SNR',
-               'NND': 'neighbor_distances'}  # TODO: add mappings for other keys
+    csvkeys = {'crystallinity':'Imax/Iave','peaks':'num_of_peaks', 'texture':'texture_sum', 'SNR':'SNR', 'NND':'neighbor_distances', 'Imax':'Imax'}
 
     def __init__(self):
         super(WaferView, self).__init__()

@@ -50,7 +50,10 @@ def nearst_neighbor_distance(index, Qlist, IntAve, folder_path, save_path, base_
     """
     concatenate all the csv files in a folder, return a 2D numpy array
     """
+
     master_file = os.path.join(folder_path, base_filename + 'scan1.csv')
+    if not os.path.exists(master_file):
+        return [['neighbor_distances', np.nan]]
     master_data = np.genfromtxt(master_file, delimiter=',', skip_header=1)
     scan_register = list(master_data[:,0])
     index_neighbor1, index_neighbor2 = find_neighbour(index, scan_register, num_of_smpls_on_wafer)
