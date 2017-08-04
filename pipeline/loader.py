@@ -274,9 +274,7 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    img = loadimage(path)
-
-    # Do extra rotations/transposition
+    img = loadimage(path)# Do extra rotations/transposition
     if config.settings['Image Load Transpose']:
         img=img.transpose()
     if config.settings['Image Load Rotations']:
@@ -803,10 +801,6 @@ class StackImage(object):
         if filepath is not None:
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
-            if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
-            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -814,6 +808,10 @@ class StackImage(object):
         else:
             if filepath is None and data is None:
                 raise ValueError('Either data or path to file must be provided')
+        # throw error if loading with fabio fails
+        if not self.fabimage:
+            raise IOError("Unable to detect file format for this dataset.")
+
         self.header = self.fabimage.header
 
         self._framecache = dict()
@@ -834,12 +832,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
-    def transpose(self, ax): # transposing is handled internally
+    def transpose(self, ax):
+        # TODO: find a good way to do this
+        # TODO: annoying because of the way hdfs are stored
         return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
-            img = self._getimage(j)[::level, ::level].transpose()
+            img = self._getimage(j)[::level, ::level]
             if i == 0:  # allocate array:
                 shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
@@ -859,7 +859,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return self.fabimage.getframe(frame).transpose()
+        return self.fabimage.getframe(frame)
 
     def invalidatecache(self):
         self.cache = dict()

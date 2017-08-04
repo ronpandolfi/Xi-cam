@@ -111,7 +111,7 @@ class dimgViewer(QtGui.QWidget):
         self.axesItem.axes['top']['item'].setZValue(10)
 
         # Make an imageview for the image
-        self.imgview = ImageView(self, actionLog_Intensity=self.toolbar.actionLog_Intensity, view=self.axesItem)
+        self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
         self.imageitem = self.imgview.getImageItem()
         self.graphicslayoutwidget = self.imgview
         self.imgview.ui.roiBtn.setParent(None)
@@ -228,6 +228,7 @@ class dimgViewer(QtGui.QWidget):
 
                 if config.activeExperiment.iscalibrated:
                     self.replot()
+                    self.drawcenter()
 
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
@@ -580,6 +581,7 @@ class dimgViewer(QtGui.QWidget):
         # Auto find the beam center
         self.dimg.findcenter()
         if not skipdraw:
+            self.drawcenter()
             self.replot()
 
     def simulatecalibrant(self, calibrantkey):
@@ -610,6 +612,7 @@ class dimgViewer(QtGui.QWidget):
         algorithm(self.dimg, calibrant)
 
         self.replot()
+        self.drawcenter()
 
     @debugtools.timeit
     def refinecenter(self):
@@ -618,6 +621,7 @@ class dimgViewer(QtGui.QWidget):
 
         cen = center_approx.refinecenter(self.dimg)
         config.activeExperiment.center = cen
+        self.drawcenter()
 
     def getROIs(self):
         return [roi for roi in self.viewbox.addedItems if hasattr(roi, 'isdeleting') and not roi.isdeleting]

@@ -1,8 +1,9 @@
 
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -16,7 +17,11 @@ from PySide.QtUiTools import QUiLoader
 from psutil import cpu_count
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
+from collections import deque
+import xicam.widgets.featurewidgets as fw
+from xicam.widgets.customwidgets import DataTreeWidget
 import reconpkg
+import os
 import viewers
 
 
@@ -100,30 +105,17 @@ class UIform(object):
         leftwidget.addWidget(self.param_form)
         leftwidget.addWidget(self.functionwidget)
 
+        self.queue = ReconManager()
+
+        logwidget = QtGui.QStackedWidget()
+        logwidget.addWidget(self.bottomwidget)
+
         icon_functions = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_49.png"))
         icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
-        self.leftmodes = [(leftwidget, icon_functions),(self.property_table,icon_properties)]
-
-        #
-        # rightwidget = QtGui.QSplitter(QtCore.Qt.Vertical)
-        #
-        # configtree = pt.ParameterTree()
-        # configtree.setMinimumHeight(230)
-        #
-        # params = [{'name': 'Start Sinogram', 'type': 'int', 'value': 0, 'default': 0, },
-        #           {'name': 'End Sinogram', 'type': 'int'},
-        #           {'name': 'Step Sinogram', 'type': 'int', 'value': 1, 'default': 1},
-        #           {'name': 'Start Projection', 'type': 'int', 'value': 0, 'default': 0},
-        #           {'name': 'End Projection', 'type': 'int'},
-        #           {'name': 'Step Projection', 'type': 'int', 'value': 1, 'default': 1},
-        #           {'name': 'Sinograms/Chunk', 'type': 'int', 'value': 5*cpu_count()},
-        #           {'name': 'CPU Cores', 'type': 'int', 'value': cpu_count(), 'default': cpu_count(),
-        #            'limits':[1, cpu_count()]}]
-        #
-        # self.config_params = pt.Parameter.create(name='Configuration', type='group', children=params)
-        # configtree.setParameters(self.config_params, showTop=False)
-        # rightwidget.addWidget(configtree)
-
+        icon_queue = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_63.png"))
+        icon_log = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_64.png"))
+        self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue), (logwidget, icon_log),
+                          (self.property_table, icon_properties)]
 
 
     def connectTriggers(self, open, save, reset, moveup, movedown, clear):
@@ -152,18 +144,6 @@ class UIform(object):
         self.functionwidget.moveDownButton.clicked.connect(moveup)
         self.functionwidget.moveUpButton.clicked.connect(movedown)
         self.functionwidget.clearButton.clicked.connect(clear)
-    #
-    # def setConfigParams(self, proj, sino):
-    #     self.config_params.child('End Sinogram').setLimits([0, sino])
-    #     self.config_params.child('Start Sinogram').setLimits([0, sino])
-    #     self.config_params.child('Step Sinogram').setLimits([0, sino + 1])
-    #     self.config_params.child('End Sinogram').setValue(sino)
-    #     self.config_params.child('End Sinogram').setDefault(sino)
-    #     self.config_params.child('End Projection').setLimits([0, proj])
-    #     self.config_params.child('Start Projection').setLimits([0, proj])
-    #     self.config_params.child('Step Projection').setLimits([0, proj + 1])
-    #     self.config_params.child('End Projection').setValue(proj)
-    #     self.config_params.child('End Projection').setDefault(proj)
 
 
 def build_function_menu(menu, functree, functiondata, actionslot):
@@ -321,12 +301,26 @@ class Toolbar(QtGui.QToolBar):
         toolbuttonMaskingAction = QtGui.QWidgetAction(self)
         toolbuttonMaskingAction.setDefaultWidget(toolbuttonMasking)
 
-        # TODO working on ROI Selection TOOL
         self.actionROI = QtGui.QAction(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_60.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionROI.setIcon(icon)
         self.actionROI.setToolTip('Select region of interest')
+
+
+        self.openButton = QtGui.QToolButton(self)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.openButton.setIcon(icon)
+        self.openButton.setToolTip('Open flats/darks')
+        openMenu = QtGui.QMenu()
+        self.openFlats = QtGui.QAction('Open flats', openMenu)
+        self.openDarks = QtGui.QAction('Open darks', openMenu)
+        openMenu.addActions([self.openFlats, self.openDarks])
+
+        self.openButton.setMenu(openMenu)
+        self.openButton.setPopupMode(QtGui.QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.openButton.setArrowType(QtCore.Qt.NoArrow)
 
         self.setIconSize(QtCore.QSize(32, 32))
 
@@ -334,13 +328,18 @@ class Toolbar(QtGui.QToolBar):
         self.addAction(self.actionRun_SlicePreview)
         self.addAction(self.actionRun_MultiSlicePreview)
         self.addAction(self.actionRun_3DPreview)
-        self.addAction(self.actionMBIR)
         self.addAction(self.actionCenter)
-        # self.addAction(self.actionROI)
+        self.addAction(self.actionROI)
+        self.addWidget(self.openButton)
+
+        # mbir functionality should be replaced by remote workflow (dask)
+        # self.addAction(self.actionMBIR)
+
         # self.addAction(toolbuttonMaskingAction)
 
 
-    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir):
+    def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir,
+                        openflats, opendarks):
 
         """
         Connect toolbar action signals to give slots
@@ -364,3 +363,166 @@ class Toolbar(QtGui.QToolBar):
         self.actionCenter.toggled.connect(center)
         self.actionMBIR.toggled.connect(mbir)
         self.actionROI.triggered.connect(roiselection)
+        self.openFlats.triggered.connect(openflats)
+        self.openDarks.triggered.connect(opendarks)
+
+class ReconManager(QtGui.QSplitter):
+    """
+    Widget to show reconstruction queue on leftwidget tab. Also has actual queue used to hold recon jobs
+
+    Attributes
+    ----------
+    queue_form : QtTui.QStackedWidget
+        widget to show dictionary representation of pipeline for each reconstruction in queue
+    queue : featurewidgets.FeatureManager
+        widget to hold featurewidgets representing reconstruction jobs
+    manager : featurewidgets.FeatureManager
+        Widget for holding recon jobs and keeping their order
+
+    """
+
+
+    def __init__(self, *args, **kwargs):
+
+        super(ReconManager, self).__init__(*args, **kwargs)
+        queue_ui = QUiLoader().load('xicam/gui/tomographyqueue.ui')
+        self.queue_form = QtGui.QStackedWidget()
+        queue_ui.functionsList.setAlignment(QtCore.Qt.AlignBottom)
+        queue_ui.moveDownButton.setToolTip('Move selected job down in queue')
+        queue_ui.moveUpButton.setToolTip('Move selected job up in queue')
+        self.manager = fw.FeatureManager(queue_ui.functionsList, self.queue_form, blank_form='Click items below to see reconstruction jobs on queue.')
+        queue_ui.moveDownButton.clicked.connect(self.moveDown)
+        queue_ui.moveUpButton.clicked.connect(self.moveUp)
+
+        self.setOrientation(QtCore.Qt.Vertical)
+        self.addWidget(self.queue_form)
+        self.addWidget(queue_ui)
+
+        # queue for reconstructions
+        self.recon_queue = deque()
+
+    def swapQueue(self, idx1, idx2):
+        """
+        Function to swap jobs sitting in queue
+
+        Parameters
+        ----------
+        idx1: int
+            index of first job
+        idx2: int
+            index of second job
+        """
+
+        idx1 -= 1
+        idx2 -= 1
+
+        tmp = self.recon_queue[idx1]
+        self.recon_queue[idx1] = self.recon_queue[idx2]
+        self.recon_queue[idx2] = tmp
+        del(tmp)
+
+    def delQueueJob(self, idx):
+        """
+        Function to delete job on queue.
+
+        Parameters
+        ----------
+        idx: int
+            index of job to delete
+        """
+
+        idx -= 1
+
+        job = self.recon_queue[idx]
+        self.recon_queue.remove(job)
+
+
+    def addRecon(self, args):
+        """
+        Adds reconstruction job to queue. Renders parameters and function pipeline in a data tree
+
+        Parameters
+        ----------
+        args: 7-tuple
+            Tuple with args for a reconstruction. They are:
+            1). datawidget: Datawidget containing data
+            2). tuple: function pipeline, and reconstruction params (like theta, COR)
+            3). type: projections to reconstruct
+            4). tuple: sinograms to reconstruct
+            5). int: sinograms per reconstruction iteration
+            6). tuple: width dimensions for reconstruction
+            7). int: cpus available
+        """
+
+        name = os.path.basename(args[0].path)
+        widget = fw.FeatureWidget(name, checkable=False)
+        widget.previewButton.hide()
+        widget.line.hide()
+        widget.sigDelete.connect(self.reconDeleted)
+
+        form = DataTreeWidget()
+        data = args[4]
+        form.setData(data, hideRoot=True)
+        form.header().hide()
+        form.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        form.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+
+        widget.form = form
+
+        self.queue_form.addWidget(form)
+        self.manager.addFeature(widget)
+
+
+    def removeRecon(self, idx):
+        """
+        Function to remove job from queue
+
+        Parameters
+        ----------
+        idx: int
+            index of job to be removed
+
+        """
+
+        feature = self.manager.features[idx]
+        self.manager.removeFeature(feature)
+
+    def reconDeleted(self, funcwidget):
+        """
+        Slot to connect to user deleting job on queue
+
+        Parameters
+        ----------
+        funcwidget: featurewidgets.FunctionWidget
+            functionwidget to be deleted
+        """
+
+        idx = self.manager.features.index(funcwidget)
+        self.delQueueJob(idx)
+
+    def moveUp(self):
+        """
+        Slot to connect to user swapping recon job and job above it
+        """
+
+        idx1 = self.manager.features.index(self.manager.selectedFeature)
+        idx2 = self.manager.features.index(self.manager.nextFeature)
+
+        if idx1 == 0 or idx2 == 0:
+            return
+        else:
+            self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature)
+            self.swapQueue(idx1, idx2)
+
+    def moveDown(self):
+        """
+        Slot to connect to user swapping recon job and job below it
+        """
+        idx1 = self.manager.features.index(self.manager.selectedFeature)
+        idx2 = self.manager.features.index(self.manager.previousFeature)
+
+        if idx1 == 0 or idx2 == 0:
+            return
+        else:
+            self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature)
+            self.swapQueue(idx1, idx2)
