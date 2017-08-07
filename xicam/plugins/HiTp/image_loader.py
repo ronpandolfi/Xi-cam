@@ -7,5 +7,7 @@ def load_image(imageFullname):
     im = Image.open(imageFullname)
     # input image object into an array
     imArray = np.array(im)
+    if len(imArray.shape) != 2:
+        raise IOError
     im.close()
     return imArray
