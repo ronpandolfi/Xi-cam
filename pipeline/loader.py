@@ -533,9 +533,9 @@ class diffimage():
             if alphai is None:
                 return self.data
 
-            remeshdata, x, y = remesh.remesh(np.rot90(self.data, 1).copy(), self.filepath,
+            remeshdata, x, y = remesh.remesh(np.rot90(self.data).copy(),
                                              self.experiment.getGeometry(), alphai)
-            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(np.rot90(self.mask).copy(),
                                              self.experiment.getGeometry(), alphai)
 
             self.cache['remesh'] = remeshdata
@@ -1141,9 +1141,9 @@ class diffimage2(object):
             alphai = np.deg2rad(config.activeExperiment.getvalue('Incidence Angle (GIXS)'))
             msg.logMessage('Using incidence angle value: ' + str(alphai))
 
-            remeshdata, x, y = remesh.remesh(np.rot90(img).copy(), self.filepath,
+            remeshdata, x, y = remesh.remesh(np.rot90(img).copy(),
                                              self.experiment.getAI(), alphai)
-            remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(), self.filepath,
+            remeshmask, _, _ = remesh.remesh(np.rot90(mask).copy(),
                                              self.experiment.getAI(), alphai)
 
             self.cache['remesh'] = remeshdata
