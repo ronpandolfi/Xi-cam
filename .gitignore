@@ -1,9 +1,10 @@
 bin
 include
 lib
-lib64
+local
 share
 pip-selfcheck.json
+lib64
 .DS_Store
 *.edf
 *.nxs

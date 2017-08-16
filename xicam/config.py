@@ -23,6 +23,9 @@ class settingstracker(ptypes.GroupParameter):
         try:
             with open(self.settingspath,'r') as stream:
                 self.restoreState(yaml.load(stream))
+            for param in self.template()['children']:
+                if param['value'] not in self:
+                    raise yaml.YAMLError
         except (yaml.YAMLError,IOError) as exc:
             msg.logMessage(exc, msg.WARNING)
             self.restoreState(self.template())
