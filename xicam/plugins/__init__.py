@@ -33,9 +33,6 @@ def initplugins(placeholders):
             msg.logMessage("Plugin loading aborted: "+modname,msg.CRITICAL)
             continue
 
-    # Dig up a paws xi-cam plugin
-    modules.append(safeimporter.import_module('.paws.paws.interfaces.paws_xicam_plugin','xicam.plugins')) 
-
     #    pgin_subdirs = os.walk(__path__[0]+'/'+pgin_dir).next()[1]
     #    if 'interfaces' in pgin_subdirs:
     #        test_pkgs = pkgutil.iter_modules([__path__[0]+'/'+pgin_dir+'/interfaces'])
