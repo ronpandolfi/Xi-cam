@@ -26,12 +26,12 @@ class BatchPlugin(base.plugin):
         #self.pawswidget = BatchWidget.BatchWidget(self.paw)
         
         self.ops = OrderedDict()
-        self.ops['read_image'] = 'IO.IMAGE.FabIOOpen'
-        self.ops['calibrate_image'] = 'PROCESSING.INTEGRATION.ApplyIntegrator2d'
-        self.ops['integrate_image'] = 'PROCESSING.INTEGRATION.ApplyIntegrator1d'
-        self.ops['log_I_2d'] = 'PROCESSING.BASIC.ArrayLog'
-        self.ops['log_I_1d'] = 'PROCESSING.BASIC.LogY'
-        self.ops['write_csv'] = 'IO.CSV.WriteArrayCSV'
+        self.ops['Read Image'] = 'IO.IMAGE.FabIOOpen'
+        self.ops['Integrate to 2d'] = 'PROCESSING.INTEGRATION.ApplyIntegrator2d'
+        self.ops['Integrate to 1d'] = 'PROCESSING.INTEGRATION.ApplyIntegrator1d'
+        self.ops['log(I) 2d'] = 'PROCESSING.BASIC.ArrayLog'
+        self.ops['log(I) 1d'] = 'PROCESSING.BASIC.LogY'
+        self.ops['Output CSV'] = 'IO.CSV.WriteArrayCSV'
         self.ops['Output Image'] = 'IO.IMAGE.FabIOWrite'
 
         for nm,opuri in self.ops.items():
@@ -77,7 +77,7 @@ class BatchPlugin(base.plugin):
 
     def wf_setup(self):
         self.paw.add_wf(self._wfname)
-        self.paw.connect_wf_input('image_path','read_image.inputs.path',self._wfname)
+        self.paw.connect_wf_input('image_path','Read Image.inputs.path',self._wfname)
         self.paw.add_wf(self._batch_wfname)
 
         # Set up the batch execution Operation first
@@ -127,31 +127,31 @@ class BatchPlugin(base.plugin):
         pass
 
     def _default_op_setup(self, op_tag):
-        if op_tag == 'read_image':
+        if op_tag == 'Read Image':
             # This is where the batch operation will set its inputs
             self.paw.set_input(op_tag,'path','')
 
-        elif op_tag == 'calibrate_image' or op_tag == 'integrate_image':
-            self.paw.set_input(op_tag,'image_data','read_image.outputs.image_data')
+        elif op_tag == 'Integrate to 1d' or op_tag == 'Integrate to 2d':
+            self.paw.set_input(op_tag,'image_data','Read Image.outputs.image_data')
             self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'object')
 
-        elif op_tag == 'log_I_1d':
-            self.paw.set_input(op_tag,'x_y','integrate_image.outputs.q_I')
+        elif op_tag == 'log(I) 1d':
+            self.paw.set_input(op_tag,'x_y','Integrate to 1d.outputs.q_I')
 
-        elif op_tag == 'log_I_2d':
-            self.paw.set_input(op_tag,'x','calibrate_image.outputs.I')
+        elif op_tag == 'log(I) 2d':
+            self.paw.set_input(op_tag,'x','Integrate to 2d.outputs.I')
 
-        elif op_tag == 'write_csv':
-            self.paw.set_input(op_tag,'array','integrate_image.outputs.q_I')
+        elif op_tag == 'Output CSV':
+            self.paw.set_input(op_tag,'array','Integrate to 1d.outputs.q_I')
             self.paw.set_input(op_tag,'headers',['q','I'])
-            self.paw.set_input(op_tag,'dir_path','read_image.outputs.dir_path','workflow item')
-            self.paw.set_input(op_tag,'filename','read_image.outputs.filename')
+            self.paw.set_input(op_tag,'dir_path','Read Image.outputs.dir_path','workflow item')
+            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename')
             self.paw.set_input(op_tag,'filetag','_processed')
 
         elif op_tag == 'Output Image':
-            self.paw.set_input(op_tag,'image_data','calibrate_image.outputs.I')
-            self.paw.set_input(op_tag,'dir_path','read_image.outputs.dir_path')
-            self.paw.set_input(op_tag,'filename','read_image.outputs.filename')
+            self.paw.set_input(op_tag,'image_data','Integrate to 2d.outputs.I')
+            self.paw.set_input(op_tag,'dir_path','Read Image.outputs.dir_path')
+            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename')
             self.paw.set_input(op_tag,'suffix','_processed')
             self.paw.set_input(op_tag,'ext','.edf')
 
@@ -180,17 +180,17 @@ class BatchPlugin(base.plugin):
                     self.viewer_tabs.removeTab(tab_idx)
 
     def make_widget(self,op_tag):
-        if op_tag == 'read_image':
+        if op_tag == 'Read Image':
             output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
-        elif op_tag == 'calibrate_image':
+        elif op_tag == 'Integrate to 2d':
             output_data = self.paw.get_output(op_tag,'I',self._wfname)
-        elif op_tag == 'integrate_image':
+        elif op_tag == 'Integrate to 1d':
             output_data = self.paw.get_output(op_tag,'q_I',self._wfname)
-        elif op_tag == 'log_I_1d':
+        elif op_tag == 'log(I) 1d':
             output_data = self.paw.get_output(op_tag,'x_logy',self._wfname)
-        elif op_tag == 'log_I_2d':
+        elif op_tag == 'log(I) 2d':
             output_data = self.paw.get_output(op_tag,'logx',self._wfname)
-        elif op_tag == 'write_csv':
+        elif op_tag == 'Output CSV':
             output_data = self.paw.get_output(op_tag,'csv_path',self._wfname)
         elif op_tag == 'Output Image':
             output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
