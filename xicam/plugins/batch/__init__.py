@@ -13,6 +13,7 @@ from paws.core import pawstools
 from paws.core.operations import Operation as opmod
 from .. import base
 from pipeline import msg
+from xicam import config
 
 class BatchPlugin(base.plugin):
     name = 'Batch'
@@ -25,13 +26,13 @@ class BatchPlugin(base.plugin):
         #self.pawswidget = BatchWidget.BatchWidget(self.paw)
         
         self.ops = OrderedDict()
-        self.ops['read_PONI'] = 'IO.CALIBRATION.ReadPONI'
         self.ops['read_image'] = 'IO.IMAGE.FabIOOpen'
-        self.ops['calibrate_image'] = 'PROCESSING.CALIBRATION.Calibrate'
-        self.ops['integrate_image'] = 'PROCESSING.CALIBRATION.CalReduce'
+        self.ops['calibrate_image'] = 'PROCESSING.INTEGRATION.ApplyIntegrator2d'
+        self.ops['integrate_image'] = 'PROCESSING.INTEGRATION.ApplyIntegrator1d'
         self.ops['log_I_2d'] = 'PROCESSING.BASIC.ArrayLog'
         self.ops['log_I_1d'] = 'PROCESSING.BASIC.LogY'
         self.ops['write_csv'] = 'IO.CSV.WriteArrayCSV'
+        self.ops['Output Image'] = 'IO.IMAGE.FabIOWrite'
 
         for nm,opuri in self.ops.items():
             self.paw.activate_op(opuri)       
@@ -93,7 +94,7 @@ class BatchPlugin(base.plugin):
             # Add the op to the workflow
             self.paw.add_op(op_tag,op_uri,self._wfname)
             # Set up the inputs....
-            self.default_op_setup(op_tag)
+            self._default_op_setup(op_tag)
 
             # Add the op name in a pushbutton 
             op_button = QtGui.QPushButton(op_tag)
@@ -125,24 +126,20 @@ class BatchPlugin(base.plugin):
     def edit_op(self,op_tag):
         pass
 
-    def default_op_setup(self,op_tag):
-        if op_tag == 'read_PONI':
-            # This should refer to the xicam global poni dict?
-            pass
-
-        elif op_tag == 'read_image':
+    def _default_op_setup(self, op_tag):
+        if op_tag == 'read_image':
             # This is where the batch operation will set its inputs
             self.paw.set_input(op_tag,'path','')
 
         elif op_tag == 'calibrate_image' or op_tag == 'integrate_image':
             self.paw.set_input(op_tag,'image_data','read_image.outputs.image_data')
-            self.paw.set_input(op_tag,'poni_dict','read_PONI.outputs.poni_dict')
+            self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'object')
 
         elif op_tag == 'log_I_1d':
             self.paw.set_input(op_tag,'x_y','integrate_image.outputs.q_I')
 
         elif op_tag == 'log_I_2d':
-            self.paw.set_input(op_tag,'x','calibrate_image.outputs.I_at_q_chi')
+            self.paw.set_input(op_tag,'x','calibrate_image.outputs.I')
 
         elif op_tag == 'write_csv':
             self.paw.set_input(op_tag,'array','integrate_image.outputs.q_I')
@@ -150,6 +147,14 @@ class BatchPlugin(base.plugin):
             self.paw.set_input(op_tag,'dir_path','read_image.outputs.dir_path','workflow item')
             self.paw.set_input(op_tag,'filename','read_image.outputs.filename')
             self.paw.set_input(op_tag,'filetag','_processed')
+
+        elif op_tag == 'Output Image':
+            self.paw.set_input(op_tag,'image_data','calibrate_image.outputs.I')
+            self.paw.set_input(op_tag,'dir_path','read_image.outputs.dir_path')
+            self.paw.set_input(op_tag,'filename','read_image.outputs.filename')
+            self.paw.set_input(op_tag,'suffix','_processed')
+            self.paw.set_input(op_tag,'ext','.edf')
+
 
     def set_visualizer(self,op_tag,state):
         if not state==0:
@@ -163,24 +168,22 @@ class BatchPlugin(base.plugin):
                 # so the widget should still be in self.output_widgets
                 widg = self.output_widgets[op_tag]
 
-            if self.output_tabs.indexOf(widg) == -1:
-                tab_idx = self.output_tabs.addTab(widg,op_tag) 
-            self.output_tabs.setCurrentWidget(widg)
+            if self.viewer_tabs.indexOf(widg) == -1:
+                tab_idx = self.viewer_tabs.addTab(widg,op_tag) 
+            self.viewer_tabs.setCurrentWidget(widg)
         else:
             widg = self.output_widgets.pop(op_tag)
             if widg is not None:
-                tab_idx = self.output_tabs.indexOf(widg)  
+                tab_idx = self.viewer_tabs.indexOf(widg)  
                 widg.close() 
                 if not tab_idx == -1: 
-                    self.output_tabs.removeTab(tab_idx)
+                    self.viewer_tabs.removeTab(tab_idx)
 
     def make_widget(self,op_tag):
-        if op_tag == 'read_PONI':
-            output_data = self.paw.get_output(op_tag,'poni_dict',self._wfname)
-        elif op_tag == 'read_image':
+        if op_tag == 'read_image':
             output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
         elif op_tag == 'calibrate_image':
-            output_data = self.paw.get_output(op_tag,'I_at_q_chi',self._wfname)
+            output_data = self.paw.get_output(op_tag,'I',self._wfname)
         elif op_tag == 'integrate_image':
             output_data = self.paw.get_output(op_tag,'q_I',self._wfname)
         elif op_tag == 'log_I_1d':
@@ -189,6 +192,8 @@ class BatchPlugin(base.plugin):
             output_data = self.paw.get_output(op_tag,'logx',self._wfname)
         elif op_tag == 'write_csv':
             output_data = self.paw.get_output(op_tag,'csv_path',self._wfname)
+        elif op_tag == 'Output Image':
+            output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
         # Form a widget from the output data 
         widg = widgets.make_widget(output_data)
         return widg
