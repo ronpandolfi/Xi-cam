@@ -1,13 +1,14 @@
+# --coding: utf-8 --
 import numpy as np
 from xicam import config
 from PySide import QtCore
 import multiprocessing
 import time
 import pyFAI
-import remesh
 import msg
 
 pyFAI_method = 'cython'
+from modpkgs import pyFAImod
 
 #
 #
@@ -182,16 +183,15 @@ def radialintegratepyFAI(data, mask=None, AIdict=None, cut=None, color=[255, 255
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask = mask.astype(bool) & cut.astype(bool)
 
-    xres = 2000
 
-    (q, radialprofile) = AI.integrate1d(data.T, xres, mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
+    (q, radialprofile) = AI.integrate1d(data.T, config.settings['Integration Bins (q)'], mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
 
     q = q/10.
 
     return q.tolist(), radialprofile.tolist(), color, requestkey
 
 
-def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None, xres=1000, yres=1000):
+def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey = None, qvrt = None, qpar = None, xres=config.settings['Integration Bins (χ)'], yres=config.settings['Integration Bins (q)']):
     AI = pyFAI.AzimuthalIntegrator()
     AI.setPyFAI(**AIdict)
     # Always do mask with 1-valid, 0's excluded
@@ -213,10 +213,10 @@ def chiintegratepyFAI(data, mask, AIdict, cut=None, color=[255, 255, 255], reque
     # data *= cut
 
 
-    cake, q, chi = AI.integrate2d(data.T, xres, yres, mask=1 - mask.T, method=pyFAI_method)
-    mask, q, chi = AI.integrate2d(1 - mask.T, xres, yres, mask=1 - mask.T, method=pyFAI_method)
+    cake, q, chi = AI.integrate2d(data.T, xres, yres, method=pyFAI_method)
+    mask, q, chi = AI.integrate2d(mask.T, xres, yres, method=pyFAI_method)
 
-    maskedcake = np.ma.masked_array(cake, mask=mask)
+    maskedcake = np.ma.masked_array(cake, mask=mask<=0)
 
     chiprofile = np.ma.average(maskedcake, axis=1)
 
@@ -282,7 +282,7 @@ def zintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey =
     return qz.tolist(), xprofile.tolist(), color, requestkey
 
 
-def cake(imgdata, experiment, mask=None, xres=1000, yres=1000):
+def cake(imgdata, experiment, mask=None,  xres=config.settings['Integration Bins (χ)'], yres=config.settings['Integration Bins (q)']):
     if mask is None:
         mask = np.zeros_like(imgdata)
     AI = experiment.getAI()
@@ -324,7 +324,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    chi = np.arange(-180,180,360/1000.)
+    chi = np.arange(-180,180,360/config.settings['Integration Bins (χ)'])
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     xprofile = np.ma.average(maskeddata, axis=1)
@@ -344,7 +344,7 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
         mask &= cut.astype(bool)
 
-    q = np.arange(1000)*np.max(qpar)/10000.
+    q = np.arange(config.settings['Integration Bins (q)'])*np.max(qpar)/ 10./config.settings['Integration Bins (q)']
 
     maskeddata = np.ma.masked_array(data, mask=1-mask)
     zprofile = np.ma.average(maskeddata, axis=0)
@@ -375,15 +375,15 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     AIdict=AI.getPyFAI()
     msg.logMessage('remesh corrected calibration: '+str(AIdict))
 
-    q,qprofile,color,requestkey = qintegrate(data,mask,AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+    q,qprofile,color,requestkey = qintegrate(data,mask.copy(),AIdict,cut,color,requestkey, qvrt = None, qpar = None)
 
-    maxq = (qsquared*mask).max()
+    maxq = np.sqrt((qsquared*mask).max())
     if cut is not None: qsquared[np.logical_not(cut.astype(np.bool))]=np.inf
-    minq = qsquared.min()
+    minq = np.sqrt(qsquared.min())
 
     q = np.linspace(minq,maxq,len(qprofile))/10.
 
-    return q.tolist(), qprofile.tolist(), color, requestkey
+    return q.tolist(), qprofile, color, requestkey
 
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()

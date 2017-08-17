@@ -40,7 +40,7 @@ def fourierAutocorrelation(dimg, calibrantkey):
         return
     yield 20
 
-    config.activeExperiment.center = center_approx.center_approx(dimg.transformdata)
+    config.activeExperiment.center = center_approx.center_approx(dimg.transformdata,dimg.mask)
 
     yield 40
 

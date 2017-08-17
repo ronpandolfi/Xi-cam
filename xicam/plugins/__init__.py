@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest','Workflow']
 
 
 def initplugins(placeholders):
@@ -104,9 +104,9 @@ class pluginlink():
 
     @enabled.setter
     def enabled(self, enabled):
-        if enabled:
+        if enabled and not self._enabled:
             self.enable()
-        else:
+        elif not enabled and self._enabled:
             self.disable()
 
     def toggle(self):

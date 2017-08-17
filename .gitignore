@@ -1,3 +1,10 @@
+bin
+include
+lib
+local
+share
+pip-selfcheck.json
+lib64
 .DS_Store
 *.edf
 *.nxs
