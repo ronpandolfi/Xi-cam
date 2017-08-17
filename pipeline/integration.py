@@ -354,15 +354,40 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
 def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], requestkey=None, qvrt = None, qpar = None):
 
-    AI = pyFAI.AzimuthalIntegrator()
-    AI.setPyFAI(**AIdict)
-
     alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
     msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
 
     if qvrt is None or qpar is None:
         import remesh
         qpar, qvrt = remesh.remeshqarray(data, AI, np.deg2rad(alphai))
+    if mask is None: mask = config.activeExperiment.mask
+    if AIdict is None:
+        AI = config.activeExperiment.getAI()
+        # p1 = AI.get_poni1()
+        # p2 = AI.get_poni2()
+        # msg.logMessage(('poni:', p1, p2),msg.DEBUG)
+    else:
+        AI = pyFAI.AzimuthalIntegrator()
+        AI.setPyFAI(**AIdict)
+
+
+    if mask is not None:
+        mask = mask.copy()
+
+    msg.logMessage(('image:', data.shape),msg.DEBUG)
+    msg.logMessage(('mask:', mask.shape),msg.DEBUG)
+
+    if not mask.shape == data.shape:
+        msg.logMessage("No mask match. Mask will be ignored.",msg.WARNING)
+        mask = np.ones_like(data)
+        msg.logMessage(('emptymask:', mask.shape),msg.DEBUG)
+
+    if cut is not None and type(cut) is np.ndarray:
+        msg.logMessage(('cut:', cut.shape),msg.DEBUG)
+        mask = mask.astype(bool) & cut.astype(bool)
+
+
+    #qpar, qvrt = remesh.remeshqarray(data, None, AI, np.deg2rad(alphai))
     qsquared=qpar**2 + qvrt**2
 
 
@@ -377,15 +402,11 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     AIdict=AI.getPyFAI()
     msg.logMessage('remesh corrected calibration: '+str(AIdict))
 
-    q,qprofile,color,requestkey = qintegrate(data,mask.copy(),AIdict,cut,color,requestkey, qvrt = None, qpar = None)
+    AI._cached_array["q_center"]=np.sqrt(qsquared).T/10   # This is cheating! pyFAI may give unexpected results here
 
-    maxq = np.sqrt((qsquared*mask).max())
-    if cut is not None: qsquared[np.logical_not(cut.astype(np.bool))]=np.inf
-    minq = np.sqrt(qsquared.min())
+    (q, radialprofile) = AI.integrate1d(data.T, config.settings['Integration Bins (q)'], mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
 
-    q = np.linspace(minq,maxq,len(qprofile))/10.
-
-    return q.tolist(), qprofile, color, requestkey
+    return q, radialprofile, color, requestkey
 
 def remeshchiintegrate(data,mask,AIdict,cut=None, color=[255,255,255],requestkey=None, qvrt = None, qpar = None):
     AI = pyFAI.AzimuthalIntegrator()
