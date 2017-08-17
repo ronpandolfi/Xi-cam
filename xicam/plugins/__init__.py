@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest','Workflow']
 
 
 def initplugins(placeholders):
@@ -33,6 +33,13 @@ def initplugins(placeholders):
             msg.logMessage("Plugin loading aborted: "+modname,msg.CRITICAL)
             continue
 
+    #    pgin_subdirs = os.walk(__path__[0]+'/'+pgin_dir).next()[1]
+    #    if 'interfaces' in pgin_subdirs:
+    #        test_pkgs = pkgutil.iter_modules([__path__[0]+'/'+pgin_dir+'/interfaces'])
+    #        for imp, modnm, ispkg in test_pkgs:
+    #            mod = safeimporter.import_module('.'+pgin_dir+'.interfaces.'+modnm,'xicam.plugins')
+    #            if mod:
+    #                modules.append(mod)
 
     for module in modules:
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)

@@ -4,6 +4,7 @@ lib
 local
 share
 pip-selfcheck.json
+lib64
 .DS_Store
 *.edf
 *.nxs
@@ -14,3 +15,11 @@ pip-selfcheck.json
 build/
 dist/
 xicam.egg_info/
+*.swp
+lib/
+lib64
+bin/
+share/
+local/
+include/
+pip-selfcheck.json
