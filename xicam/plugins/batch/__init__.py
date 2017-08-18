@@ -4,7 +4,9 @@ import os
 from functools import partial
 from collections import OrderedDict
 
-from PySide import QtGui, QtCore, QtUiTools
+from PySide.QtGui import *
+from PySide.QtCore import *
+from PySide import QtUiTools
 
 from paws.api import PawsAPI
 from paws.ui import uitools
@@ -14,6 +16,18 @@ from paws.core.operations import Operation as opmod
 from .. import base
 from pipeline import msg
 from xicam import config
+from pyqtgraph import parametertree as pt
+
+
+
+class EnableGroupParameterItem(pt.types.ParameterItem):
+    def __init__(self,*args,**kwargs):
+        super(EnableGroupParameterItem, self).__init__(*args,**kwargs)
+        self.addWidget(QCheckBox())
+
+class EnableGroupParameter(pt.Parameter):
+    itemClass = EnableGroupParameterItem
+
 
 class BatchPlugin(base.plugin):
     name = 'Batch'
@@ -51,23 +65,29 @@ class BatchPlugin(base.plugin):
     def build_ui(self):
         #self.add_files_button.setText('Add selected files')
         #self.add_files_button.clicked.connect(self.add_files)
-        self.remove_files_button = QtGui.QPushButton('Remove selected files')
+        self.remove_files_button = QPushButton('Remove selected files')
         self.remove_files_button.clicked.connect(self.rm_files)
 
-        self.viewer_tabs = QtGui.QTabWidget()
-        self.viewer_tabs.clear()
-        self.wf_control = QtGui.QGroupBox('workflow control')
-        self.wf_layout = QtGui.QGridLayout()
-        self.wf_control.setLayout(self.wf_layout)
+        self.viewer_tabs = QStackedWidget()
+        self.wf_control = pt.ParameterTree()
+        self.wf_control.setHeaderLabels(['Operation','Enabled'])
+        self.wf_control.itemSelectionChanged.connect(self.itemSelectionChanged)
 
-        self.batch_control = QtGui.QWidget()
-        self.batch_list = QtGui.QListWidget()
-        self.batch_layout = QtGui.QGridLayout()
+        self.batch_control = QWidget()
+        self.batch_list = QListWidget()
+        self.batch_layout = QGridLayout()
         self.batch_control.setLayout(self.batch_layout)
         self.batch_layout.addWidget(self.batch_list,0,0,1,1)
         self.batch_layout.addWidget(self.remove_files_button,1,0,1,1)
 
-        self.batch_list.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.batch_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+    def itemSelectionChanged(self,*args,**kwargs):
+        item=self.wf_control.selectedItems()[0]
+        while item.depth>0: item=item.param.parent().items.keys()[0] # ascend until at 'operation' depth
+        if item.param.name()=='&Run': return # do nothing if its the run button
+        selected_tag = item.param.name()
+        self.set_visualizer(selected_tag,True)
 
 
     def rm_files(self):
@@ -88,34 +108,26 @@ class BatchPlugin(base.plugin):
 
         # Set up the rest of the workflow
         self.paw.select_wf(self._wfname)
+        root = pt.types.GroupParameter(name='root')
         for op_tag,op_uri in self.ops.items():
-            add_op_row = self.paw.op_count(self._wfname)+1
+            p = pt.types.SimpleParameter(name=op_tag, type='bool',showTop=False, value=True, expanded=False)
+            root.addChild(p)
+
+            # TODO: add operation parameters as children so they are editable
+            # If an op has children, it becomes expandable
+            p.addChild(pt.types.SimpleParameter(name='Example',type='int',value='42'))
 
             # Add the op to the workflow
             self.paw.add_op(op_tag,op_uri,self._wfname)
+
             # Set up the inputs....
             self._default_op_setup(op_tag)
 
-            # Add the op name in a pushbutton 
-            op_button = QtGui.QPushButton(op_tag)
-            op_button.clicked.connect( partial(self.edit_op,op_tag) )
-            self.wf_layout.addWidget(op_button,add_op_row,0,1,1)
+        run_wf_button=pt.types.ActionParameter(name='&Run')
+        run_wf_button.sigActivated.connect(self.run_wf)
+        root.addChild(run_wf_button)
 
-
-            # Add buttons to interact with op 
-            #op_edit_button = QtGui.QPushButton('edit')
-            #op_edit_button.clicked.connect( partial(self.edit_op,op_tag,op_name) )
-            enable_toggle = QtGui.QCheckBox('enable')
-            enable_toggle.setCheckState(QtCore.Qt.Checked)
-            enable_toggle.stateChanged.connect( partial(self.toggle_enabled,op_tag) )
-            vis_toggle = QtGui.QCheckBox('view')
-            vis_toggle.stateChanged.connect( partial(self.set_visualizer,op_tag) )
-            self.wf_layout.addWidget(enable_toggle,add_op_row,3,1,1)
-            self.wf_layout.addWidget(vis_toggle,add_op_row,4,1,1)
-            #self.wf_layout.addWidget(op_edit_button,add_op_row,5,1,1)
-        self.run_wf_button = QtGui.QPushButton('&Run')
-        self.run_wf_button.clicked.connect(self.run_wf) 
-        self.wf_layout.addWidget(self.run_wf_button,self.paw.op_count(self._wfname)+1,0,1,3)
+        self.wf_control.setParameters(root,showTop=False)
 
     def toggle_enabled(self,op_tag,state):
         if not state == 0:
@@ -169,7 +181,7 @@ class BatchPlugin(base.plugin):
                 widg = self.output_widgets[op_tag]
 
             if self.viewer_tabs.indexOf(widg) == -1:
-                tab_idx = self.viewer_tabs.addTab(widg,op_tag)
+                tab_idx = self.viewer_tabs.addWidget(widg)
             self.viewer_tabs.setCurrentWidget(widg)
         else:
             widg = self.output_widgets.pop(op_tag)
@@ -183,7 +195,7 @@ class BatchPlugin(base.plugin):
         if op_tag == 'Read Image':
             output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
         elif op_tag == 'Integrate to 2d':
-            output_data = self.paw.get_output(op_tag,'I_at_q_chi',self._wfname)
+            output_data = self.paw.get_output(op_tag,'I',self._wfname)
         elif op_tag == 'Integrate to 1d':
             output_data = self.paw.get_output(op_tag,'q_I',self._wfname)
         elif op_tag == 'log(I) 1d':
@@ -213,7 +225,7 @@ class BatchPlugin(base.plugin):
 
     def update_visuals(self):
         for widg in self.output_widgets:
-            if isinstance(widg,QtGui.QWidget):
+            if isinstance(widg,QWidget):
                 widg.repaint()
 
     def openfiles(self, files, operation=None, operationname=None):
