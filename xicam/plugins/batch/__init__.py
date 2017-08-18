@@ -132,7 +132,7 @@ class BatchPlugin(base.plugin):
             self.paw.set_input(op_tag,'path','')
 
         elif op_tag == 'calibrate_image' or op_tag == 'integrate_image':
-            self.paw.set_input(op_tag,'image_data','read_image.outputs.image_data')
+            self.paw.set_input(op_tag,'data','read_image.outputs.image_data')
             self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'object')
 
         elif op_tag == 'log_I_1d':
@@ -160,7 +160,7 @@ class BatchPlugin(base.plugin):
         if not state==0:
             # Find, create, or otherwise open the widget
             if not op_tag in self.output_widgets.keys():
-                widg = self.make_widget(op_tag) 
+                widg = self.make_widget(op_tag)
                 self.output_widgets[op_tag] = widg
             else:
                 # The user closed the tab
@@ -169,14 +169,14 @@ class BatchPlugin(base.plugin):
                 widg = self.output_widgets[op_tag]
 
             if self.viewer_tabs.indexOf(widg) == -1:
-                tab_idx = self.viewer_tabs.addTab(widg,op_tag) 
+                tab_idx = self.viewer_tabs.addTab(widg,op_tag)
             self.viewer_tabs.setCurrentWidget(widg)
         else:
             widg = self.output_widgets.pop(op_tag)
             if widg is not None:
-                tab_idx = self.viewer_tabs.indexOf(widg)  
-                widg.close() 
-                if not tab_idx == -1: 
+                tab_idx = self.viewer_tabs.indexOf(widg)
+                widg.close()
+                if not tab_idx == -1:
                     self.viewer_tabs.removeTab(tab_idx)
 
     def make_widget(self,op_tag):
