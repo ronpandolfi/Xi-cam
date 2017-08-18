@@ -139,19 +139,19 @@ class BatchPlugin(base.plugin):
             self.paw.set_input(op_tag,'x_y','Integrate to 1d.outputs.q_I')
 
         elif op_tag == 'log(I) 2d':
-            self.paw.set_input(op_tag,'x','Integrate to 2d.outputs.I')
+            self.paw.set_input(op_tag,'x','Integrate to 2d.outputs.I_at_q_chi')
 
         elif op_tag == 'Output CSV':
             self.paw.set_input(op_tag,'array','Integrate to 1d.outputs.q_I')
             self.paw.set_input(op_tag,'headers',['q','I'])
             self.paw.set_input(op_tag,'dir_path','Read Image.outputs.dir_path','workflow item')
-            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename')
+            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename','workflow item')
             self.paw.set_input(op_tag,'filetag','_processed')
 
         elif op_tag == 'Output Image':
-            self.paw.set_input(op_tag,'image_data','Integrate to 2d.outputs.I')
-            self.paw.set_input(op_tag,'dir_path','Read Image.outputs.dir_path')
-            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename')
+            self.paw.set_input(op_tag,'image_data','Integrate to 2d.outputs.I_at_q_chi')
+            self.paw.set_input(op_tag,'dir_path','Read Image.outputs.dir_path','workflow item')
+            self.paw.set_input(op_tag,'filename','Read Image.outputs.filename','workflow item')
             self.paw.set_input(op_tag,'suffix','_processed')
             self.paw.set_input(op_tag,'ext','.edf')
 
@@ -183,7 +183,7 @@ class BatchPlugin(base.plugin):
         if op_tag == 'Read Image':
             output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
         elif op_tag == 'Integrate to 2d':
-            output_data = self.paw.get_output(op_tag,'I',self._wfname)
+            output_data = self.paw.get_output(op_tag,'I_at_q_chi',self._wfname)
         elif op_tag == 'Integrate to 1d':
             output_data = self.paw.get_output(op_tag,'q_I',self._wfname)
         elif op_tag == 'log(I) 1d':
