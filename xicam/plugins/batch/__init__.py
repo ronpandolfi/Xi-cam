@@ -14,6 +14,7 @@ from paws.core.operations import Operation as opmod
 from .. import base
 from pipeline import msg
 from xicam import config
+from xicam import threads
 from pyqtgraph import parametertree as pt
 
 
@@ -50,7 +51,7 @@ class BatchPlugin(base.plugin):
         self.paw.activate_op('EXECUTION.BATCH.BatchFromFiles')
 
         self.build_ui()
-        self.centerwidget = self.viewer_stack
+        self.centerwidget = self.viewer_tabs
         self.rightwidget = self.wf_control
         self.bottomwidget = self.batch_control
 
@@ -65,10 +66,13 @@ class BatchPlugin(base.plugin):
         self.remove_files_button = QtGui.QPushButton('Remove selected files')
         self.remove_files_button.clicked.connect(self.rm_files)
 
-        self.viewer_stack = QtGui.QStackedWidget()
+        self.viewer_tabs = QtGui.QTabWidget()
+        self.viewer_tabs.setTabsClosable(True)
+        self.viewer_tabs.tabCloseRequested.connect( self._close_tab_by_index )
         self.wf_control = pt.ParameterTree()
         self.wf_control.setHeaderLabels(['Operation','Settings'])
-        self.wf_control.itemSelectionChanged.connect(self.itemSelectionChanged)
+        #self.wf_control.itemSelectionChanged.connect(self.itemSelectionChanged)
+        self.wf_control.itemClicked.connect(self._display_op_output)
 
         self.batch_control = QtGui.QWidget()
         self.batch_list = QtGui.QListWidget()
@@ -79,17 +83,13 @@ class BatchPlugin(base.plugin):
 
         self.batch_list.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
-    def itemSelectionChanged(self,*args,**kwargs):
-    #    pass
-    #    print args
-    #    print kwargs
-    #    if item.param.name()=='&Run': return # do nothing if its the run button
+    def _display_op_output(self):
         sel = self.wf_control.selectedItems()
         if any(sel):
             itm = sel[0]
             while itm.depth>0: itm=itm.param.parent().items.keys()[0] # ascend until at 'operation' depth
             itm_tag = itm.param.name()
-            if itm_tag in self.ops.keys():
+            if itm_tag in self.ops.keys() and not itm_tag=='&Run':
                 self.set_visualizer(itm_tag,True)
 
     def rm_files(self):
@@ -119,9 +119,9 @@ class BatchPlugin(base.plugin):
             self._default_op_setup(op_tag)
             # Connect the ParameterTree
             self._param_setup(root_param,op_tag)
-            # Connect the viewer
-            self.paw.get_wf(self._wfname).opFinished.connect( self.update_visuals )
-            # TODO: Connect paws opChanged signal to update parameter tree
+        # Connect the viewer
+        self.paw.get_wf(self._wfname).opFinished.connect( self.update_visuals )
+        # TODO: Connect paws opChanged signal to update parameter tree
         run_wf_button=pt.types.ActionParameter(name='&Run')
         run_wf_button.sigActivated.connect(self.run_wf)
         root_param.addChild(run_wf_button)
@@ -228,26 +228,44 @@ class BatchPlugin(base.plugin):
     def edit_op(self,op_tag):
         pass
 
+    def _close_tab_by_index(self,idx):
+        op_tag = self.viewer_tabs.tabText(idx)
+        self.set_visualizer(op_tag,False)
+
     def set_visualizer(self,op_tag,state=False):
-        # Find, create, or otherwise open the widget
-        if op_tag in self.output_widgets.keys():
-            widg = self.output_widgets[op_tag]
-            if not self.viewer_stack.indexOf(widg) == -1:
-                # Get rid of old widget
-                self.viewer_stack.removeWidget(widg)
-        if state:
-            # Create new widget
-            widg = self.make_widget(op_tag)
+        if not bool(state):
+            # Remove all traces of the widget
+            if op_tag in self.output_widgets.keys():
+                widg = self.output_widgets.pop(op_tag)
+                widg_idx = self.viewer_tabs.indexOf(widg)
+                if not widg_idx == -1: 
+                    # Get rid of old widget
+                    self.viewer_tabs.removeTab(widg_idx)
+        else:
+            # Find, create, or otherwise open the widget
+            if op_tag in self.output_widgets.keys():
+                widg = self.output_widgets[op_tag]
+                #if not self.viewer_tabs.indexOf(widg) == -1:
+                #    # Get rid of old widget
+                #    self.viewer_tabs.removeWidget(widg)
+                #if state:
+            else:
+                # Create new widget
+                widg = self.make_widget(op_tag)
             if widg is not None:
-                self.output_widgets[op_tag] = widg
-                self.viewer_stack.addWidget(widg)
+                widg_idx = self.viewer_tabs.indexOf(widg)
+                if widg_idx == -1:
+                    self.output_widgets[op_tag] = widg
+                    self.viewer_tabs.addTab(widg,op_tag)
+                    widg_idx = self.viewer_tabs.indexOf(widg)
+                self.viewer_tabs.setCurrentIndex(widg_idx)
         #else:
         #    widg = self.output_widgets.pop(op_tag)
         #    if widg is not None:
-        #        tab_idx = self.viewer_stack.indexOf(widg)
+        #        tab_idx = self.viewer_tabs.indexOf(widg)
         #        widg.close()
         #        if not tab_idx == -1:
-        #            self.viewer_stack.removeTab(tab_idx)
+        #            self.viewer_tabs.removeTab(tab_idx)
 
     def make_widget(self,op_tag):
         if op_tag == 'Read Image':
@@ -278,12 +296,28 @@ class BatchPlugin(base.plugin):
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
         # TODO: Move this off the main thread.
-        self.paw.execute()
+        run_off_thread = threads.method()(self.paw.execute) 
+        run_off_thread()
+        #self.paw.execute()
         #self.update_visuals()
 
-    def update_visuals(self,opname):
-        if opname in self.output_widgets:
-            self.output_widgets[opname].repaint()
+    def update_visuals(self,op_tag):
+        if op_tag in self.output_widgets.keys():
+            current_idx = self.viewer_tabs.currentIndex()
+            print 'update_visuals({})'.format(op_tag)
+            widg = self.output_widgets[op_tag]
+            widg_idx = self.viewer_tabs.indexOf(widg)
+            if not widg_idx == -1:
+                self.viewer_tabs.removeTab(widg_idx)
+                new_widg = self.make_widget(op_tag)
+                self.viewer_tabs.insertTab(widg_idx,new_widg,op_tag)
+                self.output_widgets[op_tag] = new_widg
+            if current_idx == widg_idx:
+                # ensure current tab remains visible
+                self.viewer_tabs.setCurrentIndex(widg_idx)
+        self.paw.app.processEvents()
+        #self.output_widgets[opname].repaint()
+        #widg.repaint()
 
     def openfiles(self, files, operation=None, operationname=None):
         self.batch_list.addItems(files)
