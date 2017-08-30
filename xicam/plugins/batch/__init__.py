@@ -113,11 +113,13 @@ class BatchPlugin(base.plugin):
             self._param_setup(root_param,op_tag)
         # Connect the viewer
         self.paw.get_wf(self._wfname).opFinished.connect( self.update_visuals )
-        # TODO: Connect paws opChanged signal to update parameter tree
         run_wf_button=pt.types.ActionParameter(name='&Run')
         run_wf_button.sigActivated.connect(self.run_wf)
         root_param.addChild(run_wf_button)
         self.wf_control.setParameters(root_param,showTop=False)
+        # TODO: Connect paws opChanged signal to some signal 
+        # that updates parameters in self.wf_control 
+        # for parameters that refer to workflow item inputs 
 
     def _param_setup(self,root_param,op_tag):
         # op Parameter 
@@ -151,17 +153,14 @@ class BatchPlugin(base.plugin):
             pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'polarization_factor') )  
             p.addChild(pc)
         elif op_tag in ['Output CSV','Output Image']:
-            # TODO: think of a way to include workflow items in the parametertree,
-            # without interfering with the workflow routing
-            # TODO: add a browse button for dir_path 
-            #pc = pt.types.SimpleParameter(name='directory path',
-            #type='str',value=self.paw.get_input_setting(op_tag,'dir_path'))
-            #pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'dir_path') )  
-            #p.addChild(pc)
-            #pc = pt.types.SimpleParameter(name='file name',
-            #type='str',value=self.paw.get_input_setting(op_tag,'filename'))
-            #pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'filename') )  
-            #p.addChild(pc)
+            # TODO: include workflow items in the parametertree,
+            # as read-only parameters that display the current value of the input. 
+            # TODO: add a browse button for dir_path.
+            # if dir_path is set manually, edit the workflow
+            # so that dir_path is no longer set as a workflow item. 
+            # TODO: add a text entry field for filename.
+            # if filename is set manually, edit the workflow
+            # so that filename is no longer set as a workflow item.
             pc = pt.types.SimpleParameter(name='file tag',
             type='str',value=self.paw.get_input_setting(op_tag,'filetag'))
             pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'filetag') )  
@@ -244,9 +243,9 @@ class BatchPlugin(base.plugin):
         elif op_tag == 'log(I) 1d':
             output_data = self.paw.get_output(op_tag,'x_logy',self._wfname)
         elif op_tag == 'log(I) 2d':
-            # TODO: find a clean way to use pyqtgraph.ImageView
-            #output_data = '** log(I) visualization under development **'
             output_data = self.paw.get_output(op_tag,'logx',self._wfname)
+            # TODO: find a graceful way to handle the nans that result from log(0).
+            # currently pyqtgraph throws errors about it.
         elif op_tag == 'Output CSV':
             output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
         elif op_tag == 'Output Image':
@@ -272,7 +271,6 @@ class BatchPlugin(base.plugin):
             p = self.batch_list.item(r).text()
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
-        # TODO: Move this off the main thread.
         run_off_thread = threads.method()(self.paw.execute) 
         run_off_thread()
         #self.paw.execute()
@@ -287,7 +285,6 @@ class BatchPlugin(base.plugin):
                 visdata = self._get_vis_output(op_tag)
                 if op_tag in ['Read Image','Integrate to 2d','log(I) 2d']: 
                     # expect a pyqtgraph.ImageView
-                    # TODO: find a clean way to use pyqtgraph.ImageView
                     self._vis_widget.setImage(visdata) 
                 elif op_tag in ['Integrate to 1d','log(I) 1d']:
                     # expect a pyqtgraph.PlotWidget
