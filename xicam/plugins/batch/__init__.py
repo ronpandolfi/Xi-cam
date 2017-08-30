@@ -18,15 +18,6 @@ from xicam import threads
 from pyqtgraph import parametertree as pt
 
 
-#class EnableGroupParameterItem(pt.types.ParameterItem):
-#    def __init__(self,*args,**kwargs):
-#        super(EnableGroupParameterItem, self).__init__(*args,**kwargs)
-#        self.addWidget(QtGui.QCheckBox())
-
-#class EnableGroupParameter(pt.Parameter):
-#    itemClass = EnableGroupParameterItem
-
-
 class BatchPlugin(base.plugin):
     name = 'Batch'
 
@@ -51,27 +42,28 @@ class BatchPlugin(base.plugin):
         self.paw.activate_op('EXECUTION.BATCH.BatchFromFiles')
 
         self.build_ui()
-        self.centerwidget = self.viewer_tabs
+        self.centerwidget = self.viewer_frame
         self.rightwidget = self.wf_control
         self.bottomwidget = self.batch_control
 
         self.wf_setup()
-        self.output_widgets = {} 
+
+        self._current_visual = None
+        self._vis_widget = None
+        self._placeholder_widget = QtGui.QPlainTextEdit('** no output data **')
 
         super(BatchPlugin, self).__init__(*args, **kwargs)
 
     def build_ui(self):
-        #self.add_files_button.setText('Add selected files')
-        #self.add_files_button.clicked.connect(self.add_files)
         self.remove_files_button = QtGui.QPushButton('Remove selected files')
         self.remove_files_button.clicked.connect(self.rm_files)
 
-        self.viewer_tabs = QtGui.QTabWidget()
-        self.viewer_tabs.setTabsClosable(True)
-        self.viewer_tabs.tabCloseRequested.connect( self._close_tab_by_index )
+        self.viewer_frame = QtGui.QFrame()
+        self.viewer_layout = QtGui.QGridLayout()
+        self.viewer_frame.setLayout(self.viewer_layout)
+        
         self.wf_control = pt.ParameterTree()
         self.wf_control.setHeaderLabels(['Operation','Settings'])
-        #self.wf_control.itemSelectionChanged.connect(self.itemSelectionChanged)
         self.wf_control.itemClicked.connect(self._display_op_output)
 
         self.batch_control = QtGui.QWidget()
@@ -90,7 +82,7 @@ class BatchPlugin(base.plugin):
             while itm.depth>0: itm=itm.param.parent().items.keys()[0] # ascend until at 'operation' depth
             itm_tag = itm.param.name()
             if itm_tag in self.ops.keys() and not itm_tag=='&Run':
-                self.set_visualizer(itm_tag,True)
+                self.set_visualizer(itm_tag)
 
     def rm_files(self):
         itms = self.batch_list.selectedItems()
@@ -228,46 +220,21 @@ class BatchPlugin(base.plugin):
     def edit_op(self,op_tag):
         pass
 
-    def _close_tab_by_index(self,idx):
-        op_tag = self.viewer_tabs.tabText(idx)
-        self.set_visualizer(op_tag,False)
+    def set_visualizer(self,op_tag):
+        widg = self.make_widget(op_tag)
+        # clear the output layout
+        old_widg_itm = self.viewer_layout.takeAt(0)
+        if old_widg_itm is not None:
+            if old_widg_itm.widget() is not self._placeholder_widget:
+                old_widg_itm.widget().close()
+            del old_widg_itm
+            #old_widg_itm.widget().deleteLater()
+        # set the new widget
+        self.viewer_layout.addWidget(widg,0,0)
+        self._current_visual = op_tag
+        self._vis_widget = widg
 
-    def set_visualizer(self,op_tag,state=False):
-        if not bool(state):
-            # Remove all traces of the widget
-            if op_tag in self.output_widgets.keys():
-                widg = self.output_widgets.pop(op_tag)
-                widg_idx = self.viewer_tabs.indexOf(widg)
-                if not widg_idx == -1: 
-                    # Get rid of old widget
-                    self.viewer_tabs.removeTab(widg_idx)
-        else:
-            # Find, create, or otherwise open the widget
-            if op_tag in self.output_widgets.keys():
-                widg = self.output_widgets[op_tag]
-                #if not self.viewer_tabs.indexOf(widg) == -1:
-                #    # Get rid of old widget
-                #    self.viewer_tabs.removeWidget(widg)
-                #if state:
-            else:
-                # Create new widget
-                widg = self.make_widget(op_tag)
-            if widg is not None:
-                widg_idx = self.viewer_tabs.indexOf(widg)
-                if widg_idx == -1:
-                    self.output_widgets[op_tag] = widg
-                    self.viewer_tabs.addTab(widg,op_tag)
-                    widg_idx = self.viewer_tabs.indexOf(widg)
-                self.viewer_tabs.setCurrentIndex(widg_idx)
-        #else:
-        #    widg = self.output_widgets.pop(op_tag)
-        #    if widg is not None:
-        #        tab_idx = self.viewer_tabs.indexOf(widg)
-        #        widg.close()
-        #        if not tab_idx == -1:
-        #            self.viewer_tabs.removeTab(tab_idx)
-
-    def make_widget(self,op_tag):
+    def _get_vis_output(self,op_tag):
         if op_tag == 'Read Image':
             output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
         elif op_tag == 'Integrate to 2d':
@@ -277,15 +244,25 @@ class BatchPlugin(base.plugin):
         elif op_tag == 'log(I) 1d':
             output_data = self.paw.get_output(op_tag,'x_logy',self._wfname)
         elif op_tag == 'log(I) 2d':
+            # TODO: find a clean way to use pyqtgraph.ImageView
+            #output_data = '** log(I) visualization under development **'
             output_data = self.paw.get_output(op_tag,'logx',self._wfname)
         elif op_tag == 'Output CSV':
             output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
         elif op_tag == 'Output Image':
             output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
+        else:
+            return '** no visualization data specified **'
+        return output_data
+
+    def make_widget(self,op_tag):
+        output_data = self._get_vis_output(op_tag)
         # Form a widget from the output data 
         if output_data is not None:
             widg = widgets.make_widget(output_data)
-            return widg
+        else:
+            widg = self._placeholder_widget 
+        return widg
 
     def run_wf(self):
         self.paw.select_wf(self._batch_wfname)
@@ -302,22 +279,24 @@ class BatchPlugin(base.plugin):
         #self.update_visuals()
 
     def update_visuals(self,op_tag):
-        if op_tag in self.output_widgets.keys():
-            current_idx = self.viewer_tabs.currentIndex()
-            print 'update_visuals({})'.format(op_tag)
-            widg = self.output_widgets[op_tag]
-            widg_idx = self.viewer_tabs.indexOf(widg)
-            if not widg_idx == -1:
-                self.viewer_tabs.removeTab(widg_idx)
-                new_widg = self.make_widget(op_tag)
-                self.viewer_tabs.insertTab(widg_idx,new_widg,op_tag)
-                self.output_widgets[op_tag] = new_widg
-            if current_idx == widg_idx:
-                # ensure current tab remains visible
-                self.viewer_tabs.setCurrentIndex(widg_idx)
+        if op_tag == self._current_visual:
+            if self._vis_widget is self._placeholder_widget:
+                # visual was previously not ready: try again
+                self.set_visualizer(op_tag)
+            else:
+                visdata = self._get_vis_output(op_tag)
+                if op_tag in ['Read Image','Integrate to 2d','log(I) 2d']: 
+                    # expect a pyqtgraph.ImageView
+                    # TODO: find a clean way to use pyqtgraph.ImageView
+                    self._vis_widget.setImage(visdata) 
+                elif op_tag in ['Integrate to 1d','log(I) 1d']:
+                    # expect a pyqtgraph.PlotWidget
+                    self._vis_widget.getPlotItem().plot(visdata)
+                elif op_tag in ['Output CSV','Output Image']:
+                    # expect a QtGui.QTextEdit
+                    t = widgets.display_text_fast(visdata)
+                    self._vis_widget.setText(t)
         self.paw.app.processEvents()
-        #self.output_widgets[opname].repaint()
-        #widg.repaint()
 
     def openfiles(self, files, operation=None, operationname=None):
         self.batch_list.addItems(files)
