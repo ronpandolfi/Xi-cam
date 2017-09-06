@@ -91,7 +91,7 @@ class BatchPlugin(base.plugin):
 
     def wf_setup(self):
         self.paw.add_wf(self._wfname)
-        self.paw.connect_wf_input('image_path','Read Image.inputs.path',self._wfname)
+        self.paw.add_wf_input('image_path','Read Image.inputs.path',self._wfname)
         self.paw.add_wf(self._batch_wfname)
 
         # Set up the batch execution Operation first
