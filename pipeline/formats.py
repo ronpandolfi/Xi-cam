@@ -12,7 +12,7 @@ import pyFAI
 from pyFAI import detectors
 import logging
 import msg
-import pyfits
+import astropy.io.fits as pyfits
 from nexusformat import nexus as nx
 from collections import OrderedDict
 import re

@@ -70,19 +70,12 @@ def fittingp_to_simp(fittingp):
 
     multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
     simp = multiples * np.asarray(fittingp) + adds
+
     if np.any(simp[:5] < 0):
         return None
     if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
         return None
-    return simp
 
-def fittingp_to_simp1(fittingp):
-    # values assume initial fittingp centered at 0 and std. dev. of 100
-
-    multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
-    simp = multiples * np.asarray(fittingp) + adds
-
-    simp[np.where(simp < 0)[0], :] = None
     return simp
 
 #Tune this function for core-shell
@@ -126,7 +119,7 @@ def fix_fitness_mcmc(fitness):
 
 
 class plugin(base.plugin):
-    name = "CDSAXS"
+    name = "RSOXS_E"
 
     def __init__(self, *args, **kwargs):
 
@@ -143,9 +136,6 @@ class plugin(base.plugin):
 
         self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[
             {'name': 'test', 'type': 'group', 'children': [
-                {'name': 'Phi_min', 'type': 'float'},
-                {'name': 'Phi_max', 'type': 'float'},
-                {'name': 'Phi_step', 'type': 'float'},
                 {'name': 'Pitch', 'type': 'float'},
                 {'name': 'H', 'type': 'float'},
                 {'name': 'w0', 'type': 'float'},
@@ -192,9 +182,8 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
 
-        Phi_min, Phi_max, Phi_step, Pitch = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param[
-            'test', 'Phi_step'], self.param['test', 'Pitch']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(Phi_min, Phi_max, Phi_step, Pitch))
+        #Pitch = self.param['test', 'Pitch']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW())
         threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
@@ -233,23 +222,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         self.src = src
 
-    def loadRAW(self, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100):
-
-        #pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.095372
-        #substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
-
-        pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.09184
-        substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
-
-        #pixel_size, sample_detector_distance, wavelength = 26 * 10 ** -6, 0.15, 2.36
-        #substratethickness, substrateattenuation = 200 * 10 ** -9, 0.5 * 10 ** -3
-
-        self.qx, self.qz, self.I = [], [], []
-
-        file = [val for val in self.src]
-        phi = [np.deg2rad(Phi_min + i * Phi_step) for i in range(0, 1 + int((Phi_max - Phi_min)/Phi_step), 1)]
-        print(np.shape(file), np.shape(phi))
-        print(phi)
+    def loadRAW(self):
+        '''
         # Parallelization
         pool = multiprocessing.Pool()
         func = partial(cdsaxs.test, wavelength, substratethickness, substrateattenuation, Pitch)
@@ -257,50 +231,57 @@ class CDSAXSWidget(QtGui.QTabWidget):
         b = [list(elem) for elem in a]
         I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*pool.map(func, b))
         pool.close()
+        '''
+
+
+        Pitch = 200
+        pixel_size, sample_detector_distance, wavelength = 26 * 10 ** -6, 0.15, 2.36
+        substratethickness, substrateattenuation = 200 * 10 ** -9, 0.5 * 10 ** -3
+
+        I_cor, img1, I_peaks = [], [], []
+
+        file = [val for val in self.src]
+
+        a, b, c = [], [], []
+        print(file)
+        print(np.shape(file))
+
+        i = 0
+        for fi in file:
+            print(fi)
+            I_cor, img1, I_peaks = cdsaxs.test(wavelength, substratethickness, substrateattenuation, Pitch, fi)
+            #I_cor, img1 = cdsaxs.test(wavelength, substratethickness, substrateattenuation, Pitch, fi)
+            a.append(I_cor), b.append(img1), c.append(I_peaks)
+            i += 1
+
+        print('OK')
 
         np.save('/Users/guillaumefreychet/Desktop/icor.npy', I_cor)
-        np.save('/Users/guillaumefreychet/Desktop/Qxexp.npy', Qxexp)
-        np.save('/Users/guillaumefreychet/Desktop/Q__Z.npy', Q__Z)
         np.save('/Users/guillaumefreychet/Desktop/I_peaks.npy', I_peaks)
 
-        data = np.stack(img1)
+        data = np.stack(b)
         data = np.log(data - data.min() + 1.)
         self.CDRawWidget.setImage(data)
 
-        I_peaks = [np.array(I_peaks)[:,i] for i in range(len(np.array(I_peaks)[0]))]
-
-        threshold = max(map(max, np.array(I_peaks)))[0] /10000.
+        I_peaks = [np.array(c)[:,i] for i in range(len(np.array(c)[0]))]
+        threshold = 0.01
+        #threshold = max(map(max, np.array(I_peaks)))[0] /1000.
         column_max = map(max, I_peaks)
         ind = np.where(np.array([item for sublist in column_max for item in sublist]) > threshold)
-
+        I = []
         for i in ind[0]:
-            self.qx.append(np.array([item for sublist in np.array(Qxexp)[:, i] for item in np.array(sublist)]))
-            self.qz.append(np.array([item for sublist in np.array(Q__Z)[:, i] for item in np.array(sublist)]))
-            self.I.append(np.array([item for sublist in np.array(I_peaks)[i, :] for item in np.array(sublist)]))
+            I.append(np.array([item for sublist in np.array(I_peaks)[i, :] for item in np.array(sublist)]))
 
-        np.save('/Users/guillaumefreychet/Desktop/qqx.npy', self.qx)
-        np.save('/Users/guillaumefreychet/Desktop/qqz.npy', self.qz)
-        np.save('/Users/guillaumefreychet/Desktop/ii.npy', self.I)
+        np.save('/Users/guillaumefreychet/Desktop/ii.npy', I)
 
-        sampling_size = (400, 400)
-        qx_carto = np.array([item for sublist in q_x for item in sublist])
-        qz_carto = np.array([item for sublist in q_z for item in sublist])
-        profiles = np.array([item for sublist in I_cor for item in sublist])
-
-        self.img = cdsaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
-        self.CDCartoWidget.setImage(self.img)
-
-        global Q_x, Q_z, intensity, adds
-        # set globals
-        Q_x = self.qx
-        Q_z = self.qz
-        intensity = self.I
+        global intensity
+        intensity = I
 
         #Display the experimental profiles
         self.update_profile_ini()
 
-        self.Qxfit = SL_model1(50, 40, np.array([70]))
-        self.update_profile(plot = 'True')
+        #self.Qxfit = SL_model1(50, 40, np.array([70]))
+        #self.update_profile(plot = 'True')
         self.maxres = 0
 
     def fitting_test1(self, H=10, LL=20, Beta1=70, Num_trap=5, DW=0.11, I0=3, Bk=1):  # these are simp not fittingp
@@ -353,12 +334,12 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
     def update_profile_ini(self):
 
-        for order in range(0, len(self.I), 1):
-            self.I[order] -= min(self.I[order])
-            self.I[order] /= max(self.I[order])
-            self.I[order] += order + 1
+        for order in range(0, len(intensity)-1, 1):
+            intensity[order] -= min(intensity[order])
+            intensity[order] /= max(intensity[order])
+            intensity[order] += order + 1
 
-            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.qz[order], np.log(self.I[order]))
+            guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, np.log(intensity[order]))
 
     def update_profile(self, plot='False'):
         for order in range(0, len(self.I), 1):
@@ -531,17 +512,17 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.best_corr = fittingp_to_simp(self.best_uncorr)
         print('best', self.best_corr, self.best_fitness)
 
-
+        '''
         # make population dataframe, order of rows is first generation for all children, then second generation for all children...
         self.population_array = np.array([list(individual) for generation in population_list for individual in generation])
         print('poparr1', np.shape(self.population_array))
-        np.save('/Users/guillaumefreychet/Desktop/poparr1.npy', self.population_array)
-        self.population_array = fittingp_to_simp1(self.population_array)
+        self.population_array = self.fittingp_to_simp(self.population_array)
         print('poparr2', np.shape(self.population_array))
-        np.save('/Users/guillaumefreychet/Desktop/poparr2.npy', self.population_array)
+        np.save('/Users/guillaumefreychet/Desktop/poparr.npy', self.population_array)
         self.fitness_array = np.array([individual.fitness.values[0] for generation in population_list for individual in generation])
         print('popfit', np.shape(self.fitness_array))
         self.population_frame = pd.DataFrame(np.column_stack((self.population_array, self.fitness_array)))
+        '''
 
     def mcmc(self, N, sigma, nsteps, nwalkers, use_mh=False, parallel=True, seed=None, verbose=True):
         """Fit with emcee package's implementation of MCMC algorithm and place into instance of self

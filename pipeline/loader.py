@@ -4,7 +4,7 @@ import os
 
 import fabio
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 
 # from nexpy.api import nexus as nx
 from pyFAI import detectors
@@ -282,7 +282,12 @@ def loadpath(path):
     if config.settings['Image Load Rotations']:
         img=np.rot90(img,config.settings['Image Load Rotations'])
 
-    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
+    if not isinstance(img, tuple):
+        detectormask = finddetectorbyfilename(path).calc_mask()
+        if detectormask is None:
+            img = (img,np.zeros_like(img))
+        else:
+            img = (img, 1-finddetectorbyfilename(path).calc_mask())
     return img
 
 

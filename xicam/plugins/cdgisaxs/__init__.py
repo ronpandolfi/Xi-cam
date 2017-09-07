@@ -1,7 +1,7 @@
 import __future__
 import os, sys, time
 import glob
-import simulation, fitting, cdsaxs
+import simulation, fitting, cdgisaxs
 from scipy.signal import resample
 import pyqtgraph as pg
 from pyqtgraph import parametertree as pt
@@ -70,19 +70,12 @@ def fittingp_to_simp(fittingp):
 
     multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
     simp = multiples * np.asarray(fittingp) + adds
+
     if np.any(simp[:5] < 0):
         return None
     if np.any(simp[5:] < 0) or np.any(simp[5:] > 180):
         return None
-    return simp
 
-def fittingp_to_simp1(fittingp):
-    # values assume initial fittingp centered at 0 and std. dev. of 100
-
-    multiples = np.array([0.0001, 0.001, 0.001, 0.01, 0.04] + [0.04 for i in range(0, (len(adds) - 5), 1)])
-    simp = multiples * np.asarray(fittingp) + adds
-
-    simp[np.where(simp < 0)[0], :] = None
     return simp
 
 #Tune this function for core-shell
@@ -92,7 +85,6 @@ def SL_model1(H, LL, Beta, DW_factor=0.11, I0=3, Bk=3):
     Qxfit = []
     for i in range(len(Q_z)):
         ff_core = simulation.stacked_trapezoids(Q_x[i], Q_z[i], 0, LL, H, langle, rangle)
-        '''
         shell = 'False'
         if shell:
             y_off, h_off = 0, 0     #y_off thickness of the shell
@@ -103,8 +95,7 @@ def SL_model1(H, LL, Beta, DW_factor=0.11, I0=3, Bk=3):
             Qxfit.append(np.abs(ff) ** 2)
         else:
             Qxfit.append(np.abs(ff_core) ** 2)
-        '''
-        Qxfit.append(ff_core)
+
     Qxfitc = fitting.corrections_DWI0Bk(Qxfit, DW_factor, I0, Bk, Q_x, Q_z)
     return Qxfitc
 
@@ -126,7 +117,7 @@ def fix_fitness_mcmc(fitness):
 
 
 class plugin(base.plugin):
-    name = "CDSAXS"
+    name = "CDGISAXS"
 
     def __init__(self, *args, **kwargs):
 
@@ -143,9 +134,6 @@ class plugin(base.plugin):
 
         self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[
             {'name': 'test', 'type': 'group', 'children': [
-                {'name': 'Phi_min', 'type': 'float'},
-                {'name': 'Phi_max', 'type': 'float'},
-                {'name': 'Phi_step', 'type': 'float'},
                 {'name': 'Pitch', 'type': 'float'},
                 {'name': 'H', 'type': 'float'},
                 {'name': 'w0', 'type': 'float'},
@@ -188,13 +176,12 @@ class plugin(base.plugin):
         widget = widgets.OOMTabItem(itemclass=CDSAXSWidget, src=files, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
-
+        Pitch = self.param['test', 'Pitch']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=Pitch)
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
 
-        Phi_min, Phi_max, Phi_step, Pitch = self.param['test', 'Phi_min'], self.param['test', 'Phi_max'], self.param[
-            'test', 'Phi_step'], self.param['test', 'Pitch']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(Phi_min, Phi_max, Phi_step, Pitch))
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW)
         threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
@@ -225,7 +212,6 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.CDModelWidget = CDModelWidget()
 
         self.addTab(self.CDRawWidget, 'RAW')
-        self.addTab(self.CDCartoWidget, 'Cartography')
         self.addTab(self.CDModelWidget, 'Model')
 
         self.setTabPosition(self.South)
@@ -233,26 +219,22 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         self.src = src
 
-    def loadRAW(self, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100):
+    def loadRAW(self, Pitch = 100):
 
-        #pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.095372
+        #pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.09184
         #substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
 
-        pixel_size, sample_detector_distance, wavelength = 172 * 10 ** -6, 5., 0.09184
-        substratethickness, substrateattenuation = 700 * 10 ** -6, 200 * 10 ** -6
-
-        #pixel_size, sample_detector_distance, wavelength = 26 * 10 ** -6, 0.15, 2.36
-        #substratethickness, substrateattenuation = 200 * 10 ** -9, 0.5 * 10 ** -3
+        pixel_size, sample_detector_distance, wavelength = 26 * 10 ** -6, 0.15, 2.32
+        substratethickness, substrateattenuation = 200 * 10 ** -9, 0.5 * 10 ** -3
 
         self.qx, self.qz, self.I = [], [], []
 
         file = [val for val in self.src]
-        phi = [np.deg2rad(Phi_min + i * Phi_step) for i in range(0, 1 + int((Phi_max - Phi_min)/Phi_step), 1)]
         print(np.shape(file), np.shape(phi))
         print(phi)
         # Parallelization
         pool = multiprocessing.Pool()
-        func = partial(cdsaxs.test, wavelength, substratethickness, substrateattenuation, Pitch)
+        func = partial(cdgisaxs.test, wavelength, substratethickness, substrateattenuation, Pitch)
         a = zip(file,phi)
         b = [list(elem) for elem in a]
         I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*pool.map(func, b))
@@ -269,7 +251,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         I_peaks = [np.array(I_peaks)[:,i] for i in range(len(np.array(I_peaks)[0]))]
 
-        threshold = max(map(max, np.array(I_peaks)))[0] /10000.
+        threshold = max(map(max, np.array(I_peaks)))[0] /100.
         column_max = map(max, I_peaks)
         ind = np.where(np.array([item for sublist in column_max for item in sublist]) > threshold)
 
@@ -287,7 +269,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         qz_carto = np.array([item for sublist in q_z for item in sublist])
         profiles = np.array([item for sublist in I_cor for item in sublist])
 
-        self.img = cdsaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
+        self.img = cdgisaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
         self.CDCartoWidget.setImage(self.img)
 
         global Q_x, Q_z, intensity, adds
@@ -531,17 +513,17 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.best_corr = fittingp_to_simp(self.best_uncorr)
         print('best', self.best_corr, self.best_fitness)
 
-
+        '''
         # make population dataframe, order of rows is first generation for all children, then second generation for all children...
         self.population_array = np.array([list(individual) for generation in population_list for individual in generation])
         print('poparr1', np.shape(self.population_array))
-        np.save('/Users/guillaumefreychet/Desktop/poparr1.npy', self.population_array)
-        self.population_array = fittingp_to_simp1(self.population_array)
+        self.population_array = self.fittingp_to_simp(self.population_array)
         print('poparr2', np.shape(self.population_array))
-        np.save('/Users/guillaumefreychet/Desktop/poparr2.npy', self.population_array)
+        np.save('/Users/guillaumefreychet/Desktop/poparr.npy', self.population_array)
         self.fitness_array = np.array([individual.fitness.values[0] for generation in population_list for individual in generation])
         print('popfit', np.shape(self.fitness_array))
         self.population_frame = pd.DataFrame(np.column_stack((self.population_array, self.fitness_array)))
+        '''
 
     def mcmc(self, N, sigma, nsteps, nwalkers, use_mh=False, parallel=True, seed=None, verbose=True):
         """Fit with emcee package's implementation of MCMC algorithm and place into instance of self
