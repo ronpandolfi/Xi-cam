@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from modpkgs import nonesigmod
 
 class timelineLinePlot(pg.PlotWidget):
-    def __init__(self):
+    def __init__(self, frameaxes, xaxes):
         super(timelineLinePlot, self).__init__()
         self.variationcurve = dict()
 
@@ -20,14 +20,14 @@ class timelineLinePlot(pg.PlotWidget):
 
 
 class timelineStackPlot(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, frameaxes, xaxes):
         super(timelineStackPlot, self).__init__()
 
         self.slider = QtGui.QSlider(QtCore.Qt.Vertical, self)
         self.slider.setGeometry(500, 500, 30, 10)
         # slider.setFocusPolicy(QtCore.Qt.NoFocus)
 
-        self.plotWidget = pg.PlotWidget()
+        self.plotWidget = pg.PlotWidget(labels={'bottom':(xaxes['label'])})
 
         layout = QtGui.QHBoxLayout()
         self.setLayout(layout)
@@ -40,7 +40,7 @@ class timelineStackPlot(QtGui.QWidget):
         self._curvesdata = []
 
     def mapSlider(self):
-        return 10 * (np.exp(self.slider.value() / 100.) - 1)
+        return (np.exp(self.slider.value() / 100.) - 1) / 10
 
     def setOffset(self, value):
         for i in range(len(self.curves)):
@@ -71,16 +71,16 @@ class timelineStackPlot(QtGui.QWidget):
 
 
 class timelineWaterfallPlot(pg.ImageView):
-    def __init__(self, *args, **kwargs):
+    def __init__(self,frameaxes,xaxes):
         self.axesItem = pg.PlotItem()
-        self.axesItem.setLabel('top', "Time", units='s')
-        self.axesItem.setLabel('left', u'q (Å⁻¹)')
+        self.axesItem.setLabel('top', frameaxes['label'], units=frameaxes['units'] if 'units' in frameaxes else None)
+        self.axesItem.setLabel('left', xaxes['label'], units=xaxes['units'] if 'units' in xaxes else None)
         self.axesItem.axes['left']['item'].setZValue(10)
         self.axesItem.axes['top']['item'].setZValue(10)
         self.axesItem.showAxis('bottom', False)
 
-        kwargs['view'] = self.axesItem
-        super(timelineWaterfallPlot, self).__init__(*args, **kwargs)
+        kwargs= {'view':self.axesItem}
+        super(timelineWaterfallPlot, self).__init__(**kwargs)
         self.view.setAspectLocked(False)
 
     def setData(self, t, x, y):
@@ -92,11 +92,12 @@ class timelineWaterfallPlot(pg.ImageView):
 
 
 class TimelinePlot(QtGui.QTabWidget):
-    def __init__(self):
+    def __init__(self,frameaxes={'label':'Time','units':'s'},
+                      xaxes={'label':'q (Å⁻¹)'}):
         super(TimelinePlot, self).__init__()
-        self.waterfall = timelineWaterfallPlot()
-        self.lineplot = timelineLinePlot()
-        self.stackplot = timelineStackPlot()
+        self.waterfall = timelineWaterfallPlot(frameaxes,xaxes)
+        self.lineplot = timelineLinePlot(frameaxes,xaxes)
+        self.stackplot = timelineStackPlot(frameaxes,xaxes)
         self.addTab(self.lineplot, 'Line plot')
         self.addTab(self.waterfall, 'Waterfall')
         self.addTab(self.stackplot, 'Stack plot')
@@ -137,6 +138,8 @@ class TimelinePlot(QtGui.QTabWidget):
             if 'x' not in self._data: self._data['x'] = x  # maybe I should check that the x is the same otherwise?...
         self.setData()
 
+    plot = addData
+
     def setData(self):
         if 'x' not in self._data:
             for colorhash in self._data['colors']:
@@ -171,6 +174,10 @@ class TimelinePlot(QtGui.QTabWidget):
 
     def clearData(self):
         self._data = {'t': [], 'colors': []}
+
+    def clear(self):
+        self.clearData()
+        self.currentPlot().clear()
 
     def widgetChanged(self, *args, **kwargs):
         self.currentPlot().clear()
@@ -214,3 +221,8 @@ if __name__ == '__main__':
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
+
+class XASTimelineWidget(TimelinePlot):
+    def __init__(self):
+        super(XASTimelineWidget, self).__init__(frameaxes={'label':'Scan'},
+                                                xaxes={'label':'Energy','units':'eV'})
