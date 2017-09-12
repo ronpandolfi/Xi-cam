@@ -20,6 +20,11 @@ def combs_generator(x,y,z):
 
 def latticevectors(a, b, c, zoffset, maxreps=100, repetitions=None,scaling=1.):
     if repetitions is None: repetitions = [0,0,0]
+    max_rep = [5,5,5]
+    repet_list = list(repetitions)
+    for n in range(0,2):
+        repet_list[n] = min(repet_list[n],max_rep[n])
+    repetitions = tuple(repet_list)
     mi = np.vstack([a, b, c])
     combs = combs_generator(*repetitions) #itertools.product(range(-order, order + 1), repeat=3)
     # vecs = [np.sum((mi.T * np.array(comb)).T, axis=0) for comb in combs]

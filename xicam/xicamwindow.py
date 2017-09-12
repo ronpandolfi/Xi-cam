@@ -12,7 +12,7 @@ from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-import config
+from xicam import config
 import watcher
 #import daemon
 import pipeline
@@ -108,6 +108,8 @@ class MyMainWindow(QtCore.QObject):
         # ACTIONS
         # Wire up action buttons
         self.ui.findChild(QtGui.QAction, 'actionOpen').triggered.connect(self.dialogopen)
+        self.ui.findChild(QtGui.QAction, 'actionSettings').triggered.connect(self.settingsopen)
+        self.ui.findChild(QtGui.QAction, 'actionQuit').triggered.connect(QtGui.QApplication.instance().quit)
         self.ui.findChild(QtGui.QAction, 'actionPublish').triggered.connect(self.publish)
 
         self.ui.actionExport_Image.triggered.connect(self.exportimage)
@@ -460,3 +462,6 @@ class MyMainWindow(QtCore.QObject):
             #     self.loadplugin(hiprmc)
             #
             # def loadplugin(self,module):
+
+    def settingsopen(self):
+        config.settings.showEditor()
