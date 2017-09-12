@@ -116,6 +116,9 @@ class plugin(QtCore.QObject):
     def openfiles(self, files, operation=None, operationname=None):
         pass
 
+    def export(self):
+        return None
+
     @property
     def isActive(self):
         return activeplugin == self

@@ -13,6 +13,8 @@ import numpy as np
 from pyqtgraph import functions as fn
 import os.path
 import scipy
+from pypif import pif
+from pypif.obj import *
 
 class WaferView(QWidget):
     sigPlot = Signal(object,object,object)  # emits 2-d cake array, 1-D Q, 1-D chi
@@ -137,6 +139,15 @@ class WaferView(QWidget):
 
         self.waferplotitem.setPoints(points)
         self.WaferPlot.autoRange()
+
+    def export(self):
+        data = pd.read_csv(self.lastcsv)
+
+        # build package
+        for row in data.iterrows():
+
+
+        return package
 
 
 class LUTScatterPlotItem(pg.ScatterPlotItem):

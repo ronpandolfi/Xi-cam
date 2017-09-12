@@ -827,7 +827,7 @@
   </widget>
   <action name="actionPublish">
    <property name="text">
-    <string>&amp;Publish</string>
+    <string>&amp;Publish...</string>
    </property>
   </action>
   <action name="actionCenterFind">

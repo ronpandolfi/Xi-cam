@@ -16,9 +16,6 @@ from xicam.plugins.HiTp.on_the_fly import run
 import os.path
 from modpkgs import pyqtgraphmod
 
-def runtest():
-    #EZTest.bottomwidget.clear()
-    pass
 
 def redrawfromCSV(csvpath):
     print(csvpath)
@@ -77,6 +74,9 @@ def openfiles(filepaths):
         folder_path, imageFilename = os.path.split(os.path.abspath(filepath))
         csvpath = os.path.join(folder_path, 'Processed//attributes.csv')
     return csvpath
+
+def export():
+    return plugins.plugins['HiTp'].instance.centerwidget.export()
 
 
 LocalView = widgets.LocalView
