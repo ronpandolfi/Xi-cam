@@ -144,10 +144,11 @@ class WaferView(QWidget):
         data = pd.read_csv(self.lastcsv)
 
         # build package
-        for row in data.iterrows():
+        # for row in data.iterrows():
 
 
-        return package
+
+        return payload
 
 
 class LUTScatterPlotItem(pg.ScatterPlotItem):

@@ -15,9 +15,3 @@ class PublishWizard(QWizard):
         wizard = QUiLoader().load(uifile)
         uifile.close()
         return wizard
-
-class PublishPackage(object):
-    def __init__(self):
-        self.license =
-    def validate(self):
-        return True
