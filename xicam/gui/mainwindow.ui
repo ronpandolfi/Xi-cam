@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-       <width>982</width>
-       <height>686</height>
+    <width>982</width>
+    <height>686</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-      <string>Xi-cam</string>
+   <string>Xi-cam</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -722,9 +722,19 @@
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionExport_Image"/>
+    <addaction name="actionPublish"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
+  <action name="actionPublish">
+   <property name="text">
+    <string>&amp;Publish</string>
+   </property>
+  </action>
   <action name="actionCenterFind">
    <property name="icon">
     <iconset>
