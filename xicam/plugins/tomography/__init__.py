@@ -590,7 +590,7 @@ class TomographyPlugin(base.plugin):
         bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, 'Slice')
 
 
-    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, dims=None):
+    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer

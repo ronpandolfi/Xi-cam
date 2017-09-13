@@ -686,7 +686,7 @@ class FunctionManager(fw.FeatureManager):
 
 
     def reconGenerator(self, datawidget, func_dict, theta, center, yaml_pipe,
-                       run_dict, dims, ncore = None, reconType='Full'):
+                       run_dict, dims, ncore = 1, reconType='Full'):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction or the
@@ -1007,7 +1007,7 @@ class FunctionManager(fw.FeatureManager):
         self.sigPipelineChanged.emit()
 
     def extractPipelineRunnable(self, runnable_pipe, center, params,
-                                proj, sino, sino_p_chunk, width, path, ncore=None):
+                                proj, sino, sino_p_chunk, width, path, ncore=1):
         """
         Saves the function pipeline as a runnable (Python) file. This needs more work.
 
