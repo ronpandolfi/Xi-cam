@@ -16,6 +16,7 @@ def import_module(modname,packagename=None):
 
         from . import config
 
+        # bad magic numbers result from trying to import .pyc built in wrong environment
         if missingpackage in config.settings['Ignored Modules'] or ex.msg.startswith('bad magic'):
             return None
 
