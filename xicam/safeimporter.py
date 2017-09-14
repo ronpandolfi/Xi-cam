@@ -15,9 +15,9 @@ def import_module(modname,packagename=None):
         missingpackage = ex.args[0].replace('No module named ', '')
 
         from . import config
-        if config.settings['ignoredmodules']:
-            if missingpackage in config.settings['ignoredmodules']:
-                return None
+
+        if missingpackage in config.settings['Ignored Modules'] or ex.msg.startswith('bad magic'):
+            return None
 
         msgBox = QtGui.QMessageBox()
         msgBox.setText("A python package is missing! Xi-cam can try to install this for you.")
