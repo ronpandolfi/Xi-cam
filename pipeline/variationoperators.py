@@ -25,6 +25,10 @@ def chisquared(data, t, roi):
     previous = data[t - 1].astype(float)
     return np.sum(roi * np.square(current - previous))
 
+def imgmax(data, t, roi):
+    current = data[t].astype(float)
+    return (roi * current).max()
+
 
 def absdiff(data, t, roi):
     current = data[t].astype(float)
@@ -79,6 +83,7 @@ def angularcorrelationwithfirst(data, t, roi):
 
 
 operations = collections.OrderedDict([('Chi Squared', chisquared),
+                                      ('Max', imgmax),
                                       ('Absolute Diff.', absdiff),
                                       ('Norm. Abs. Diff.', normabsdiff),
                                       ('Sum Intensity', sumintensity),

@@ -256,7 +256,7 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
     decorated_method = threads.method(callback_slot, ...)(method_to_decorate)
-    then simply run it: decorated_iterator(*args, **kwargs)
+    then simply run it: decorated_method(*args, **kwargs)
 
     Parameters
     ----------

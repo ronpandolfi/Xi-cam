@@ -12,17 +12,15 @@ class MOTDPlugin(base.plugin):
 
 
     def __init__(self, *args, **kwargs):
+        self.rightwidget = None
+
         try:
             from PySide import QtWebKit
         except ImportError:
-            print 'Splash page disabled.'
+            pass
         else:
             self.centerwidget = webview = QtWebKit.QWebView()
             webview.load('MOTD.html')
-
-        self.rightwidget = None
-
-
 
         super(MOTDPlugin, self).__init__(*args, **kwargs)
 
