@@ -1,4 +1,4 @@
-.. highlight:: bash
+.. highlight:: bat
     :linenothreshold: 2
 
 Running Xi-cam from source in Windows
@@ -20,6 +20,9 @@ https://www.jetbrains.com/pycharm/download/download-thanks.html?platform=windows
 Clone Xi-cam
 ------------
 
+.. image:: images/wininstall_1.png
+    :width: 900 px
+
 1.  Open PyCharm and click on “Check out from Version Control” and then “Git”.
 
 2.  Enter: https://github.com/ronpandolfi/Xi-cam/ and clone.
@@ -33,10 +36,16 @@ You will now see Xi-cam's files, and need to define which Python version to use:
 
 2.  Under Project: Xi-cam you will see Project Interpreter. Select C:\Python27\python.exe and close the “Settings” by clicking “OK”.
 
+.. image:: images/wininstall_2.png
+    :width: 900 px
+
 Install Dependencies
 --------------------
 
 If you try to run Xi-cam by clicking on the green arrow you will see the missing packages. We will start with clicking on “Install requirements”. This will install some but NOT ALL dependencies.
+
+.. image:: images/wininstall_3.png
+    :width: 900 px
 
 You will need to download remaining packages from the Unofficial Windows Binaries for Python Extension Packages:
 
@@ -57,7 +66,7 @@ To install these, open a command prompt by pressing [Windows] + [R] and enter "c
 
 To test that pip is installed and accessible:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip -V
         pip 9.0.1 from c:\python27\lib\site-packages (python 2.7)
@@ -65,19 +74,19 @@ To test that pip is installed and accessible:
 
 If you get an error here, add the python27 into your windows environment variables:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
 
 now run
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip install --upgrade setuptools pip
 
 To change into the Download folder type
 
-.. code-block:: bash
+.. code-block:: bat
 
         > cd Download
 
@@ -85,7 +94,7 @@ To change into the Download folder type
 Lets first install the correct numpy with MKT
 Type:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip2.7 install numpy-1.12.1+mkl-cp27-cp27m-win_amd64.whl
 
@@ -93,31 +102,31 @@ Type:
 
 Next tifffile, just type:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > Pip2.7 install tifffile-2017.3.17-cp27-cp27m-win_amd64.whl
 
 then:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip2.7 install scikit_image-0.13.0-cp27-cp27m-win_amd64.whl
 
 and finally:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip2.7 install scipy-0.19.0-cp27-cp27m-win_amd64.whl
 
 now (hopefully) just pyfai left. Just type:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip2.7 install pyFAI
 
 For PySide currently we need version 1.2.2 therefore use:
 
-.. code-block:: bash
+.. code-block:: bat
 
         > pip2.7 install -U PySide==1.2.2
 
