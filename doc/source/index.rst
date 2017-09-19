@@ -13,6 +13,7 @@ Contents:
 
     introduction
     macSourceInstall
+    winSourceInstall
     pluginUserTutorial
     pluginTutorial
     workflowAPI
