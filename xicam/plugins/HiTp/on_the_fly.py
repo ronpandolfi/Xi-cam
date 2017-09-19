@@ -52,6 +52,7 @@ def run(filepath, p,
     try:
         # import image and convert it into an array
         imArray = load_image(filepath)
+        if not len(imArray.shape)==2: raise IOError
 
     except (OSError, IOError, IndexError, ValueError):
         # The image was being created but not complete yet
