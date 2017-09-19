@@ -34,9 +34,9 @@ You will now see Xi-cam's files, and need to define which Python version to use:
 
 1.  Click “Ctrl + Alt + s” to open Setting.
 
-2.  Under Project: Xi-cam you will see Project Interpreter. Select C:\Python27\python.exe and close the “Settings” by clicking “OK”.
+2.  Under Project: Xi-cam you will see Project Interpreter. Select C:\\Python27\\python.exe and close the “Settings” by clicking “OK”.
 
-.. image:: images/wininstall_2.png
+.. image:: images/wininstall_3.png
     :width: 900 px
 
 Install Dependencies
@@ -44,7 +44,7 @@ Install Dependencies
 
 If you try to run Xi-cam by clicking on the green arrow you will see the missing packages. We will start with clicking on “Install requirements”. This will install some but NOT ALL dependencies.
 
-.. image:: images/wininstall_3.png
+.. image:: images/wininstall_2.png
     :width: 900 px
 
 You will need to download remaining packages from the Unofficial Windows Binaries for Python Extension Packages:
