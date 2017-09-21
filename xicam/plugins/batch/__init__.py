@@ -271,6 +271,8 @@ class BatchPlugin(base.plugin):
             p = self.batch_list.item(r).text()
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
+        # TODO: A way to stop the workflow once running
+        # TODO: Ensure this is thread-safe
         run_off_thread = threads.method()(self.paw.execute) 
         run_off_thread()
         #self.paw.execute()
