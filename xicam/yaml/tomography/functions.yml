@@ -1,6 +1,7 @@
 Functions:
   Downsample: [Downsample]
-  Filter: [Gaussian Filter, Median Filter, Sobel Filter]
+  Filter: [Gaussian Filter, TomoPy Median Filter, Sobel Filter, F3D Median Filter, F3D Bilateral Filter, F3D Mask Filter,
+            F3D MM Erosion, F3D MM Dilation, F3D MM Opening, F3D MM Closing]
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
   Normalization: [Regular, Background Intensity, Nearest Flats]
@@ -9,8 +10,8 @@ Functions:
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
                  Astra: [BP, FBP_astra, SIRT, SART, ART, CGLS, BP_CUDA, FBP_CUDA, SIRT_CUDA, SART_CUDA,
                          CGLS_CUDA],
-                  TomoCam: [Gridrec TomoCam, SIRT TomoCam]}
-  Outlier Removal: [Remove Outliers, Remove NAN]
+                  TomoCam: [Gridrec TomoCam, SIRT TomoCam, MBIR TomoCam]}
+  Outlier Removal: [Remove Outliers, Remove NAN, 1D Remove Outliers]
   Ring Removal: [Polar Mean Filter]
   Stripe Removal: [Fourier-Wavelet, Titarenko, Smoothing Filter]
   Upsample: [Upsample]

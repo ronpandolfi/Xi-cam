@@ -16,8 +16,8 @@ from collections import OrderedDict
 from .loader import ProjectionStack, SinogramStack
 from pipeline.loader import StackImage, PStack
 from pipeline import msg
-from xicam.plugins.tomography import functionwidgets, reconpkg, config
-from xicam.widgets.customwidgets import DataTreeWidget, ImageView, dataDialog
+from xicam.plugins.tomography import functionwidgets, functionmanager, reconpkg, config
+from xicam.widgets.customwidgets import DataTreeWidget, ImageView, histDialogButton
 from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
@@ -91,7 +91,7 @@ class TomoViewer(QtGui.QWidget):
         # self._recon_path = None
         self.viewstack = QtGui.QStackedWidget(self)
         self.viewmode = QtGui.QTabBar(self)
-        self.viewmode.addTab('Projection View')  # TODO: Add icons!
+        self.viewmode.addTab('Projection View')
         self.viewmode.addTab('Sinogram View')
         self.viewmode.addTab('Flats')
         self.viewmode.addTab('Darks')
@@ -105,9 +105,6 @@ class TomoViewer(QtGui.QWidget):
         self.preview_holder = []
         self.prange = []
 
-
-
-
         if data is not None:
             self.data = data
         elif paths is not None and len(paths):
@@ -115,26 +112,6 @@ class TomoViewer(QtGui.QWidget):
                 self.data = self.loaddata(paths, raw=True)
             else:
                 self.data = self.loaddata(paths)
-
-
-        if self.data.flats is None and self.data.darks is None:
-            import fabio
-            flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Flats not detected in input data. Please select flats for this dataset: ")
-            dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Darks not detected in input data. Please select darks for this dataset: ")
-
-            if flat_dialog[0] and dark_dialog[0]:
-                try:
-                    flats = fabio.open(flat_dialog[0])
-                    darks = fabio.open(dark_dialog[0])
-                    self.data.flats = np.stack([np.copy(flats._dgroup[frame]) for frame in flats.frames])
-                    self.data.darks = np.stack([np.copy(darks._dgroup[frame]) for frame in darks.frames])
-
-                    del flats, darks
-                except IOError:
-                    QtGui.QMessageBox.warning(self, 'Warning','Flats and/or darks not loaded.')
-            else:
-                QtGui.QMessageBox.warning(self, 'Warning', 'Flats and/or darks not provided.')
-
 
         self.projectionViewer = ProjectionViewer(self.data, parent=self)
         self.projectionViewer.centerBox.setRange(0, self.data.shape[1])
@@ -145,18 +122,13 @@ class TomoViewer(QtGui.QWidget):
             sgram.primary = sgram.sino
         else:
             sgram = SinogramStack.cast(self.data)
-        self.sinogramViewer = StackViewer(sgram,
-                                          parent=self)
+        self.sinogramViewer = StackViewer(sgram, parent=self)
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-
-        self.flatViewer = ArrayViewer(self.data.flats, flipAxes=True, parent=self)
-        if self.data.fabimage.flat_frames: self.flatViewer.connectImageToName(self.data.fabimage.flat_frames)
+        self.flatViewer = ArrayViewer(self.data.flats,flipAxes=True,  parent=self)
+        self.darkViewer = ArrayViewer(self.data.darks, flipAxes=True, parent=self)
         self.viewstack.addWidget(self.flatViewer)
-
-        self.darkViewer = ArrayViewer(data=self.data.darks, flipAxes=True, parent=self)
-        if self.data.fabimage.dark_frames: self.darkViewer.connectImageToName(self.data.fabimage.dark_frames)
         self.viewstack.addWidget(self.darkViewer)
 
         self.previewViewer = PreviewViewer(self.data.shape[1], parent=self)
@@ -194,12 +166,51 @@ class TomoViewer(QtGui.QWidget):
             center_param = recon_function.params.child('center')
             # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
             # manual center widget, but this limits the center options to a resolution of 0.5
-            # self.projectionViewer.sigCenterChanged.connect(
-            #     lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.sigCenterChanged.connect(
+                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+            self.projectionViewer.centerBox.valueChanged.connect(lambda x: center_param.setValue(x))
             self.projectionViewer.setCenterButton.clicked.connect(
                 lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.centerBox.setValue(v))
             center_param.sigValueChanged.connect(lambda p,v: self.projectionViewer.updateROIFromCenter(v))
+
+    def openFlats(self):
+
+        flat_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select flats for this dataset: ")
+        path = flat_dialog[0]
+
+        if path:
+            import fabio
+            msg.showMessage('Loading flats...')
+            try:
+                flats = fabio.open(path)
+                self.data.flats = OrderedDict()
+                for frame in sorted(flats.frames):
+                    self.data.flats[frame] = np.squeeze(np.copy(flats._dgroup[frame])).transpose()
+                self.flatViewer.setData(self.data.flats)
+                del flats
+            except IOError:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Flats not loaded.')
+        msg.clearMessage()
+
+    def openDarks(self):
+
+        dark_dialog = QtGui.QFileDialog(self).getOpenFileName(caption="Please select darks for this dataset: ")
+        path = dark_dialog[0]
+
+        if path:
+            import fabio
+            msg.showMessage('Loading darks...', timeout=10)
+            try:
+                darks = fabio.open(path)
+                self.data.darks = OrderedDict()
+                for frame in sorted(darks.frames):
+                    self.data.darks[frame] = np.squeeze(np.copy(darks._dgroup[frame])).transpose()
+                self.darkViewer.setData(self.data.darks)
+                del darks
+            except IOError:
+                QtGui.QMessageBox.warning(self, 'Warning', 'Darks not loaded.')
+        msg.clearMessage()
 
     @staticmethod
     def loaddata(paths, raw=True):
@@ -234,14 +245,7 @@ class TomoViewer(QtGui.QWidget):
                                     stream_name='background')
             sinogram = db.db.get_images(h, 'sinogram',
                                         stream_name='sinogram')
-
-            # this is required because code else where expects it
-            for pim in (projection, dark, flat, sinogram):
-                pim.frames = [str(j) for j in range(len(pim))]
-            for pim in (projection, sinogram):
-                pim.flat_frames = {j: str(j) for j in range(len(flat))}
-                pim.dark_frames = {j: str(j) for j in range(len(dark))}
-            return PStack(projection, dark, flat, sinogram, h.start)
+            return ProjectionStack(data=PStack(projection, dark, flat, sinogram, h.start, h.descriptors))
 
         if raw:
             return ProjectionStack(paths)
@@ -264,7 +268,7 @@ class TomoViewer(QtGui.QWidget):
 
         """
         if slc is None:
-            return np.ascontiguousarray(self.sinogramViewer.currentdata[:,np.newaxis,:])
+            return np.ascontiguousarray(self.sinogramViewer.currentdata[:, np.newaxis, :])
         else:
             return np.ascontiguousarray(self.data.fabimage[slc])
 
@@ -303,10 +307,15 @@ class TomoViewer(QtGui.QWidget):
             Array of flat field data
 
         """
-        if slc is None:
-            return np.ascontiguousarray(self.data.flats[:, self.sinogramViewer.currentIndex, :])
+        if isinstance(self.data.flats, dict):
+            flats = np.array(list(self.data.flats.values()))
         else:
-            return np.ascontiguousarray(self.data.flats[slc])
+            flats = np.array(self.data.flats)
+
+        if slc is None:
+            return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
+        else:
+            return np.ascontiguousarray(flats[slc])
 
     def getdarks(self, slc=None):
         """
@@ -323,10 +332,15 @@ class TomoViewer(QtGui.QWidget):
             Array of dark field data
 
         """
-        if slc is None:
-            return np.ascontiguousarray(self.data.darks[: ,self.sinogramViewer.currentIndex, :])
+        if isinstance(self.data.darks, dict):
+            darks = np.array(list(self.data.darks.values()))
         else:
-            return np.ascontiguousarray(self.data.darks[slc])
+            darks = np.array(self.data.darks)
+
+        if slc is None:
+            return np.ascontiguousarray(darks[:, self.sinogramViewer.currentIndex, :])
+        else:
+            return np.ascontiguousarray(darks[slc])
 
     def getheader(self):
         """Return the data's header (metadata)"""
@@ -404,6 +418,11 @@ class TomoViewer(QtGui.QWidget):
         self.viewstack.setCurrentWidget(self.preview3DViewer)
         self.preview3DViewer.setPreview(recon, params)
         hist = self.preview3DViewer.volumeviewer.getHistogram()
+
+        # disable auto scale
+        preview_hist = self.preview3DViewer.volumeviewer.HistogramLUTWidget
+        preview_hist.vb.enableAutoRange(preview_hist.vb.YAxis, False)
+
         max = hist[0][np.argmax(hist[1])]
         self.preview3DViewer.volumeviewer.setLevels([max, hist[0][-1]])
 
@@ -421,8 +440,9 @@ class TomoViewer(QtGui.QWidget):
 
         if active:
             self.viewstack.setCurrentWidget(self.projectionViewer)
-            self.projectionViewer.showCenterDetection()
             self.projectionViewer.hideMBIR()
+            self.projectionViewer.showCenterDetection()
+
         else:
             self.projectionViewer.hideCenterDetection()
 
@@ -431,8 +451,8 @@ class TomoViewer(QtGui.QWidget):
 
         if active:
             self.viewstack.setCurrentWidget(self.projectionViewer)
-            self.projectionViewer.showMBIR()
             self.projectionViewer.hideCenterDetection()
+            self.projectionViewer.showMBIR()
         else:
             self.projectionViewer.hideMBIR()
 
@@ -766,11 +786,12 @@ class ProjectionViewer(QtGui.QWidget):
 
     sigCenterChanged = QtCore.Signal(float)
     sigCORChanged = QtCore.Signal(bool)
+    sigROIWidgetChanged = QtCore.Signal(pg.ROI)
 
     def __init__(self, data, view_label=None, center=None, paths=None, *args, **kwargs):
         super(ProjectionViewer, self).__init__(*args, **kwargs)
 
-
+        self.setMinimumHeight(200)
 
         self.stackViewer = StackViewer(data, view_label=view_label)
         self.imageItem = self.stackViewer.imageItem
@@ -782,6 +803,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
+        self.roi_histogram.vb.enableAutoRange(self.roi_histogram.vb.YAxis, False) #disable autoscaling for histogram
         self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
@@ -793,7 +815,11 @@ class ProjectionViewer(QtGui.QWidget):
         self.stackViewer.keyPressEvent = self.keyPressEvent
 
         self.cor_widget = QtGui.QWidget(self)
-        self.auto_cor_widget = functionwidgets.CORSelectionWidget(parent=self)
+        self.auto_cor_widget = functionmanager.CORSelectionWidget(parent=self)
+        self.cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.auto_cor_widget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.cor_widget.setMinimumHeight(50)
+        self.auto_cor_widget.setMinimumHeight(50)
 
         self.cor_box = QtGui.QStackedWidget(self)
         self.cor_box.addWidget(self.auto_cor_widget)
@@ -812,6 +838,11 @@ class ProjectionViewer(QtGui.QWidget):
         h.addWidget(self.manual_cor_button)
         h.addWidget(write_cor)
         self.cor_button_holder.setLayout(h)
+
+        # push button for overlay widget's histogram range selection
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.roi_histogram)
+        self.stackViewer.ui.gridLayout.addWidget(self.setButton, 1, 3, 1, 2)
 
         clabel = QtGui.QLabel('Rotation Center:')
         olabel = QtGui.QLabel('Offset:')
@@ -835,15 +866,18 @@ class ProjectionViewer(QtGui.QWidget):
         h1.addWidget(olabel)
         h1.addWidget(originBox)
 
+        # hide center button since cor updates automatically in pipeline
+        self.setCenterButton.hide()
+
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
         #TODO data shape seems to be on larger than the return from slicing it with [:-1]
-        spinBox.setRange(0, data.shape[0])
+        spinBox.setRange(0, data.shape[0]-1)
         slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
-        slider.setRange(0, data.shape[0])
-        spinBox.setValue(data.shape[0])
-        slider.setValue(data.shape[0])
+        slider.setRange(0, data.shape[0]-1)
+        spinBox.setValue(data.shape[0]-1)
+        slider.setValue(data.shape[0]-1)
         flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
         flipCheckBox.setChecked(True)
         constrainYCheckBox = QtGui.QCheckBox('Constrain Y', parent=self.cor_widget)
@@ -916,10 +950,12 @@ class ProjectionViewer(QtGui.QWidget):
 
     def manualCOR(self):
         self.cor_box.setCurrentWidget(self.cor_widget)
+        self.stackViewer.show()
         self.sigCORChanged.emit(False)
 
     def autoCOR(self):
         self.cor_box.setCurrentWidget(self.auto_cor_widget)
+        self.stackViewer.hide()
         self.sigCORChanged.emit(True)
 
 
@@ -957,7 +993,9 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_box.hide()
         self.cor_button_holder.hide()
         self.roi_histogram.hide()
+        self.setButton.hide()
         self.imgoverlay_roi.setVisible(False)
+        self.stackViewer.show()
 
     def showCenterDetection(self):
         """
@@ -967,7 +1005,13 @@ class ProjectionViewer(QtGui.QWidget):
         self.cor_box.show()
         self.cor_button_holder.show()
         self.roi_histogram.show()
+        self.setButton.show()
         self.imgoverlay_roi.setVisible(True)
+
+        if self.auto_cor_button.isChecked():
+            self.stackViewer.hide()
+        else:
+            self.stackViewer.show()
 
     def showMBIR(self):
         self.mbir_viewer.show()
@@ -1021,11 +1065,15 @@ class ProjectionViewer(QtGui.QWidget):
         """
         Adds/ removes a rectangular ROI to select a region of interest for reconstruction. Not implemented yet
         """
+        if self.selection_roi:
+            self.stackViewer.view.removeItem(self.selection_roi)
 
-        self.selection_roi = pg.ROI([0, 0], [10, 10])
+        self.selection_roi = pg.ROI([0, 0], [100, 100])
         self.stackViewer.view.addItem(self.selection_roi)
         self.selection_roi.addScaleHandle([1, 1], [0, 0])
         self.selection_roi.addScaleHandle([0, 0], [1, 1])
+        self.sigROIWidgetChanged.emit(self.selection_roi)
+
 
     def normalize(self, val):
         """
@@ -1036,6 +1084,7 @@ class ProjectionViewer(QtGui.QWidget):
         val : bool
             Boolean specifying to normalize image
         """
+        # self.roi_histogram.setLevels(0,1)
         if val and not self.normalized:
             self.flat = np.median(self.data.flats, axis=0).transpose()
             self.dark = np.median(self.data.darks, axis=0).transpose()
@@ -1062,10 +1111,14 @@ class ProjectionViewer(QtGui.QWidget):
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
+            self.roi_histogram.setLevels(-1,1) # lazy solution, could be improved with some sampling methods
             self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
             self.stackViewer.resetImage()
             self.imgoverlay_roi.resetImage()
+            min, max = self.stackViewer.quickMinMax(self.imgoverlay_roi.imageItem.image)
+            self.roi_histogram.setLevels(min, max)
+            self.normalized = False
             self.normalized = False
             self.normCheckBox.setChecked(False)
 
@@ -1153,12 +1206,12 @@ class PreviewViewer(QtGui.QSplitter):
         h.addWidget(self.deleteButton)
         ly.addLayout(h)
         panel = QtGui.QWidget(self)
+        panel.resize(375,480)
         panel.setLayout(ly)
         self.setPipelineButton.hide()
         self.deleteButton.hide()
 
         self.imageview = ImageView(self)
-        self.imageview.ui.roiBtn.setParent(None)
         self.imageview.ui.roiBtn.setParent(None)
         self.imageview.ui.menuBtn.setParent(None)
 
@@ -1166,9 +1219,13 @@ class PreviewViewer(QtGui.QSplitter):
         self.view_label.setText('No: ')
         self.view_number = QtGui.QSpinBox(self)
         self.view_number.setReadOnly(True)
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.imageview.getHistogramWidget())
+
         self.view_number.setMaximum(5000) # Large enough number
-        self.imageview.ui.gridLayout.addWidget(self.view_label, 1, 1, 1, 1)
-        self.imageview.ui.gridLayout.addWidget(self.view_number, 1, 2, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.setButton, 1, 1, 1, 2)
+        self.imageview.ui.gridLayout.addWidget(self.view_label, 2, 1, 1, 1)
+        self.imageview.ui.gridLayout.addWidget(self.view_number, 2, 2, 1, 1)
 
         self.setCurrentIndex = self.imageview.setCurrentIndex
         self.addWidget(panel)
@@ -1178,6 +1235,7 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.clicked.connect(self.defaultsButtonClicked)
         self.deleteButton.clicked.connect(self.removePreview)
         self.imageview.sigTimeChanged.connect(self.indexChanged)
+
 
     @ QtCore.Slot(object, object)
     def indexChanged(self, index, time):
@@ -1208,10 +1266,13 @@ class PreviewViewer(QtGui.QSplitter):
         self.setPipelineButton.show()
         self.previews.appendleft(np.flipud(image))
         functree = DataTreeWidget()
-        functree.setHeaderHidden(True)
+        functree.setHeaderHidden(False)
+        functree.setHeaderLabels(['Function', 'Params'])
         functree.setData(funcdata, hideRoot=True)
         functree.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         functree.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+        functree.setColumnWidth(0, 140)
+        functree.setColumnWidth(1, 235)
 
         self.data.appendleft(funcdata)
         self.datatrees.appendleft(functree)
@@ -1220,6 +1281,11 @@ class PreviewViewer(QtGui.QSplitter):
         self.functionform.addWidget(functree)
         levels = False if len(self.data) > 1 else True
         self.imageview.setImage(self.previews, autoRange=False, autoLevels=levels, autoHistogramRange=False)
+
+        # disable autoscaling for histogram
+        hist = self.imageview.getHistogramWidget()
+        hist.vb.enableAutoRange(hist.vb.YAxis, False)
+
         self.functionform.setCurrentWidget(functree)
 
     def removePreview(self):
@@ -1280,7 +1346,7 @@ class Preview3DViewer(QtGui.QSplitter):
         l = QtGui.QVBoxLayout()
         l.setContentsMargins(0, 0, 0, 0)
         self.pipelinetree = DataTreeWidget()
-        self.pipelinetree.setHeaderHidden(True)
+        self.pipelinetree.setHeaderHidden(False)
         self.pipelinetree.clear()
 
         self.setPipelineButton = QtGui.QToolButton(self)
@@ -1298,6 +1364,7 @@ class Preview3DViewer(QtGui.QSplitter):
         h.addWidget(self.setPipelineButton)
         ly.addLayout(h)
         panel = QtGui.QWidget(self)
+        panel.resize(400, 480)
         panel.setLayout(ly)
 
         self.volumeviewer = VolumeViewer()
@@ -1309,6 +1376,11 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.setPipelineButton.clicked.connect(lambda: self.sigSetDefaults.emit(self.data))
         self.setPipelineButton.hide()
+
+        self.resize(800, 480)
+
+        # self.pipelinetree.setColumnWidth(0, 140)
+        # self.pipelinetree.setColumnWidth(1, 235)
 
     def setPreview(self, recon, funcdata):
         """
@@ -1324,6 +1396,8 @@ class Preview3DViewer(QtGui.QSplitter):
 
         self.pipelinetree.setData(funcdata, hideRoot=True)
         self.data = funcdata
+        self.pipelinetree.setColumnWidth(0, 130)
+        self.pipelinetree.setColumnWidth(1, 245)
         self.pipelinetree.show()
         self.volumeviewer.setVolume(vol=recon)
         self.setPipelineButton.show()

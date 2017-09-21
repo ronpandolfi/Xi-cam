@@ -25,6 +25,7 @@ op_sys = platform.system()
 
 import os
 import time
+import numpy as np
 from functools import partial
 from PySide import QtGui, QtCore
 from collections import OrderedDict
@@ -36,13 +37,12 @@ from xicam import threads
 from .viewers import TomoViewer
 from . import ui
 from . import config
-from .functionwidgets import FunctionManager
+from .functionmanager import FunctionManager
 from psutil import cpu_count
 
 # YAML file specifying the default workflow pipeline
-DEFAULT_PIPELINE_YAML = 'yaml/tomography/default_pipeline.yml'
-APS_PIPELINE_YAML = 'yaml/tomography/aps_default_pipeline.yml'
-
+DEFAULT_PIPELINE_YAML = 'xicam/yaml/tomography/default_pipeline.yml'
+APS_PIPELINE_YAML = 'xicam/yaml/tomography/aps_default_pipeline.yml'
 
 class TomographyPlugin(base.plugin):
     """
@@ -88,9 +88,12 @@ class TomographyPlugin(base.plugin):
         self.toolbar = self.ui.toolbar
         self.leftmodes = self.ui.leftmodes
         self.rightwidget = None
-        self.bottomwidget = self.ui.bottomwidget
+        self.bottom = self.ui.bottomwidget
+        # self.bottomwidget = self.ui.bottomwidget
+        # self.bottomwidget.hide()
         self.centerwidget.currentChanged.connect(self.currentChanged)
         self.centerwidget.tabCloseRequested.connect(self.tabCloseRequested)
+
 
         # Keep a timer for reconstructions
         self.recon_start_time = 0
@@ -104,6 +107,11 @@ class TomographyPlugin(base.plugin):
         self.manager.setPipelineFromYAML(config.load_pipeline(DEFAULT_PIPELINE_YAML))
         self.manager.sigPipelineChanged.connect(self.reconnectTabs)
 
+        # queue for recon jobs
+        self.queue_widget = self.ui.queue
+        # self.queue_widget.sigReconSwapped.connect(self.manager.swapQueue)
+        # self.queue_widget.sigReconDeleted.connect(self.manager.delQueueJob)
+
         # DRAG-DROP
         self.centerwidget.setAcceptDrops(True)
         self.centerwidget.dragEnterEvent = self.dragEnterEvent
@@ -112,17 +120,19 @@ class TomographyPlugin(base.plugin):
         # Connect toolbar signals and ui button signals
         self.toolbar.connectTriggers(self.slicePreviewAction, self.multiSlicePreviewAction, self.preview3DAction,
                                             self.loadFullReconstruction, self.manualCenter,  self.roiSelection,
-                                            self.mbir)
+                                            self.mbir, self.openFlats, self.openDarks)
 
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.nextFeature),
                                 self.clearPipeline)
         self.manager.sigTestRange.connect(self.slicePreviewAction)
-        self.bottomwidget.local_cancelButton.clicked.connect(self.freeRecon)
+        self.bottom.local_cancelButton.clicked.connect(self.freeRecon)
         ui.build_function_menu(self.ui.addfunctionmenu, config.funcs['Functions'],
                                config.names, self.manager.addFunction)
         super(TomographyPlugin, self).__init__(placeholders, *args, **kwargs)
+
+        self.leftwidget.resize(300, 480)
 
     def dropEvent(self, e):
         for url in e.mimeData().urls():
@@ -169,6 +179,7 @@ class TomographyPlugin(base.plugin):
         widget.wireupCenterSelection(self.manager.recon_function)
         widget.projectionViewer.sigCORChanged.connect(self.manager.updateCORChoice)
         widget.projectionViewer.auto_cor_widget.sigCORFuncChanged.connect(self.manager.updateCORFunc)
+        widget.projectionViewer.sigROIWidgetChanged.connect(self.manager.connectReaderROI)
         self.manager.sigCORDetectChanged.connect(widget.projectionViewer.updateCORChoice)
         self.manager.updateCORFunc("Phase Correlation", widget.projectionViewer.auto_cor_widget)
 
@@ -197,7 +208,15 @@ class TomographyPlugin(base.plugin):
     #     except AttributeError:
     #         return None
 
+    def openFlats(self):
 
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+        currentWidget.openFlats()
+
+    def openDarks(self):
+
+        currentWidget = self.centerwidget.widget(self.currentWidget())
+        currentWidget.openDarks()
 
     def currentWidget(self):
 
@@ -215,7 +234,7 @@ class TomographyPlugin(base.plugin):
             self.manager.updateParameters()
             self.toolbar.actionCenter.setChecked(False)
         except (AttributeError, RuntimeError) as e:
-            msg.logMessage(e.message, level=msg.ERROR)
+            msg.logMessage(str(e), level=msg.ERROR)
 
     def reconnectTabs(self):
         """
@@ -225,14 +244,6 @@ class TomographyPlugin(base.plugin):
         for idx in range(self.centerwidget.count()):
             self.centerwidget.widget(idx).wireupCenterSelection(self.manager.recon_function)
             self.centerwidget.widget(idx).sigSetDefaults.connect(self.manager.setPipelineFromDict)
-
-
-    def freeRecon(self):
-        """
-        Frees plugin to run reconstruction and run next in queue when job is canceled
-        """
-        self.recon_running = False
-        self.runReconstruction()
 
     def loadPipeline(self):
         """
@@ -350,14 +361,14 @@ class TomographyPlugin(base.plugin):
             input_dict = OrderedDict()
             for key,val in function.input_functions.items():
                 # print key, ",", val.params.children()
-                dict = OrderedDict()
-                dict['func'] = val
-                dict['enabled'] = val.enabled
-                dict['subfunc_name'] = val.subfunc_name
-                dict['vals'] = OrderedDict()
+                dct = OrderedDict()
+                dct['func'] = val
+                dct['enabled'] = val.enabled
+                dct['subfunc_name'] = val.subfunc_name
+                dct['vals'] = OrderedDict()
                 for child in val.params.children():
-                    dict['vals'][child.name()] = child.value()
-                input_dict[key] = dict
+                    dct['vals'][child.name()] = child.value()
+                input_dict[key] = dct
             currentWidget.pipeline[function.name]["input_functions"] = input_dict
         currentWidget.pipeline['pipeline_for_yaml'] = config.extract_pipeline_dict(self.manager.features)
 
@@ -441,13 +452,13 @@ class TomographyPlugin(base.plugin):
         if self.checkPipeline():
             msg.showMessage(message, timeout=0)
             self.preview_slices = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func, prange=prange)
+            self.processFunctionStack(callback=self.runSlicePreview,fixed_func=fixed_func, prange=prange)
 
     def multiSlicePreviewAction(self, message='Computing multi-slice preview...', fixed_func=None):
 
         slice_no = self.centerwidget.widget(self.currentWidget()).sinogramViewer.currentIndex
         maximum = self.centerwidget.widget(self.currentWidget()).sinogramViewer.data.shape[0]-1
-        dialog = sliceDialog(parent=None, val1=slice_no, val2=slice_no+20,maximum=maximum)
+        dialog = sliceDialog(parent=self.centerwidget, val1=slice_no, val2=slice_no+20,maximum=maximum)
         try:
             value = dialog.value
 
@@ -460,11 +471,12 @@ class TomographyPlugin(base.plugin):
                     msg.showMessage(message, timeout=0)
                     if value[0] == value[1]:
                         self.preview_slices = value[1]
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x),fixed_func=fixed_func)
+                        self.centerwidget.widget(self.currentWidget()).sinogramViewer.setIndex(self.preview_slices)
+                        self.processFunctionStack(callback=self.runSlicePreview,fixed_func=fixed_func)
                     else:
                         self.preview_slices = [value[0],value[1]]
                         slc = (slice(None,None,None), slice(value[0],value[1]+1,1), slice(None,None,None))
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), slc=slc, fixed_func=fixed_func)
+                        self.processFunctionStack(callback=self.runSlicePreview, slc=slc, fixed_func=fixed_func)
         except AttributeError:
             pass
 
@@ -501,7 +513,7 @@ class TomographyPlugin(base.plugin):
             msg.showMessage('Computing 3D preview...', timeout=0)
             slc = (slice(None), slice(None, None, 8), slice(None, None, 8))
             self.manager.cor_scale = lambda x: x // 8
-            self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), slc=slc)
+            self.processFunctionStack(callback=self.run3DPreview, slc=slc)
 
 
 
@@ -552,7 +564,6 @@ class TomographyPlugin(base.plugin):
             parameter range tests to create the class with the parameter to be run and send it to a background thread.
             See FunctionManager.testParameterRange for more details
         """
-
         bg_functionstack = threads.method(callback_slot=callback, finished_slot=finished,
                                           lock=threads.mutex)(self.manager.loadPreviewData)
         bg_functionstack(self.centerwidget.widget(self.currentWidget()), slc=slc,
@@ -601,10 +612,10 @@ class TomographyPlugin(base.plugin):
 
         name = self.centerwidget.tabText(self.centerwidget.currentIndex())
         msg.showMessage('Computing reconstruction for {}...'.format(name),timeout = 0)
-        self.bottomwidget.local_console.clear()
+        self.bottom.local_console.clear()
         self.manager.updateParameters()
-        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                                    interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
+                                    interrupt_signal=self.bottom.local_cancelButton.clicked,
                                     finished_slot=self.reconstructionFinished)(self.manager.functionStackGenerator)
         #
         # pstart = self.ui.config_params.child('Start Projection').value()
@@ -620,6 +631,15 @@ class TomographyPlugin(base.plugin):
 
 
 
+    def freeRecon(self):
+        """
+        Frees plugin to run reconstruction and run next in queue when job is canceled
+        """
+        msg.showMessage("Reconstruction interrupted.", timeout=0)
+        self.bottom.log2local('---------- RECONSTRUCTION INTERRUPTED ----------')
+        self.queue_widget.removeRecon(0)
+        self.recon_running = False
+        self.runReconstruction()
 
 
     def loadFullReconstruction(self):
@@ -642,36 +662,31 @@ class TomographyPlugin(base.plugin):
         self.manager.updateParameters()
 
         run_state = self.manager.saveState(currentWidget)
-
-
-
-        recon_iter = threads.iterator(callback_slot=self.bottomwidget.log2local,
-                            interrupt_signal=self.bottomwidget.local_cancelButton.clicked,
+        recon_iter = threads.iterator(callback_slot=self.bottom.log2local,
+                            interrupt_signal=self.bottom.local_cancelButton.clicked,
                             finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
-        # pstart = self.ui.config_params.child('Start Projection').value()
-        # pend = self.ui.config_params.child('End Projection').value()
-        # pstep = self.ui.config_params.child('Step Projection').value()
-        # sstart = self.ui.config_params.child('Start Sinogram').value()
-        # send = self.ui.config_params.child('End Sinogram').value()
-        # sstep =  self.ui.config_params.child('Step Sinogram').value()
 
         proj = None
         sino = None
         chunk = None
+        width = None
         for f in self.manager.features:
             if 'Reader' in f.name:
                 proj = f.projections
                 sino = f.sinograms
                 chunk = f.chunk
+                width = f.width
 
         if (not proj and not sino and not chunk) or (not proj[1] and not sino[1] and not chunk):
             sino = (0, currentWidget.data.shape[2], 1)
             proj = (0, currentWidget.data.shape[0], 1)
             chunk = cpu_count()*5
+            width = (None, None, None)
 
-        args = (currentWidget, run_state, proj, sino, chunk, cpu_count())
+        args = (currentWidget, run_state, proj, sino, chunk, width, cpu_count())
 
-        self.manager.recon_queue.put([recon_iter, args])
+        self.queue_widget.recon_queue.append([recon_iter, args])
+        self.queue_widget.addRecon(args)
 
         if self.recon_running:
             name = self.centerwidget.tabText(self.centerwidget.currentIndex())
@@ -681,12 +696,13 @@ class TomographyPlugin(base.plugin):
 
     def runReconstruction(self):
         """
-        Takes reconstruction job from self.manager.recon_queue and runs it on background thread. Saves function
+        Takes reconstruction job from self.queue_widget.recon_queue and runs it on background thread. Saves function
         pipeline as python runnable after reconstruction is finished.
         """
-        if (not self.manager.recon_queue.empty()) and (not self.recon_running):
+        if (not len(self.queue_widget.recon_queue)==0) and (not self.recon_running):
             self.recon_running = True
-            recon_job = self.manager.recon_queue.get()
+            self.queue_widget.manager.features[0].closeButton.hide()
+            recon_job = self.queue_widget.recon_queue.popleft()
             args = recon_job[1]
             name = self.centerwidget.tabText(self.centerwidget.indexOf(args[0]))
             msg.showMessage('Computing reconstruction for {}...'.format(name), timeout=0)
@@ -703,8 +719,10 @@ class TomographyPlugin(base.plugin):
 
         msg.showMessage('Reconstruction complete.', timeout=10)
 
+        self.queue_widget.removeRecon(0)
         self.recon_running = False
         self.runReconstruction()
+
 
 
 

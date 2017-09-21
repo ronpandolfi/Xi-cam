@@ -408,8 +408,13 @@ class DataBrokerView(QtGui.QListWidget):
         self.clear()
         for h in results:
             start = h.start
+            for n in [start.get('sample_name'), start.get('object'), '??']:
+                if type(n) == str:
+                    name = n
+                    break
+
             key = '{} [{}] sample: {}'.format(start.get('plan_name', '??'),
-                                   start.get('scan_id', ''), start.get('sample_name', '??'))
+                                   start.get('scan_id', ''), name)
 
             item = QtGui.QListWidgetItem(key)
 

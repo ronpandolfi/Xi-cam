@@ -20,7 +20,7 @@ Vo:
 Gaussian Filter:
 - gaussian_filter
 - tomopy
-Median Filter:
+TomoPy Median Filter:
 - median_filter
 - tomopy
 Regular:
@@ -83,6 +83,29 @@ Write HDF5:
 - write_hdf5
 - dxchange
 
+# F3D functions
+F3D Median Filter:
+- run_MedianFilter
+- pyF3D
+F3D Bilateral Filter:
+- run_BilateralFilter
+- pyF3D
+F3D Mask Filter:
+- run_MaskFilter
+- pyF3D
+F3D MM Erosion:
+- run_MMFilterEro
+- pyF3D
+F3D MM Dilation:
+- run_MMFilterDil
+- pyF3D
+F3D MM Closure:
+- run_MMFilterClo
+- pyF3D
+F3D MM Opening:
+- run_MMFilterOpe
+- pyF3D
+
 # Xi-Cam functions
 Crop:
 - crop
@@ -110,4 +133,7 @@ Slice:
 - pipelinefunctions
 Read Data:
 - reader
+- pipelinefunctions
+1D Remove Outliers:
+- remove_outlier1d
 - pipelinefunctions

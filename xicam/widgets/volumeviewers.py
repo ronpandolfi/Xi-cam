@@ -22,6 +22,7 @@ from PySide import QtCore, QtGui
 from vispy import scene
 from vispy.color import Colormap
 from pipeline import loader
+from xicam.widgets.customwidgets import histDialogButton
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -45,7 +46,15 @@ class VolumeViewer(QtGui.QWidget):
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        ly.addWidget(self.HistogramLUTWidget)
+        v = QtGui.QVBoxLayout()
+        v.addWidget(self.HistogramLUTWidget)
+
+        # ly.addWidget(self.HistogramLUTWidget)
+
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.connectToHistWidget(self.HistogramLUTWidget)
+        v.addWidget(self.setButton)
+        ly.addLayout(v)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -93,7 +102,7 @@ class VolumeViewer(QtGui.QWidget):
                 try:
                     region.item.region.setRegion([0, vol.shape[i]])
                 except RuntimeError as e:
-                    print(e.message)
+                    print(e)
 
     def moveGradientTick(self, idx, pos):
         tick = self.HistogramLUTWidget.item.gradient.listTicks()[idx][0]

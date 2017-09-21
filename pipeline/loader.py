@@ -60,7 +60,11 @@ def loadimage(path):
             data,mask = loadstitched('','',data1=ev1['image'],data2=ev2['image'],paras1=ev1,paras2=ev2)
             return data, mask
         else:
-            data = np.array(db.db.get_images(h, img_names[0])).squeeze()
+            data = db.db.get_images(h, img_names[0])[0]
+
+            # converting to np.array takes too long - is it necessary to do this?
+            # if so, comment out line above and uncomment line below
+            # data = np.array(db.db.get_images(h, img_names[0]).squeeze()
             if data.ndim>2:
                 data =np.transpose(data,[1,2,0])
             return data
@@ -837,7 +841,7 @@ class jpegimageset(object):
 class PStack(object):
     ndim = 3
 
-    def __init__(self, projections, dark, flat, sino, hdr):
+    def __init__(self, projections, dark, flat, sino, hdr, descriptors):
         self.primary = projections
         self.projections = projections
         self.sino = sino
@@ -845,12 +849,14 @@ class PStack(object):
         self.flats = flat
         self.dtype = projections.pixel_type
         self.header = hdr
+        self.descriptors = descriptors
+        self.frames = [str(j) for j in range(len(self.projections))]
 
-    # shim because this is expected a few other places in
-    # the code.
-    @property
-    def fabimage(self):
-        return self.primary
+        for pim in (self.sino, self.darks, self.flats, self.primary):
+            pim.frames = [str(j) for j in range(len(pim))]
+
+    def __len__(self):
+        return len(self.primary)
 
     # these are required because this object gets passed
     # into pyqtgraph which tries to down sample / scale
@@ -873,29 +879,75 @@ class PStack(object):
     def transpose(self, ax):
         return self
 
-    def __getitem__(self, indx):
-        # this is a hack to work around pyqtgraph expecting a
-        # non-proxy object that it can progress
-        if (isinstance(indx, list) and
-                all(isinstance(ind, slice) for ind in indx)):
-            indx = 0
-        # in all other cases pass through
-        return self._gi(indx)
+    def __getitem__(self, item):
 
-    def _gi(self, indx):
-        """guts of __getitem__
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item,)
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
 
-        Split this like so because pyqtgraph throws lists at us
-        which lru can not hash!
-        """
-        return self.primary[indx]
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self.primary[i][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+    def flatindices(self):
+
+        # looks through databroker descriptor
+        # TODO: find a better way to search through the doc
+        i0 = 0
+        for descriptor in self.descriptors:
+            try:
+                key = list(descriptor['configuration'].keys())[0]
+                if 'i0cycle' in descriptor['configuration'][key]['data']:
+                    i0 = int(descriptor['configuration'][key]['data']['i0cycle'])
+            except KeyError:
+                pass
+
+
+        nproj = len(self)
+        if i0 > 0:
+            indices = list(range(0, nproj, i0))
+            if indices[-1] != nproj - 1:
+                indices.append(nproj - 1)
+        elif i0 == 0:
+            indices = [0, nproj - 1]
+        return indices
+
 
     @property
     def rawdata(self):
-        # this is required else where in the code base.
-        # the existing implementations seem to just cache
-        # what ever the 'current frame' is !?!
         return self[0]
+
+    def getframe(self, frame=0):
+        self.data = self.primary[frame]
+        return self.data
+
+    def close(self):
+        pass
 
 
 class StackImage(object):
@@ -914,10 +966,6 @@ class StackImage(object):
         if filepath is not None:
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
-            if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
-            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -945,12 +993,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
-    def transpose(self, ax): # transposing is handled internally
+    def transpose(self, ax):
+        # TODO: find a good way to do this
+        # TODO: annoying because of the way hdfs are stored
         return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
-            img = self._getimage(j)[::level, ::level].transpose()
+            img = self._getimage(j)[::level, ::level]
             if i == 0:  # allocate array:
                 shape = (np.ceil(old_div(float(self.shape[0]), level)), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
@@ -972,7 +1022,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return self.fabimage.getframe(frame).transpose()
+        return self.fabimage.getframe(frame)
 
     def invalidatecache(self):
         self.cache = dict()

@@ -1,6 +1,6 @@
 include README.rst
 recursive-include samples *
 recursive-include xicam/gui *
-recursive-include yaml *
+recursive-include xicam/yaml *
 include cext/*
 include LICENSE.txt

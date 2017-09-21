@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
-try:
-    from .tomocam import tomoCam
-except ImportError:
-    pass
+from .tomocam import tomoCam
 
 def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs):
 
@@ -12,4 +9,4 @@ def recon(tomo, theta, center=None, algorithm=None, input_params=None, **kwargs)
     elif 'sirt' in algorithm:
         return tomoCam.gpuSIRT(tomo, theta, center, input_params)
     else:
-        raise ValueError('TomoCam reconstruction error')
+        raise ValueError('TomoCam reconstruction must be either \'gridrec\', \'sirt\', or \'mbir\'')
