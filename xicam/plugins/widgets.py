@@ -9,7 +9,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools, writer
+from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, path, writer
 from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
@@ -110,7 +110,7 @@ class dimgViewer(QtGui.QWidget):
             self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
-        self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
+        self.imgview = ImageView(self)
         self.imageitem = self.imgview.getImageItem()
         self.graphicslayoutwidget = self.imgview
         self.imgview.ui.roiBtn.setParent(None)
@@ -230,6 +230,14 @@ class dimgViewer(QtGui.QWidget):
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
 
+    def appendpaths(self, paths):
+        newimages = np.stack([loader.loadimage(path) for path in paths])
+        oldimages = self.dimg._rawdata
+        if len(oldimages.shape)==2:
+            oldimages = np.stack([oldimages])
+
+        self.dimg=loader.datadiffimage2(np.vstack([oldimages,np.rot90(newimages,3,axes=[1,2])]),rot90=0)
+        self.redrawimage()
 
     def mousePressEvent(self,ev):
         super(dimgViewer, self).mousePressEvent(ev)
@@ -1495,10 +1503,6 @@ pg.ImageItem.getHistogram = getHistogram
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
-    def __init__(self,*args,**kwargs):
-        self.actionLog_Intensity=kwargs['actionLog_Intensity']
-        del kwargs['actionLog_Intensity']
-        super(ImageView, self).__init__(*args,**kwargs)
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -1522,34 +1526,6 @@ class ImageView(pg.ImageView):
                 return (0, t)
             ind = inds[-1, 0]
         return ind, t
-
-    def setImage(self,*args,**kwargs):
-        super(ImageView, self).setImage(*args,**kwargs)
-        # if self.actionLog_Intensity.isChecked():
-        #     levelmin = np.log(self.levelMin)
-        #     levelmax = np.log(self.levelMax)
-        #     if np.isnan(levelmin): levelmin = 0
-        #     if np.isnan(levelmax): levelmax = 1
-        #     if np.isinf(levelmin): levelmin = 0
-        #     msg.logMessage(('min:',levelmin),msg.DEBUG)
-        #     msg.logMessage(('max:',levelmax),msg.DEBUG)
-        #
-        #     self.ui.histogram.setLevels(levelmin, levelmax)
-
-    # def updateImage(self, autoHistogramRange=True): # inject logarithm action
-    #     ## Redraw image on screen
-    #     if self.image is None:
-    #         return
-    #
-    #     image = self.getProcessedImage()
-    #
-    #     if autoHistogramRange:
-    #         self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
-    #     if self.axes['t'] is None:
-    #         self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
-    #     else:
-    #         self.ui.roiPlot.show()
-    #         self.imageItem.updateImage(np.log(image[self.currentIndex] * (image[self.currentIndex]> 0) + (image[self.currentIndex] < 1)) if self.actionLog_Intensity.isChecked() else image[self.currentIndex])
 
 
 from scipy.signal import fftconvolve
@@ -1687,7 +1663,7 @@ class fileTreeWidget(QtGui.QTreeView):
         super(fileTreeWidget, self).__init__()
         self.filetreemodel = QtGui.QFileSystemModel()
         self.setModel(self.filetreemodel)
-        self.filetreepath = pathtools.getRoot()
+        self.filetreepath = path.getRoot()
         self.treerefresh(self.filetreepath)
         header = self.header()
         self.setHeaderHidden(True)

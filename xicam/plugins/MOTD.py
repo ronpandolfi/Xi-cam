@@ -36,6 +36,10 @@ class MOTDPlugin(base.plugin):
         xglobals.plugins['Viewer'].instance.activate()
         xglobals.plugins['Viewer'].instance.openfiles(*args, **kwargs)
 
+    def appendfiles(self, files):
+        xglobals.plugins['Viewer'].instance.activate()
+        xglobals.plugins['Viewer'].instance.openfiles(files)
+
     def calibrate(self):
         xglobals.plugins['Viewer'].instance.activate()
         xglobals.plugins['Viewer'].instance.calibrate()

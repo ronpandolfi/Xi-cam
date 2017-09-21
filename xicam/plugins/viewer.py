@@ -258,6 +258,14 @@ class ViewerPlugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
 
+    def appendfiles(self, paths=None):
+        if not self.centerwidget.count():
+            return self.openfiles(paths)
+        self.activate()
+        if type(paths) is not list:
+            paths = [paths]
+        self.centerwidget.currentWidget().widget.appendpaths(paths)
+
     def opendata(self, data=None, operation=None, operationname=None):
         self.activate()
         dimg = loader.datadiffimage2(data=data)

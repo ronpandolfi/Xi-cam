@@ -18,7 +18,6 @@ import subprocess
 import xicam.RmcView as rmc
 import time
 from xicam import threads
-from daemon.daemon import daemon
 import multiprocessing
 import queue
 import glob
@@ -637,87 +636,6 @@ class inOutViewer(QtGui.QWidget, ):
 
         self.interrupt = False
 
-
-class NewFolderWatcher(daemon):
-
-    """
-    Daemon subclass to watch for hiprmc folder when it is created
-    """
-
-    sigFinished = QtCore.Signal(str)
-
-    def process(self, path, files):
-
-        if files:
-            folder = path + '/' + files[0]
-            self.sigFinished.emit(folder)
-            self.stop()
-
-    def run(self):
-
-        if self.procold:
-            self.process(self.path, self.childfiles)
-
-        try:
-            while not self.exiting:
-                time.sleep(.1)
-                self.checkdirectory()  # Force update; should not have to do this -.-
-        except KeyboardInterrupt:
-            pass
-
-    def stop(self):
-        self.exiting = True
-        print ("thread stop - %s" % self.exiting)
-
-    def __del__(self):
-        self.exiting = True
-        self.wait()
-
-
-    def checkdirectory(self):
-        """
-        Checks a directory for new files, comparing what files are there now vs. before
-        """
-        updatedchildren = set(os.listdir(self.path))
-        newchildren = updatedchildren - self.childfiles
-        self.childfiles = updatedchildren
-        self.process(self.path, list(newchildren))
-
-
-class HipRMCWatcher(daemon):
-
-    """
-    Daemon subclass to watch hiprmc output folder. Emits sigCallback whenever folder contents change
-    """
-
-    num_cores = multiprocessing.cpu_count()
-    sigCallback = QtCore.Signal(str)
-
-    def run(self):
-
-        if self.procold:
-            self.process(self.path, self.childfiles)
-
-        try:
-            while not self.exiting:
-                time.sleep(.1)
-                self.checkdirectory()  # Force update; should not have to do this -.-
-        except KeyboardInterrupt:
-            pass
-
-    def checkdirectory(self):
-        """
-        Checks a directory for new files, comparing what files are there now vs. before
-        """
-        updatedchildren = set(os.listdir(self.path))
-        newchildren = updatedchildren - self.childfiles
-        self.childfiles = updatedchildren
-        self.process(self.path, list(newchildren))
-
-
-    def process(self, path, files):
-        if files:
-            self.sigCallback.emit(path)
 
 
 

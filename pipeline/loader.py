@@ -251,7 +251,7 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
 def loadthumbnail(path):
     try:
         if os.path.splitext(path)[1] in ['.nxs', '.hdf']:
-            nxroot = nx.load(pathtools.path2nexus(path))
+            nxroot = nx.load(path.path2nexus(path))
             # print nxroot.tree
             if hasattr(nxroot, 'data'):
                 if hasattr(nxroot.data, 'thumbnail'):
@@ -368,7 +368,7 @@ def loadimageseries(pattern):
     return data
 
 
-from . import integration, remesh, center_approx, variation, pathtools
+from . import integration, remesh, center_approx, variation, path
 
 
 class diffimage(object):
@@ -608,7 +608,7 @@ class diffimage(object):
 
     @debugtools.timeit
     def writenexus(self):
-        nxpath = pathtools.path2nexus(self.filepath)
+        nxpath = path.path2nexus(self.filepath)
         w = writer.nexusmerger(img=self._data, thumb=self.thumbnail, path=nxpath, rawpath=self.filepath,
                                variation=self._variation)
         w.run()
@@ -628,7 +628,7 @@ class diffimage(object):
     @debugtools.timeit  # 0.07s on Izanami
     def variation(self, operationindex, roi):
         if operationindex not in self._variation or roi is not None:
-            nxpath = pathtools.path2nexus(self.filepath)
+            nxpath = path.path2nexus(self.filepath)
             if os.path.exists(nxpath) and roi is None:
                 v = readvariation(nxpath)
                 # print v
@@ -636,12 +636,12 @@ class diffimage(object):
                     self._variation[operationindex] = v[operationindex]
                     msg.logMessage('successful variation load!')
                 else:
-                    prv = pathtools.similarframe(self.filepath, -1)
-                    nxt = pathtools.similarframe(self.filepath, +1)
+                    prv = path.similarframe(self.filepath, -1)
+                    nxt = path.similarframe(self.filepath, +1)
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
             else:
-                prv = pathtools.similarframe(self.filepath, -1)
-                nxt = pathtools.similarframe(self.filepath, +1)
+                prv = path.similarframe(self.filepath, -1)
+                nxt = path.similarframe(self.filepath, +1)
                 if roi is None:
                     self._variation[operationindex] = variation.filevariation(operationindex, prv, self.dataunrot, nxt)
                 else:
@@ -1552,11 +1552,12 @@ class multifilediffimage2(diffimage2):
 class datadiffimage2(singlefilediffimage2):
     ndim = 2
 
-    def __init__(self, data, detector=None, experiment=None):
+    def __init__(self, data, detector=None, experiment=None, rot90=3):
         super(datadiffimage2, self).__init__(filepath=None, detector=detector, experiment=experiment)
-        self._rawdata = np.rot90(data, 3)
+        self._rawdata = np.rot90(data, rot90)
 
-        # False scale rawdata to avoid log issues
+
+        # False scale rawdata when given floats less than 1 to avoid log issues
         if self._rawdata.max() <= 1:
             self._rawdata *= 2 ** 32
 

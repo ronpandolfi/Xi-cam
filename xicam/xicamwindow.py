@@ -136,6 +136,7 @@ class MyMainWindow(QtCore.QObject):
 
         plugins.base.fileexplorer.sigOpen.connect(self.openfiles)
         plugins.base.fileexplorer.sigFolderOpen.connect(self.openfolder)
+        plugins.base.fileexplorer.sigAppend.connect(self.appendfiles)
         plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.handleOpenAction)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
@@ -321,6 +322,32 @@ class MyMainWindow(QtCore.QObject):
                 elif response == QtGui.QMessageBox.Cancel:
                     return None
 
+    def appendfiles(self, filenames):
+        """
+        when a file is opened, check if there is calibration and offer to use the image as calibrant
+        """
+        if filenames is not u'':
+            if config.activeExperiment.iscalibrated() or len(filenames) > 1:
+                self.appendimages(filenames)
+            else:
+                msgBox = QtGui.QMessageBox()
+                msgBox.setText("The current experiment has not yet been calibrated. ")
+                msgBox.setInformativeText("Use this image as a calibrant (AgBe)?")
+                msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
+                msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
+
+                response = msgBox.exec_()
+
+                if response == QtGui.QMessageBox.Yes:
+                    self.appendimages(filenames)
+
+                    self.calibrate()
+                elif response == QtGui.QMessageBox.No:
+                    self.appendimages(filenames)
+                elif response == QtGui.QMessageBox.Cancel:
+                    return None
+
+
     def openfolder(self, filenames):
         """
         build a new tab from the folder path, add it to the tab view, and display it
@@ -361,6 +388,20 @@ class MyMainWindow(QtCore.QObject):
         #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
         plugins.base.activeplugin.openfiles(paths)
+
+        self.ui.statusbar.showMessage('Ready...')
+
+    def appendimages(self, paths):
+        """
+        build a new tab, add it to the tab view, and display it
+        """
+
+        from . import plugins
+
+        self.ui.statusbar.showMessage('Loading image...')
+        self.app.processEvents()
+
+        plugins.base.activeplugin.appendfiles(paths)
 
         self.ui.statusbar.showMessage('Ready...')
 

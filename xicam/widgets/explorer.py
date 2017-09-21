@@ -23,9 +23,88 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools, msg
+from pipeline import path, msg
 from xicam import config
 from modpkgs import guiinvoker
+from pipeline import daemon
+
+class LiveFolderView(QtGui.QListWidget):
+    """
+    Local file explorer tree view
+    """
+
+    pathChanged = QtCore.Signal(str)
+    sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
+    sigDelete = QtCore.Signal(list)
+    sigUpload = QtCore.Signal(list)
+    sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
+
+    def __init__(self, path, parent=None):
+        self.path=path
+        super(LiveFolderView, self).__init__(parent)
+
+        # self.path = config.settings['Default Local Path']
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Open', self)]
+        standardActions[0].triggered.connect(self.handleOpenAction)
+        # standardActions[1].triggered.connect(self.handleOpenFolderAction)
+        # standardActions[2].triggered.connect(self.handleDeleteAction)
+        self.menu.addActions(standardActions)
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+        self.doubleClicked.connect(self.onDoubleClick)
+
+        filter='*.*'
+        self.watcher = daemon.Watcher(self.path, filter, newcallback=lambda ev: self.autoOpen(ev.src_path), procold=False)
+
+    def autoOpen(self, path):
+        self.addItem(QtGui.QListWidgetItem(path))
+        self.sigOpen.emit(path)
+
+    def test(self,*args,**kwargs):
+        print(args,kwargs)
+
+    def refresh(self, path=None):
+        """
+        Refresh the file tree, or switch directories and refresh
+        """
+        pass
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def onDoubleClick(self, index):
+        self.sigOpen.emit(self.itemFromIndex(index).text())
+
+    def currentChanged(self, current, previous):
+        path = self.currentItem().text()
+        if os.path.isfile(path):
+            self.sigItemPreview.emit(path)
+
+    def getSelectedFilePaths(self):
+        items = self.selectedIndexes()
+        paths = [item.text() for item in items]
+        self.sigOpen.emit(paths)
+
+    def getSelectedFile(self):
+        pass
+
+    def handleOpenAction(self):
+        paths = self.getSelectedFilePaths()
+        if os.path.isdir(paths[0]) and len(paths) == 1:
+            self.refresh(path=paths[0])
+        else:
+            self.sigOpen.emit(paths)
+
+class StreamFolderView(LiveFolderView):
+
+    def autoOpen(self, path):
+        self.addItem(QtGui.QListWidgetItem(path))
+        self.sigAppend.emit(path)
 
 class LocalFileView(QtGui.QTreeView):
     """
@@ -38,6 +117,7 @@ class LocalFileView(QtGui.QTreeView):
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
@@ -160,6 +240,7 @@ class RemoteFileView(QtGui.QListWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -243,6 +324,7 @@ class DataBrokerView(QtGui.QListWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, db, parent=None):
         self.path = '-100:'
@@ -399,6 +481,7 @@ class SFTPFileView(QtGui.QTreeWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, sftp_client, parent=None):
         super(SFTPFileView, self).__init__(parent=parent)
@@ -537,6 +620,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(object)
+    sigAppend = QtCore.Signal(str)
 
 
     def __init__(self, spot_client, parent=None):
@@ -810,6 +894,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     sigOpen = QtCore.Signal(list)
     sigFolderOpen = QtCore.Signal(list)
     sigPreview = QtCore.Signal(object)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -835,6 +920,8 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.tabCloseRequested.connect(self.removeTab)
 
         self.newtabmenu = QtGui.QMenu(None)
+        addlivefolder = QtGui.QAction('Live Folder', self.newtabmenu)
+        addstreamfolder = QtGui.QAction('Stream Folder', self.newtabmenu)
         adddatabroker = QtGui.QAction('Data Broker', self.newtabmenu)
         addspot = QtGui.QAction('SPOT', self.newtabmenu)
         addcori = QtGui.QAction('Cori', self.newtabmenu)
@@ -843,9 +930,11 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
         self.standard_actions = OrderedDict({'DataBroker':adddatabroker,'SPOT': addspot, 'Cori': addcori,
-                                             'Edison': addedison, 'Bragg': addbragg, 'SFTP': addsftp})
+                                             'Edison': addedison, 'Bragg': addbragg, 'SFTP': addsftp, 'Live': addlivefolder, 'Stream': addstreamfolder})
         self.newtabmenu.addActions(list(self.standard_actions.values()))
         self.newtabmenu.addAction(showjobtab)
+        addlivefolder.triggered.connect(self.addLiveFolderTab)
+        addstreamfolder.triggered.connect(self.addStreamFolderTab)
         adddatabroker.triggered.connect(self.addDataBrokerTab)
         addspot.triggered.connect(self.addSPOTTab)
         addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
@@ -889,6 +978,20 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client),
                                   True, False)
 
+    def addLiveFolderTab(self):
+        dialog = QtGui.QFileDialog(self, 'Choose a live folder to watch', os.curdir,
+                                   options=QtGui.QFileDialog.ShowDirsOnly)
+        d = dialog.getExistingDirectory()
+        if d:
+            self.addFileExplorer('Live Folder', FileExplorer(LiveFolderView(d)))
+
+    def addStreamFolderTab(self):
+        dialog = QtGui.QFileDialog(self, 'Choose a stream folder to watch', os.curdir,
+                                   options=QtGui.QFileDialog.ShowDirsOnly)
+        d = dialog.getExistingDirectory()
+        if d:
+            self.addFileExplorer('Stream Folder', FileExplorer(StreamFolderView(d)))
+
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
         file_explorer.file_view.sigItemPreview.connect(self.itemSelected)
@@ -907,6 +1010,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.handleOpenActions)
         explorer.file_view.sigOpenFolder.connect(self.handleOpenFolderActions)
+        explorer.file_view.sigAppend.connect(self.handleAppendActions)
         try:
             explorer.file_view.sigDownload.connect(self.handleDownloadActions)
         except AttributeError:
@@ -995,6 +1099,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleOpenActions(self, paths):
         if len(paths) > 0:
             self.sigOpen.emit(paths)
+
+    def handleAppendActions(self, paths):
+        if len(paths) > 0:
+            self.sigAppend.emit(paths)
 
     def handleOpenFolderActions(self, paths):
         if len(paths) > 0:

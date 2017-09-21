@@ -13,14 +13,14 @@ from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree import parameterTypes as ptypes
 import numpy as np
 import yaml
-from pipeline import pathtools
+from pipeline import path
 import os
 from pipeline import msg
 from pipeline import detectors
 
 
 class settingstracker(ptypes.GroupParameter):
-    settingspath = os.path.join(pathtools.user_config_dir, 'settings.yml')
+    settingspath = os.path.join(path.user_config_dir, 'settings.yml')
 
     def __init__(self):
         super(settingstracker, self).__init__(name='Settings')
@@ -36,8 +36,8 @@ class settingstracker(ptypes.GroupParameter):
 
     def write(self):
 
-        if not os.path.exists(pathtools.user_config_dir):
-            os.makedirs(pathtools.user_config_dir)
+        if not os.path.exists(path.user_config_dir):
+            os.makedirs(path.user_config_dir)
         with open(self.settingspath,'w') as stream:
             try:
                 stream.write(yaml.dump(self.saveState()))
