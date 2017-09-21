@@ -58,21 +58,27 @@ class LiveFolderView(QtGui.QListWidget):
         self.customContextMenuRequested.connect(self.menuRequested)
         self.doubleClicked.connect(self.onDoubleClick)
 
-        filter='*.*'
-        self.watcher = daemon.Watcher(self.path, filter, newcallback=lambda ev: self.autoOpen(ev.src_path), procold=False)
+        self.filter='*.*'
+        self.startwatcher()
+
+    def startwatcher(self):
+        self.watcher = daemon.Watcher(self.path, self.filter, newcallback=lambda ev: self.autoOpen(ev.src_path),
+                                      procold=False)
 
     def autoOpen(self, path):
         self.addItem(QtGui.QListWidgetItem(path))
         self.sigOpen.emit(path)
 
-    def test(self,*args,**kwargs):
-        print(args,kwargs)
-
     def refresh(self, path=None):
         """
         Refresh the file tree, or switch directories and refresh
         """
-        pass
+        self.watcher.stop()
+        if not os.path.isdir(path):
+            self.path = os.path.dirname(path)
+            self.filter = os.path.basename(path)
+        self.startwatcher()
+
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
