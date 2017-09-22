@@ -52,6 +52,8 @@ class VolumeViewer(QtGui.QWidget):
         # ly.addWidget(self.HistogramLUTWidget)
 
         self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.setMaximumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
+        self.setButton.setMinimumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
         self.setButton.connectToHistWidget(self.HistogramLUTWidget)
         v.addWidget(self.setButton)
         ly.addLayout(v)
@@ -93,6 +95,8 @@ class VolumeViewer(QtGui.QWidget):
             print('Got slice', sliceobj)
         else:
             sliceobj = 3*(slice(0, None),)
+
+        if vol is not None: vol=np.nan_to_num(vol)
 
         self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
@@ -153,8 +157,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (np.ceil(old_div(float(self.vol.shape[0]), targetImageSize)),
-                    np.ceil(old_div(float(self.vol.shape[1]), targetImageSize)))
+            step = (int(np.ceil(old_div(float(self.vol.shape[0]), targetImageSize)),
+                    int(np.ceil(old_div(float(self.vol.shape[1]), targetImageSize)))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
@@ -297,6 +301,9 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.vol = vol
 
         if slice is not None:
+            def intify(a):
+                if a is not None: return int(a)
+            sliceobj = [slice(intify(s.start),intify(s.stop),intify(s.step)) for s in sliceobj]
             slicevol = self.vol[sliceobj]
         else:
             slicevol = self.vol

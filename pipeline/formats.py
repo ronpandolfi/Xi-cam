@@ -36,11 +36,45 @@ def register_fabioclass(cls):
 
 
 h5classes = list()
+tiffclasses = list()
+
+def register_tiffclass(cls):
+    global tiffclasses
+    tiffclasses.append(cls)
+    return cls
 
 def register_h5class(cls):
     global h5classes
     h5classes.append(cls)
     return cls
+
+@register_fabioclass
+class xicamtiffimage(fabioimage):
+    extensions = ['.tiff', '.tif']
+
+    def read(self, filename, frame=None):
+        for tiff in tiffclasses:
+            if hasattr(tiff,'validate'): # check which class preferably based on the validate staticmethod
+                try:
+                    tiff.validate(filename, frame)
+                except Exception as ex:
+                    continue
+            try: # if there isn't one, try to read with this class
+                return xicamtiffimage._instantiate_read(tiff,filename,frame)
+            except Exception as ex:
+                continue
+
+        # if custom classes fail, use built-in class
+        return xicamtiffimage._instantiate_read(fabio.tifimage.tifimage, filename, frame)
+
+    @staticmethod
+    def _instantiate_read(cls,filename,frame):
+        fabh5 = cls()
+        fabh5.filename = filename
+        return fabh5.read(filename, frame)
+
+fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'xicamtiff'))
+
 
 @register_fabioclass
 class hdf5image(fabioimage):
@@ -99,14 +133,14 @@ class ALS832H5image(fabioimage):
 
     @staticmethod
     def validate(f, frame=None):
-        h5 = h5py.File(f, 'r+')
+        h5 = h5py.File(f, 'r')
         header = dict(h5.attrs)
         h5.close()
-        if type(header['facility'])!=str:
+        if type(header['facility']) != str:
             assert header['facility'].decode('UTF-8') == 'als'
         else:
             assert header['facility'] == 'als'
-        if type(header['facility'])!=str:
+        if type(header['facility']) != str:
             assert header['end_station'].decode('UTF-8') == 'bl832'
         else:
             assert header['end_station'] == 'bl832'
@@ -142,10 +176,10 @@ class ALS832H5image(fabioimage):
         self._dgroup.attrs.modify(key, value)
 
     def _finddatagroup(self, h5object):
-        keys = list(h5object.keys())
+        keys = h5object.keys()
         if len(keys) == 1:
             if isinstance(h5object[keys[0]], h5py.Group):
-                group_keys = list(h5object[keys[0]].keys())
+                group_keys = h5object[keys[0]].keys()
                 if isinstance(h5object[keys[0]][group_keys[0]], h5py.Dataset):
                     return h5object[keys[0]]
                 else:
@@ -211,7 +245,7 @@ class ALS832H5image(fabioimage):
                 stop = self.data.shape[0]
             elif n == 2:
                 stop = self.data.shape[1]
-            if n < len(item) and isinstance(item[n], slice) :
+            if n < len(item) and isinstance(item[n], slice):
                 start = item[n].start if item[n].start is not None else 0
                 step = item[n].step if item[n].step is not None else 1
                 stop = item[n].stop if item[n].stop is not None else stop
@@ -259,18 +293,18 @@ class ALS832H5image(fabioimage):
     def close(self):
         self._h5.close()
 
+
 @register_h5class
 class nexusimage(fabioimage):
     extensions = ['.hdf']
 
     def read(self, f, frame=None):
-
-        # nxroot = nx.nxload(f)
-        # # print nxroot.tree
-        # if hasattr(nxroot, 'entry'):
-        #     if hasattr(nxroot.entry, 'data'):
-        #         if hasattr(nxroot.entry.data,'data'):
-        #             self._dgroup = nxroot.entry.data.data
+       # nxroot = nx.nxload(f)
+        # #print nxroot.tree
+        #if hasattr(nxroot, 'entry'):
+        #    if hasattr(nxroot.entry, 'data'):
+        #        if hasattr(nxroot.entry.data,'data'):
+        #            self._dgroup = nxroot.entry.data.data
 
         self.filename = f
         if frame is None:
@@ -407,7 +441,7 @@ class nexusimage(fabioimage):
         self._h5.close()
 
 
-@register_fabioclass
+@register_tiffclass
 class tomotifimage(fabioimage):
 
     """
@@ -425,6 +459,11 @@ class tomotifimage(fabioimage):
         self.flats = None
         self.darks = None
 
+    @staticmethod
+    def validate(f, frame=None):
+        tiff = tifffile.imread(f)
+        assert len(tiff.shape) > 2
+
     def read(self, f, frame=None):
         self._dgroup = tifffile.imread(f)
         self.data = self._dgroup[0]
@@ -432,7 +471,7 @@ class tomotifimage(fabioimage):
         return self
 
     def getframe(self, frame=0):
-        self.data = self._dgroup[frame].transpose()
+        self.data = self._dgroup[frame]
         return self.data
 
     def __getitem__(self, item):
@@ -461,8 +500,8 @@ class tomotifimage(fabioimage):
 
     def close(self):
         pass
-
 fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'tomotif'))
+
 
 @register_fabioclass
 class npyimage(fabioimage):

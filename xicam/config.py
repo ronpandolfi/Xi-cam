@@ -28,6 +28,9 @@ class settingstracker(ptypes.GroupParameter):
         try:
             with open(self.settingspath,'r') as stream:
                 self.restoreState(yaml.load(stream))
+            for param in self.template()['children']:
+                if param['value'] not in self:
+                    raise yaml.YAMLError
         except (yaml.YAMLError,IOError) as exc:
             msg.logMessage(exc, msg.WARNING)
             self.restoreState(self.template())
@@ -124,9 +127,9 @@ class experiment(Parameter):
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
                       {'name': 'Detector', 'type': 'list', 'values':detectors.ALL_DETECTORS},
-                      {'name': 'Pixel Size X', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size X', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
-                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
                       {'name': 'Center X', 'type': 'float', 'value': 0, 'suffix': ' px'},
                       {'name': 'Center Y', 'type': 'float', 'value': 0, 'suffix': ' px'},

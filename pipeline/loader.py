@@ -973,6 +973,10 @@ class StackImage(object):
         else:
             if filepath is None and data is None:
                 raise ValueError('Either data or path to file must be provided')
+        # throw error if loading with fabio fails
+        if not self.fabimage:
+            raise IOError("Unable to detect file format for this dataset.")
+
         self.header = self.fabimage.header
 
         self._framecache = dict()

@@ -4,11 +4,11 @@ Functions:
             F3D MM Erosion, F3D MM Dilation, F3D MM Opening, F3D MM Closing]
   Negative Logarithm: [Negative Logarithm]
   Circular Mask: [Circular Mask]
-  Normalization: [Regular, Background Intensity, Nearest Flats]
+  Normalization: [Regular, Background Intensity, Nearest Flats, ROI]
   Padding: [Padding]
   Phase Retrieval: [Phase Retrieval]
   Reconstruction: {TomoPy: [Gridrec, FBP, ART, BART, MLEM, OSEM, OSPML Hybrid, OSPML Quad, PML Hybrid, PML Quad, SIRT],
-                 Astra: [BP, FBP_astra, SIRT, SART, ART, CGLS, BP_CUDA, FBP_CUDA, SIRT_CUDA, SART_CUDA,
+                 Astra: [BP, FBP_astra, SIRT_astra, SART, ART_astra, CGLS, BP_CUDA, FBP_CUDA, SIRT_CUDA, SART_CUDA,
                          CGLS_CUDA],
                   TomoCam: [Gridrec TomoCam, SIRT TomoCam, MBIR TomoCam]}
   Outlier Removal: [Remove Outliers, Remove NAN, 1D Remove Outliers]
@@ -20,6 +20,9 @@ Functions:
   Convert Data Type: [Convert Data Type]
   Write: [Tiff Stack, Write HDF5] #, Numpy Array, Data Exchange
   Array Operation: [Add, Subtract, Multiply, Divide, Maximum]
+  Beam Hardening: [Beam Hardening]
+  Sino 360 to 180: [Sino 360 to 180]
+  Beam Tilt: [Beam Tilt]
   Reader: [Read Data]
 Input Functions:
   Reconstruction:
