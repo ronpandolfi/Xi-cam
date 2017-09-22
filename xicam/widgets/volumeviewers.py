@@ -157,8 +157,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (int(np.ceil(old_div(float(self.vol.shape[0]), targetImageSize)),
-                    int(np.ceil(old_div(float(self.vol.shape[1]), targetImageSize)))
+            step = (int(np.ceil(old_div(float(self.vol.shape[0]), targetImageSize))),
+                    int(np.ceil(old_div(float(self.vol.shape[1]), targetImageSize))))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
