@@ -290,6 +290,7 @@ class BatchPlugin(base.plugin):
                     self._vis_widget.setImage(visdata) 
                 elif op_tag in ['Integrate to 1d','log(I) 1d']:
                     # expect a pyqtgraph.PlotWidget
+                    self._vis_widget.getPlotItem().clear()
                     self._vis_widget.getPlotItem().plot(visdata)
                 elif op_tag in ['Output CSV','Output Image']:
                     # expect a QtGui.QTextEdit
