@@ -441,67 +441,6 @@ class nexusimage(fabioimage):
         self._h5.close()
 
 
-@register_tiffclass
-class tomotifimage(fabioimage):
-
-    """
-    Fabio class for tiff images (specifically for tomography)
-    """
-
-    extensions = ['.tif', '.tiff']
-
-    def __init__(self, data=None, header=None):
-        super(tomotifimage, self).__init__(data=data, header=header)
-        self.frames = None
-        self.currentframe = 0
-        self._dgroup = None
-        self.header = None
-        self.flats = None
-        self.darks = None
-
-    @staticmethod
-    def validate(f, frame=None):
-        tiff = tifffile.imread(f)
-        assert len(tiff.shape) > 2
-
-    def read(self, f, frame=None):
-        self._dgroup = tifffile.imread(f)
-        self.data = self._dgroup[0]
-        self.frames = range(self._dgroup.shape[0])
-        return self
-
-    def getframe(self, frame=0):
-        self.data = self._dgroup[frame]
-        return self.data
-
-    def __getitem__(self, item):
-        return self._dgroup[item]
-
-    def __len__(self):
-        return self._dgroup.shape[0]
-
-    def flatindices(self):
-        nproj = len(self)
-        return [0, nproj - 1]
-
-    def next(self):
-        if self.currentframe < self.__len__() - 1:
-            self.currentframe += 1
-        else:
-            raise StopIteration
-        return self.getframe(self.currentframe)
-
-    def previous(self):
-        if self.currentframe > 0:
-            self.currentframe -= 1
-            return self.getframe(self.currentframe)
-        else:
-            raise StopIteration
-
-    def close(self):
-        pass
-fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'tomotif'))
-
 
 @register_fabioclass
 class npyimage(fabioimage):
