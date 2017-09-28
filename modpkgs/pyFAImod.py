@@ -78,4 +78,20 @@ class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
             mask = numpy.where(numpy.logical_not(mask))
         return mask
 
+    def __reduce__(self):
+        return (AzimuthalIntegrator, (self.dist, self.poni1, self.poni2,
+                 self.rot1, self.rot2, self.rot3,
+                 self.pixel1, self.pixel2,
+                 self.splineFile, None, self.wavelength,))
+
 pyFAI.__dict__['AzimuthalIntegrator']=AzimuthalIntegrator
+
+def test_AzimuthalIntegrator_pickle():
+    import pickle
+    import numpy as np
+    det=pyFAI.detectors.detector_factory('pilatus2m')
+    ai=AzimuthalIntegrator(detector=det)
+    ai.set_wavelength(.1)
+    ai.integrate1d(np.zeros(det.shape),1000) # force lut generation
+    print(ai.__reduce__())
+    print(pickle.dumps(ai))
