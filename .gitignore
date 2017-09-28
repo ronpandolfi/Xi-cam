@@ -1,3 +1,4 @@
+*.egg_info
 bin
 include
 lib
@@ -14,7 +15,6 @@ lib64
 *.tif
 build/
 dist/
-xicam.egg_info/
 *.swp
 lib/
 lib64
