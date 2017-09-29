@@ -78,11 +78,28 @@ class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
             mask = numpy.where(numpy.logical_not(mask))
         return mask
 
-    def __reduce__(self):
-        return (AzimuthalIntegrator, (self.dist, self.poni1, self.poni2,
-                 self.rot1, self.rot2, self.rot3,
-                 self.pixel1, self.pixel2,
-                 self.splineFile, None, self.wavelength,))
+    def __getnewargs_ex__(self):
+        # TODO: also allow detector object to be pickled (currently they are recycled as None)
+        return self.dist, self.poni1, self.poni2,self.rot1, self.rot2, self.rot3,self.pixel1, self.pixel2,self.splineFile, None, self.wavelength
+
+    def __getstate__(self):
+        return (self._flatfield, 
+                self._darkcurrent,
+                self._flatfield_crc,
+                self._darkcurrent_crc,
+                self._writer,
+                self.flatfiles,
+                self.darkfiles,
+                self.header,
+                self._ocl_integrator,
+                self._ocl_lut_integr,
+                self._ocl_csr_integr,
+                self._lut_integrator,
+                self._csr_integrator,
+                self._ocl_sorter)
+
+    def __setstate__(self, state):
+        self._flatfield, self._darkcurrent,self._flatfield_crc,self._darkcurrent_crc,self._writer,self.flatfiles, self.darkfiles,self.header,self._ocl_integrator,self._ocl_lut_integr,self._ocl_csr_integr,self._lut_integrator,self._csr_integrator,self._ocl_sorter = state
 
 pyFAI.__dict__['AzimuthalIntegrator']=AzimuthalIntegrator
 
