@@ -97,6 +97,13 @@ class BatchPlugin(base.plugin):
     def wf_setup(self):
         self.paw.add_wf(self._wfname)
         self.paw.add_wf_input('image_path','Read Image.inputs.path',self._wfname)
+
+        # If we wanted to save some of the outputs,
+        # we could do this:
+        #self.paw.add_wf_output('q_I','Integrate to 1d.outputs.q_I')
+        #self.paw.add_wf_output('chi','Integrate to 2d.outputs.chi')
+        #self.paw.add_wf_output('I_at_q_chi','Integrate to 2d.outputs.I_at_q_chi')
+
         self.paw.add_wf(self._batch_wfname)
 
         # Set up the batch execution Operation first
@@ -279,8 +286,9 @@ class BatchPlugin(base.plugin):
             p = self.batch_list.item(r).text()
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
+        # Uncomment to save this wfl in the scratch dir
+        #self.paw.save_to_wfl(os.path.join(pawstools.paws_scratch_dir,'xicam_batch.wfl'))
         # TODO: A way to stop the workflow once running
-        # TODO: Ensure this is thread-safe
 
         if wfmanager.client is not None:
             wfmanager.run_paws(self.paw)
