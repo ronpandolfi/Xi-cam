@@ -25,6 +25,10 @@ class BatchPlugin(base.plugin):
     def __init__(self, *args, **kwargs):
 
         self.paw = QPawsAPI(QtGui.QApplication.instance())
+        self.paw.set_logmethod(print)
+        # TODO: paw will soon have a better way to handle these message emissions.
+        # Implement it here when it's done.
+        self.paw._wf_manager.emitMessage.connect(print)
         self._wfname = 'img_process'
         self._batch_wfname = 'batch'
         #self.pawswidget = BatchWidget.BatchWidget(self.paw)
