@@ -269,6 +269,9 @@ class BatchPlugin(base.plugin):
         return widg
 
     def run_wf(self):
+        import xicam.xglobals
+        wfmanager = xicam.xglobals.window.wfmanager
+
         self.paw.select_wf(self._batch_wfname)
         file_list = []
         nfiles = self.batch_list.count()
@@ -278,8 +281,13 @@ class BatchPlugin(base.plugin):
         self.paw.set_input('batch','file_list',file_list)
         # TODO: A way to stop the workflow once running
         # TODO: Ensure this is thread-safe
-        run_off_thread = threads.method()(self.paw.execute) 
-        run_off_thread()
+
+        if wfmanager.client is not None:
+            wfmanager.run_paws(self.paw)
+        else:
+            run_off_thread = threads.method()(self.paw.execute) 
+            run_off_thread()
+
         #self.paw.execute()
         #self.update_visuals()
 
