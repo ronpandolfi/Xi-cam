@@ -21,56 +21,10 @@ import plugins
 from xicam import xglobals
 import numpy as np
 
-# import client.dask_io_loop
-# import client.dask_local_scheduler
-# import client.dask_remote_scheduler
-# import client.dask_active_executor
+import client.workflow
+
 import threads
 from pipeline import msg
-
-class ComboBoxAction(QtGui.QWidgetAction):
-    def __init__(self, title, parent=None):
-        QtGui.QWidgetAction.__init__(self, parent)
-        pWidget = QtGui.QWidget()
-        pLayout = QtGui.QHBoxLayout()
-        pLabel = QtGui.QLabel(title)
-        pLayout.addWidget(pLabel)
-
-        pComboBox = QtGui.QComboBox()
-        pLayout.addWidget(pComboBox)
-        pWidget.setLayout(pLayout)
-
-        self.setDefaultWidget(pWidget)
-
-        # def comboBox (self):
-        #    return self.pComboBox
-
-
-class Login(QtGui.QDialog):
-    def __init__(self, machineName="", parent=None):
-        super(Login, self).__init__(parent)
-        self.textMachine = QtGui.QLineEdit(self)
-        self.textMachine.setPlaceholderText("Machine...")
-        self.textMachine.setText(machineName)
-        self.textName = QtGui.QLineEdit(self)
-        self.textName.setPlaceholderText("Username...")
-        self.textPass = QtGui.QLineEdit(self)
-        self.textPass.setPlaceholderText("Password (Empty for SSH Key)...")
-        self.textPass.setEchoMode(QtGui.QLineEdit.Password)
-        self.buttonLogin = QtGui.QPushButton('Login', self)
-        self.buttonLogin.clicked.connect(self.handleLogin)
-        layout = QtGui.QVBoxLayout(self)
-        layout.addWidget(self.textMachine)
-        layout.addWidget(self.textName)
-        layout.addWidget(self.textPass)
-        layout.addWidget(self.buttonLogin)
-        self.resize(300, 100)
-
-    def handleLogin(self):
-        if len(self.textName.text()) > 0 and len(self.textMachine.text()) > 0:
-            self.accept()
-        else:
-            self.close()
 
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
@@ -156,45 +110,9 @@ class MyMainWindow(QtCore.QObject):
 
         self.ui.menubar.addMenu(testmenu)
 
-        # DASK WORKFLOW
-        # TODO turn this into a class
+        self.wfmanager = client.workflow.XicamWorkflow()
 
-        # convert the following into a class
-        self.sessions = ["localhost", "Andromeda", "Daint", "NERSC/Edison"]
-        self.session_machines = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.1.7", "edison.nersc.gov"]
-        # self.session_address = ["localhost", socket.gethostbyname("andromeda.dhcp.lbl.gov"), "148.187.26.16", ""]
-        self.session_address = ["localhost", "andromeda.dhcp.lbl.gov", "148.187.26.16", ""]
-        self.session_exec = ["", "/home/hari/runscript.sh", "/users/course79/runscript.sh",
-                             "/usr/common/graphics/visit/camera/runscript.sh"]
-        self.executors = [None, None, None, None]
-
-        self.sessionmenu = QtGui.QMenu('Sessions')
-
-        # comboBoxAction = ComboBoxAction("Active Session", self.sessionmenu);
-
-        self.actionGroup = QtGui.QActionGroup(self.sessionmenu)
-        for i in self.sessions:
-            action = QtGui.QAction(i, self.sessionmenu, checkable=True)
-            if i == "localhost":
-                action.setChecked(True)
-            action.triggered.connect(self.activesessionchanged)
-            self.actionGroup.addAction(action)
-            self.sessionmenu.addAction(action)
-
-        # self.comboBoxAction.comboBox().activated.connect(self.activesessionchanged)
-        # self.sessionmenu.addAction(comboBoxAction)
-        self.ui.menubar.addMenu(self.sessionmenu)
-
-        # self.daskLoop = client.dask_io_loop.DaskLoop()
-        # try:
-        #     # create a local active executor
-        #     local_scheduler = client.dask_local_scheduler.LocalScheduler(self.daskLoop)
-        #     local_scheduler.execute()
-        #     self.executors[0] = local_scheduler
-        #     self.sessionmenu.setTitle("Active Session (localhost)")
-        #     client.dask_active_executor.active_executor = local_scheduler
-        # except:
-        #     msg.logMessage("Issues connecting to localhost",msg.ERROR)
+        self.wfmanager.setup(self.ui.menubar)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes
@@ -203,7 +121,7 @@ class MyMainWindow(QtCore.QObject):
     def eventFilter(self, obj, ev):
         if obj is self.ui:  # if the object is from the MainWindow
             if ev.type() == QtCore.QEvent.Close:
-                self.closeAllConnections()
+                # self.closeAllConnections()
                 QtGui.QApplication.quit()
                 threads.worker.stop()  # ask worker to stop nicely
                 #threads.worker.wait()
@@ -212,47 +130,6 @@ class MyMainWindow(QtCore.QObject):
             else:
                 return False
         return QtCore.QObject.eventFilter(self, obj, ev)
-
-    def closeAllConnections(self):
-        msg.logMessage("Closing all connections")
-
-        # stop any existing executors
-        # for e in range(len(self.executors)):
-        #     if self.executors[e] is not None:
-        #         self.executors[e].close()
-        # self.daskLoop.loop.stop()
-        # self.daskLoop.loop.close()
-
-        # self.daskLoop.loop.instance().add_callback(self.daskLoop.loop.instance().stop)
-
-    def activesessionchanged(self):
-        # w = self
-        obj = 0
-        for (i, ac) in enumerate(self.actionGroup.actions()):
-            if self.sender().text() == ac.text():
-                obj = i
-                break
-
-        # if self.executors[obj] != None:
-        #     client.dask_active_executor.active_executor = self.executors[obj]
-        #     self.sessionMenu.setText("Active Session ({0})".format(self.session_machines[obj]))
-        # else:
-        #     # setup connection
-        #     login = Login(self.session_machines[obj])
-        #     if login.exec_() == QtGui.QDialog.Accepted:
-        #         username = str(login.textName.text())
-        #         machine = str(login.textMachine.text())
-        #         password = str(login.textPass.text())
-        #         msg.logMessage((username, machine),msg.DEBUG)  # , password
-        #         self.executors[obj] = client.dask_remote_scheduler.RemoteScheduler(machine, username, self.daskLoop,
-        #                                                                            password, self.session_address[obj],
-        #                                                                            self.session_exec[obj])
-        #         self.sessionmenu.setTitle("Active Session ({0})".format(self.session_machines[obj]))
-        #
-        #         import time
-        #         time.sleep(5)
-        #         self.executors[obj].execute()
-        #         client.dask_active_executor.active_executor = self.executors[obj]
 
     def singletest(self):
         self.openfiles(['/home/rp/data/3pt8m_gisaxs/26_pt10_30s_hi_2m.edf'])
