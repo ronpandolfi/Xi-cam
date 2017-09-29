@@ -2,13 +2,12 @@ import pyFAI
 import numpy
 
 import logging
+
 logger = logging.getLogger("pyFAI.azimuthalIntegrator")
 
 
 # monkey patch to correct auto-inversion of masks
 class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
-
-
     def create_mask(self, data, mask=None,
                     dummy=None, delta_dummy=None, mode="normal"):
         """
@@ -78,38 +77,33 @@ class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
             mask = numpy.where(numpy.logical_not(mask))
         return mask
 
+    __statevars = (
+    '_cached_array', '_dssa', '_dssa_crc', '_dssa_order', '_oversampling', '_correct_solid_angle_for_spline', '_cosa',
+    '_transmission_normal', '_transmission_corr', '_transmission_crc')
+
+
     def __getnewargs_ex__(self):
         # TODO: also allow detector object to be pickled (currently they are recycled as None)
-        return self.dist, self.poni1, self.poni2,self.rot1, self.rot2, self.rot3,self.pixel1, self.pixel2,self.splineFile, None, self.wavelength
+        return self.dist, self.poni1, self.poni2, self.rot1, self.rot2, self.rot3, self.pixel1, self.pixel2, self.splineFile, None, self.wavelength
 
     def __getstate__(self):
-        return (self._flatfield, 
-                self._darkcurrent,
-                self._flatfield_crc,
-                self._darkcurrent_crc,
-                self._writer,
-                self.flatfiles,
-                self.darkfiles,
-                self.header,
-                self._ocl_integrator,
-                self._ocl_lut_integr,
-                self._ocl_csr_integr,
-                self._lut_integrator,
-                self._csr_integrator,
-                self._ocl_sorter)
+        return tuple(getattr(self, var) for var in self.__statevars)
 
     def __setstate__(self, state):
-        self._flatfield, self._darkcurrent,self._flatfield_crc,self._darkcurrent_crc,self._writer,self.flatfiles, self.darkfiles,self.header,self._ocl_integrator,self._ocl_lut_integr,self._ocl_csr_integr,self._lut_integrator,self._csr_integrator,self._ocl_sorter = state
+        for statevar, varkey in zip(state, self.__statevars):
+            setattr(self, varkey, statevar)
 
-pyFAI.__dict__['AzimuthalIntegrator']=AzimuthalIntegrator
+
+pyFAI.__dict__['AzimuthalIntegrator'] = AzimuthalIntegrator
+
 
 def test_AzimuthalIntegrator_pickle():
     import pickle
     import numpy as np
-    det=pyFAI.detectors.detector_factory('pilatus2m')
-    ai=AzimuthalIntegrator(detector=det)
+    det = pyFAI.detectors.detector_factory('pilatus2m')
+    ai = AzimuthalIntegrator(detector=det)
     ai.set_wavelength(.1)
-    ai.integrate1d(np.zeros(det.shape),1000) # force lut generation
+    ai.integrate1d(np.zeros(det.shape), 1000)  # force lut generation
+    print(ai.__getstate__())
     assert pickle.dumps(ai)
     assert pickle.loads(pickle.dumps(ai))
-    
