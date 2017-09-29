@@ -79,12 +79,12 @@ class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
 
     __statevars = (
     '_cached_array', '_dssa', '_dssa_crc', '_dssa_order', '_oversampling', '_correct_solid_angle_for_spline', '_cosa',
-    '_transmission_normal', '_transmission_corr', '_transmission_crc')
+    '_transmission_normal', '_transmission_corr', '_transmission_crc','detector')
 
 
     def __getnewargs_ex__(self):
         # TODO: also allow detector object to be pickled (currently they are recycled as None)
-        return self.dist, self.poni1, self.poni2, self.rot1, self.rot2, self.rot3, self.pixel1, self.pixel2, self.splineFile, None, self.wavelength
+        return self.dist, self.poni1, self.poni2, self.rot1, self.rot2, self.rot3, self.pixel1, self.pixel2, self.splineFile, self.detector, self.wavelength
 
     def __getstate__(self):
         return tuple(getattr(self, var) for var in self.__statevars)
@@ -92,9 +92,24 @@ class AzimuthalIntegrator(pyFAI.AzimuthalIntegrator):
     def __setstate__(self, state):
         for statevar, varkey in zip(state, self.__statevars):
             setattr(self, varkey, statevar)
+        self.engines={}
 
 
 pyFAI.__dict__['AzimuthalIntegrator'] = AzimuthalIntegrator
+
+
+def test_Detector_pickle():
+    import pickle
+    import numpy as np
+    from pyFAI import Detector
+    det = Detector.factory('pilatus2m')
+
+    print(det.__reduce__())
+    print(det.__getnewargs_ex__())
+    print(det.__getstate__())
+
+    assert pickle.dumps(det)
+    assert pickle.loads(pickle.dumps(det))
 
 
 def test_AzimuthalIntegrator_pickle():
@@ -103,7 +118,7 @@ def test_AzimuthalIntegrator_pickle():
     det = pyFAI.detectors.detector_factory('pilatus2m')
     ai = AzimuthalIntegrator(detector=det)
     ai.set_wavelength(.1)
-    ai.integrate1d(np.zeros(det.shape), 1000)  # force lut generation
-    print(ai.__getstate__())
-    assert pickle.dumps(ai)
-    assert pickle.loads(pickle.dumps(ai))
+    spectra=ai.integrate1d(np.ones(det.shape), 1000)  # force lut generation
+    dump = pickle.dumps(ai)
+    newai = pickle.loads(dump)
+    assert np.array_equal(newai.integrate1d(np.ones(det.shape),1000),spectra)
