@@ -110,5 +110,6 @@ def test_AzimuthalIntegrator_pickle():
     ai=AzimuthalIntegrator(detector=det)
     ai.set_wavelength(.1)
     ai.integrate1d(np.zeros(det.shape),1000) # force lut generation
-    print(ai.__reduce__())
-    print(pickle.dumps(ai))
+    assert pickle.dumps(ai)
+    assert pickle.loads(pickle.dumps(ai))
+    
