@@ -45,6 +45,7 @@ class BatchPlugin(base.plugin):
         for nm,opuri in self.ops.items():
             self.paw.activate_op(opuri)       
         self.paw.activate_op('EXECUTION.BATCH.BatchFromFiles')
+        self.paw.activate_op('PROCESSING.INTEGRATION.BuildPyFAIIntegrator')
 
         self.build_ui()
         self.centerwidget = self.viewer_frame
@@ -97,6 +98,8 @@ class BatchPlugin(base.plugin):
     def wf_setup(self):
         self.paw.add_wf(self._wfname)
         self.paw.add_wf_input('image_path','Read Image.inputs.path',self._wfname)
+        integrator_input_uris = ['Integrate to 1d.inputs.integrator','Integrate to 2d.inputs.integrator']
+        self.paw.add_wf_input('integrator',integrator_input_uris,self._wfname)
 
         # If we wanted to save some of the outputs,
         # we could do this:
@@ -106,11 +109,17 @@ class BatchPlugin(base.plugin):
 
         self.paw.add_wf(self._batch_wfname)
 
-        # Set up the batch execution Operation first
+        # Set up the batch workflow first
         self.paw.select_wf(self._batch_wfname)
+        self.paw.add_op('load_integrator','PROCESSING.INTEGRATION.BuildPyFAIIntegrator')
         self.paw.add_op('batch','EXECUTION.BATCH.BatchFromFiles')
+        # The load_integrator input dict will be loaded when execution is triggered:
+        self.paw.set_input('load_integrator','poni_dict',{},'auto')
         self.paw.set_input('batch','workflow',self._wfname)
         self.paw.set_input('batch','input_name','image_path')
+        # use batch extra inputs fields to insert the integrator into the processing workflow: 
+        self.paw.set_input('batch','extra_input_names',['integrator'],'auto')
+        self.paw.set_input('batch','extra_inputs',['load_integrator.outputs.integrator'],'workflow item')
 
         # Set up the read-and-integrate workflow
         self.paw.select_wf(self._wfname)
@@ -142,6 +151,7 @@ class BatchPlugin(base.plugin):
         p = pt.types.SimpleParameter(name=op_tag, type='bool',showTop=False, value=default_enabled, expanded=False)
         p.sigValueChanged.connect( partial(self._set_op_enabled,op_tag) )
         # child Parameters
+        # TODO: make some subroutines to clean this section up.
         if op_tag == 'Integrate to 1d':
             pc = pt.types.SimpleParameter(name='number of q-points',
             type='int',value=self.paw.get_input_setting(op_tag,'npt'))
@@ -203,7 +213,10 @@ class BatchPlugin(base.plugin):
             self.paw.set_input(op_tag,'path','')
         elif op_tag == 'Integrate to 1d' or op_tag == 'Integrate to 2d':
             self.paw.set_input(op_tag,'data','Read Image.outputs.image_data')
-            self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'auto')
+            #self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'auto')
+            # Instead of loading xicam's integrator,
+            # expect the integrator to be built and loaded by the batch controller.
+            self.paw.set_input(op_tag,'integrator',None,'auto')
         elif op_tag == 'log(I) 1d':
             self.paw.set_input(op_tag,'x_y','Integrate to 1d.outputs.q_I')
         elif op_tag == 'log(I) 2d':
@@ -276,6 +289,7 @@ class BatchPlugin(base.plugin):
         return widg
 
     def run_wf(self):
+        # TODO: Connect signals to stop the workflow once running
         import xicam.xglobals
         wfmanager = xicam.xglobals.window.wfmanager
 
@@ -286,10 +300,11 @@ class BatchPlugin(base.plugin):
             p = self.batch_list.item(r).text()
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
-        # Uncomment to save this wfl in the scratch dir
-        #self.paw.save_to_wfl(os.path.join(pawstools.paws_scratch_dir,'xicam_batch.wfl'))
-        # TODO: A way to stop the workflow once running
+        self.paw.set_input('load_integrator','poni_dict',
+        config.activeExperiment.getAI().getPyFAI(),'auto',self._batch_wfname)
 
+        # Uncomment to save this wfl in the scratch dir
+        self.paw.save_to_wfl(os.path.join(pawstools.paws_scratch_dir,'xicam_batch.wfl'))
         if wfmanager.client is not None:
             wfmanager.run_paws(self.paw)
         else:
