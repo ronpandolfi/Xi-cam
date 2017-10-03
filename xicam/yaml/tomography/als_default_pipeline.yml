@@ -53,6 +53,7 @@
       order: 2
       filter_name: butterworth
       arr: tomo
+      ncore: 1
     Package: tomopy
     Input Functions:
       center:
