@@ -282,7 +282,10 @@ def loadpath(path):
     if config.settings['Image Load Rotations']:
         img=np.rot90(img,config.settings['Image Load Rotations'])
 
-    if not isinstance(img, tuple): img = (img, 1-finddetectorbyfilename(path).calc_mask())
+    if not isinstance(img, tuple):
+        mask = finddetectorbyfilename(path).calc_mask()
+        if mask is None: mask = np.zeros_like(img)
+        img = (img, 1-mask)
     return img
 
 
