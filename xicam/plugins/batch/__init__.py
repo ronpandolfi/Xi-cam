@@ -97,9 +97,12 @@ class BatchPlugin(base.plugin):
 
     def wf_setup(self):
         self.paw.add_wf(self._wfname)
-        self.paw.add_wf_input('image_path','Read Image.inputs.path',self._wfname)
-        integrator_input_uris = ['Integrate to 1d.inputs.integrator','Integrate to 2d.inputs.integrator']
-        self.paw.add_wf_input('integrator',integrator_input_uris,self._wfname)
+        self.paw.select_wf(self._wfname)
+        self.paw.add_wf_input('image_path',
+            'Read Image.inputs.path')
+        self.paw.add_wf_input('integrator',
+            ['Integrate to 1d.inputs.integrator',
+            'Integrate to 2d.inputs.integrator'])
 
         # If we wanted to save some of the outputs,
         # we could do this:
@@ -114,11 +117,11 @@ class BatchPlugin(base.plugin):
         self.paw.add_op('load_integrator','PROCESSING.INTEGRATION.BuildPyFAIIntegrator')
         self.paw.add_op('batch','EXECUTION.BATCH.BatchFromFiles')
         # The load_integrator input dict will be loaded when execution is triggered:
-        self.paw.set_input('load_integrator','poni_dict',{},'auto')
+        self.paw.set_input('load_integrator','poni_dict',None)
         self.paw.set_input('batch','workflow',self._wfname)
         self.paw.set_input('batch','input_name','image_path')
         # use batch extra inputs fields to insert the integrator into the processing workflow: 
-        self.paw.set_input('batch','extra_input_names',['integrator'],'auto')
+        self.paw.set_input('batch','extra_input_names',['integrator'])
         self.paw.set_input('batch','extra_inputs',['load_integrator.outputs.integrator'],'workflow item')
 
         # Set up the read-and-integrate workflow
@@ -210,13 +213,13 @@ class BatchPlugin(base.plugin):
     def _default_op_setup(self,op_tag):
         if op_tag == 'Read Image':
             # This is where the batch operation will set its inputs
-            self.paw.set_input(op_tag,'path','')
+            self.paw.set_input(op_tag,'path',None,'runtime')
         elif op_tag == 'Integrate to 1d' or op_tag == 'Integrate to 2d':
             self.paw.set_input(op_tag,'data','Read Image.outputs.image_data')
-            #self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI(),'auto')
-            # Instead of loading xicam's integrator,
+            #self.paw.set_input(op_tag,'integrator',config.activeExperiment.getAI())
+            # Instead of loading xicam's integrator directly,
             # expect the integrator to be built and loaded by the batch controller.
-            self.paw.set_input(op_tag,'integrator',None,'auto')
+            self.paw.set_input(op_tag,'integrator',None,'runtime')
         elif op_tag == 'log(I) 1d':
             self.paw.set_input(op_tag,'x_y','Integrate to 1d.outputs.q_I')
         elif op_tag == 'log(I) 2d':
@@ -301,7 +304,7 @@ class BatchPlugin(base.plugin):
             file_list.append(p)
         self.paw.set_input('batch','file_list',file_list)
         self.paw.set_input('load_integrator','poni_dict',
-        config.activeExperiment.getAI().getPyFAI(),'auto',self._batch_wfname)
+        config.activeExperiment.getAI().getPyFAI(),'basic')
 
         # Uncomment to save this wfl in the scratch dir
         self.paw.save_to_wfl(os.path.join(pawstools.paws_scratch_dir,'xicam_batch.wfl'))
