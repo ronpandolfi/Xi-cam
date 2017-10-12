@@ -1,6 +1,6 @@
 import __future__
 import os, sys, time
-import simulation, fitting, cdsaxs
+import cdrsoxs, fitting, simulation
 import pyqtgraph as pg
 import numpy as np
 from xicam.plugins import base, widgets
@@ -10,6 +10,7 @@ from functools import partial
 from PySide import QtGui, QtCore
 import multiprocessing
 import deap.base as deap_base
+import deap.base as deap_base
 from deap import creator
 from scipy import interpolate
 
@@ -17,7 +18,7 @@ creator.create('FitnessMin', deap_base.Fitness, weights=(-1.0,))  # want to mini
 creator.create('Individual', list, fitness=creator.FitnessMin)
 
 class plugin(base.plugin):
-    name = "CDSAXS"
+    name = "CDSOXS"
 
     def __init__(self, *args, **kwargs):
 
@@ -34,9 +35,7 @@ class plugin(base.plugin):
 
         self.param = pg.parametertree.Parameter.create(name='params', type='group', children=[
             {'name': 'User_input', 'type': 'group', 'children': [
-                {'name': 'Phi_min', 'type': 'float'},
-                {'name': 'Phi_max', 'type': 'float'},
-                {'name': 'Phi_step', 'type': 'float'},
+                {'name': '1st_pic', 'type': 'float'},
                 {'name': 'Pitch', 'type': 'float'},
                 {'name': 'Num_trap', 'type': 'float'},
                 {'name': 'H', 'type': 'float'},
@@ -83,9 +82,8 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
 
-        Phi_min, Phi_max, Phi_step, Pitch = self.param['User_input', 'Phi_min'], self.param['User_input', 'Phi_max'], self.param[
-            'User_input', 'Phi_step'], self.param['User_input', 'Pitch']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(Phi_min, Phi_max, Phi_step, Pitch))
+        fst_pic, Pitch = self.param['User_input', '1st_pic'], self.param['User_input', 'Pitch']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(fst_pic, Pitch))
         threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
@@ -124,7 +122,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         self.src = src
 
-    def loadRAW(self, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100):
+    def loadRAW(self, fst_pic = 50, Pitch = 100):
         """ This function is launched when the user select the data. 4 parameters have to be entered manually by the user (Phi, ..., pitch) => to change when angles are contained in the header
         Here this fucntion will process all the data treatment in order to dislay the experimental raw data, the qx,qz cartography and the peak intensity profile
 
@@ -148,18 +146,17 @@ class CDSAXSWidget(QtGui.QTabWidget):
         self.Qx, self.Qz, self.In = [],[],[]
 
         file = [val for val in self.src]
-        phi = [np.deg2rad(Phi_min + i * Phi_step) for i in range(0, 1 + int((Phi_max - Phi_min)/Phi_step), 1)]
 
         #find a smart way to calculate q-pitch : Find theta = 0 => procedure doen in test.....
         q_pitch = np.abs(2. * np.pi / Pitch)
 
         # Parallelization
         pool = multiprocessing.Pool()
-        func = partial(cdsaxs.test, substratethickness, substrateattenuation, Pitch, q_pitch)
-        a = zip(file,phi)
-        b = [list(elem) for elem in a]
+        func = partial(cdrsoxs.test, substratethickness, substrateattenuation, Pitch, q_pitch, fst_pic)
+        a = file
+        #b = [list(elem) for elem in a]
         #I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*pool.map(func, b))
-        I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*map(func, b))
+        I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*map(func, a))
         np.save('/Users/guillaumefreychet/Desktop/i_ini.npy', I_peaks)
 
 
@@ -204,7 +201,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
         qz_carto = np.array([item for sublist in q_z for item in sublist])
         profiles = np.array([item for sublist in I_cor for item in sublist])
 
-        self.img = cdsaxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
+        self.img = cdrsoxs.interpolation(qx_carto, qz_carto, profiles, sampling_size)
         #Change interpolation
 
         #grid_x, grid_z = np.mgrid[0:200, 0:200]
@@ -299,6 +296,8 @@ class CDSAXSWidget(QtGui.QTabWidget):
             self.I[order] += order + 1
 
             guiinvoker.invoke_in_main_thread(self.CDModelWidget.orders[order].setData, self.qz[order], np.log(self.I[order]))
+            #np.save('/Users/guillaumefreychet/Desktop/I_all.npy'%order, self.I)
+            #np.save('/Users/guillaumefreychet/Desktop/q_all.npy' %order, self.qz)
 
     def update_profile(self):
         """

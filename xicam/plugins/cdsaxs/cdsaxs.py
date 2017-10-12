@@ -23,7 +23,7 @@ def configu(beamline, file, phi):
     data (array of float32): 2D scattering image
     img1 (array of float32): 2D scattering image rotated, displayed as the raw data
     """
-    if beamline == 'CMS':
+    if beamline == '733':
         data = np.flipud(loader.loadimage(file))
         img1 = np.rot90(loader.loadimage(file), 1)
         I_0 = np.float(loader.loadparas(file)['Izero'])
@@ -33,7 +33,8 @@ def configu(beamline, file, phi):
         data = np.rot90(np.flipud(loader.loadimage(file)),1)        #Flipud works for RSOXS data
         img1 = loader.loadimage(file)
         I_0 = loader.loadparas(file)['AI 3 Izero']
-        phi = np.deg2rad(1.0 * (loader.loadparas(file)['sample theta'] - 90))
+        th_sc, th_0 = 0.984, -2.14
+        phi = np.deg2rad(th_sc * (loader.loadparas(file)['sample theta'] - th_0) - 90)
         t = loader.loadparas(file)['EXPOSURE']
         data = data / np.abs(I_0 * t)
         data = data/1.
@@ -62,7 +63,7 @@ def test(substratethickness, substrateattenuation, Pitch, q_pitch, Data):
     """
     try:
         file, phi = Data[0], Data[1]
-        beamline = '1102'
+        beamline = 'CMS'
         phi, data, img1 = configu(beamline, file, phi)
         q_n, q_x, q_z, I, wavelength = reduceto1dprofile(data, phi, beamline)
         I_cor = correc_Iexp(I, substratethickness, substrateattenuation, phi)
@@ -126,8 +127,8 @@ def reduceto1dprofile(data, phi, beamline):
         tilt = 0
     else:
         tilt = tiltprofile.argmax() / float(config.settings['Integration Bins (χ)'])* 360.
+        #print(tilt)
 
-    print(tilt)
     #correct tilt
     AI.set_rot3(np.deg2rad(tilt))
     AI.setFit2D(directDist, min(0, centerX), 21)
@@ -166,47 +167,28 @@ def Find_peak(q, profiles, pitch, phi, wavelength, q_pitch):
     q_pitch /= (1.* np.cos(phi) + 0.0000001)
     ind_pi = np.argmin(np.abs(q - q_pitch))
 
-    '''
-    fit_g = fitting.LevMarLSQFitter()
-    #Switch to masked array
-    pos_gauss = np.linspace(max(ind - 50, 0), min(ind + 50, len(profiles)-1), int(min(ind + 50, len(profiles)-1) - (max(ind - 50, 0))) - 1, dtype=np.int32)
-    pos_gauss1 = np.linspace(max(2*ind - 50, 0), min(2*ind + 50, len(profiles)-1), int(min(2*ind + 50, len(profiles)-1) - (max(2*ind - 50, 0))) - 1, dtype=np.int32)
-
-    g_init = models.Gaussian1D(amplitude = profiles[pos_gauss].max(), mean= q_pitch, stddev = 0.1)
-    g_init1 = models.Gaussian1D(amplitude = profiles[pos_gauss1].max(), mean= 2 * q_pitch, stddev = 0.1)
-
-    g = fit_g(g_init, q[pos_gauss], profiles[pos_gauss])
-    g1 = fit_g(g_init1, q[pos_gauss1], profiles[pos_gauss1])
-    q_temp = min([g.mean.value, 0.5 * g1.mean.value, ], key=lambda x: abs(x - q_pitch))
-    '''
     j, q_ref, nb = 0, 0, 0
-
-    while abs((j+2) * q_pitch) < q[-25]:
-        ind = (j+2) * ind_pi
+    while abs((j+1) * ind_pi) < len(profiles)-1:
+        ind = (j+1) * ind_pi
         #Switch to masked array
-        pos_gauss2 = np.linspace(max(ind - 25, 0), min(ind + 25, len(profiles)), int(1 + min(ind + 25, len(profiles)) - (max(ind - 25, 0))), dtype=np.int32)
-        g_init2 = models.Gaussian1D(amplitude=profiles[pos_gauss2].max(), mean=q[ind], stddev=0.001)
+        pos_gauss2 = np.linspace(max(ind - 25, 0), min(ind + 35, len(profiles) - 1), int(1 + min(ind + 35, len(profiles) - 1) - (max(ind - 25, 0))), dtype=np.int32)
+        g_init2 = models.Gaussian1D(amplitude=profiles[pos_gauss2].max(), mean=q[ind], stddev=0.01)
         fit_g = fitting.LevMarLSQFitter()
-
         with warnings.catch_warnings(record=True) as w:
             # Cause all warnings to always be triggered.
             warnings.simplefilter("always")
             # Trigger a warning.
             gg = fit_g(g_init2, q[pos_gauss2], profiles[pos_gauss2])
-            '''
-            if not(gg.mean.value <= q[pos_gauss2[0]] and gg.mean.value > q[pos_gauss2[-1]]):
-                #q_ref = q_ref + (int(not(w)) * gg.mean.value)
-                #nb = nb + (int(not(w)) * (j+1))
-            '''
-            #I_peaks[j] = I_peaks[j] + [np.float(gg.amplitude.value if (not(w) and not(gg.mean.value <= q[pos_gauss2[0]] and gg.mean.value > q[pos_gauss2[-1]])) else profiles[ind])]
-            I_peaks[j] = I_peaks[j] + [np.float(gg.amplitude.value if (not (w) and not (gg.mean.value <= q[pos_gauss2[0]] and gg.mean.value > q[pos_gauss2[-1]])) else max(profiles[pos_gauss2]))]
+            I_peaks[j] = I_peaks[j] + [np.float(gg.amplitude.value if (not (w) and not (fit_g.fit_info['param_cov'] is None)) else profiles[pos_gauss2].max())]
+
+            if (not (w) and not (fit_g.fit_info['param_cov'] is None and gg.mean.value < q[pos_gauss2[0]] and gg.mean.value > q[pos_gauss2[-1]])):
+                ind_pi = np.int(np.argmin(np.abs(q - gg.mean.value)) / (j+1))
         j += 1
 
-    #q_ref /= (nb + 0.0000001)
     q_ref = q_pitch
     for j in range(0, len(filter(None, I_peaks)), 1):
-        Qxexp[j] = Qxexp[j] + [(j+2) * q_ref * np.cos(phi + 2 * np.arcsin((j+1) * q_ref * wavelength / (4. * np.pi)))]
-        Q__Z[j] = Q__Z[j] + [(j+2) * q_ref * np.sin(phi + 2 * np.arcsin((j+1) * q_ref * wavelength / (4. * np.pi)))]
+        Qxexp[j] = Qxexp[j] + [(j+1) * q_ref * np.cos(phi + 2 * np.arcsin((j+1) * q_ref * wavelength / (4. * np.pi)))]
+        Q__Z[j] = Q__Z[j] + [(j+1) * q_ref * np.sin(phi + 2 * np.arcsin((j+1) * q_ref * wavelength / (4. * np.pi)))]
 
     return Qxexp, Q__Z, I_peaks
 
