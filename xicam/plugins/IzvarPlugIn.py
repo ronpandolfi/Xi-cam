@@ -4,7 +4,6 @@ import numpy.matlib
 from scipy.fftpack import *
 import scipy.ndimage
 from numpy.fft import *
-from afmmesher import loadafmasmesh
 
 def runtest():
     reso = 18
