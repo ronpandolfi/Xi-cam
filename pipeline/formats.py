@@ -19,6 +19,7 @@ import re
 
 
 def register_fabioclass(cls):
+    return cls
     setattr(fabio.openimage, cls.__name__, cls)
     for extension in cls.extensions:
         if extension in fabioutils.FILETYPES:
