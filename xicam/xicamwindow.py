@@ -21,7 +21,7 @@ import plugins
 from xicam import xglobals
 import numpy as np
 
-import client.workflow
+#import client.workflow
 
 import threads
 from pipeline import msg
@@ -110,9 +110,8 @@ class MyMainWindow(QtCore.QObject):
 
         self.ui.menubar.addMenu(testmenu)
 
-        self.wfmanager = client.workflow.XicamWorkflow()
-
-        self.wfmanager.setup(self.ui.menubar)
+        #self.wfmanager = client.workflow.XicamWorkflow()
+        #self.wfmanager.setup(self.ui.menubar)
 
         # START PYSIDE MAIN LOOP
         # Show UI and end app when it closes

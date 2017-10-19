@@ -14,7 +14,11 @@ import msmcam
 
 class Workflow(object):
     def __init__(self):
-
+        self.preproc_settings = {
+                                'DownsampleScale': 1, 'UseMedian': False, 'UseBilateral': False,
+                                'MedianMaskSize': 5, 'BilateralSigmaSpatial': 5,
+                                'BilateralSigmaColor': 0.05
+                                }
     def load_mask(self):
 
     def apply_mask(self):

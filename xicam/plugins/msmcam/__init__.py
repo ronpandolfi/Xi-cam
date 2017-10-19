@@ -41,7 +41,9 @@ class MSMCam(base.plugin):
         self.centerwidget = _ui.centerwidget
         self.toolbar = _ui.toolbar
         self.bottomwidget = None
-        self.setParameters()
+        self.rightwidget = _ui.rightwidget
+        self.rightwidget.show()
+        self.params = _ui.params
         super(MSMCam, self).__init__(*args, **kwargs)
 
     def openfiles(self, paths):
@@ -68,18 +70,6 @@ class MSMCam(base.plugin):
         self.centerwidget.addTab(viewer, 'Image')
         self.centerwidget.setCurrentWidget(viewer)
 
-
-    def setParameters(self):
-        scatteringParams = pt.ParameterTree()
-        params = [
-                {'name': 'Fiber Data', 'type': 'bool', 'value': False, 'default': False },
-                {'name': 'No. of Slices', 'type': 'int', 'value': None, 'default': None },
-                {'name': 'Downsample', 'type': 'bool', 'value': False, 'default': False },
-                {'name': 'Scale', 'type': 'float', 'value': 1, 'default': 1 }
-                ]
-        self.configparams = pt.Parameter.create(name='Configuration', type='group', children=params)
-        scatteringParams.setParameters(self.configparams, showTop=False)
-        self.rightwidet =  scatteringParams
 
     @staticmethod
     def loaddata(path):
