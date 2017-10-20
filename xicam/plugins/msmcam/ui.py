@@ -35,6 +35,8 @@ class UI(object):
         # general parameters
         p = [ 
                 { 'name': 'Downsample Scale', 'type': 'float', 'value': 1, 'default': 1 },
+                { 'name': 'No. of Slices', 'type': 'int', 'value': 10, 'default': 10 },
+                { 'name': 'Fiber Data', 'type': 'bool', 'value': False, 'default': False },
                 { 'name': 'Filter', 'type': 'group' },
                 { 'name': 'Segmentation', 'type': 'group' }
                 ]
@@ -51,19 +53,26 @@ class UI(object):
         self.params.child('Filter').addChild(p1)
 
         # segmentation
+        p1 = Parameter.create(name='Invert', type='bool', value=False, default=False)
+        self.params.child('Segmentation').addChild(p1)
+        p1 = Parameter.create(name='Multiphase', type='bool', value=False, default=False)
+        self.params.child('Segmentation').addChild(p1)
+
         # k-means
         p1 = Parameter.create(name='k-means', type='bool', value=True)
         p1.addChild(Parameter.create(name='Clusters', type='int', value=3))
         self.params.child('Segmentation').addChild(p1)
         # SRM
         p1 = Parameter.create(name='SRM', type='bool', value=True)
-        p1.addChild(Parameter.create(name='Clusters', type='int', value=2))
+        self.params.child('Segmentation').addChild(p1)
+        # RMRF
+        p1 = Parameter.create(name='PMRF', type='bool', value=True, readonly=True)
+        p1.addChild(Parameter.create(name='Clusters', type='int', value=2, readonly=True))
         self.params.child('Segmentation').addChild(p1)
 
         param_tree = ParameterTree()
         param_tree.setParameters(self.params, showTop=False)
         return param_tree
-        
         
 
 class Toolbar(QtGui.QToolBar):

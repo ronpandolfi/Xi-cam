@@ -10,11 +10,7 @@ __status__ = "Alpha"
 
 
 from PySide import QtCore, QtGui
-from PySide.QtUiTools import QUiLoader
-from pyqtgraph import parametertree as paramtree
 from pyqtgraph import ImageView
-import numpy as np
-import dxchange
 
 class Viewer(QtGui.QWidget):
     """
@@ -36,5 +32,4 @@ class Viewer(QtGui.QWidget):
         
         imv = ImageView(viewer)
         imv.setImage(data) 
-        #viewer.addTab(imv, 'Orignal')
         

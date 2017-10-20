@@ -16,8 +16,8 @@ import numpy as np
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam.plugins import base
-#from .viewer import Viewer
 from . import ui
+from .workflow import Workflow
 import dxchange
 from pipeline import msg
 from pyqtgraph import parametertree as pt
@@ -44,7 +44,11 @@ class MSMCam(base.plugin):
         self.rightwidget = _ui.rightwidget
         self.rightwidget.show()
         self.params = _ui.params
+        self.params.sigTreeStateChanged.connect(self.updateparams)
         super(MSMCam, self).__init__(*args, **kwargs)
+
+        # set up workflow
+        self.wf = Workflow()
 
     def openfiles(self, paths):
         """
@@ -59,10 +63,10 @@ class MSMCam(base.plugin):
 
         self.activate()
         self.path = paths
-        data = self.loaddata(self.path)
+        self.data = self.loaddata(self.path)
         try:
             viewer = ImageView()
-            viewer.setImage(data)
+            viewer.setImage(self.data)
         except Exception as e:
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
@@ -70,7 +74,16 @@ class MSMCam(base.plugin):
         self.centerwidget.addTab(viewer, 'Image')
         self.centerwidget.setCurrentWidget(viewer)
 
+    def updateparams(self):
+        self.wf.update_preproc_settings(self.params)
+        self.wf.update_input_settings(self.params)
+        self.wf.update_segmentaion_settings(self.params)
+        print(self.wf.preproc_settings)
+
+    def run(self):
+        res = self.wf.run(self.data)
 
     @staticmethod
     def loaddata(path):
         return np.array(dxchange.reader.read_tiff(path[0]))
+
