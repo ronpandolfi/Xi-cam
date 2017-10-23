@@ -17,6 +17,13 @@ Install PyCharm
 Download and install PyCharm:
 https://www.jetbrains.com/pycharm/download/download-thanks.html?platform=windows&code=PCC
 
+Install Git
+-----------
+
+Download and install the Git client:
+https://git-scm.com/download/win
+
+
 Clone Xi-cam
 ------------
 
