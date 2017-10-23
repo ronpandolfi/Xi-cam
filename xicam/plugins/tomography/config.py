@@ -1,7 +1,8 @@
 
-__author__ = "Luis Barroso-Luque"
+__author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
-__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
+__credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
+               "Holden Parks", "Alexander Hexemer"]
 __license__ = ""
 __version__ = "1.2.1"
 __maintainer__ = "Ronald J Pandolfi"
@@ -20,24 +21,35 @@ from modpkgs import yamlmod
 PARAM_TYPES = {'int': int, 'float': float}
 
 # Load yaml with names of all available functions in pipeline
-with open('yaml/tomography/functions.yml','r') as stream:
+with open('xicam/yaml/tomography/functions.yml','r') as stream:
     funcs=yaml.load(stream)
 
-# Load parameter data for available functions
-parameter_files = ('tomopy_function_parameters.yml',
-                   'aux_function_parameters.yml',
-                   'dataexchange_function_parameters.yml',
-                   'astra_function_parameters.yml',
-                   'mbir_function_parameters.yml')
-parameters = {}
+# load various function dictionaries from function_info.yml file
+parameters = {}; als832defaults = {}; aps_defaults = {}; names = {}; function_defaults = {}
+with open('xicam/yaml/tomography/functions_info.yml', 'r') as stream:
+    info = yaml.load(stream)
+    for key in info.keys():
+        # load parameter data for available functions
+        if 'parameters' in info[key].keys():
+            parameters[key] = info[key]['parameters']
 
-for file in parameter_files:
-    with open('yaml/tomography/'+file ,'r') as stream:
-        parameters.update(yaml.load(stream))
+        # load dictionary with function parameters to be retrieved from metadata
+        try:
+            als832defaults[key] = info[key]['conversions']['als']
+        except KeyError:
+            pass
+        try:
+            aps_defaults[key] = info[key]['conversions']['aps']
+        except KeyError:
+            pass
 
-# Load dictionary with pipeline names and function names
-with open('yaml/tomography/function_names.yml','r') as stream:
-    names=yaml.load(stream)
+        # load dictionary with pipeline names and function names
+        if 'name' in info[key].keys():
+            names[key] = info[key]['name']
+
+        # load dictionary of set defaults
+        if 'defaults' in info[key].keys():
+            function_defaults[key] = info[key]['defaults']
 
 # Add reconstruction methods to function name dictionary, but include the package the method is in
 for algorithm in funcs['Functions']['Reconstruction']['TomoPy']:
@@ -48,16 +60,6 @@ for algorithm in funcs['Functions']['Reconstruction']['Astra']:
 
 for algorithm in funcs['Functions']['Reconstruction']['TomoCam']:
     names[algorithm] = ['recon','mbir']
-
-# Load dictionary with function parameters to be retrieved from metadatas
-with open('yaml/tomography/als832_function_defaults.yml','r') as stream:
-    als832defaults = yaml.load(stream)
-with open('yaml/tomography/aps_function_defaults.yml','r') as stream:
-    aps_defaults = yaml.load(stream)
-
-# Load dictionary for astra recon functions
-with open('yaml/tomography/function_defaults.yml','r') as stream:
-    function_defaults=yaml.load(stream)
 
 
 def load_pipeline(yaml_file):
@@ -220,18 +222,30 @@ def set_aps_defaults(mdata, funcwidget_list, path, shape):
 
 
 def set_reader_defaults(reader_widget, shape, cpu):
+    """
+    Sets defaults for reader widget based on dataset size
+    """
     reader_widget.params.child('start_sinogram').setLimits([0, shape[2]])
     reader_widget.params.child('end_sinogram').setLimits([0, shape[2]])
-    reader_widget.params.child('step_sinogram').setLimits([0, shape[2] + 1])
+    reader_widget.params.child('step_sinogram').setLimits([1, shape[2] + 1])
     reader_widget.params.child('start_projection').setLimits([0, shape[0]])
     reader_widget.params.child('end_projection').setLimits([0, shape[0]])
-    reader_widget.params.child('step_projection').setLimits([0, shape[0] + 1])
+    reader_widget.params.child('step_projection').setLimits([1, shape[0] + 1])
+    reader_widget.params.child('start_width').setLimits([0, shape[1]])
+    reader_widget.params.child('end_width').setLimits([0, shape[1]])
+    reader_widget.params.child('step_width').setLimits([1, shape[2] + 1])
+
     reader_widget.params.child('end_sinogram').setValue(shape[2])
     reader_widget.params.child('end_sinogram').setDefault(shape[2])
     reader_widget.params.child('end_projection').setValue(shape[0])
     reader_widget.params.child('end_projection').setDefault(shape[0])
+    reader_widget.params.child('end_width').setValue(shape[1])
+    reader_widget.params.child('end_width').setDefault(shape[1])
     reader_widget.params.child('sinograms_per_chunk').setValue(cpu * 5)
+    reader_widget.params.child('projections_per_chunk').setValue(cpu * 5)
     reader_widget.params.child('sinograms_per_chunk').setDefault(cpu * 5)
+    reader_widget.params.child('projections_per_chunk').setDefault(cpu * 5)
+
 
 
 def extract_pipeline_dict(funwidget_list):
@@ -294,7 +308,8 @@ def extract_runnable_dict(funwidget_list):
     dict
         dictionary specifying the workflow pipeline and important parameters
     """
-    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'}}
+    center_functions = {'find_center_pc': {'proj1': 'tomo[0]', 'proj2': 'tomo[-1]'},
+                        'find_center': {'tomo': 'tomo', 'theta': 'theta'}, 'find_center_vo': {'tomo': 'tomo'}}
 
     d = OrderedDict()
     func_dict = OrderedDict(); subfuncs = OrderedDict()
@@ -337,7 +352,7 @@ def extract_runnable_dict(funwidget_list):
                         subfunc += "{}={},".format(key, val) if not isinstance(val, str) \
                             else '{}=\'{}\','.format(key, val)
                     for cor_func in center_functions.iterkeys():
-                        if ipf._function.func_name in cor_func:
+                        if ipf._function.func_name == cor_func:
                             for k, v in center_functions[cor_func].iteritems():
                                 subfunc += "{}={},".format(k, v)
                     subfunc += ")"

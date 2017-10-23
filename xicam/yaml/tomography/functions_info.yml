@@ -1,0 +1,1735 @@
+# This yaml file contains information relevant to adding new functions to the Xi-cam tomography plugin pipeline.
+# Using PyYaml, the contents of this file are loaded into a dictionary in xicam/plugins/tomography/config.py that are
+# then used to configure the functionwidgets of each function. To add your own function, you must at minimum fill out
+# an entry in this file, in the xicam/yaml/tomography/functions.yml.
+#
+# In the xicam/yaml/tomography/functions.yml file, each function is listed with a corresponding 'sub-function.' A
+# function is a more general descriptor (for example, 'Stripe Removal'), while a sub-function identifies the method or
+# algorithm more specifically (for example, 'Fourier-Wavelet'). This allows for multiple implementations of equivalent
+# 'steps' in a processing pipeline. YOU MUST ADD YOUR FUNCTION TO THIS FILE WITH A CORRESPONDING SUBFUNCTION TO BE
+# USED IN THE TOMOGRAPHY PLUGIN.
+#
+# In the xicam/yaml/tomography/functions_info.yml file (this file), each function (referred to by its subfunction name)
+# has several subfields.
+#   - parameters : the parameters to be listed for this function's functionwidget. This section lists the name, suffix
+#                  (optional), type, and constrained values (optional) for each parameter. Parameters NOT listed in this
+#                  section but expected in the function's arguments will be evaluated based on their default value.
+#   - conversions : sets conversions between certain parameters and values in the dataset's metadata. The top entry is
+#                   is the name of the parameter. The 'name' field is the value in the metadata which will be used
+#                   in the conversion for the parameter. The 'conversion' and 'type' fields set the conversion factor
+#                   and final type, respectively, of the parameter in the functionwidget.
+#   - name : contains the function name and respective library for each function. For example, 'Phase Retrieval' is
+#            called from tomopy as 'tomopy.retrieve_phase'. Thus, the two entries under 'name' will be 'retrieve_phase'
+#            and 'tomopy'. If you're adding a custom function (rather than a function from a python library), add the
+#            code to the xicam/plugins/tomography/pipelinefunctions.py file.
+#
+# If the entries in the two yaml files are correctly filled, the function will be available to be added to the function
+# pipeline in the tomography plugin.
+#
+
+Phase Retrieval:
+  conversions:
+    als:
+      pixel_size:
+        name: pxsize
+        conversion: 0.1
+        type: float
+      dist:
+        name: Camera_Z_Support
+        conversion: 0.1
+        type: float
+      energy:
+        name: senergy
+        conversion: 0.001
+        type: float
+  parameters:
+    - name: pixel_size
+      suffix: cm
+      type: float
+    - name: dist
+      suffix: cm
+      type: float
+    - name: energy
+      suffix: keV
+      type: float
+    - name: alpha
+      type: float
+    - name: pad
+      type: bool
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - retrieve_phase
+    - tomopy
+Polar Mean Filter:
+  conversions:
+    als:
+      thresh:
+        name: ring_threshold
+        type: float
+      thresh_max:
+        name: upp_ring_value
+        type: float
+      thresh_min:
+        name: low_ring_value
+        type: float
+      theta_min:
+        name: max_arc_length
+        type: int
+      rwidth:
+        name: max_arc_length
+        type: int
+  parameters:
+    - name: thresh
+      type: float
+    - name: thresh_max
+      type: float
+    - name: thresh_min
+      type: float
+    - name: theta_min
+      suffix: "\u00b0"
+      type: int
+      limits: [0, 360]
+    - name: rwidth
+      suffix: px
+      type: int
+    - name: int_mode
+      type: list
+      values:
+        - wrap
+        - reflect
+    - name: rec
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - remove_ring
+    - tomopy
+Add:
+  parameters:
+    - name: value
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - array_operation_add
+    - pipelinefunctions
+Subtract:
+  parameters:
+    - name: value
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - array_operation_sub
+    - pipelinefunctions
+Multiply:
+  parameters:
+    - name: value
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - array_operation_mult
+    - pipelinefunctions
+Divide:
+  conversions:
+    als:
+      value:
+        name: pxsize
+        type: float
+        conversion: 0.1
+  parameters:
+    - name: value
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - array_operation_div
+    - pipelinefunctions
+Maximum:
+  parameters:
+    - name: value
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - array_operation_max
+    - pipelinefunctions
+Read Data:
+  parameters:
+    - name: start_sinogram
+      type: int
+    - name: end_sinogram
+      type: int
+    - name: step_sinogram
+      type: int
+    - name: start_projection
+      type: int
+    - name: end_projection
+      type: int
+    - name: step_projection
+      type: int
+    - name: start_width
+      type: int
+    - name: end_width
+      type: int
+    - name: step_width
+      type: int
+    - name: sinograms_per_chunk
+      type: int
+    - name: projections_per_chunk
+      type: int
+  name:
+    - reader
+    - pipelinefunctions
+1D Remove Outliers:
+  parameters:
+    - name: dif
+      type: float
+    - name: size
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - remove_outlier1d
+    - pipelinefunctions
+Remove Outliers:
+  parameters:
+    - name: dif
+      type: float
+    - name: size
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - remove_outlier
+    - tomopy
+Beam Hardening:
+  parameters:
+    - name: a0
+      type: float
+    - name: a0
+      type: float
+    - name: a0
+      type: float
+    - name: a0
+      type: float
+    - name: a0
+      type: float
+    - name: a0
+      type: float
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - beam_hardening
+    - pipelinefunctions
+Beam Tilt:
+  parameters:
+    - name: tilt
+      type: int
+    - name: tiltcenter_slice
+      type: int
+    - name: tiltcenter_det
+      type: int
+    - name: sino_0
+      type: int
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - correct_tilt
+    - pipelinefunctions
+Sino 360 to 180:
+  parameters:
+    - name: rotation
+      type: list
+      values:
+        - left
+        - right
+    - name: data
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - sino_360_to_180
+    - pipelinefunctions
+Padding:
+  conversions:
+    als:
+      npad:
+        name: dxelements
+        type: int
+        conversion: 0.4
+  parameters:
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: npad
+      sufix: px
+      type: int
+    - name: mode
+      type: list
+      values:
+      - constant
+      - edge
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - pad
+    - tomopy
+Slice:
+  parameters:
+    - name: p11
+      type: int
+    - name: p12
+      type: int
+    - name: p21
+      type: int
+    - name: p22
+      type: int
+    - name: p31
+      type: int
+    - name: p32
+      type: int
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - slice
+    - pipelinefunctions
+Crop:
+  conversions:
+    als:
+      p11:
+        name: dxelements
+        type: int
+        conversion: 0.4
+      p12:
+        name: dxelements
+        type: int
+        conversion: 0.4
+      p21:
+        name: dxelements
+        type: int
+        conversion: 0.4
+      p22:
+        name: dxelements
+        type: int
+        conversion: 0.4
+  parameters:
+    - name: p11
+      type: int
+    - name: p12
+      type: int
+    - name: p21
+      type: int
+    - name: p22
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - crop
+    - pipelinefunctions
+Convert Data Type:
+  parameters:
+    - name: dtype
+      type: list
+      values:
+      - uint8
+      - uint16
+      - int16
+      - float32
+      - float64
+    - name: imin
+      type: float
+    - name: imax
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - convert_data
+    - pipelinefunctions
+TomoPy Median Filter:
+  parameters:
+    - name: size
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - median_filter
+    - tomopy
+Gaussian Filter:
+  parameters:
+    - name: sigma
+      type: float
+    - name: order
+      type: int
+      limits: [0, 3]
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - gaussian_filter
+    - tomopy
+Sobel Filter:
+  parameters:
+    - name: axis
+      limits: [0, 2]
+      type: int
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - sobel_filter
+    - tomopy
+Titarenko:
+  parameters:
+    - name: nblock
+      type: int
+    - name: alpha
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - remove_stripe_ti
+    - tomopy
+Smoothing Filter:
+  parameters:
+    - name: size
+      type: int
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - remove_stripe_sf
+    - tomopy
+F3D Median Filter:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - run_MedianFilter
+    - pyF3D
+F3D Bilateral Filter:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: spatialRadius
+      type: int
+    - name: rangeRadius
+      type: int
+  name:
+    - run_BilateralFilter
+    - pyF3D
+F3D Mask Filter:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: maskChoice
+      type: list
+      values:
+      - mask3D
+    - name: mask
+      type: list
+      values:
+      - StructuredElementL
+      - Diagonal3x3x3
+      - Diagonal10x10x4
+      - Diagonal10x10x10
+      - custom mask
+    - name: mask path
+      type: str
+    - name: L
+      type: int
+    - name: Browse mask image
+      type: action
+  name:
+    - run_MaskFilter
+    - pyF3D
+F3D MM Erosion:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: mask
+      type: list
+      values:
+      - StructuredElementL
+      - Diagonal3x3x3
+      - Diagonal10x10x4
+      - Diagonal10x10x10
+      - custom mask
+    - name: mask path
+      type: str
+    - name: L
+      type: int
+    - name: Browse mask image
+      type: action
+  name:
+    - run_MMFilterEro
+    - pyF3D
+F3D MM Dilation:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: mask
+      type: list
+      values:
+      - StructuredElementL
+      - Diagonal3x3x3
+      - Diagonal10x10x4
+      - Diagonal10x10x10
+      - custom mask
+    - name: mask path
+      type: str
+    - name: L
+      type: int
+    - name: Browse mask image
+      type: action
+  name:
+    - run_MMFilterDil
+    - pyF3D
+F3D MM Opening:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: mask
+      type: list
+      values:
+      - StructuredElementL
+      - Diagonal3x3x3
+      - Diagonal10x10x4
+      - Diagonal10x10x10
+      - custom mask
+    - name: mask path
+      type: str
+    - name: L
+      type: int
+    - name: Browse mask image
+      type: action
+  name:
+    - run_MMFilterOpe
+    - pyF3D
+F3D MM Closing:
+  parameters:
+    - name: image
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: mask
+      type: list
+      values:
+      - StructuredElementL
+      - Diagonal3x3x3
+      - Diagonal10x10x4
+      - Diagonal10x10x10
+      - custom mask
+    - name: mask path
+      type: str
+    - name: L
+      type: int
+    - name: Browse mask image
+      type: action
+  name:
+    - run_MMFilterClo
+    - pyF3D
+Regular:
+  parameters:
+    - name: cutoff
+      type: float
+  name:
+    - normalize
+    - pipelinefunctions
+Nearest Flats:
+  parameters:
+    - name: cutoff
+      type: float
+  name:
+    - normalize_nf
+    - tomopy
+Projection Angles:
+  parameters:
+    - name: nang
+      type: int
+    - name: ang1
+      type: float
+      suffix: "\u00b0"
+    - name: range
+      type: int
+      suffix: "\u00b0"
+  name:
+    - angles
+    - tomopy
+  defaults:
+    ang1:
+      default: 90
+    range:
+      default: 180
+ROI:
+  name:
+    - normalize_roi
+    - tomopy
+  parameters:
+    - name: p11
+      type: int
+    - name: p12
+      type: int
+    - name: p21
+      type: int
+    - name: p22
+      type: int
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: Select roi
+      type: action
+Background Intensity:
+  parameters:
+    - name: air
+      type: int
+    - name: tomo
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - normalize_bg
+    - tomopy
+Fourier-Wavelet:
+  parameters:
+    - name: level
+      type: int
+    - name: wname
+      type: list
+      values:
+      - haar
+      - db5
+      - sym5
+    - name: sigma
+      type: float
+    - name: pad
+      type: bool
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - remove_stripe_fw
+    - tomopy
+Circular Mask:
+  parameters:
+    - name: ratio
+      suffix: px/px
+      type: float
+    - name: val
+      type: float
+    - name: axis
+      type: int
+      default: 0
+      value: 0
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  name:
+    - circ_mask
+    - tomopy
+Remove NAN:
+  parameters:
+    - name: val
+      type: float
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - remove_nan
+    - tomopy
+Downsample:
+  parameters:
+    - name: level
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - downsample
+    - tomopy
+Upsample:
+  parameters:
+    - name: level
+      type: int
+    - name: axis
+      type: int
+      limits: [0, 2]
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - upsample
+    - tomopy
+Negative Logarithm:
+  parameters:
+    - name: arr
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+  name:
+    - minus_log
+    - tomopy
+Phase Correlation:
+  parameters:
+    - name: tol
+      suffix: px
+      type: float
+  name:
+    - find_center_pc
+    - tomopy
+Nelder-Mead:
+  parameters:
+    - name: ind
+      type: str
+    - name: init
+      suffix: px
+      type: str
+    - name: tol
+      suffix: px
+      type: float
+    - name: mask
+      type: bool
+    - name: ratio
+      suffix: px/px
+      type: float
+  name:
+    - find_center
+    - tomopy
+  defaults:
+    ind:
+      default: None
+      type: int
+    init:
+      default: None
+      type: float
+Vo:
+  parameters:
+    - name: ind
+      type: str
+    - name: smin
+      suffix: px
+      type: int
+    - name: smax
+      suffix: px
+      type: int
+    - name: srad
+      suffix: px
+      type: float
+    - name: step
+      type: float
+    - name: ratio
+      type: float
+    - name: drop
+      type: int
+  name:
+    - find_center_vo
+    - tomopy
+  defaults:
+    ind:
+      default: None
+      type: int
+Gridrec:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: filter_name
+        type: list
+        values:
+        - none
+        - shepp
+        - cosine
+        - hann
+        - hamming
+        - ramlak
+        - parzen
+        - butterworth
+      - name: cutoff
+        type: float
+      - name: order
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+FBP:
+  conversions:
+    als:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: filter_name
+        type: list
+        values:
+        - none
+        - shepp
+        - cosine
+        - hann
+        - hamming
+        - ramlak
+        - parzen
+        - butterworth
+      - name: cutoff
+        type: float
+      - name: order
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+ART:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: num_iter
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+BART:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: num_iter
+        type: int
+      - name: num_block
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+MLEM:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: num_iter
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+OSEM:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+      - name: center
+        type: float
+        suffix: px
+      - name: num_iter
+        type: int
+      - name: num_block
+        type: int
+      - name: arr
+        type: list
+        values:
+          - tomo
+          - flats
+          - dark
+      - name: ncore
+        type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+OSPML Hybrid:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+OSPML Quad:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: num_block
+      type: int
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+PML Hybrid:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: reg_par
+      type: float
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+PML Quad:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: reg_par
+      type: float
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+SIRT:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+  defaults:
+    ncore:
+      default: None
+      type: int
+BP:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+FBP_astra:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: ncore
+      type: str
+  defaults:
+    ncore:
+      default: None
+      type: int
+SIRT_astra:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: MinConstraint
+      type: str
+    - name: MaxConstraint
+      type: str
+    - name: ncore
+      type: str
+  defaults:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+SART:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: MinConstraint
+      type: str
+    - name: MaxConstraint
+      type: str
+    - name: ncore
+      type: str
+#   - name: ProjectionOrder
+#      type: str
+  defaults:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+ART_astra:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: MinConstraint
+      type: str
+    - name: MaxConstraint
+      type: str
+    - name: ncore
+      type: str
+#    - name: RayOrder
+#      type: str
+  defaults:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    ncore:
+      default: None
+      type: int
+CGLS:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+BP_CUDA:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: GPUIndex
+      type: int
+    - name: PixelSuperSampling
+      type: str
+    - name: ncore
+      type: str
+  defaults:
+    GPUIndex:
+      default: 0
+    PixelSuperSampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+FBP_CUDA:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: FilterType
+      type: list
+      values:
+        - None
+        - ram-lak
+        - shepp-logan
+        - cosine
+        - hamming
+        - hann
+        - tukey
+        - lanczos
+        - triangular
+        - gaussian
+        - barlett-hann
+        - blackmann
+        - nuttail
+        - blackman-harris
+        - black-nuttail
+        - flat-top
+        - kaiser
+        - parzen
+        - projection
+        - sinogram
+        - rprojection
+        - rsinogram
+    - name: GPUIndex
+      type: int
+    - name: PixelSupersampling
+      type: str
+    - name: ncore
+      type: str
+#    - name: ShortScan
+#      type: bool
+  defaults:
+    Filtertype:
+      default: None
+    GPUIndex:
+      default: 0
+    PixelSuperSampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+SIRT_CUDA:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: MinConstraint
+      type: str
+    - name: MaxConstraint
+      type: str
+    - name: GPUIndex
+      type: int
+    - name: PixelSupersampling
+      type: str
+    - name: ncore
+      type: str
+#   - name: ShortScan
+#     type: bool
+  defaults:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    GPUIndex:
+      default: 0
+    PixelSupersampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+SART_CUDA:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: num_iter
+      type: int
+    - name: MinConstraint
+      type: str
+    - name: MaxConstraint
+      type: str
+#    - name: ProjectionOrder
+#      type: str
+    - name: GPUIndex
+      type: int
+    - name: PixelSupersampling
+      type: str
+    - name: ncore
+      type: str
+#   - name: ShortScan
+#     type: bool
+# ART_CUDA:
+#  - name: center
+#    type: float
+#    suffix: px
+#  - name: num_iter
+#    type: int
+#  - name: MinConstraint
+#    type: float
+#  - name: MaxConstraint
+#    type: float
+  defaults:
+    num_iter:
+      default: 1800
+    MinConstraint:
+      default: None
+      type: float
+    MaxConstraint:
+      default: None
+      type: float
+    GPUIndex:
+      default: 0
+    PixelSupersampling:
+      default: None
+      type: int
+    ncore:
+      default: 1
+      type: int
+CGLS_CUDA:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+Gridrec TomoCam:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: oversamp_factor
+      type: float
+    - name: cutoff
+      type: float
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+SIRT TomoCam:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: oversamp_factor
+      type: float
+    - name: num_iter
+      type: int
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+MBIR TomoCam:
+  conversions:
+    als:
+      center:
+        name: center
+        type: float
+    aps:
+      center:
+        name: center
+        type: float
+  parameters:
+    - name: center
+      type: float
+      suffix: px
+    - name: oversamp_factor
+      type: float
+    - name: num_iter
+      type: int
+    - name: smoothness
+      type: float
+    - name: p
+      type: float
+    - name: arr
+      type: list
+      values:
+        - tomo
+        - flats
+        - dark
+Tiff Stack:
+  parameters:
+    - name: axis
+      type: int
+    - name: digit
+      type: int
+    - name: overwrite
+      type: bool
+    - name: data
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: parent folder
+      type: str
+    - name: folder name
+      type: str
+    - name: file name
+      type: str
+    - name: fname
+      type: str
+    - name: Browse
+      type: action
+  name:
+    - write_tiff_stack
+    - dxchange
+Write HDF5:
+  parameters:
+    - name: gname
+      type: str
+    - name: overwrite
+      type: bool
+    - name: data
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: appendaxis
+      type: int
+    - name: maxsize
+      type: int
+    - name: fname
+      type: str
+    - name: Browse
+      type: action
+  name:
+    - write_hdf5
+    - dxchange
+Numpy Array:
+  parameters:
+    - name: overwrite
+      type: bool
+    - name: data
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: fname
+      type: str
+    - name: Browse
+      type: action
+  name:
+    - write_npy
+    - dxchange
+Data Exchange:
+  parameters:
+    - name: axes
+      type: str
+    - name: overwrite
+      type: bool
+    - name: data
+      type: list
+      values:
+      - tomo
+      - flats
+      - dark
+    - name: fname
+      type: str
+    - name: Browse
+      type: action
+  name:
+    - write_dxf
+    - dxchange

@@ -18,6 +18,7 @@ from PySide import QtCore, QtGui
 from vispy import scene
 from vispy.color import Colormap
 from pipeline import loader
+from xicam.widgets.customwidgets import histDialogButton
 
 
 class VolumeViewer(QtGui.QWidget):
@@ -36,11 +37,22 @@ class VolumeViewer(QtGui.QWidget):
         self.volumeRenderWidget= VolumeRenderWidget()
         ly.addWidget(self.volumeRenderWidget.native)
 
+        self.HistogramLUTWidget = None
         self.HistogramLUTWidget = pg.HistogramLUTWidget(image=self, parent=self)
         self.HistogramLUTWidget.setMaximumWidth(self.HistogramLUTWidget.minimumWidth()+15)# Keep static width
         self.HistogramLUTWidget.setMinimumWidth(self.HistogramLUTWidget.minimumWidth()+15)
 
-        ly.addWidget(self.HistogramLUTWidget)
+        v = QtGui.QVBoxLayout()
+        v.addWidget(self.HistogramLUTWidget)
+
+        # ly.addWidget(self.HistogramLUTWidget)
+
+        self.setButton = histDialogButton('Set', parent=self)
+        self.setButton.setMaximumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
+        self.setButton.setMinimumWidth(self.HistogramLUTWidget.minimumWidth() + 15)
+        self.setButton.connectToHistWidget(self.HistogramLUTWidget)
+        v.addWidget(self.setButton)
+        ly.addLayout(v)
 
         self.xregion = SliceWidget(parent=self)
         self.yregion = SliceWidget(parent=self)
@@ -80,6 +92,8 @@ class VolumeViewer(QtGui.QWidget):
         else:
             sliceobj = 3*(slice(0, None),)
 
+        if vol is not None: vol=np.nan_to_num(vol)
+
         self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
@@ -101,7 +115,7 @@ class VolumeViewer(QtGui.QWidget):
     def setLevels(self, levels, update=True):
         self.levels = levels
         self.setLookupTable()
-        self.HistogramLUTWidget.region.setRegion(levels)
+        if self.HistogramLUTWidget: self.HistogramLUTWidget.region.setRegion(levels)
         if update:
             self.volumeRenderWidget.update()
 
@@ -139,8 +153,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (np.ceil(float(self.vol.shape[0]) / targetImageSize),
-                    np.ceil(float(self.vol.shape[1]) / targetImageSize))
+            step = (int(np.ceil(float(self.vol.shape[0]) / targetImageSize)),
+                    int(np.ceil(float(self.vol.shape[1]) / targetImageSize)))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
@@ -283,6 +297,9 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.vol = vol
 
         if slice is not None:
+            def intify(a):
+                if a is not None: return int(a)
+            sliceobj = [slice(intify(s.start),intify(s.stop),intify(s.step)) for s in sliceobj]
             slicevol = self.vol[sliceobj]
         else:
             slicevol = self.vol

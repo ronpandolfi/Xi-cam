@@ -140,7 +140,7 @@ EXT = Extension(name='pipeline.cWarpImage',
                 )
 
 setup(name='Xi-cam',
-      version='1.2.18',
+      version='1.2.19',
       author='Advanced Light Source',
       author_email='ronpandolfi@lbl.gov',
       description='High Performance Interactive Environment for Scattering',

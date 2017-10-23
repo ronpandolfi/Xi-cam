@@ -4,26 +4,32 @@ import pyFAI
 from pyFAI import geometry
 from PySide import QtGui
 from pyqtgraph.parametertree import Parameter
+from pyqtgraph.parametertree import ParameterTree
+from pyqtgraph.parametertree import parameterTypes as ptypes
 import numpy as np
 import yaml
 from pipeline import pathtools
 import os
 from pipeline import msg
+from pipeline import detectors
 
 
-class settingstracker(object):
+class settingstracker(ptypes.GroupParameter):
     settingspath = os.path.join(pathtools.user_config_dir, 'settings.yml')
 
     def __init__(self):
-        self.settings = dict()
-        if os.path.isfile(self.settingspath):
-            with open(self.settingspath,'r') as stream:
-                try:
-                    self.settings = yaml.load(stream)
-                except yaml.YAMLError as exc:
-                    msg.logMessage(exc, msg.WARNING)
-        if not self.settings: self.settings=dict()
+        super(settingstracker, self).__init__(name='Settings')
 
+        try:
+            with open(self.settingspath,'r') as stream:
+                self.restoreState(yaml.load(stream))
+            for param in self.template()['children']:
+                if param['value'] not in self:
+                    raise yaml.YAMLError
+        except (yaml.YAMLError,IOError) as exc:
+            msg.logMessage(exc, msg.WARNING)
+            self.restoreState(self.template())
+        self.sigTreeStateChanged.connect(self.write)
 
 
     def write(self):
@@ -32,19 +38,53 @@ class settingstracker(object):
             os.makedirs(pathtools.user_config_dir)
         with open(self.settingspath,'w') as stream:
             try:
-                stream.write(yaml.dump(self.settings))
+                stream.write(yaml.dump(self.saveState()))
+                stream.close()
             except yaml.YAMLError as exc:
                 print exc
 
     def __getitem__(self, item):
-        try:
-            return self.settings[item]
-        except KeyError:
-            return None
+        if item in self:
+            try:
+                return super(settingstracker, self).__getitem__(item)
+            except KeyError:
+                return None
 
     def __setitem__(self, key, value):
-        self.settings[key]=value
+        if key in self:
+            super(settingstracker, self).__setitem__(key,value)
+        else:
+            self.addChild({'name':key,'type':type(value).__name__,'value':value})
         self.write()
+
+    def __contains__(self, item):
+        return item in self.names
+
+    def _builddialog(self):
+        if not hasattr(self,'dialog'):
+            self.pt = ParameterTree()
+            self.pt.setParameters(self, showTop=False)
+            self.dialog = QtGui.QDialog()
+            layout = QtGui.QVBoxLayout()
+            layout.addWidget(self.pt)
+            layout.setContentsMargins(0, 0, 0, 0)
+            self.dialog.setLayout(layout)
+            self.dialog.setWindowTitle('Settings')
+
+    def showEditor(self):
+        self._builddialog()
+        self.dialog.show()
+
+    # TODO check for new template fields on start
+    @staticmethod
+    def template():
+        return {'type':'group','name':'settings','children':[
+            {'name':'Default Local Path','value':os.path.expanduser('~'),'type':'str'},
+            {'name':'Integration Bins (q)','value':1000,'type':'int','min':1},
+            {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int','min':1},
+            {'name':'Image Load Rotations','value':0,'type':'int'},
+            {'name':'Image Load Transpose','value':False,'type':'bool'}]}
+
 
 settings=settingstracker()
 
@@ -69,6 +109,7 @@ class PyFAIGeometry(pyFAI.geometry.Geometry):
                 param_dict['tiltPlanRotation']]
 
 
+
 class experiment(Parameter):
     def __init__(self, path=None):
 
@@ -77,10 +118,10 @@ class experiment(Parameter):
         if path is None:  # If not loading an exeriment from file
             # Build an empty experiment tree
             config = [{'name': 'Name', 'type': 'str', 'value': 'New Experiment'},
-                      {'name': 'Detector', 'type': 'str', 'value': 'Unknown'},
-                      {'name': 'Pixel Size X', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Detector', 'type': 'list', 'values':detectors.ALL_DETECTORS},
+                      {'name': 'Pixel Size X', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
-                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 0, 'siPrefix': True, 'suffix': 'm',
+                      {'name': 'Pixel Size Y', 'type': 'float', 'value': 172.e-6, 'siPrefix': True, 'suffix': 'm',
                        'step': 1e-6},
                       {'name': 'Center X', 'type': 'float', 'value': 0, 'suffix': ' px'},
                       {'name': 'Center Y', 'type': 'float', 'value': 0, 'suffix': ' px'},
@@ -98,14 +139,11 @@ class experiment(Parameter):
             super(experiment, self).__init__(name='Experiment Properties', type='group', children=config)
 
             # Wire up the energy and wavelength parameters to fire events on change (so they always match)
-            EnergyParam = self.param('Energy')
-            WavelengthParam = self.param('Wavelength')
-            EnergyParam.sigValueChanged.connect(self.EnergyChanged)
-            WavelengthParam.sigValueChanged.connect(self.WavelengthChanged)
+            self.param('Energy').sigValueChanged.connect(self.EnergyChanged)
+            self.param('Wavelength').sigValueChanged.connect(self.WavelengthChanged)
+            self.param('Detector').sigValueChanged.connect(self.DetectorChanged)
 
             # Add tilt style dialog
-            tilt = self.param('Detector Tilt')
-            rot = self.param('Detector Rotation')
             self.tiltStyleMenu = QtGui.QMenu()
             grp = QtGui.QActionGroup(self)
             self.fit2dstyle = QtGui.QAction('Use Fit2D style rot/tilt', self.tiltStyleMenu)
@@ -139,7 +177,6 @@ class experiment(Parameter):
     # Make the mask accessible as a property
     @property
     def mask(self):
-        """I'm the 'mask' property."""
         return self._mask
 
     @mask.setter
@@ -165,6 +202,10 @@ class experiment(Parameter):
         #     edf.write('mask.edf')
         # except Exception:
         #     pass
+
+    def DetectorChanged(self):
+        self.param('Pixel Size X').setValue(self.getDetector().get_pixel1())
+        self.param('Pixel Size Y').setValue(self.getDetector().get_pixel2())
 
     def EnergyChanged(self):
         # Make Energy and Wavelength match
@@ -263,9 +304,7 @@ class experiment(Parameter):
         # return geo
 
     def getDetector(self):
-        key = self.getvalue('Detector')
-        if key in pyFAI.detectors.ALL_DETECTORS:
-            return pyFAI.detectors.ALL_DETECTORS[self.getvalue('Detector')]()
+        return self.getvalue('Detector')()
 
     def edit(self):
         pass

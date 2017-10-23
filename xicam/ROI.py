@@ -66,11 +66,11 @@ class LinearRegionItem(pg.LinearRegionItem):
         if self.orientation is pg.LinearRegionItem.Horizontal:
             regionbounds = self.getRegion()
 
-            cut[:, regionbounds[0]:regionbounds[1]] = 1
+            cut[:, int(regionbounds[0]):int(regionbounds[1])] = 1
         elif self.orientation is pg.LinearRegionItem.Vertical:
             regionbounds = self.getRegion()
 
-            cut[regionbounds[0]:regionbounds[1], :] = 1
+            cut[int(regionbounds[0]):int(regionbounds[1]), :] = 1
 
 
         return (cut * data).T
@@ -302,9 +302,9 @@ class ArcROI(pg.ROI):
             (x - self.startcenter[0]) ** 2. + (y - self.startcenter[1]) ** 2.) ** .5) &
                          (((x - self.startcenter[0]) ** 2. + (
                          y - self.startcenter[1]) ** 2.) ** .5 < self.outerhandle.pos().length()) &
-                         (np.degrees(np.arctan2(y - self.startcenter[1], x - self.startcenter[0])) > self.startangle) &
-                         (np.degrees(np.arctan2(y - self.startcenter[1],
-                                                x - self.startcenter[0])) < self.startangle + self.arclength)
+                         ((np.degrees(np.arctan2(y - self.startcenter[1], x - self.startcenter[0]))-self.startangle) %360 > 0) &
+                         ((np.degrees(np.arctan2(y - self.startcenter[1],
+                                                x - self.startcenter[0]))-self.startangle) %360 < self.arclength)
             , (w, h))
 
         return (arr * mask).T

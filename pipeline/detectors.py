@@ -1,7 +1,7 @@
 import pyFAI.detectors
 import fabio
 import logging
-
+from collections import OrderedDict
 
 class PrincetonMTE(pyFAI.detectors.Detector):
     """
@@ -69,7 +69,28 @@ class PrincetonMTE(pyFAI.detectors.Detector):
         self._mask = False
         self._mask_crc = None
 
-class _Rayonix_SX165(pyFAI.detectors.RayonixSx165):
-    pass
 
-ALL_DETECTORS = pyFAI.detectors.ALL_DETECTORS
+class PhotonicScience(pyFAI.detectors.Detector):
+    """
+    Photonic Science CCD Detector
+
+    """
+    aliases = ["Photonic Science"]
+    force_pixel = True
+    MAX_SHAPE = (1042, 1042)
+    DEFAULT_PIXEL1 = DEFAULT_PIXEL2 = 200e-6
+
+    def __init__(self, pixel1=200e-6, pixel2=200e-6):
+        super(PhotonicScience, self).__init__(pixel1=pixel1, pixel2=pixel2)
+        if (pixel1 != self.DEFAULT_PIXEL1) or (pixel2 != self.DEFAULT_PIXEL2):
+            self._binning = (int(2 * pixel1 / self.DEFAULT_PIXEL1), int(2 * pixel2 / self.DEFAULT_PIXEL2))
+            self.shape = tuple(s // b for s, b in zip(self.max_shape, self._binning))
+        else:
+            self.shape = (1042/2, 1042/2)
+            self._binning = (2, 2)
+
+    def __repr__(self):
+        return "Detector %s\t PixelSize= %.3e, %.3e m" % \
+            (self.name, self._pixel1, self._pixel2)
+
+ALL_DETECTORS = OrderedDict((cls().name,cls) for cls in sorted(pyFAI.detectors.ALL_DETECTORS.values(),key=lambda cls:cls().name))

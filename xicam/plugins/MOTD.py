@@ -1,5 +1,5 @@
 import base
-from PySide import QtGui,QtWebKit
+from PySide import QtGui
 import os
 from xicam import xglobals
 
@@ -12,10 +12,15 @@ class MOTDPlugin(base.plugin):
 
 
     def __init__(self, *args, **kwargs):
-        self.centerwidget = webview = QtWebKit.QWebView()
         self.rightwidget = None
 
-        webview.load('MOTD.html')
+        try:
+            from PySide import QtWebKit
+        except ImportError:
+            pass
+        else:
+            self.centerwidget = webview = QtWebKit.QWebView()
+            webview.load('MOTD.html')
 
         super(MOTDPlugin, self).__init__(*args, **kwargs)
 
