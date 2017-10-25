@@ -12,24 +12,28 @@ __status__ = "Alpha"
 from PySide import QtCore, QtGui
 from pyqtgraph import ImageView
 
-class Viewer(QtGui.QWidget):
+class CenterWidget(QtGui.QTabWidget):
     """
-    
 
     """
-    def __init__(self, path= None, data = None, *args, **kwargs):
-        if path is None and data is None:
-            raise ValueError('Either path or data must be provided')
+    def __init__(self, *args, **kwargs):
+        
+        super(CenterWidget, self).__init__(*args, **kwargs)
+        self.setTabPosition(QtGui.QTabWidget.South)
+        self.setTabShape(QtGui.QTabWidget.Rounded)
+        self.setTabsClosable(False)
+        self.setMovable(True)
 
+
+        self.tab = { 'image': Viewer(), 'filtered': Viewer(), 'segmented': Viewer() }
+        self.addTab(self.tab['image'], 'Image')
+        self.addTab(self.tab['filtered'], 'Filtered')
+        self.addTab(self.tab['segmented'], 'Segmented')
+
+class Viewer(ImageView):
+    """
+    """
+    def __init__(self, *args, **kwargs):
         super(Viewer, self).__init__(*args, **kwargs)
-        
-        viewer = QtGui.QTabWidget()
-        viewer.TabPosition = QtGui.QTabWidget.South
-        viewer.TabShape = QtGui.QTabWidget.Rounded
-        
-        if data is None:
-            data = self.loaddata(path)
-        
-        imv = ImageView(viewer)
-        imv.setImage(data) 
-        
+        self.ui.roiBtn.setParent(None)
+        self.ui.menuBtn.setParent(None)
