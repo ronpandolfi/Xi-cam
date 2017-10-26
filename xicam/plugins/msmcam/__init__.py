@@ -11,18 +11,14 @@ __status__ = "Alpha"
 import platform
 op_sys = platform.system()
 
-import os
 import numpy as np
 from PySide import QtGui, QtCore
-from collections import OrderedDict
 from xicam.plugins import base
 from xicam import threads
-from . import ui
-from .workflow import Workflow
+import ui
+from workflow import Workflow
 import dxchange
 from pipeline import msg
-from pyqtgraph import parametertree as pt
-from pyqtgraph import ImageView
 
 
 
@@ -56,6 +52,7 @@ class MSMCam(base.plugin):
         # set up workflow
         self.path = None
         self.data = None
+        self.in_memory = True
         self.wf = Workflow()
 
     def openfiles(self, paths):
@@ -73,6 +70,11 @@ class MSMCam(base.plugin):
         if self.path is not None and self.path == paths:
             return
         self.path = paths
+        if len(paths) == 1:
+            self.wf.input_settings['InputType'] = 1
+        else:
+            self.wf.input_settings['InputType'] = 0
+
         self.data = self.loaddata(self.path)
         try:
             self.centerwidget.tab['image'].setImage(self.data)
@@ -85,30 +87,42 @@ class MSMCam(base.plugin):
     def updateparams(self):
         self.wf.update_preproc_settings(self.params)
         self.wf.update_input_settings(self.params)
+        self.in_memory = self.wf.input_settings['InMemory']
         self.wf.update_segmentaion_settings(self.params)
 
     def filter(self):
         self.wf.update_preproc_settings(self.params)
         self.wf.update_input_settings(self.params)
         msg.showBusy()    
-        threads.method(callback_slot=self.showFiltered)(self.wf.filter)(self.data)
+        if self.in_memory:
+            threads.method(callback_slot=self.showFiltered)(self.wf.filter)(self.data)
+        else:
+            threads.method(callback_slot=self.showFiltered)(self.wf.filter)(self.path[0])
 
     def run(self):
         self.wf.update_preproc_settings(self.params)
         self.wf.update_input_settings(self.params)
         self.wf.update_segmentaion_settings(self.params)
-        msg.showBusy()    
+        msg.showBusy()
         threads.method(callback_slot=self.showSegmented)(self.wf.run)()
-
+            
     def showFiltered(self, *args):
         msg.hideBusy()
         self.toolbar.actionSegment.setEnabled(True)
-        self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
+        if self.in_memory:
+            self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
+        else:
+            data = self.loaddata(self.wf.filtered)
+            self.centerwidget.tab['filtered'].setImage(data)
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['filtered'])
 
     def showSegmented(self, *args):
         msg.hideBusy()
-        self.centerwidget.tab['segmented'].setImage(self.wf.segmented['kmeans'])
+        if self.in_memory:
+            self.centerwidget.tab['segmented'].setImage(self.wf.segmented['kmeans'])
+        else:
+            data = self.loaddata(self.wf.segmented['kmeans'])
+            self.centerwidget.tab['segmented'].setImage(data)
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['segmented'])
 
     @staticmethod
@@ -117,7 +131,7 @@ class MSMCam(base.plugin):
             if iend is None:
                 iend = len(path)
             slc = range(ibeg, iend)
-            return dxchange.reader.read_tiff_stack(path, slc)
+            return dxchange.reader.read_tiff_stack(path[0], slc)
         else:
             data = dxchange.reader.read_tiff(path[0])
             if iend is None:

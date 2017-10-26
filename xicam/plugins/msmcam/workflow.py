@@ -9,7 +9,9 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Alpha"
 
 import numpy as np
+import os
 from pyqtgraph.parametertree import Parameter
+from MSMcam.inout.ImageReader import ImageReader
 from MSMcam.preprocessing.PreProcessor import PreProcessor
 from MSMcam.segmentation.kmeans import kmeans
 from MSMcam.segmentation.srm.pysrm import srm
@@ -22,7 +24,7 @@ class Workflow(object):
             'MedianMaskSize': 5, 'BilateralSigmaSpatial': 5, 'BilateralSigmaColor': 0.05
         }
         self.input_settings = {
-            'InputType': 0, 'InputDir': '/tmp', 'Masked': False, 'GroundTruthExists': False, 
+            'InputType': 0, 'InputDir': '/tmp/', 'Masked': False, 'GroundTruthExists': False, 
             'GroundTruthDir': None, 'FiberData': False, 'NumSlices' : 10, 'InMemory': True
         }
 
@@ -64,7 +66,18 @@ class Workflow(object):
         """
         TODO
         """
-        preproc = PreProcessor(data, self.input_settings, self.preproc_settings)
+        if isinstance(data, np.ndarray):
+            n_slice = data.shape[0]
+            if not n_slice == self.input_settings['NumSlices']: 
+                n_slice = self.input_settings['NumSlices']
+            preproc = PreProcessor(data[:n_slice,:,:], self.input_settings, self.preproc_settings)
+        else:
+            self.input_settings['InputDir'] = os.path.dirname(data)
+            reader =  ImageReader(self.input_settings['InputDir'], self.input_settings['InputType'], 
+                self.input_settings['NumSlices'], False, self.input_settings['InMemory'])
+            reader.read()
+            path = reader.getImageFilenames() 
+            preproc = PreProcessor(path, self.input_settings, self.preproc_settings) 
         preproc.process()
         self.filtered = preproc.getFiltered()
 
