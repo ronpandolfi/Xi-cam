@@ -46,6 +46,7 @@ class MSMCam(base.plugin):
         self.params.sigTreeStateChanged.connect(self.updateparams)
         self.toolbar.actionFilter.triggered.connect(self.filter)
         self.toolbar.actionSegment.triggered.connect(self.run)
+        self.toolbar.actionROI.triggered.connect(self.centerwidget.setROI)
 
         super(MSMCam, self).__init__(*args, **kwargs)
 
@@ -82,7 +83,10 @@ class MSMCam(base.plugin):
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['image'])
+        self.centerwidget.tab['filtered'].clear()
+        self.centerwidget.tab['segmented'].clear()
         self.toolbar.actionFilter.setEnabled(True)
+        self.toolbar.actionROI.setEnabled(True)
 
     def updateparams(self):
         self.wf.update_preproc_settings(self.params)
@@ -95,9 +99,19 @@ class MSMCam(base.plugin):
         self.wf.update_input_settings(self.params)
         msg.showBusy()    
         if self.in_memory:
-            threads.method(callback_slot=self.showFiltered)(self.wf.filter)(self.data)
+            if self.centerwidget.ROISET:
+                img = self.centerwidget.currentWidget().getImageItem()
+                slc = self.data[0,:,:]
+                roi = self.centerwidget.roi
+                _,idx = roi.getArrayRegion(slc, img, returnMappedCoords=True)
+                rows = idx[0].astype(int)
+                cols = idx[1].astype(int)
+                inp = self.data[:,rows, cols]
+            else:
+                inp = self.data
         else:
-            threads.method(callback_slot=self.showFiltered)(self.wf.filter)(self.path[0])
+            inp = self.path[0]
+        threads.method(callback_slot=self.showFiltered)(self.wf.filter)(inp)
 
     def run(self):
         self.wf.update_preproc_settings(self.params)

@@ -1,3 +1,4 @@
+
 __author__ = "Dinesh Kumar"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
@@ -42,6 +43,7 @@ class UI(object):
         p1 = Parameter.create(name='Median', type='bool', value=True)
         p1.addChild(Parameter.create(name='Mask Size', type='int', value=5))
         self.params.child('Filter').addChild(p1)
+
         #bilateral fileter
         p1 = Parameter.create(name='Bilateral', type='bool', value=False)
         p1.addChild(Parameter.create(name='Sigma Spatial', type='int', value=5))
@@ -61,6 +63,7 @@ class UI(object):
         # SRM
         p1 = Parameter.create(name='SRM', type='bool', value=False)
         self.params.child('Segmentation').addChild(p1)
+
         # RMRF
         p1 = Parameter.create(name='PMRF', type='bool', value=False, readonly=True)
         p1.addChild(Parameter.create(name='Clusters', type='int', value=2, readonly=True))
@@ -69,7 +72,6 @@ class UI(object):
         param_tree = ParameterTree()
         param_tree.setParameters(self.params, showTop=False)
         return param_tree
-        
 
 class Toolbar(QtGui.QToolBar):
     """
@@ -90,28 +92,56 @@ class Toolbar(QtGui.QToolBar):
     def __init__(self):
         super(Toolbar, self).__init__()
 
-        self.actionMask = QtGui.QAction(self)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_08.png"), QtGui.QIcon.Normal, 
-QtGui.QIcon.On)
-        self.actionMask.setIcon(icon)
-        self.actionMask.setToolTip('Mask')
-	self.addAction(self.actionMask)
+        # Masking action
+        self.actionMask = self.newAction(icon_path='xicam/gui/icons_08.png',
+            tooltip='Mask')
+        self.addAction(self.actionMask)
 
-        self.actionFilter = QtGui.QAction(self)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_62.png"), QtGui.QIcon.Normal, 
-QtGui.QIcon.On)
-        self.actionFilter.setIcon(icon)
-        self.actionFilter.setToolTip('Filter')
-        self.actionFilter.setDisabled(True)
+        # ROI
+        self.actionROI = self.newAction(icon_path='xicam/gui/icons_roi.png',
+            tooltip='ROI', enabled=True)
+        self.addAction(self.actionROI)
+
+        # Filter action
+        self.actionFilter = self.newAction(icon_path='xicam/gui/icons_62.png', 
+            tooltip='Filter')
         self.addAction(self.actionFilter)
 
-        self.actionSegment = QtGui.QAction(self)
+        # Segmentation action
+        self.actionSegment = self.newAction(icon_path='xicam/gui/icons_34.png', 
+            tooltip='Run Segmentation')
+        self.addAction(self.actionSegment)
+
+        # export config action
+        self.actionSaveCfg = self.newAction(icon_path="xicam/gui/write_inp.png", 
+            tooltip='Export Config')
+        self.addAction(self.actionSaveCfg)
+
+        # select and display segmentation results
+        self.actionShowKmeans = self.newAction(icon_path='xicam/gui/icons_kmeans.png',
+            tooltip='k-means')
+        self.actionShowSRM = self.newAction(icon_path='xicam/gui/icons_srm.png',
+            tooltip='SRM')
+        self.actionShowPRMF = self.newAction(icon_path='xicam/gui/icons_pmrf.png',
+            tooltip='PRMF')
+        menu = QtGui.QMenu()
+        menu.addAction(self.actionShowKmeans)
+        menu.addAction(self.actionShowSRM)
+        menu.addAction(self.actionShowPRMF)
+        btnShowSegmentation = QtGui.QToolButton()
+        btnShowSegmentation.setDefaultAction(self.actionShowKmeans)
+        btnShowSegmentation.setMenu(menu)
+        btnShowSegmentationAction = QtGui.QWidgetAction(self)
+        btnShowSegmentationAction.setDefaultWidget(btnShowSegmentation)
+        self.addAction(btnShowSegmentationAction)
+
+
+    @staticmethod
+    def newAction(icon_path=None, tooltip=None, enabled=False):
+        action = QtGui.QAction(None)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_34.png"), QtGui.QIcon.Normal, 
-QtGui.QIcon.On)
-        self.actionSegment.setIcon(icon)
-        self.actionSegment.setToolTip('Run Segmentation')
-        self.actionSegment.setDisabled(True)
-	self.addAction(self.actionSegment)
+        icon.addPixmap(QtGui.QPixmap(icon_path), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        action.setIcon(icon)
+        action.setToolTip(tooltip)
+        action.setEnabled(enabled)
+        return action
