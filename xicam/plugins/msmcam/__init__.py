@@ -50,6 +50,7 @@ class MSMCam(base.plugin):
         self.toolbar.actionROI.triggered.connect(self.centerwidget.setROI)
         self.toolbar.actionSaveCfg.triggered.connect(self.saveConfig)
         self.toolbar.viewSelect.currentIndexChanged.connect(self.updateView)
+        #self.centerwidget.currentChanged.connect(self.protectparams)
 
         super(MSMCam, self).__init__(*args, **kwargs)
 
@@ -97,9 +98,13 @@ class MSMCam(base.plugin):
     def updateView(self, idx):
         if self.segmented is None: return
         if idx < 0: return
-        else:
-            key = self.segmented[idx]
-            self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
+        key = self.segmented[idx]
+        self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
+
+    def protectparams(self, idx):
+        if idx < 0: return
+        if idx == 0: self.rightwidget.unlock()
+        else: self.rightwidget.lock()
 
     def updateparams(self):
         self.wf.update_preproc_settings(self.params)
@@ -166,7 +171,7 @@ class MSMCam(base.plugin):
         filename, _ = QtGui.QFileDialog.getSaveFileName(caption='Select output file', dir=dirname)
         if filename:
             self.wf.writeConfig(filename) 
-
+         
     @staticmethod
     def loaddata(path, ibeg=0, iend=None):
         if len(path) > 1:
