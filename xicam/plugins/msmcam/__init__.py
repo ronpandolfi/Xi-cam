@@ -11,6 +11,7 @@ __status__ = "Alpha"
 import platform
 op_sys = platform.system()
 
+import os
 import numpy as np
 from PySide import QtGui, QtCore
 from xicam.plugins import base
@@ -47,6 +48,8 @@ class MSMCam(base.plugin):
         self.toolbar.actionFilter.triggered.connect(self.filter)
         self.toolbar.actionSegment.triggered.connect(self.run)
         self.toolbar.actionROI.triggered.connect(self.centerwidget.setROI)
+        self.toolbar.actionSaveCfg.triggered.connect(self.saveConfig)
+        self.toolbar.viewSelect.currentIndexChanged.connect(self.updateView)
 
         super(MSMCam, self).__init__(*args, **kwargs)
 
@@ -55,6 +58,7 @@ class MSMCam(base.plugin):
         self.data = None
         self.in_memory = True
         self.wf = Workflow()
+        self.segmented = None
 
     def openfiles(self, paths):
         """
@@ -82,11 +86,20 @@ class MSMCam(base.plugin):
         except Exception as e:
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
+
+        self.wf.input_settings['InputDir'] = os.path.dirname(self.path[0])
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['image'])
         self.centerwidget.tab['filtered'].clear()
         self.centerwidget.tab['segmented'].clear()
         self.toolbar.actionFilter.setEnabled(True)
         self.toolbar.actionROI.setEnabled(True)
+
+    def updateView(self, idx):
+        if self.segmented is None: return
+        if idx < 0: return
+        else:
+            key = self.segmented[idx]
+            self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
 
     def updateparams(self):
         self.wf.update_preproc_settings(self.params)
@@ -132,12 +145,27 @@ class MSMCam(base.plugin):
 
     def showSegmented(self, *args):
         msg.hideBusy()
+        res = []
+   
+        for key, val in self.wf.segmented.items():
+            if val is not None:
+                res.append(key)
+        self.toolbar.viewSelect.clear()
+        self.toolbar.viewSelect.addItems(res)
+        self.segmented = res
+
         if self.in_memory:
-            self.centerwidget.tab['segmented'].setImage(self.wf.segmented['kmeans'])
+            self.centerwidget.tab['segmented'].setImage(self.wf.segmented['k-means'])
         else:
-            data = self.loaddata(self.wf.segmented['kmeans'])
+            data = self.loaddata(self.wf.segmented['k-means'])
             self.centerwidget.tab['segmented'].setImage(data)
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['segmented'])
+
+    def saveConfig(self):
+        dirname = os.path.expanduser('~')
+        filename, _ = QtGui.QFileDialog.getSaveFileName(caption='Select output file', dir=dirname)
+        if filename:
+            self.wf.writeConfig(filename) 
 
     @staticmethod
     def loaddata(path, ibeg=0, iend=None):

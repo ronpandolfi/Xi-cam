@@ -24,7 +24,7 @@ class Workflow(object):
             'MedianMaskSize': 5, 'BilateralSigmaSpatial': 5, 'BilateralSigmaColor': 0.05
         }
         self.input_settings = {
-            'InputType': 0, 'InputDir': '/tmp/', 'Masked': False, 'GroundTruthExists': False, 
+            'InputType': 0, 'InputDir': None, 'Masked': False, 'GroundTruthExists': False, 
             'GroundTruthDir': None, 'FiberData': False, 'NumSlices' : 10, 'InMemory': True
         }
 
@@ -32,6 +32,7 @@ class Workflow(object):
             'Multiphase': False, 'NumClustersKMEANS': 3, 'NumClustersPMRF': 2,
             'RunPMRF': False, 'RunKMEANS': True, 'RunSRM': False, 'Invert': False
         }
+        self.segmented = {'k-means': None, 'SRM': None, 'pMRF': None}
 
     def update_preproc_settings(self, params):
         if not isinstance(params, Parameter):
@@ -82,18 +83,41 @@ class Workflow(object):
         self.filtered = preproc.getFiltered()
 
     def run(self):
-        self.segmented = {'kmeans': None, 'srm': None, 'pmrf': None}
         if self.segmentation_settings['RunKMEANS']:
             imgs =  kmeans.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['kmeans'] = imgs
+            self.segmented['k-means'] = imgs
 
         if self.segmentation_settings['RunSRM']:
-            imgs = srm.segment(filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['srm'] = imgs
+            imgs = srm.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
+            self.segmented['SRM'] = imgs
             
         if self.segmentation_settings['RunPMRF']:
-            imgs = pmrf.segment(filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['pmrf'] = imgs
+            imgs = pmrf.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
+            self.segmented['pMRF'] = imgs
+
+    def writeConfig(self, filename):
+        from configparser import ConfigParser
+        from collections import OrderedDict
+
+        c = ConfigParser()
+        c.optionxform = str
+        c.add_section('Input')
+        c.add_section('Preprocess')
+        c.add_section('Segmentation')
+        c.add_section('Visualization')
+        for key, val in self.input_settings.items():
+            c.set('Input', key, str(val))
+
+        for key, val in self.preproc_settings.items():
+            c.set('Preprocess', key, str(val)) 
+        
+        for key, val in self.segmentation_settings.items():
+            c.set('Segmentation', key, str(val)) 
+        
+        c['Visualization'] = { 'SavePlots': 'True', 'ViewPlots': 'False' }
+        fp = open(filename, 'w')
+        c.write(fp)
+        fp.close()
 
     def apply_mask(self):
         """

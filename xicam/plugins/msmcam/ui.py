@@ -114,27 +114,15 @@ class Toolbar(QtGui.QToolBar):
 
         # export config action
         self.actionSaveCfg = self.newAction(icon_path="xicam/gui/write_inp.png", 
-            tooltip='Export Config')
+            tooltip='Export Config', enabled=True)
         self.addAction(self.actionSaveCfg)
 
         # select and display segmentation results
-        self.actionShowKmeans = self.newAction(icon_path='xicam/gui/icons_kmeans.png',
-            tooltip='k-means')
-        self.actionShowSRM = self.newAction(icon_path='xicam/gui/icons_srm.png',
-            tooltip='SRM')
-        self.actionShowPRMF = self.newAction(icon_path='xicam/gui/icons_pmrf.png',
-            tooltip='PRMF')
-        menu = QtGui.QMenu()
-        menu.addAction(self.actionShowKmeans)
-        menu.addAction(self.actionShowSRM)
-        menu.addAction(self.actionShowPRMF)
-        btnShowSegmentation = QtGui.QToolButton()
-        btnShowSegmentation.setDefaultAction(self.actionShowKmeans)
-        btnShowSegmentation.setMenu(menu)
-        btnShowSegmentationAction = QtGui.QWidgetAction(self)
-        btnShowSegmentationAction.setDefaultWidget(btnShowSegmentation)
-        self.addAction(btnShowSegmentationAction)
-
+        self.viewSelect = QtGui.QComboBox()
+        self.viewSelect.addItem(u'k-means')
+        self.viewSelect.addItem(u'SRM')
+        self.viewSelect.addItem(u'pMRF')
+        self.addWidget(self.viewSelect)
 
     @staticmethod
     def newAction(icon_path=None, tooltip=None, enabled=False):
@@ -145,3 +133,4 @@ class Toolbar(QtGui.QToolBar):
         action.setToolTip(tooltip)
         action.setEnabled(enabled)
         return action
+
