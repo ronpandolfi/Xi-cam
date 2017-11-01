@@ -25,11 +25,13 @@ class Workflow(object):
         }
         self.input_settings = {
             'InputType': 0, 'InputDir': None, 'Masked': False, 'GroundTruthExists': False, 
-            'GroundTruthDir': None, 'FiberData': False, 'NumSlices' : 10, 'InMemory': True
+            'GroundTruthDir': None, 'FiberData': False, 'FirstSlice' : 0, 
+            'LastSlice': 10, 'InMemory': True
         }
 
         self.segmentation_settings = {
             'Multiphase': False, 'NumClustersKMEANS': 3, 'NumClustersPMRF': 2,
+            'QSRM': 32, 'RunThresh': False, 'ThreshAlg': 'Otsu',
             'RunPMRF': False, 'RunKMEANS': True, 'RunSRM': False, 'Invert': False
         }
         self.segmented = {'k-means': None, 'SRM': None, 'pMRF': None}
@@ -48,52 +50,77 @@ class Workflow(object):
         if not isinstance(params, Parameter):
             raise TypeError('input must of an instance of pyqtgraph.parametertree.Parameter')
         self.input_settings['FiberData'] = params.child('Fiber Data').value()
-        self.input_settings['NumSlices'] = params.child('No. of Slices').value()
+        self.input_settings['FirstSlice'] = params.child('First Slice').value()
+        self.input_settings['LastSlice'] = params.child('Last Slice').value()
         self.input_settings['InMemory'] = params.child('In Memory').value()
 
 
     def update_segmentaion_settings(self, params):
         if not isinstance(params, Parameter):
             raise TypeError('input must of an instance of pyqtgraph.parametertree.Parameter')
-        self.segmentation_settings['Multiphase'] = params.child('Segmentation').child('Multiphase').value()
-        self.segmentation_settings['Invert'] = params.child('Segmentation').child('Multiphase').value()
+        nclusters = params.child('Segmentation').child('Clusters').value()
+        if nclusters > 2: 
+            self.segmentation_settings['Multiphase'] = True
+        else:
+            self.segmentation_settings['Multiphase'] = False
+        self.segmentation_settings['Invert'] = params.child('Segmentation').child('Invert').value()
+        self.segmentation_settings['QSRM'] = params.child('Segmentation').child('QSRM').value()
         self.segmentation_settings['RunKMEANS'] = params.child('Segmentation').child('k-means').value()
-        self.segmentation_settings['NumClustersKMEANS'] = params.child('Segmentation').child('k-means').child('Clusters').value()
+        self.segmentation_settings['NumClustersKMEANS'] = nclusters
         self.segmentation_settings['RunSRM'] = params.child('Segmentation').child('SRM').value()
         self.segmentation_settings['RunPMRF'] = params.child('Segmentation').child('PMRF').value()
-        self.segmentation_settings['NumClustersPMRF'] = params.child('Segmentation').child('PMRF').child('Clusters').value()
+        self.segmentation_settings['NumClustersPMRF'] = nclusters
 
     def filter(self, data):
         """
         TODO
         """
         if isinstance(data, np.ndarray):
-            n_slice = data.shape[0]
-            if not n_slice == self.input_settings['NumSlices']: 
-                n_slice = self.input_settings['NumSlices']
-            preproc = PreProcessor(data[:n_slice,:,:], self.input_settings, self.preproc_settings)
+            slc_a = 0
+            slc_z = data.shape[0]
+            if not slc_a == self.input_settings['FirstSlice']: 
+                slc_a = self.input_settings['FristSlice']
+            if not slc_z == self.input_settings['LastSlice']:
+                slc_z = self.input_settings['LastSlice']
+            preproc = PreProcessor(data[slc_a:slc_z,:,:], self.input_settings, self.preproc_settings, 0)
         else:
             self.input_settings['InputDir'] = os.path.dirname(data)
             reader =  ImageReader(self.input_settings['InputDir'], self.input_settings['InputType'], 
-                self.input_settings['NumSlices'], False, self.input_settings['InMemory'])
+                self.input_settings['FirstSlice'], self.input_settings['LastSlice'],
+                 False, self.input_settings['InMemory'], 0)
             reader.read()
             path = reader.getImageFilenames() 
             preproc = PreProcessor(path, self.input_settings, self.preproc_settings) 
         preproc.process()
-        self.filtered = preproc.getFiltered()
+        if self.input_settings['InMemory']:
+            self.filtered,_ = preproc.getFiltered()
+        else:
+            _,self.filtered = preproc.getFiltered()
 
     def run(self):
         if self.segmentation_settings['RunKMEANS']:
-            imgs =  kmeans.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['k-means'] = imgs
+            imgs =  kmeans.segment(self.filtered, self.input_settings, 
+                    self.preproc_settings, self.segmentation_settings, 0)
+            if self.input_settings['InMemory']:
+                self.segmented['k-means'] = imgs[0]
+            else:
+                self.segmented['k-means'] = imgs[1]
 
         if self.segmentation_settings['RunSRM']:
-            imgs = srm.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['SRM'] = imgs
+            imgs = srm.segment(self.filtered, self.input_settings, 
+                        self.preproc_settings, self.segmentation_settings, 0)
+            if self.input_settings['InMemory']:
+                self.segmented['SRM'] = imgs[0]
+            else:
+                self.segmented['SRM'] = imgs[1]
             
         if self.segmentation_settings['RunPMRF']:
-            imgs = pmrf.segment(self.filtered, self.input_settings, self.preproc_settings, self.segmentation_settings)
-            self.segmented['pMRF'] = imgs
+            imgs = pmrf.segment(self.filtered, self.input_settings, 
+                self.preproc_settings, self.segmentation_settings, 0)
+            if self.input_settings['InMemory']:
+                self.segmented['pMRF'] = imgs[0]
+            else:
+                self.segmented['pMRF'] = imgs[1]
 
     def writeConfig(self, filename):
         from configparser import ConfigParser

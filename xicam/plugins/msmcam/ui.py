@@ -31,7 +31,8 @@ class UI(object):
         # general parameters
         p = [ 
                 { 'name': 'Downsample Scale', 'type': 'float', 'value': 1, 'default': 1 },
-                { 'name': 'No. of Slices', 'type': 'int', 'value': 10, 'default': 10 },
+                { 'name': 'First Slice', 'type': 'int', 'value': 0, 'default': 0 },
+                { 'name': 'Last Slice', 'type': 'int', 'value': 10, 'default': 10 },
                 { 'name': 'Fiber Data', 'type': 'bool', 'value': False, 'default': False },
                 { 'name': 'In Memory', 'type': 'bool', 'value' : True, 'default': True },
                 { 'name': 'Filter', 'type': 'group', 'expanded': False },
@@ -53,21 +54,25 @@ class UI(object):
         # segmentation
         p1 = Parameter.create(name='Invert', type='bool', value=False, default=False)
         self.params.child('Segmentation').addChild(p1)
-        p1 = Parameter.create(name='Multiphase', type='bool', value=False, default=False)
+        p1 = Parameter.create(name='Clusters', type='int', value=2, default=2)
+        self.params.child('Segmentation').addChild(p1)
+        p1 = Parameter.create(name='QSRM', type='int', value=32, default=32)
         self.params.child('Segmentation').addChild(p1)
 
         # k-means
         p1 = Parameter.create(name='k-means', type='bool', value=True)
-        p1.addChild(Parameter.create(name='Clusters', type='int', value=3))
         self.params.child('Segmentation').addChild(p1)
+
         # SRM
         p1 = Parameter.create(name='SRM', type='bool', value=False)
         self.params.child('Segmentation').addChild(p1)
 
         # RMRF
-        p1 = Parameter.create(name='PMRF', type='bool', value=False, readonly=True)
-        p1.addChild(Parameter.create(name='Clusters', type='int', value=2, readonly=True))
+        p1 = Parameter.create(name='PMRF', type='bool', value=False, Readonly=False)
         self.params.child('Segmentation').addChild(p1)
+
+        # Threshold
+        p1 = Parameter.create(name='Threshold', type='bool', value=False, Readonly=True)
 
         param_tree = ParameterTree()
         param_tree.setParameters(self.params, showTop=False)
@@ -123,6 +128,11 @@ class Toolbar(QtGui.QToolBar):
         self.viewSelect.addItem(u'SRM')
         self.viewSelect.addItem(u'pMRF')
         self.addWidget(self.viewSelect)
+
+        # Transpose
+        self.boxT = QtGui.QCheckBox('Transpose')
+        self.addWidget(self.boxT)
+        
 
     @staticmethod
     def newAction(icon_path=None, tooltip=None, enabled=False):

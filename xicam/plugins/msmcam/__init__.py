@@ -50,7 +50,7 @@ class MSMCam(base.plugin):
         self.toolbar.actionROI.triggered.connect(self.centerwidget.setROI)
         self.toolbar.actionSaveCfg.triggered.connect(self.saveConfig)
         self.toolbar.viewSelect.currentIndexChanged.connect(self.updateView)
-        #self.centerwidget.currentChanged.connect(self.protectparams)
+        self.toolbar.boxT.stateChanged.connect(self.viewTranspose)
 
         super(MSMCam, self).__init__(*args, **kwargs)
 
@@ -105,6 +105,29 @@ class MSMCam(base.plugin):
         if idx < 0: return
         if idx == 0: self.rightwidget.unlock()
         else: self.rightwidget.lock()
+
+    def viewTranspose(self, state):
+        idx = self.centerwidget.currentIndex()
+        if idx == 0:
+            if state == 0:
+                self.centerwidget.tab['image'].setImage(self.data)
+            else:
+                self.centerwidget.tab['image'].setImage(self.data.T)
+
+        if idx == 1:
+            if state == 0:
+                self.centerwidget.tab['filter'].setImage(self.wf.filtered)
+            else:
+                self.centerwidget.tab['filter'].setImage(self.wf.filtered.T)
+
+        if idx == 2:
+            j = self.toolbar.viewSelect.currentIndex()
+            key = self.segmented[j] 
+            if state == 0:
+                self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
+            else:
+                self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key].T)
+
 
     def updateparams(self):
         self.wf.update_preproc_settings(self.params)
