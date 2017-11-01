@@ -3,20 +3,26 @@ import numpy as np
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
 from modpkgs import nonesigmod
+from collections import OrderedDict
 
 class timelineLinePlot(pg.PlotWidget):
     def __init__(self):
         super(timelineLinePlot, self).__init__()
-        self.variationcurve = dict()
+        self.variationcurve = OrderedDict()
 
-    def setData(self, t, y, color):
-        colorhash = ','.join([str(c) for c in color])
-        if not colorhash in self.variationcurve:
-            self.variationcurve[colorhash] = self.plot()
+    def setData(self, t, **kwargs):
+        for key in kwargs.keys():
+            if key != 'y' and not self.plotItem.legend:
+                self.addLegend()
 
-        l=min(len(t),len(y))
-        self.variationcurve[colorhash].setData(x=t[:l], y=y[:l])
-        self.variationcurve[colorhash].setPen(pg.mkPen(color=color))
+            if not key in self.variationcurve:
+                self.variationcurve[key] = self.plot(name=key)
+
+            y = kwargs[key]
+            l=min(len(t),len(y))
+            self.variationcurve[key].setData(x=t[:l], y=y[:l])
+            self.variationcurve[key].setPen(pg.mkPen(color=pg.intColor(self.variationcurve.keys().index(key),len(self.variationcurve))))
+
 
 
 class timelineStackPlot(QtGui.QWidget):
@@ -36,37 +42,33 @@ class timelineStackPlot(QtGui.QWidget):
 
         self.slider.valueChanged.connect(self.setOffset)
 
-        self.curves = []
-        self._curvesdata = []
+        self.curves = {}
+        self._curvesdata = {}
 
     def mapSlider(self):
         return 10 * (np.exp(self.slider.value() / 100.) - 1)
 
-    def setOffset(self, value):
-        for i in range(len(self.curves)):
-            x, y = self._curvesdata[i]
-            self.curves[i].setData(x, y + i * self.mapSlider())
+    def setOffset(self, _):
+        for i,curve in enumerate(self.curves.values()):
+            x, y = self._curvesdata['x'],self._curvesdata['y']
+            curve.setData(x[i], y[i] + i * self.mapSlider())
 
     def setData(self, t, x, y):
-        if len(self.curves) == 0:
-            for ycurve in y:
-                self.appendcurve(t, x, ycurve)
-        else:
-            self.appendcurve(t, x, y[-1])
+        self._curvesdata={'t':t,'x':x,'y':y}
+        for i,t0 in enumerate(t):
+            if t0 not in self.curves:
+                self.curves[t0] = self.plotWidget.plot(x[i], y[i] + (len(self.curves) * self.mapSlider()))
         self.setColors()
-
-    def appendcurve(self, t, x, y):
-        self._curvesdata.append((x, y))
-        self.curves.append(self.plotWidget.plot(x, y + (len(self.curves) * self.mapSlider())))
+        self.setOffset(0)
 
     def setColors(self):
-        for i in range(len(self.curves)):
-            self.curves[i].setPen(
+        for i,curve in enumerate(self.curves.values()):
+            curve.setPen(
                 pg.mkPen(color=[(1 - float(i) / len(self.curves)) * 255, float(i) / len(self.curves) * 255, 255]))
 
     def clear(self):
-        self.curves = []
-        self._curvesdata = []
+        self.curves = {}
+        self._curvesdata = {}
         self.plotWidget.clear()
 
 
@@ -100,50 +102,62 @@ class TimelinePlot(QtGui.QTabWidget):
         self.addTab(self.lineplot, 'Line plot')
         self.addTab(self.waterfall, 'Waterfall')
         self.addTab(self.stackplot, 'Stack plot')
-        self._data = {'t': [], 'colors': []}
+        self._data = {'t': []}
         self.setTabPosition(self.West)
         self.currentChanged.connect(self.widgetChanged)
 
-    @QtCore.Slot(tuple, list)
+    @QtCore.Slot(object, list)
     @nonesigmod.pyside_none_deco
-    def addData(self, data, color=None):
+    def addData(self, t, *args):
+        kwargs=OrderedDict()
+        if isinstance(args[0],OrderedDict):
+            kwargs=args[0]
+        elif len(args)==1:
+            kwargs['y']=args[0]
+        elif len(args)==2:
+            kwargs['x']=args[0]
+            kwargs['y']=args[1]
 
-        if data is None: return
-        if color is None: color = [255, 255, 255]
-        is1D = type(data[1]) is not tuple
+        if t is None: return
 
-        if is1D:
-            t, y = data
-        else:
-            t, (x, y) = data
+        is1D = True
+        if len(kwargs)==2 and 'x' in kwargs and 'y' in kwargs:
+            x = kwargs['x']
+            y = kwargs['y']
+            is1D = False
 
         if len(self._data['t']) == 0:
-            self.guessPlot(data)
-        # append data to currentData
-        if is1D:
-            colorhash = ','.join([str(c) for c in color])
-            if colorhash=='255,255,255': self._data['t'].append(t)
-            if colorhash not in self._data:
-                self._data[colorhash] = []
-                self._data['colors'].append(colorhash)
-            self._data[colorhash].append(y)  # use color as hash
+            self.setDMode(is1D)
 
-        else:
-            self._data['t'].append(t)
-            if 'y' not in self._data:
-                self._data['y'] = [y]
-            else:
-                self._data['y'].append(y)
-            if 'x' not in self._data: self._data['x'] = x  # maybe I should check that the x is the same otherwise?...
+        # append data to currentData
+        self._data['t'].append(t)
+        for key,value in kwargs.items():
+            if not key in self._data: self._data[key] = []
+            self._data[key].append(value)
+
         self.setData()
 
     def setData(self):
-        if 'x' not in self._data:
-            for colorhash in self._data['colors']:
-                color = map(int, colorhash.split(','))
-                self.currentPlot().setData(self._data['t'], self._data[colorhash], color)
+        self.currentPlot().setData(**self._data)
+
+    def setDMode(self,is1D):
+        index = None
+        if is1D:
+            self.setCurrentIndex(0)
+            self.setTabEnabled(0, True)
+            self.setTabEnabled(1, False)
+            self.setTabEnabled(2, False)
+            index = 0  # line plot
         else:
-            self.currentPlot().setData(self._data['t'], self._data['x'], self._data['y'])
+            self.setTabEnabled(0, False)
+            self.setTabEnabled(1, True)
+            self.setTabEnabled(2, True)
+            if self.currentIndex() == 0:
+                self.setCurrentIndex(1)
+            index = 1  # waterfall plot
+
+        if index is None: index = self.currentIndex()  # otherwise do nothing
+        return index
 
     def guessPlot(self, data):
         # if its a line plot, switch to line plot; if its a 3d plot, switch to a 3d plot or whichever is already selected
@@ -170,11 +184,11 @@ class TimelinePlot(QtGui.QTabWidget):
         return self.widget(self.currentIndex())
 
     def clearData(self):
-        self._data = {'t': [], 'colors': []}
+        self._data = {'t': []}
 
     def widgetChanged(self, *args, **kwargs):
         self.currentPlot().clear()
-        self.setData()
+        if len(self._data)>1: self.setData()
 
 
 ## Start Qt event loop unless running in interactive mode.
@@ -197,11 +211,14 @@ if __name__ == '__main__':
 
     def update():
         global t, timer
-        if True:
-            data = {'t': t, 'x': np.arange(0, 1, .01), 'y': np.sin(np.arange(0, 1, .01) * t), 'color': [255, 255, t]}
+        if False:
+            data = OrderedDict([('t', t),('FWHM',np.random.rand()),('center',t)])
+            t += 1
+        elif True:
+            data = {'t': t, 'x': np.arange(0, 1, .01), 'y': np.sin(np.arange(0, 1, .01) * t)}
             t += 1
         else:
-            data = {'t': t, 'y': np.sin(.01 * t), 'color': [255, 255, 255]}
+            data = {'t': t, 'y': np.sin(.01 * t)}
             t += 1
         timelineplot.addData(**data)
 

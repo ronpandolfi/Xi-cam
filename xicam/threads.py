@@ -239,9 +239,12 @@ class RunnableIterator(RunnableMethod):
                     self.emit(self._callback_slot,status)
                     # self.emitter.sigRetValue.emit(status)
                 except RuntimeError:
+                    etype, ex, tb = sys.exc_info()
+                    print 'exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method
+                    print 'this did not run'
                     msg.logMessage(('Runnable iterator tried to return value, but signal was already disconnected.'),msg.WARNING)
                     if self.lock is not None: self.lock.unlock()
-                    return
+
         except Exception:
             etype, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(etype, ex, tb)

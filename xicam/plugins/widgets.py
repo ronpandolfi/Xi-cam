@@ -975,7 +975,7 @@ class dimgViewer(QtGui.QWidget):
 
 
 class timelineViewer(dimgViewer):
-    sigAddTimelineData = QtCore.Signal(tuple, list)
+    sigAddTimelineData = QtCore.Signal(object,object)
     sigClearTimeline = QtCore.Signal()
     def __init__(self, simg=None, files=None, toolbar=None):
         self.variationcurve = dict()
@@ -1102,7 +1102,7 @@ class timelineViewer(dimgViewer):
                     # self.plotvariation(variation, [0, 255, 255])
                     # Run on thread queue
                     # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
-                    bg_variation(self.simg, self.operationindex, roi=roi, color=[0, 255, 255])
+                    bg_variation(self.simg, self.operationindex, roi=roi)
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:
