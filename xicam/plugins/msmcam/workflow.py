@@ -79,7 +79,7 @@ class Workflow(object):
             slc_a = 0
             slc_z = data.shape[0]
             if not slc_a == self.input_settings['FirstSlice']: 
-                slc_a = self.input_settings['FristSlice']
+                slc_a = self.input_settings['FirstSlice']
             if not slc_z == self.input_settings['LastSlice']:
                 slc_z = self.input_settings['LastSlice']
             preproc = PreProcessor(data[slc_a:slc_z,:,:], self.input_settings, self.preproc_settings, 0)

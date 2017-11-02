@@ -88,6 +88,8 @@ class MSMCam(base.plugin):
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
 
+        if self.toolbar.boxT.checkState():
+            self.toolbar.boxT.setChecked(False)
         self.wf.input_settings['InputDir'] = os.path.dirname(self.path[0])
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['image'])
         self.centerwidget.tab['filtered'].clear()
@@ -99,6 +101,8 @@ class MSMCam(base.plugin):
         if self.segmented is None: return
         if idx < 0: return
         key = self.segmented[idx]
+        if self.toolbar.boxT.checkState():
+            self.toolbar.boxT.setChecked(False)
         self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
 
     def protectparams(self, idx):
@@ -116,9 +120,9 @@ class MSMCam(base.plugin):
 
         if idx == 1:
             if state == 0:
-                self.centerwidget.tab['filter'].setImage(self.wf.filtered)
+                self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
             else:
-                self.centerwidget.tab['filter'].setImage(self.wf.filtered.T)
+                self.centerwidget.tab['filtered'].setImage(self.wf.filtered.T)
 
         if idx == 2:
             j = self.toolbar.viewSelect.currentIndex()
@@ -164,6 +168,8 @@ class MSMCam(base.plugin):
     def showFiltered(self, *args):
         msg.hideBusy()
         self.toolbar.actionSegment.setEnabled(True)
+        if self.toolbar.boxT.checkState():
+            self.toolbar.boxT.setChecked(False)
         if self.in_memory:
             self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
         else:
@@ -181,6 +187,8 @@ class MSMCam(base.plugin):
         self.toolbar.viewSelect.clear()
         self.toolbar.viewSelect.addItems(res)
         self.segmented = res
+        if self.toolbar.boxT.checkState():
+            self.toolbar.boxT.setChecked(False)
 
         if self.in_memory:
             self.centerwidget.tab['segmented'].setImage(self.wf.segmented['k-means'])
