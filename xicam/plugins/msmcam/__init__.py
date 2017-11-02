@@ -50,7 +50,7 @@ class MSMCam(base.plugin):
         self.toolbar.actionROI.triggered.connect(self.centerwidget.setROI)
         self.toolbar.actionSaveCfg.triggered.connect(self.saveConfig)
         self.toolbar.viewSelect.currentIndexChanged.connect(self.updateView)
-        self.toolbar.boxT.stateChanged.connect(self.viewTranspose)
+        self.toolbar.actionTranspose.triggered.connect(self.viewTranspose)
 
         super(MSMCam, self).__init__(*args, **kwargs)
 
@@ -88,8 +88,8 @@ class MSMCam(base.plugin):
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
 
-        if self.toolbar.boxT.checkState():
-            self.toolbar.boxT.setChecked(False)
+        if self.toolbar.actionTranspose.checkState():
+            self.toolbar.actionTranspose.setChecked(False)
         self.wf.input_settings['InputDir'] = os.path.dirname(self.path[0])
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['image'])
         self.centerwidget.tab['filtered'].clear()
@@ -101,8 +101,8 @@ class MSMCam(base.plugin):
         if self.segmented is None: return
         if idx < 0: return
         key = self.segmented[idx]
-        if self.toolbar.boxT.checkState():
-            self.toolbar.boxT.setChecked(False)
+        if self.toolbar.actionTranspose.checkState():
+            self.toolbar.actionTranspose.setChecked(False)
         self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
 
     def protectparams(self, idx):
@@ -168,8 +168,8 @@ class MSMCam(base.plugin):
     def showFiltered(self, *args):
         msg.hideBusy()
         self.toolbar.actionSegment.setEnabled(True)
-        if self.toolbar.boxT.checkState():
-            self.toolbar.boxT.setChecked(False)
+        if self.toolbar.actionTranspose.checkState():
+            self.toolbar.actionTranspose.setChecked(False)
         if self.in_memory:
             self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
         else:
@@ -187,8 +187,8 @@ class MSMCam(base.plugin):
         self.toolbar.viewSelect.clear()
         self.toolbar.viewSelect.addItems(res)
         self.segmented = res
-        if self.toolbar.boxT.checkState():
-            self.toolbar.boxT.setChecked(False)
+        if self.toolbar.actionTranspose.checkState():
+            self.toolbar.actionTranspose.setChecked(False)
 
         if self.in_memory:
             self.centerwidget.tab['segmented'].setImage(self.wf.segmented['k-means'])

@@ -131,8 +131,9 @@ class Toolbar(QtGui.QToolBar):
         self.addWidget(self.viewSelect)
 
         # Transpose
-        self.boxT = QtGui.QCheckBox('Transpose')
-        self.addWidget(self.boxT)
+        self.actionTranspose = self.newAction(icon_path="xicam/gui/msmicon_2.png", tooltip='Transpose')
+        self.actionTranspose.setCheckable(True)
+        self.addAction(self.actionTranspose)
         
 
     @staticmethod
