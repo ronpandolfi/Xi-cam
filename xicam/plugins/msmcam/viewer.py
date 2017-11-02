@@ -14,6 +14,8 @@ from PySide import QtCore, QtGui
 from pyqtgraph import ImageView
 from pyqtgraph import RectROI
 
+from collections import OrderedDict
+
 class CenterWidget(QtGui.QTabWidget):
     """
     Sets up Main panel to display Images.
@@ -28,7 +30,7 @@ class CenterWidget(QtGui.QTabWidget):
         self.roi = None
         self.ROISET = False
 
-        self.tab = { 'image': Viewer(), 'filtered': Viewer(), 'segmented': Viewer() }
+        self.tab = OrderedDict({ 'image': Viewer(), 'filtered': Viewer(), 'segmented': Viewer() })
         self.addTab(self.tab['image'], 'Image')
         self.addTab(self.tab['filtered'], 'Filtered')
         self.addTab(self.tab['segmented'], 'Segmented')
