@@ -91,19 +91,20 @@ class Toolbar(QtGui.QToolBar):
 
     def __init__(self):
         super(Toolbar, self).__init__()
+        self.setIconSize(QtCore.QSize(32, 32))
 
         # Masking action
-        self.actionMask = self.newAction(icon_path='xicam/gui/icons_08.png',
+        self.actionMask = self.newAction(icon_path='xicam/gui/icons_03.png',
             tooltip='Mask')
         self.addAction(self.actionMask)
 
         # ROI
-        self.actionROI = self.newAction(icon_path='xicam/gui/icons_roi.png',
+        self.actionROI = self.newAction(icon_path='xicam/gui/msmicon_0.png',
             tooltip='ROI', enabled=True)
         self.addAction(self.actionROI)
 
         # Filter action
-        self.actionFilter = self.newAction(icon_path='xicam/gui/icons_62.png', 
+        self.actionFilter = self.newAction(icon_path='xicam/gui/msmicon_1.png',
             tooltip='Filter')
         self.addAction(self.actionFilter)
 
