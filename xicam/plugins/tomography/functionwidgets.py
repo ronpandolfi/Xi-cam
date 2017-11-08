@@ -352,8 +352,8 @@ class AnglesFunctionWidget(FunctionWidget):
     def updated_param_dict(self):
 
         param_dict = {}
-        param_dict['ang1'] = float(self.param_dict['ang1'] + self.param_dict['range'])
-        param_dict['ang2'] = float(self.param_dict['ang1'])
+        param_dict['ang1'] = float(self.param_dict['ang1']) 
+        param_dict['ang2'] = float(self.param_dict['ang1'] + self.param_dict['range'])
         param_dict['nang'] = self.param_dict['nang']
 
         return param_dict

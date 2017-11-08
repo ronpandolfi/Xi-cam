@@ -1587,8 +1587,10 @@ Gridrec TomoCam:
       suffix: px
     - name: oversamp_factor
       type: float
+      value: 1.25
     - name: cutoff
       type: float
+      value: 0.5
     - name: arr
       type: list
       values:

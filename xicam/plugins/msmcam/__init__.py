@@ -88,7 +88,7 @@ class MSMCam(base.plugin):
             msg.showMessage('Unable to load data. Check log for details', timeout=10)
             raise e
 
-        if self.toolbar.actionTranspose.checkState():
+        if self.toolbar.actionTranspose.isChecked():
             self.toolbar.actionTranspose.setChecked(False)
         self.wf.input_settings['InputDir'] = os.path.dirname(self.path[0])
         self.centerwidget.setCurrentWidget(self.centerwidget.tab['image'])
@@ -101,7 +101,7 @@ class MSMCam(base.plugin):
         if self.segmented is None: return
         if idx < 0: return
         key = self.segmented[idx]
-        if self.toolbar.actionTranspose.checkState():
+        if self.toolbar.actionTranspose.isChecked():
             self.toolbar.actionTranspose.setChecked(False)
         self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
 
@@ -110,24 +110,35 @@ class MSMCam(base.plugin):
         if idx == 0: self.rightwidget.unlock()
         else: self.rightwidget.lock()
 
-    def viewTranspose(self, state):
+    def viewTranspose(self):
         idx = self.centerwidget.currentIndex()
+        state = self.toolbar.actionTranspose.isChecked()
         if idx == 0:
-            if state == 0:
+            if self.data is None:
+                self.toolbar.actionTranspose.setChecked(False)
+                return
+            if state == False:
                 self.centerwidget.tab['image'].setImage(self.data)
             else:
                 self.centerwidget.tab['image'].setImage(self.data.T)
 
         if idx == 1:
-            if state == 0:
+            if self.wf.filtered is None:
+                self.toolbar.actionTranspose.setChecked(False)
+                return
+            if state == False:
                 self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
             else:
                 self.centerwidget.tab['filtered'].setImage(self.wf.filtered.T)
 
         if idx == 2:
+            if self.wf.segmented is None:
+                self.toolbar.actionTranspose.setChecked(False)
+                return
+
             j = self.toolbar.viewSelect.currentIndex()
             key = self.segmented[j] 
-            if state == 0:
+            if state == False:
                 self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key])
             else:
                 self.centerwidget.tab['segmented'].setImage(self.wf.segmented[key].T)
@@ -168,7 +179,7 @@ class MSMCam(base.plugin):
     def showFiltered(self, *args):
         msg.hideBusy()
         self.toolbar.actionSegment.setEnabled(True)
-        if self.toolbar.actionTranspose.checkState():
+        if self.toolbar.actionTranspose.isChecked():
             self.toolbar.actionTranspose.setChecked(False)
         if self.in_memory:
             self.centerwidget.tab['filtered'].setImage(self.wf.filtered)
@@ -187,7 +198,7 @@ class MSMCam(base.plugin):
         self.toolbar.viewSelect.clear()
         self.toolbar.viewSelect.addItems(res)
         self.segmented = res
-        if self.toolbar.actionTranspose.checkState():
+        if self.toolbar.actionTranspose.isChecked():
             self.toolbar.actionTranspose.setChecked(False)
 
         if self.in_memory:
