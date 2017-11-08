@@ -506,7 +506,7 @@ class TomographyPlugin(base.plugin):
 
         slice_no = self.centerwidget.widget(self.currentIndex()).sinogramViewer.currentIndex
         maximum = self.centerwidget.widget(self.currentIndex()).sinogramViewer.data.shape[0]-1
-        dialog = sliceDialog(parent=self.centerwidget, val1=slice_no, val2=slice_no+20,maximum=maximum)
+        dialog = sliceDialog(parent=self.centerwidget, val1=slice_no, val2=slice_no+31,maximum=maximum)
         try:
             value = dialog.value
 

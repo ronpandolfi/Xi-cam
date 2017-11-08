@@ -607,6 +607,13 @@ class TomoCamReconFuncWidget(TomoPyReconFunctionWidget):
         if 'gridrec'in param_dict['algorithm']:
             input_params['fbp_filter_param'] = param_dict['cutoff']
             param_dict.pop('cutoff')
+        elif 'mbir' in param_dict['algorithm']:
+            input_params['smoothness'] = param_dict['smoothness']
+            param_dict.pop('smoothness')
+            input_params['p'] = param_dict['p']
+            param_dict.pop('p')
+            input_params['num_iter'] = param_dict['num_iter']
+            param_dict.pop('num_iter')
         else:
             input_params['num_iter'] = param_dict['num_iter']
             param_dict.pop('num_iter')
