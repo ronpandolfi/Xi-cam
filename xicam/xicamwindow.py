@@ -83,7 +83,7 @@ class MyMainWindow(QtCore.QObject):
 
         plugins.initplugins(placeholders)
 
-        plugins.plugins['MOTD'].instance.activate()
+        plugins.plugins['Tomography'].instance.activate()
 
         plugins.base.fileexplorer.sigOpen.connect(self.openfiles)
         plugins.base.fileexplorer.sigFolderOpen.connect(self.openfolder)
