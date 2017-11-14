@@ -98,7 +98,7 @@ class FunctionManager(fw.FeatureManager):
         'Gridrec': 'sino', 'FBP': 'sino', 'ART': 'sino', 'BART': 'sino', 'MLEM': 'sino', 'OSEm': 'sino',
         'OSPML Hybrid': 'sino', 'OSPML Quad': 'sino', 'PML Hybrid': 'sino', 'PML Quad': 'sino', 'SIRT': 'sino',
         'BP': 'sino', 'FBP_astra': 'sino', 'SIRT_astra': 'sino', 'SART': 'sino', 'ART_astra': 'sino', 'CGLS': 'sino', 'BP_CUDA': 'sino',
-        'FBP_CUDA': 'sino', 'SIRT_CUDA': 'sino', 'SART_CUDA': 'sino', 'CGLS_CUDA': 'sino', 'Gridrec Tomocam': 'sino',
+        'FBP_CUDA': 'sino', 'SIRT_CUDA': 'sino', 'SART_CUDA': 'sino', 'CGLS_CUDA': 'sino', 'Gridrec TomoCam': 'sino',
         'SIRT TomoCam': 'sino', 'MBIR TomoCam': 'sino',
         'Polar Mean Filter': 'sino',
         'F3D Bilateral Filter': 'both',
@@ -372,7 +372,7 @@ class FunctionManager(fw.FeatureManager):
                     dummy = self.cor_offset
                     self.cor_offset = lambda x: dummy(x) - n
         elif 'Padding' in name and param_dict['axis'] == 2:
-            n = param_dict['npad']
+            n = int(param_dict['npad'])
             dummy = self.cor_offset
             self.cor_offset = lambda x: dummy(x) + n
         elif 'Downsample' in name and param_dict['axis'] == 2:
@@ -686,7 +686,7 @@ class FunctionManager(fw.FeatureManager):
 
 
     def reconGenerator(self, datawidget, func_dict, theta, center, yaml_pipe,
-                       run_dict, dims, ncore = None, reconType='Full'):
+                       run_dict, dims, ncore = 1, reconType='Full'):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction or the
@@ -1007,7 +1007,7 @@ class FunctionManager(fw.FeatureManager):
         self.sigPipelineChanged.emit()
 
     def extractPipelineRunnable(self, runnable_pipe, center, params,
-                                proj, sino, sino_p_chunk, width, path, ncore=None):
+                                proj, sino, sino_p_chunk, width, path, ncore=1):
         """
         Saves the function pipeline as a runnable (Python) file. This needs more work.
 

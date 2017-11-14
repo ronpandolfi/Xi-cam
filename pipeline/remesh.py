@@ -1,11 +1,8 @@
 #! /usr/bin/env python
 
-# from image_load import *
-# import loader
 import numpy as np
 from pyFAI import geometry
 
-from PySide import QtGui
 import msg
 
 
@@ -47,7 +44,7 @@ def calc_q_range(lims, geometry, alphai, cen):
     return q_range, k0
 
 
-def remesh(image, filename, geometry, alphai):
+def remesh(image, geometry, alphai):
     shape = image.shape
     center = np.zeros(2, dtype=np.float)
     pixel = np.zeros(2, dtype=np.float)
@@ -118,7 +115,7 @@ def remesh(image, filename, geometry, alphai):
         qimg[mask] = 0.
         return np.rot90(qimg, 3), np.rot90(qpar, 3), np.rot90(qvrt, 3)
 
-def remeshqarray(image, filename, geometry, alphai):
+def remeshqarray(image, geometry, alphai):
     shape = image.shape
     center = np.zeros(2, dtype=np.float)
     pixel = np.zeros(2, dtype=np.float)

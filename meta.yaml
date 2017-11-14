@@ -1,0 +1,55 @@
+package:
+  name: xi-cam
+  version: 1.2.21
+
+source:
+  git_url: https://github.com/ronpandolfi/Xi-cam.git
+  git_tag: tomo
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - numpy
+    - cython
+
+  run:
+    - scipy
+    - Cython
+    - pyFAI
+    - fabio
+    - h5py
+    - PySide
+    - pyqtgraph
+    - QDarkStyle
+    - nexusformat
+    - Pillow
+    - pyfits
+    - PyOpenGL
+    - PyYAML
+    - qtconsole
+    - tifffile
+    - pysftp
+    - requests
+    - dask
+    - distributed
+    - appdirs
+    - futures
+    - scikit-image
+    - imagio
+    - vispy
+    - numpy
+    - matplotlib
+    - setuptools
+    - numexpr
+    - six
+    - jupyter-client
+    - ipykernel
+    - ipython
+    - paramiko
+    - tornado
+    - psutil
+    
+about:
+  home: https://github.com/ronpandolfi/Xi-cam
+  summary: Xi-cam build for Synchrotron tomography reconstruction

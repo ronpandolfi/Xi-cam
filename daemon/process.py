@@ -33,7 +33,8 @@ def process(parent, files, experiment,
                 thumb = pipeline.writer.thumbnail(img)
 
             if options['remesh']:
-                img = pipeline.remesh.remesh(img, path, experiment.getGeometry())
+                alphai = np.deg2rad(experiment.getvalue('Incidence Angle (GIXS)'))
+                img = pipeline.remesh.remesh(img, experiment.getGeometry(), alphai)
 
             variation = None
             if options['variation']:

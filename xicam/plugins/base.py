@@ -78,13 +78,14 @@ class plugin(QtCore.QObject):
 
     def __init__(self, placeholders):
         super(plugin, self).__init__()
-
         self.placeholders = placeholders
         self.setup()
 
     def setup(self, placeholders=None):
         if placeholders: self.placeholders = placeholders
 
+        # If inheriting class did not define widgets,
+        # load the defaults.
         if not hasattr(self, 'centerwidget'):
             self.centerwidget = None
 

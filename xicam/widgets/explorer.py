@@ -38,7 +38,7 @@ class LocalFileView(QtGui.QTreeView):
 
         self.file_model = QtGui.QFileSystemModel()
         self.setModel(self.file_model)
-        self.path = config.settings['defaultlocalpath']
+        self.path = config.settings['Default Local Path']
         if not self.path: self.path = os.path.expanduser('~')  # pathtools.getRoot()
         self.refresh(self.path)
 
@@ -78,11 +78,18 @@ class LocalFileView(QtGui.QTreeView):
         else:
             self.path = path
 
-        root = QtCore.QDir(path)
+        if os.path.isdir(path):
+            filter='*'
+            root=path
+        else:
+            filter=os.path.basename(path)
+            root=path[:-len(filter)]
+        root = QtCore.QDir(root)
         self.file_model.setRootPath(root.absolutePath())
+        self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
         self.pathChanged.emit(path)
-        config.settings['defaultlocalpath'] = path
+        config.settings['Default Local Path'] = path
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))

@@ -666,9 +666,11 @@ Projection Angles:
       type: int
     - name: ang1
       type: float
+      value: 0
       suffix: "\u00b0"
     - name: range
       type: int
+      value: 180
       suffix: "\u00b0"
   name:
     - angles
@@ -1587,8 +1589,10 @@ Gridrec TomoCam:
       suffix: px
     - name: oversamp_factor
       type: float
+      value: 1.25
     - name: cutoff
       type: float
+      value: 0.5
     - name: arr
       type: list
       values:
@@ -1611,8 +1615,10 @@ SIRT TomoCam:
       suffix: px
     - name: oversamp_factor
       type: float
+      value: 1.25
     - name: num_iter
       type: int
+      value: 50
     - name: arr
       type: list
       values:
@@ -1635,12 +1641,16 @@ MBIR TomoCam:
       suffix: px
     - name: oversamp_factor
       type: float
+      value: 1.25
     - name: num_iter
       type: int
+      value: 50
     - name: smoothness
       type: float
+      value: 0.1
     - name: p
       type: float
+      value: 1.2
     - name: arr
       type: list
       values:
