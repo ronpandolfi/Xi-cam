@@ -11,7 +11,7 @@ if op_sys == 'Darwin':
 
 
 import base, viewer
-from PySide import QtGui
+from PySide import QtGui,QtCore
 import os
 # from moviepy.editor import VideoClip
 import numpy as np
@@ -19,6 +19,7 @@ import numpy as np
 import widgets
 from pipeline import calibration
 from xicam.widgets.NDTimelinePlotWidget import TimelinePlot
+from collections import OrderedDict
 
 
 class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
@@ -148,12 +149,23 @@ class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
             tab.unload()
         self.centerwidget.currentWidget().load()
 
+    @QtCore.Slot(object,object)
+    def unpack(self,*args):
+        if isinstance(args[1], OrderedDict):
+            self.bottomwidget.addData(args[0], **args[1])
+        elif isinstance(args[1], tuple):
+            self.bottomwidget.addData(args[0], *args[1])
+        else:
+            self.bottomwidget.addData(args[0], args[1])
+
     def openfiles(self, files, operation=None, operationname=None):
         self.activate()
         widget = widgets.OOMTabItem(itemclass=widgets.timelineViewer, files=files, toolbar=self.toolbar)
         self.centerwidget.addTab(widget, 'Timeline: ' + os.path.basename(files[0]) + ', ...')
         self.centerwidget.setCurrentWidget(widget)
-        self.getCurrentTab().sigAddTimelineData.connect(self.bottomwidget.addData)
+
+
+        self.getCurrentTab().sigAddTimelineData.connect(self.unpack)
         self.getCurrentTab().sigClearTimeline.connect(self.bottomwidget.clearData)
 
 

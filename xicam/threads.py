@@ -239,9 +239,12 @@ class RunnableIterator(RunnableMethod):
                     self.emit(self._callback_slot,status)
                     # self.emitter.sigRetValue.emit(status)
                 except RuntimeError:
+                    etype, ex, tb = sys.exc_info()
+                    print 'exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method
+                    print 'this did not run'
                     msg.logMessage(('Runnable iterator tried to return value, but signal was already disconnected.'),msg.WARNING)
                     if self.lock is not None: self.lock.unlock()
-                    return
+
         except Exception:
             etype, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(etype, ex, tb)
@@ -256,7 +259,7 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
     decorated_method = threads.method(callback_slot, ...)(method_to_decorate)
-    then simply run it: decorated_iterator(*args, **kwargs)
+    then simply run it: decorated_method(*args, **kwargs)
 
     Parameters
     ----------
