@@ -5,10 +5,6 @@ Usage: python setup.py install
        twine upload dist/*
 """
 
-# if __name__ == "__main__":
-#     print 'You should run his with pip instead!\n Try this:\n\tpip install .\n...or...\n\tpip install xicam'
-#     exit(0)
-
 try:
     import numpy as np
 except ImportError:
@@ -27,12 +23,6 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:  # rst?
     long_description = f.read()
 
-EXT = Extension(name='pipeline.cWarpImage',
-                sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
-                extra_compile_args=['-O3', '-ffast-math'],  # '-fopenmp',, '-I/opt/local/include'
-                # extra_link_args=['-fopenmp'],
-                include_dirs=[np.get_include()],
-                )
 setup(
     name='xicam',
 
@@ -60,7 +50,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Science/Research',
@@ -127,8 +117,5 @@ setup(
         'gui_scripts': [
             'xicam=xicamlauncher.main:main',
         ],
-    },
-
-    ext_modules=[EXT],
-    include_package_data=True
+    }
 )
