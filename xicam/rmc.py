@@ -46,7 +46,7 @@ class gui():
 
     def addfiles(self):
         paths, ok = QtGui.QFileDialog.getOpenFileNames(self.ui, 'Add files to RMC', os.curdir,
-                                                       "*.tif *.edf *.fits *.tif")
+                                                       "*.tif *.edf *.tiff")
         self.ui.rmcinputpaths.addItems(paths)
 
     def removefiles(self):

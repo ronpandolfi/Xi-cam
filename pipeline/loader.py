@@ -25,7 +25,7 @@ import numpy as nx
 
 import detectors  # injects pyFAI with custom detectors
 
-acceptableexts = ['.fits', '.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
+acceptableexts = ['.edf', '.tif', '.tiff', '.nxs', '.hdf', '.cbf', '.img', '.raw', '.mar3450', '.gb', '.h5',
                   '.out', '.txt', '.npy']
 imagecache = dict()
 

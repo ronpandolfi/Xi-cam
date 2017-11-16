@@ -56,7 +56,6 @@ pipeline/spacegrp_peaks.py
 pipeline/variation.py
 pipeline/variationoperators.py
 pipeline/writer.py
-samples/Ade_1Close_28639-00002.fits
 samples/AgB_5s_hi_2m.txt
 samples/AgB_5s_lo_2m.txt
 xicam/ROI.py

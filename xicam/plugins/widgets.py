@@ -1684,7 +1684,7 @@ class fileTreeWidget(QtGui.QTreeView):
         for i in range(1, 4):
             header.hideSection(i)
         filefilter = ['*' + ext for ext in
-                      loader.acceptableexts]  # ["*.tif", "*.edf", "*.fits", "*.nxs", "*.hdf", "*.cbf"]
+                      loader.acceptableexts]  # ["*.tif", "*.edf", "*.nxs", "*.hdf", "*.cbf"]
         self.filetreemodel.setNameFilters(filefilter)
         self.filetreemodel.setNameFilterDisables(False)
         self.filetreemodel.setResolveSymlinks(True)
