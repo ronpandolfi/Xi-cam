@@ -12,7 +12,6 @@ import pyFAI
 from pyFAI import detectors
 import logging
 from . import msg
-import pyfits
 from nexusformat import nexus as nx
 from collections import OrderedDict
 import re
@@ -501,15 +500,6 @@ class hipgisaxsimage(fabioimage):
         data = np.loadtxt(f)
         data = (data / data.max() * ((2 ** 32) - 1)).astype(np.uint32).copy()
         self.data = data
-        return self
-
-
-@register_fabioclass
-class fitsimage(fabioimage):
-    extensions = ['fits']
-
-    def read(self, f, frame=None):
-        self.data = np.rot90(np.fliplr(pyfits.open(f)[2].data), 2)
         return self
 
 

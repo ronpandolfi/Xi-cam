@@ -6,6 +6,7 @@ Home-page: https://bitbucket.org/ronpandolfi/xicam
 Author: Ronald J Pandolfi
 Author-email: ronpandolfi@lbl.gov
 License: BSD
+Description-Content-Type: UNKNOWN
 Description: .. hidden image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?branch=master
         .. image:: https://readthedocs.org/projects/xi-cam/badge/?version=latest
         
@@ -71,7 +72,7 @@ Description: .. hidden image:: https://travis-ci.org/ronpandolfi/Xi-cam.svg?bran
         publicly, and to permit other to do so.
 Keywords: synchrotron analysis x-ray scattering
 Platform: UNKNOWN
-Classifier: Development Status :: 3 - Alpha
+Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Science/Research
 Classifier: Topic :: Scientific/Engineering :: Physics
 Classifier: License :: OSI Approved :: BSD License

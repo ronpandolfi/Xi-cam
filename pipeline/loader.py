@@ -4,7 +4,6 @@ import os
 
 import fabio
 import numpy as np
-import pyfits
 
 # from nexpy.api import nexus as nx
 from pyFAI import detectors
@@ -63,12 +62,7 @@ def loadimage(path):
 def readenergy(path):
     try:
         if os.path.splitext(path)[1] in acceptableexts:
-            if os.path.splitext(path)[1] == '.fits':
-                head = pyfits.open(path)
-                # print head[0].header.keys()
-                paras = scanparaslines(str(head[0].header).split('\r'))
-                # print paras
-            elif os.path.splitext(path)[1] in ['.nxs', '.hdf']:
+            if os.path.splitext(path)[1] in ['.nxs', '.hdf']:
                 pass
                 # nxroot = nx.load(path)
                 # # print nxroot.tree
@@ -115,12 +109,7 @@ def merge_dicts(*dict_args):
 def loadparas(path):
     try:
         extension = os.path.splitext(path)[1]
-        if extension == '.fits':
-            head = pyfits.open(path)
-            # print head[0].header
-            return head[0].header
-
-        elif extension == '.edf':
+        if extension == '.edf':
             return fabio.open(path).header
 
         elif extension == '.gb':

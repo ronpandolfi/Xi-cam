@@ -8,7 +8,6 @@ pyqtgraph
 QDarkStyle
 nexusformat
 Pillow
-pyfits
 PyOpenGL
 PyYAML
 qtconsole

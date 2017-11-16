@@ -1,6 +1,5 @@
 client
 daemon
-local
 modpkgs
 pipeline
 xicam

@@ -82,7 +82,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
+                      'nexusformat', 'Pillow', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
                       'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy'],
 
     setup_requires=['numpy', 'cython'],
@@ -113,9 +113,10 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={
-        'gui_scripts': [
-            'xicam=xicamlauncher.main:main',
-        ],
-    }
+    #entry_points={
+    #    'gui_scripts': [
+    #        'xicam=xicamlauncher.main:main',
+    #    ],
+    #}
+    include_package_data = True
 )

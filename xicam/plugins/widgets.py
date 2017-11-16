@@ -4,7 +4,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools, writer
+from pipeline import loader, integration, peakfinding, center_approx, variationoperators, pathtools, writer
 from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
