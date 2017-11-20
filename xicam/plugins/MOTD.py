@@ -27,17 +27,17 @@ class MOTDPlugin(base.plugin):
     # Defer methods to other plugins
 
     def openSelected(self, *args, **kwargs):
-        xglobals.plugins['Timeline'].instance.activate()
-        xglobals.plugins['Timeline'].instance.openSelected(*args, **kwargs)
+        xglobals.plugins['Tomography'].instance.activate()
+        xglobals.plugins['Tomography'].instance.openSelected(*args, **kwargs)
 
     def openfiles(self, *args, **kwargs):
-        xglobals.plugins['Viewer'].instance.activate()
-        xglobals.plugins['Viewer'].instance.openfiles(*args, **kwargs)
+        xglobals.plugins['Tomography'].instance.activate()
+        xglobals.plugins['Tomography'].instance.openfiles(*args, **kwargs)
 
     def calibrate(self):
         xglobals.plugins['Viewer'].instance.activate()
         xglobals.plugins['Viewer'].instance.calibrate()
 
     def currentImage(self):
-        xglobals.plugins['Viewer'].instance.activate()
-        xglobals.plugins['Viewer'].instance.currentImage()
+        xglobals.plugins['Tomography'].instance.activate()
+        xglobals.plugins['Tomography'].instance.currentImage()
