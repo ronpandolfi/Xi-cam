@@ -16,6 +16,8 @@ Contents:
     winSourceInstall
     pluginUserTutorial
     pluginTutorial
+    testdoc
+    SAXSTutorial
     workflowAPI
 
 
