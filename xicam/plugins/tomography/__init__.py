@@ -491,7 +491,7 @@ class TomographyPlugin(base.plugin):
             dims = self.get_reader_dims(sino=(prev_slice, prev_slice + 1, 1))
             dims += (0,)
             self.preview_slices = self.centerwidget.widget(self.currentIndex()).sinogramViewer.currentIndex
-            self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+            self.processFunctionStack(callback=lambda *x: self.runSlicePreview(*x), dims=dims,
                                       fixed_func=fixed_func, prange=prange)
 
     def multiSlicePreviewAction(self, message='Computing multi-slice preview...'):
@@ -522,13 +522,13 @@ class TomographyPlugin(base.plugin):
                         dims += (0,)
                         self.preview_slices = value[1]
                         self.centerwidget.widget(self.currentIndex()).sinogramViewer.setIndex(self.preview_slices)
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+                        self.processFunctionStack(callback=lambda *x: self.runSlicePreview(*x), dims=dims,
                                                   fixed_func=None)
                     else:
                         dims = self.get_reader_dims(sino=(value[0], value[1] + 1, 1))
                         dims += (0,)
                         self.preview_slices = [value[0],value[1]]
-                        self.processFunctionStack(callback=lambda x: self.runSlicePreview(*x), dims=dims,
+                        self.processFunctionStack(callback=lambda *x: self.runSlicePreview(*x), dims=dims,
                                                   fixed_func=None)
         except AttributeError:
             pass
@@ -553,7 +553,7 @@ class TomographyPlugin(base.plugin):
                 msg.showMessage('Computing 3D preview...', timeout=0)
                 dims = self.get_reader_dims(sino = (None, None, val), width=(None, None, val))
                 dims += (0,)
-                self.processFunctionStack(callback=lambda x: self.run3DPreview(*x), dims=dims)
+                self.processFunctionStack(callback=lambda *x: self.run3DPreview(*x), dims=dims)
 
 
     def runSlicePreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
@@ -590,7 +590,7 @@ class TomographyPlugin(base.plugin):
         bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, 'Slice')
 
 
-    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, dims=None):
+    def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
         Callback function that receives the partial stack and corresponding dictionary required to run a preview and
         add it to the viewer.TomoViewer.preview3DViewer

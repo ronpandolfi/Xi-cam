@@ -274,7 +274,19 @@ def loadpath(path):
         except Exception as ex:
             msg.logMessage(('Stitching failed: ', ex.message),msg.ERROR)
 
-    return loadimage(path), None
+    img = loadimage(path)
+
+    # Do extra rotations/transposition
+    if config.settings['Image Load Transpose']:
+        img=img.transpose()
+    if config.settings['Image Load Rotations']:
+        img=np.rot90(img,config.settings['Image Load Rotations'])
+
+    if not isinstance(img, tuple):
+        mask = finddetectorbyfilename(path).calc_mask()
+        if mask is None: mask = np.zeros_like(img)
+        img = (img, 1-mask)
+    return img
 
 
 def loadxfs(path):
@@ -425,7 +437,7 @@ class diffimage():
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1036,7 +1048,7 @@ class diffimage2(object):
                         self.experiment.addtomask(np.rot90(1 - mask, 3))  # FABIO uses 0-valid mask
                     self.experiment.setvalue('Pixel Size X', detector.pixel1)
                     self.experiment.setvalue('Pixel Size Y', detector.pixel2)
-                    self.experiment.setvalue('Detector', detector.name)
+                    self.experiment.setvalue('Detector', type(detector))
         return self._detector
 
     def finddetector(self):
@@ -1181,6 +1193,11 @@ class diffimage2(object):
     def view(self, t):
         if t is np.ndarray:
             return self.displaydata
+
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            msg.logMessage('Conflict with newstyle pyqtgraph imageview; see line 669',level=msg.ERROR)
+        return self
 
     def __getitem__(self, item):
         return self.displaydata[item]
@@ -1328,6 +1345,7 @@ class multifilediffimage2(diffimage2):
 
     @property
     def currentframe(self):
+        if self._currentframe is None: return 0
         return self._currentframe
 
     @currentframe.setter
@@ -1410,7 +1428,9 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            var=variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            t=self.xvals('')[i]
+            return t, var
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None

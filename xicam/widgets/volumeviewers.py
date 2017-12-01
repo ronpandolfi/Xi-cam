@@ -92,6 +92,8 @@ class VolumeViewer(QtGui.QWidget):
         else:
             sliceobj = 3*(slice(0, None),)
 
+        if vol is not None: vol=np.nan_to_num(vol)
+
         self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
         if vol is not None or path is not None:
@@ -151,8 +153,8 @@ class VolumeViewer(QtGui.QWidget):
         if self.vol is None:
             return None,None
         if step == 'auto':
-            step = (np.ceil(float(self.vol.shape[0]) / targetImageSize),
-                    np.ceil(float(self.vol.shape[1]) / targetImageSize))
+            step = (int(np.ceil(float(self.vol.shape[0]) / targetImageSize)),
+                    int(np.ceil(float(self.vol.shape[1]) / targetImageSize)))
         if np.isscalar(step):
             step = (step, step)
         stepData = self.vol[::step[0], ::step[1]]
@@ -249,7 +251,6 @@ class SliceWidget(pg.HistogramLUTWidget):
         bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
 
-
 scene.visuals.Volume = VolumeVisual
 
 class VolumeRenderWidget(scene.SceneCanvas):
@@ -295,6 +296,9 @@ class VolumeRenderWidget(scene.SceneCanvas):
         self.vol = vol
 
         if slice is not None:
+            def intify(a):
+                if a is not None: return int(a)
+            sliceobj = [slice(intify(s.start),intify(s.stop),intify(s.step)) for s in sliceobj]
             slicevol = self.vol[sliceobj]
         else:
             slicevol = self.vol

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 __author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
@@ -118,8 +117,8 @@ class FunctionWidget(fw.FeatureWidget):
         self.param_dict.update({key : val for (key, val) in zip(argspec[0][-default_argnum:], argspec[3])})
         for key, val in self.param_dict.iteritems():
             if key in [p.name() for p in self.params.children()]:
-                self.params.child(key).setValue(val)
-                self.params.child(key).setDefault(val)
+                self.params.param(key).setValue(val)
+                self.params.param(key).setDefault(val)
 
         # Create a list of argument names (this will most generally be the data passed to the function)
         self.missing_args = [i for i in argspec[0] if i not in self.param_dict.keys()]
@@ -859,28 +858,7 @@ class WriteFunctionWidget(FunctionWidget):
         for p, ipf in self.input_functions.iteritems():
             ipf.updateParamsDict()
 
-
 class CORSelectionWidget(QtGui.QWidget):
-
-    """
-    Widget holding functions to auto calculate COR and these functions' parameters
-
-    Attributes
-    ----------
-    function: FunctionWidget
-        functionwidget representing function to calculate COR. Can be 'Phase Correlation', 'Vo', or 'Nelder-Mead'
-    params: pyqtgraph.Parameter
-        contains parameters used to calculate COR associated with 'function' attribute
-    method_box: QtGui.ComboBox
-        used to select auto COR function
-    cor_detection_funcs : list
-        List of available COR detection functions. Used to set options in self.method_box
-
-    Signals
-    -------
-    sigCORFuncChanged(str, QtGui.QWidget)
-        emitted when user selects another COR function from 'method_box' attribute
-    """
 
     cor_detection_funcs = ['Phase Correlation', 'Vo', 'Nelder-Mead']
     sigCORFuncChanged = QtCore.Signal(str, QtGui.QWidget)

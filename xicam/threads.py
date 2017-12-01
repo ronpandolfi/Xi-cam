@@ -10,6 +10,11 @@ __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
 
+# Threading debug notes:
+# 1. YOU CANNOT COMMUNICATE NUMPY ARRAYS ACROSS THREADS ON WINDOWS BUILDS!
+# 2. SOME PYFAI INTEGRATION METHODS DON'T WORK ACROSS THEADS ON WINDOWS; ONLY NUMPY/CYTHON WORK!
+
+
 import sys
 import types
 import traceback
@@ -122,11 +127,11 @@ class RunnableMethod(QtCore.QRunnable):
             if self.lock is not None:
                 self.lock.lock()
             value = self._method(*self.method_args, **self.method_kwargs)
-            if value is None:
-                value = False
             try:
                 if self._callback_slot: self.emit(self._callback_slot, value)
             except RuntimeError:
+                etype, ex, tb = sys.exc_info()
+                print 'exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method
                 print 'this did not run'
                 msg.logMessage(('Runnable method tried to return value, but signal was already disconnected.'),
                                msg.WARNING)
@@ -135,6 +140,7 @@ class RunnableMethod(QtCore.QRunnable):
 
         except Exception:
             etype, ex, tb = sys.exc_info()
+            print 'exception:',etype,ex,traceback.format_exc(),self._callback_slot,self._method
             self.emitter.sigExcept.emit(etype, ex, tb)
         else:
             self.emitter.sigFinished.emit()
@@ -142,7 +148,9 @@ class RunnableMethod(QtCore.QRunnable):
             if self.lock is not None:
                 self.lock.unlock()
 
-    def emit(self,slot,*value):
+    def emit(self,slot,value):
+        if slot is None: return
+        if type(value) is not tuple: value = (value,)
         if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name str
             if slot is None: return
             value = map(nonesigmod.pyside_none_wrap, value)
@@ -223,18 +231,20 @@ class RunnableIterator(RunnableMethod):
         if self.lock is not None: self.lock.lock()
         try:
             for status in self._method(*self.method_args, **self.method_kwargs):
-                if type(status) is not tuple: status = (status,)
                 if self._interrupt:
                     raise StopIteration('{0} running in background thread {1} interrupted'.format(
                                             self._method.__name__, QtCore.QThread.currentThreadId()))
                 try:
                     # print 'status:',status
-                    self.emit(self._callback_slot,*status)
+                    self.emit(self._callback_slot,status)
                     # self.emitter.sigRetValue.emit(status)
                 except RuntimeError:
+                    etype, ex, tb = sys.exc_info()
+                    print 'exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method
+                    print 'this did not run'
                     msg.logMessage(('Runnable iterator tried to return value, but signal was already disconnected.'),msg.WARNING)
                     if self.lock is not None: self.lock.unlock()
-                    return
+
         except Exception:
             etype, ex, tb = sys.exc_info()
             self.emitter.sigExcept.emit(etype, ex, tb)
@@ -249,7 +259,7 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
     decorated_method = threads.method(callback_slot, ...)(method_to_decorate)
-    then simply run it: decorated_iterator(*args, **kwargs)
+    then simply run it: decorated_method(*args, **kwargs)
 
     Parameters
     ----------
@@ -340,6 +350,7 @@ class Worker(QtCore.QThread):
         super(Worker, self).__init__(parent)
         self.queue = queue
         self.pool = QtCore.QThreadPool.globalInstance()
+        print 'maxthreads:',self.pool.maxThreadCount()
 
 
     # def __del__(self):

@@ -13,7 +13,11 @@ Contents:
 
     introduction
     macSourceInstall
+    winSourceInstall
+    pluginUserTutorial
     pluginTutorial
+    testdoc
+    SAXSTutorial
     workflowAPI
 
 
