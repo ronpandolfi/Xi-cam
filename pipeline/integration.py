@@ -357,9 +357,6 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     alphai=config.activeExperiment.getvalue('Incidence Angle (GIXS)')
     msg.logMessage('Incoming angle applied to remeshed q integration: ' + str(alphai),msg.DEBUG)
 
-    if qvrt is None or qpar is None:
-        import remesh
-        qpar, qvrt = remesh.remeshqarray(data, AI, np.deg2rad(alphai))
     if mask is None: mask = config.activeExperiment.mask
     if AIdict is None:
         AI = config.activeExperiment.getAI()

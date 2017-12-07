@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['Viewer']
+disabledatstart = ['Timeline', 'Viewer']
 
 
 def initplugins(placeholders):

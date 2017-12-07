@@ -6,7 +6,6 @@ import tifffile
 import glob
 import numpy as np
 from fabio.fabioimage import fabioimage
-from fabio import fabioutils, edfimage, tifimage
 import fabio
 import pyFAI
 from pyFAI import detectors
@@ -23,9 +22,12 @@ def register_fabioclass(cls):
         if extension in fabioutils.FILETYPES:
             fabioutils.FILETYPES[extension].append(cls.__name__.rstrip('image'))
         else:
-            fabioutils.FILETYPES[extension] = [cls.__name__.rstrip('image')]
-    return cls
+            infodialog("The FabIO package was updated. Please restart Xi-cam.",'Update Success!')
+            exit(0)
 
+from fabio import fabioutils, edfimage, tifimage, fabioformats
+
+fabioformats.__dict__['_extension_cache'] = None
 
 h5classes = list()
 tiffclasses = list()
@@ -40,9 +42,9 @@ def register_h5class(cls):
     h5classes.append(cls)
     return cls
 
-@register_fabioclass
+
 class xicamtiffimage(fabioimage):
-    extensions = ['.tiff', '.tif']
+    DEFAULT_EXTENTIONS = ['.tiff', '.tif']
 
     def read(self, filename, frame=None):
         for tiff in tiffclasses:
@@ -68,9 +70,8 @@ class xicamtiffimage(fabioimage):
 fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'xicamtiff'))
 
 
-@register_fabioclass
 class hdf5image(fabioimage):
-    extensions = ['.hdf','.h5','.hdf5']
+    DEFAULT_EXTENTIONS = ['.hdf','.h5','.hdf5']
 
     # A proxy class which defers to specific hdf5 schema classes
     def read(self, filename, frame=None):
@@ -99,7 +100,7 @@ class ALS832H5image(fabioimage):
     """
     Fabio Image class for ALS Beamline 8.3.2 HDF5 Datasets
     """
-    extensions = ['h5']
+    DEFAULT_EXTENTIONS = ['h5']
 
     def __init__(self, data=None, header=None, transpose=False):
         super(ALS832H5image, self).__init__(data=data, header=header)
@@ -274,9 +275,8 @@ class ALS832H5image(fabioimage):
         self._h5.close()
 
 
-@register_h5class
 class nexusimage(fabioimage):
-    extensions = ['.hdf']
+    DEFAULT_EXTENTIONS = ['.hdf']
 
     def read(self, f, frame=None):
         # nxroot = nx.nxload(f)
@@ -430,7 +430,7 @@ class tomotifimage(fabioimage):
     Fabio class for tiff images (specifically for tomography)
     """
 
-    extensions = ['.tif', '.tiff']
+    DEFAULT_EXTENTIONS = ['.tif', '.tiff']
 
     def __init__(self, data=None, header=None):
         super(tomotifimage, self).__init__(data=data, header=header)
@@ -483,18 +483,16 @@ class tomotifimage(fabioimage):
     def close(self):
         pass
 
-@register_fabioclass
 class npyimage(fabioimage):
-    extensions = ['.npy']
+    DEFAULT_EXTENTIONS = ['.npy']
 
     def read(self, f, frame=None):
         self.data = np.load(f)
         return self
 
 
-@register_fabioclass
 class hipgisaxsimage(fabioimage):
-    extensions = ['out']
+    DEFAULT_EXTENTIONS = ['out']
 
     def read(self, f, frame=None):
         data = np.loadtxt(f)
@@ -503,9 +501,18 @@ class hipgisaxsimage(fabioimage):
         return self
 
 
-@register_fabioclass
+class fitsimage(fabioimage):
+    DESCRIPTION = "FITS file format from astronomy"
+
+    DEFAULT_EXTENTIONS = ["fits"]
+
+    def read(self, f, frame=None):
+        self.data = np.rot90(np.fliplr(pyfits.open(f)[2].data), 2)
+        return self
+
+
 class gbimage(fabioimage):
-    extensions = ['gb']
+    DEFAULT_EXTENTIONS = ['gb']
 
     def read(self, f, frame=None):
         data = np.fromfile(f, np.float32)
@@ -519,9 +526,8 @@ class gbimage(fabioimage):
         return self
 
 
-@register_fabioclass
 class rawimage(fabioimage):
-    extensions = ['raw']
+    DEFAULT_EXTENTIONS = ['raw']
 
     def read(self, f, frame=None):
         with open(f, 'r') as f:
@@ -545,7 +551,6 @@ class rawimage(fabioimage):
         return self
 
 
-@register_fabioclass
 # @register_fabioclass
 # class H5image(fabioimage):
 #     """
@@ -607,8 +612,7 @@ class rawimage(fabioimage):
 
 @register_h5class
 class ALS733H5image(fabioimage):
-
-    extensions = ['h5']
+    DEFAULT_EXTENTIONS = ['h5']
 
     def _readheader(self, f):
         fname = f.name  # get filename from file object
@@ -693,6 +697,7 @@ class GeneralAPSH5image(fabioimage):
     """
     Fabio Image class for arbitrary APS H5 structure
     """
+    DEFAULT_EXTENTIONS = ['h5']
     def __init__(self, data=None , header=None):
         super(GeneralAPSH5image, self).__init__(data=data, header=header)
         self.frames = None
@@ -834,7 +839,7 @@ class DXchangeH5image(fabioimage):
     """
     Fabio Image class for Data-Exchange HDF5 Datasets
     """
-
+    DEFAULT_EXTENTIONS = ['h5']
     def __init__(self, data=None, header=None):
         super(DXchangeH5image, self).__init__(data=data, header=header)
         self.currentframe = 0
@@ -990,9 +995,8 @@ class CondensedTiffStack(object):
         pass
 
 
-@register_fabioclass
 class EdfImage(edfimage.EdfImage):
-    extensions = ['.edf']
+    DEFAULT_EXTENTIONS = ['.edf']
 
     def read(self, f, frame=None):
         return super(EdfImage, self).read(f, frame)
@@ -1053,7 +1057,10 @@ class H5ReadError(IOError):
 #     imshow(arr, cmap='gray')
 #     show()
 def tests():
-    print(fabio.open('/media/winHDD/hparks/aps_example.h5').data)
+
+    # print(fabio.open('/home/rp/Downloads/Bar5_sample2_th0.098_10.00s_3451.tif').data)
+    print(fabio.open('/home/rp/Downloads/MFLP3_50Al_OK_5TH_Sp2_40549-00001(1).fits').data)
 
 if __name__ == '__main__':
+
     tests()

@@ -35,8 +35,8 @@ class MOTDPlugin(base.plugin):
         xglobals.plugins['Tomography'].instance.openfiles(*args, **kwargs)
 
     def calibrate(self):
-        xglobals.plugins['Viewer'].instance.activate()
-        xglobals.plugins['Viewer'].instance.calibrate()
+        xglobals.plugins['Tomography'].instance.activate()
+        xglobals.plugins['Tomography'].instance.calibrate()
 
     def currentImage(self):
         xglobals.plugins['Tomography'].instance.activate()
