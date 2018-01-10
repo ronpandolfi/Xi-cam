@@ -45,11 +45,17 @@ class BatchPlugin(base.plugin):
         self._run_button_text = '&Run'
         self._stop_button_text = 'S&top'
 
+        # create basic ui components
+        self.build_ui()
+        self.centerwidget = self.viewer_frame
+        self.rightwidget = self.wf_frame
+        self.bottomwidget = self.batch_control
+
         # PawsAPI instances for each workflow,
         # and ParameterTree roots as well
         self._paws = OrderedDict()
         self._root_params = OrderedDict()
-        self._run_wf_buttons = OrderedDict()
+        #self._run_wf_buttons = OrderedDict()
         # allowed datatypes for ParameterTree entries:
         self.allowed_datatypes = ['int','float','str','bool']
         for wf_title,wf_uri in self._wf_uris.items():
@@ -64,14 +70,7 @@ class BatchPlugin(base.plugin):
             # Connect the viewer
             #self._paws[wf_title].get_wf(self._wf_names[wf_title]).opFinished.connect( self.update_visuals )
 
-        # create basic ui components
-        self.build_ui()
-        self.centerwidget = self.viewer_frame
-        self.rightwidget = self.wf_frame
-        self.bottomwidget = self.batch_control
-
         # select a default workflow (populates ui content)
-        self._current_wf_title = None
         self.select_workflow(self._wf_uris.keys()[0])
 
         #self._current_visual = None
@@ -95,11 +94,15 @@ class BatchPlugin(base.plugin):
         lm = ListModel(self._wf_uris.keys())
         self.wf_selector.setModel(lm)
         self.wf_selector.currentIndexChanged.connect( partial(self._set_wf_by_idx) )
- 
+        self.run_wf_button = QtGui.QPushButton(self._run_button_text)
+        self.run_wf_button.clicked.connect(self.toggle_run_wf)
+        self.vis_toggle = QtGui.QCheckBox('Realtime visualization')
         self.wf_control = pt.ParameterTree()
         self.wf_control.setHeaderLabels(['Operation','Settings'])
-        self.wf_layout.addWidget(self.wf_selector,0,0,1,1)
-        self.wf_layout.addWidget(self.wf_control,1,0,1,1)
+        self.wf_layout.addWidget(self.wf_selector,0,0,1,2)
+        self.wf_layout.addWidget(self.run_wf_button,1,0,1,1)
+        self.wf_layout.addWidget(self.vis_toggle,1,1,1,1)
+        self.wf_layout.addWidget(self.wf_control,2,0,1,2)
         #self.wf_control.itemClicked.connect(self._display_wf_item)
 
         self.batch_control = QtGui.QWidget()
@@ -110,14 +113,10 @@ class BatchPlugin(base.plugin):
         self.batch_layout.addWidget(self.remove_files_button,1,0,1,1)
         self.batch_list.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
-    def _set_wf_by_idx(self,wf_selector_idx):
-        wf_title = self.wf_selector.model().list_data()[wf_selector_idx]
-        self.select_workflow(wf_title)
-
     def select_workflow(self,wf_title): 
         self.wf_control.setParameters(
             self._root_params[wf_title],showTop=False)
-        self._current_wf_title = wf_title
+        self._reset_run_wf_button(wf_title)
 
     # this is an overridden method from base.plugin 
     def openfiles(self, files, operation=None, operationname=None):
@@ -128,6 +127,17 @@ class BatchPlugin(base.plugin):
         for itm in itms:
             self.batch_list.takeItem(self.batch_list.row(itm))
  
+    def _rt_vis_active(self):
+        return self.vis_toggle.isChecked()
+
+    def _current_wf_title(self):
+        wf_idx = self.wf_selector.currentIndex()
+        return self._wf_uris.keys()[wf_idx]
+
+    def _set_wf_by_idx(self,wf_selector_idx):
+        wf_title = self.wf_selector.model().list_data()[wf_selector_idx]
+        self.select_workflow(wf_title)
+
     def _add_workflow_params(self,wf_title):
         paw = self._paws[wf_title]
         # Create a root parameter for the ParameterTree
@@ -136,12 +146,12 @@ class BatchPlugin(base.plugin):
         for op_tag in paw.get_wf(self._wf_names[wf_title]).list_op_tags():
             # Connect the ParameterTree
             root_param.addChild(self._op_param(op_tag,wf_title))
-        # Create a "run" button as an "ActionParameter"
-        run_wf_button=pt.types.ActionParameter(name=self._run_button_text)
-        run_wf_button.sigActivated.connect( partial(self.toggle_run_wf,wf_title) )
-        root_param.addChild(run_wf_button)
         self._root_params[wf_title] = root_param
-        self._run_wf_buttons[wf_title] = run_wf_button
+        # Create a "run" button as an "ActionParameter"
+        #run_wf_button=pt.types.ActionParameter(name=self._run_button_text)
+        #run_wf_button.sigActivated.connect( partial(self.toggle_run_wf,wf_title) )
+        #root_param.addChild(run_wf_button)
+        #self._run_wf_buttons[wf_title] = run_wf_button
 
     def _op_param(self,op_tag,wf_title):
         paw = self._paws[wf_title]
@@ -210,37 +220,50 @@ class BatchPlugin(base.plugin):
             paw.disable_op(op_name,self._wf_names[wf_title])
 
     def _reset_run_wf_button(self,wf_title):
-        self._run_wf_buttons[wf_title].setName(self._run_button_text)
+        if wf_title == self._current_wf_title():
+            wf_run_status = self._paws[wf_title]._wf_manager.wf_running[self._batch_wf_names[wf_title]]
+            if wf_run_status:
+                self.run_wf_button.setText(self._stop_button_text)
+            else:
+                self.run_wf_button.setText(self._run_button_text)
 
-    def toggle_run_wf(self,wf_title,param):
+    def toggle_run_wf(self):
+        wf_title = self._current_wf_title()
         paw = self._paws[wf_title]
+        wf_run_status = paw._wf_manager.wf_running[self._batch_wf_names[wf_title]]
+        if wf_run_status:
+            self.stop_wf(wf_title)
+        else:
+            self.run_wf(wf_title)
 
-        button_text = self._run_wf_buttons[wf_title].name()
-        if button_text == self._run_button_text:
-            file_list = []
-            nfiles = self.batch_list.count()
-            for r in range(nfiles):
-                p = self.batch_list.item(r).text()
-                file_list.append(p)
+    def stop_wf(self,wf_title):
+        self._paws[wf_title].stop_wf(self._batch_wf_names[wf_title])
+        self._reset_run_wf_button(wf_title)
 
-            # harvest file list and (maybe) PyFAI.AzimuthalIntegrator settings
-            # from GUI and Xi-cam internal variables, respectively
-            paw.set_input('Batch Execution','input_arrays',[file_list],
+    def run_wf(self,wf_title):
+        paw = self._paws[wf_title]
+        if wf_title == self._current_wf_title():
+            self.run_wf_button.setText(self._stop_button_text)
+
+        # harvest file list and (maybe) PyFAI.AzimuthalIntegrator settings
+        # from GUI and Xi-cam internal variables, respectively
+        file_list = []
+        nfiles = self.batch_list.count()
+        for r in range(nfiles):
+            p = self.batch_list.item(r).text()
+            file_list.append(p)
+        paw.set_input('Batch Execution','input_arrays',[file_list],
+            None,self._batch_wf_names[wf_title])
+        if wf_title in ['saxs integrator']:
+            paw.set_input('Integrator Setup','poni_dict',
+                config.activeExperiment.getAI().getPyFAI(),
                 None,self._batch_wf_names[wf_title])
-            if wf_title == 'saxs integrator':
-                paw.set_input('Integrator Setup','poni_dict',
-                    config.activeExperiment.getAI().getPyFAI(),
-                    None,self._batch_wf_names[wf_title])
 
-            self._run_wf_buttons[wf_title].setName(self._stop_button_text)
-            #if wfmanager.client is not None:
-            #    wfmanager.run_paws(paw)
-            #else:
-            run_off_thread = threads.method()( paw.execute )
-            run_off_thread( self._batch_wf_names[wf_title] )
-        else:            
-            paw.stop_wf(self._batch_wf_names[wf_title])
-            self._run_wf_buttons[wf_title].setName(self._run_button_text)
+        #if wfmanager.client is not None:
+        #    wfmanager.run_paws(paw)
+        #else:
+        run_off_thread = threads.method()( paw.execute )
+        run_off_thread( self._batch_wf_names[wf_title] )
 
     #def update_visuals(self,op_tag):
     #    if op_tag == self._current_visual:
