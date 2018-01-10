@@ -41,6 +41,8 @@ class BatchPlugin(base.plugin):
         self._batch_wf_names = OrderedDict()
         self._batch_wf_names['saxs integrator'] = 'batch_saxs_integrator'
         self._batch_wf_names['saxs guinier-porod fitter'] = 'batch_saxs_gp_fit'
+        self._run_button_text = '&Run'
+        self._stop_button_text = 'S&top'
 
         # PawsAPI instances for each workflow,
         # and ParameterTree roots as well
@@ -56,6 +58,8 @@ class BatchPlugin(base.plugin):
             # TODO : How should message emissions be handled?
             self._paws[wf_title].set_logmethod(print)
             self._paws[wf_title]._wf_manager.emitMessage.connect(print)
+            # connect the signal/slot to update the "Run" button
+            self._paws[wf_title].get_wf(self._batch_wf_names[wf_title]).wfFinished.connect( partial(self._reset_run_wf_button,wf_title) )
             # Connect the viewer
             #self._paws[wf_title].get_wf(self._wf_names[wf_title]).opFinished.connect( self.update_visuals )
 
@@ -67,7 +71,7 @@ class BatchPlugin(base.plugin):
 
         # select a default workflow (populates ui content)
         self._current_wf_title = None
-        self.select_workflow('saxs integrator')
+        self.select_workflow(self._wf_uris.keys()[0])
 
         #self._current_visual = None
         self._vis_widget = None
@@ -132,9 +136,7 @@ class BatchPlugin(base.plugin):
             # Connect the ParameterTree
             root_param.addChild(self._op_param(op_tag,wf_title))
         # Create a "run" button as an "ActionParameter"
-        # TODO: toggle the text on this run button,
-        # and add a signal to "stop"
-        run_wf_button=pt.types.ActionParameter(name='&Run')
+        run_wf_button=pt.types.ActionParameter(name=self._run_button_text)
         run_wf_button.sigActivated.connect( partial(self.toggle_run_wf,wf_title) )
         root_param.addChild(run_wf_button)
         self._root_params[wf_title] = root_param
@@ -206,34 +208,38 @@ class BatchPlugin(base.plugin):
         else:
             paw.disable_op(op_name,self._wf_names[wf_title])
 
+    def _reset_run_wf_button(self,wf_title):
+        self._run_wf_buttons[wf_title].setName(self._run_button_text)
+
     def toggle_run_wf(self,wf_title,param):
-        # TODO: toggle the run_wf_button text,
-        # and connect signals to stop the workflow once running
-        #import xicam.xglobals
-        #wfmanager = xicam.xglobals.window.wfmanager
-
         paw = self._paws[wf_title]
-        #paw.select_wf(self._batch_wf_names[wf_title])
-        file_list = []
-        nfiles = self.batch_list.count()
-        for r in range(nfiles):
-            p = self.batch_list.item(r).text()
-            file_list.append(p)
 
-        # harvest file list and (maybe) PyFAI.AzimuthalIntegrator settings
-        # from GUI and Xi-cam internal variables, respectively
-        paw.set_input('Batch Execution','input_arrays',[file_list],
-            None,self._batch_wf_names[wf_title])
-        if wf_title == 'saxs integrator':
-            paw.set_input('Integrator Setup','poni_dict',
-                config.activeExperiment.getAI().getPyFAI(),
+        button_text = self._run_wf_buttons[wf_title].name()
+        if button_text == self._run_button_text:
+            file_list = []
+            nfiles = self.batch_list.count()
+            for r in range(nfiles):
+                p = self.batch_list.item(r).text()
+                file_list.append(p)
+
+            # harvest file list and (maybe) PyFAI.AzimuthalIntegrator settings
+            # from GUI and Xi-cam internal variables, respectively
+            paw.set_input('Batch Execution','input_arrays',[file_list],
                 None,self._batch_wf_names[wf_title])
+            if wf_title == 'saxs integrator':
+                paw.set_input('Integrator Setup','poni_dict',
+                    config.activeExperiment.getAI().getPyFAI(),
+                    None,self._batch_wf_names[wf_title])
 
-        #if wfmanager.client is not None:
-        #    wfmanager.run_paws(paw)
-        #else:
-        run_off_thread = threads.method()( paw.execute )
-        run_off_thread( self._batch_wf_names[wf_title] )
+            self._run_wf_buttons[wf_title].setName(self._stop_button_text)
+            #if wfmanager.client is not None:
+            #    wfmanager.run_paws(paw)
+            #else:
+            run_off_thread = threads.method()( paw.execute )
+            run_off_thread( self._batch_wf_names[wf_title] )
+        else:            
+            paw.stop_wf(self._batch_wf_names[wf_title])
+            self._run_wf_buttons[wf_title].setName(self._run_button_text)
 
     #def update_visuals(self,op_tag):
     #    if op_tag == self._current_visual:
@@ -254,73 +260,5 @@ class BatchPlugin(base.plugin):
     #                t = widgets.display_text_fast(visdata)
     #                self._vis_widget.setText(t)
     #    self.paw.app.processEvents()
-
-    #def _get_vis_output(self,op_name):
-    #    if op_name == 'Read Image':
-    #        output_data = self.paw.get_output(op_tag,'image_data',self._wfname)
-    #    elif op_tag == 'Integrate to 2d':
-    #        output_data = self.paw.get_output(op_tag,'I_at_q_chi',self._wfname)
-    #    elif op_tag == 'Integrate to 1d':
-    #        output_data = self.paw.get_output(op_tag,'q_I',self._wfname)
-    #    elif op_tag == 'log(I) 1d':
-    #        output_data = self.paw.get_output(op_tag,'x_logy',self._wfname)
-    #    elif op_tag == 'log(I) 2d':
-    #        output_data = self.paw.get_output(op_tag,'logx',self._wfname)
-    #        # TODO: find a graceful way to handle the nans that result from log(0).
-    #        # currently pyqtgraph throws errors about it.
-    #    elif op_tag == 'Output CSV':
-    #        output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
-    #    elif op_tag == 'Output Image':
-    #        output_data = self.paw.get_output(op_tag,'file_path',self._wfname)
-    #    else:
-    #        return '** no visualization data specified **'
-    #    return output_data
-
-        # TODO: make some subroutines to clean this section up.
-        #root_param.addChild(p)
-        #if op_tag == 'Integrate to 1d':
-        #    pc = pt.types.SimpleParameter(name='number of q-points',
-        #    type='int',value=self.paw.get_input_setting(op_tag,'npt'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'npt') )  
-        #    p.addChild(pc)
-        #    pc = pt.types.SimpleParameter(name='polarization factor',
-        #    type='float',value=self.paw.get_input_setting(op_tag,'polarization_factor'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'polarization_factor') )  
-        #    p.addChild(pc)
-        #elif op_tag == 'Integrate to 2d':
-        #    pc = pt.types.SimpleParameter(name='number of q-points',
-        #    type='int',value=self.paw.get_input_setting(op_tag,'npt_rad'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'npt_rad') )  
-        #    p.addChild(pc)
-        #    pc = pt.types.SimpleParameter(name='number of chi-points',
-        #    type='int',value=self.paw.get_input_setting(op_tag,'npt_azim'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'npt_azim') )  
-        #    p.addChild(pc)
-        #    pc = pt.types.SimpleParameter(name='polarization factor',
-        #    type='float',value=self.paw.get_input_setting(op_tag,'polarization_factor'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'polarization_factor') )  
-        #    p.addChild(pc)
-        #elif op_tag in ['Output CSV','Output Image']:
-            # TODO: include workflow items in the parametertree,
-            # as read-only parameters that display the current value of the input. 
-            # TODO: add a browse button for dir_path.
-            # if dir_path is set manually, edit the workflow
-            # so that dir_path is no longer set as a workflow item. 
-            # TODO: add a text entry field for filename.
-            # if filename is set manually, edit the workflow
-            # so that filename is no longer set as a workflow item.
-        #    pc = pt.types.SimpleParameter(name='file tag',
-        #    type='str',value=self.paw.get_input_setting(op_tag,'filetag'))
-        #    pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'filetag') )  
-        #    p.addChild(pc)
-        #    if op_tag == 'Output Image':
-        #        pc = pt.types.SimpleParameter(name='extension',
-        #        type='str',value=self.paw.get_input_setting(op_tag,'ext'))
-        #        pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'ext') )  
-        #        p.addChild(pc)
-        #        pc = pt.types.SimpleParameter(name='overwrite',
-        #        type='bool',value=self.paw.get_input_setting(op_tag,'overwrite'))
-        #        pc.sigValueChanged.connect( partial(self._set_parameter,op_tag,'overwrite') )  
-        #        p.addChild(pc)
 
 
