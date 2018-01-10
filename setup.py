@@ -94,7 +94,7 @@ setup(
     install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
                       'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
                       'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
-                      'pypaws>=0.8.4','matplotlib'],
+                      'pypaws>=0.8.4','matplotlib','saxskit'],
 
     setup_requires=['numpy', 'cython'],
 
