@@ -5,6 +5,7 @@
 *.pyc
 *.csv
 *.tif
+*.swp
 build/
 dist/
 xicam.egg_info/
