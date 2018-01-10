@@ -20,15 +20,16 @@ class BatchPlugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
-
-        # here is a dictionary of available batch workflows for XICAM.
-        # note that each batch workflow is composed of two workflows. 
-        # one is a processing workflow (written for a single input)
-        # and the other is a batch executor which iterates an input 
-        # for the processing workflow and optionally harvests its outputs.
-        # the names of these two workflows (taken from the paws documentation)
-        # are saved here for later use in paws api calls 
-        #
+        """
+        here is a dictionary of available batch workflows for XICAM.
+        note that each batch workflow is composed of two workflows. 
+        one is a processing workflow (written for a single input)
+        and the other is a batch executor which iterates an input 
+        for the processing workflow and optionally harvests its outputs.
+        the names of these two workflows (taken from the paws documentation)
+        are saved here for later use in paws api calls 
+        """
+        
         # uris to locate workflow modules from paws:
         self._wf_uris = OrderedDict()
         self._wf_uris['saxs integrator'] = 'XICAM.batch_saxs_integrator'
