@@ -20,25 +20,25 @@ class BatchPlugin(base.plugin):
     name = 'Batch'
 
     def __init__(self, *args, **kwargs):
-        """
-        here is a dictionary of available batch workflows for XICAM.
-        note that each batch workflow is composed of two workflows. 
-        one is a processing workflow (written for a single input)
-        and the other is a batch executor which iterates an input 
-        for the processing workflow and optionally harvests its outputs.
-        the names of these two workflows (taken from the paws documentation)
-        are saved here for later use in paws api calls 
-        """
         
-        # uris to locate workflow modules from paws:
+        # the dict below specifies available batch workflows for XICAM.
+        # note that each batch workflow is composed of two workflows. 
+        # one is a processing workflow (written for a single input)
+        # and the other is a batch executor which iterates an input 
+        # for the processing workflow and optionally harvests its outputs.
+        # the names of these two workflows (taken from the paws documentation)
+        # are also saved here for later use in paws api calls.
+        # depending on what sort of data must be taken from Xi-cam internal variables,
+        # each workflow may also perform some additional loading in self.run_wf().
+        # - uris to locate workflow modules from paws:
         self._wf_uris = OrderedDict()
         self._wf_uris['saxs integrator'] = 'XICAM.batch_saxs_integrator'
         self._wf_uris['saxs guinier-porod fitter'] = 'XICAM.batch_saxs_gp_fit'
-        # names of the processing workflows:
+        # - names of the processing workflows:
         self._wf_names = OrderedDict()
         self._wf_names['saxs integrator'] = 'saxs_integrator'
         self._wf_names['saxs guinier-porod fitter'] = 'saxs_gp_fit'
-        # names of the batch-execution workflows:
+        # - names of the batch-execution workflows:
         self._batch_wf_names = OrderedDict()
         self._batch_wf_names['saxs integrator'] = 'batch_saxs_integrator'
         self._batch_wf_names['saxs guinier-porod fitter'] = 'batch_saxs_gp_fit'
