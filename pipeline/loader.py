@@ -1320,7 +1320,7 @@ class singlefilediffimage2(diffimage2):
         if self._rawdata is None:
             rawdata, mask = loadpath(self.filepath)
             self._rawdata = np.rot90(rawdata, 3)
-            if mask is not None: self.experiment.mask = np.rot90(mask, 3)
+            if mask is not None and self.experiment.mask is None: self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
 
     def implements(self, t):
