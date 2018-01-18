@@ -153,9 +153,9 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
     positionX1 = 0
     positionX2 = 0
 
-    if 'Detector Vertical' in paras1 and 'Detector Vertical' in paras2 and \
-                    'Detector Horizontal' in paras1 and 'Detector Horizontal' in paras2:
-        if paras1['Detector Vertical']!=0 and paras2['Detector Vertical']!=0:
+    if config.activeExperiment.mapHeader('Detector Vertical') in paras1 and config.activeExperiment.mapHeader('Detector Vertical') in paras2 and \
+                    config.activeExperiment.mapHeader('Detector Horizontal') in paras1 and config.activeExperiment.mapHeader('Detector Horizontal') in paras2:
+        if float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])!=0 and float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])!=0:
             positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
             positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
             positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
