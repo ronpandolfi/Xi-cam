@@ -7,7 +7,7 @@ from xicam import config
 from pipeline import loader
 import warnings
 
-def configu(beamline, file, phi):
+def configu(beamline, phi, file):
     """ Garbage function which allow to read the different images from several beamlines (CMS, 733, 11012 .....)
     It allow to read the I0, sample_rotation and correct the noise level => different detector and header (different name and level of noise)
 
@@ -46,7 +46,7 @@ def configu(beamline, file, phi):
     return phi, data, img1
 
 
-def test(substratethickness, substrateattenuation, Pitch, q_pitch, Data):
+def test(substratethickness, substrateattenuation, Pitch, q_pitch, or_hor, header_dic):
     """ This function is used to manage all the process of extraction from the name of the file (it is not very usefull but was easier to use for multiprocessing). It is just calling the different functions.
 
     Parameters
@@ -62,17 +62,41 @@ def test(substratethickness, substrateattenuation, Pitch, q_pitch, Data):
 
     """
     try:
-        file, phi = Data[0], Data[1]
         beamline = 'CMS'
-        phi, data, img1 = configu(beamline, file, phi)
+        phi, data, img1 = configu(beamline, header_dic[0], header_dic[1])
         q_n, q_x, q_z, I, wavelength = reduceto1dprofile(data, phi, beamline)
-        I_cor = correc_Iexp(I, substratethickness, substrateattenuation, phi)
-        Qxexp, Q__Z, I_peaks = Find_peak(q_n, I_cor, Pitch, phi, wavelength, q_pitch)
+        I_cor = correc_Iexp(I, substratethickness, substrateattenuation, header_dic[0])
+        Qxexp, Q__Z, I_peaks = Find_peak(q_n, I_cor, Pitch, header_dic[0], wavelength, q_pitch)
         return I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks
 
     except IndexError:
         print 'Error in {}'.format(file)
 
+def image_orientation(file):
+
+    data = np.flipud(loader.loadimage(file))
+    mask = config.activeExperiment.getDetector().calc_mask()
+
+    AI = AzimuthalIntegrator()
+    AI = config.activeExperiment.getAI()
+    centerX, directDist, centerY = AI.getFit2D()['centerX'], AI.getFit2D()["directDist"], AI.getFit2D()["centerY"]
+    AI.setFit2D(directDist, -25, 21)
+
+    cake, q, chi = AI.integrate2d(data[int(centerY - 20): int(centerY + 20), int(centerX + 25):],
+                                  config.settings['Integration Bins (q)'], config.settings['Integration Bins (χ)'])
+    cakemask, q, chi = AI.integrate2d(np.ones_like(data[int(centerY - 20): int(centerY + 20), int(centerX + 25):]),
+                                      config.settings['Integration Bins (q)'], config.settings['Integration Bins (χ)'])
+    maskedcake = np.ma.masked_array(cake, mask=cakemask <= 0)
+    chiprofile = np.ma.average(maskedcake, axis=1)
+
+    kernel = np.zeros_like(chiprofile)
+    kernel[0] = 1
+    kernel[len(kernel) / 2] = 1
+
+    tiltprofile = filters.convolve1d(kernel, chiprofile, mode='wrap')
+    tilt = tiltprofile.argmax() / float(config.settings['Integration Bins (χ)']) * 360.
+
+    return tilt
 
 def reduceto1dprofile(data, phi, beamline):
     """ First, q indices are calculated from the 2d image (pixel number). Then a correction of the sample tilt is done (if necessary) through the caking of pyFai. Finally, only few pixels around the scattering peaks coming from the gratings are selected and summed.
@@ -89,7 +113,6 @@ def reduceto1dprofile(data, phi, beamline):
     wavelength (float32) : wavelength
 
     """
-    np.save('/Users/guillaumefreychet/Desktop/data.npy', data)
 
     #cosmic masking
     if beamline == '1102':
@@ -113,14 +136,12 @@ def reduceto1dprofile(data, phi, beamline):
     maskedcake = np.ma.masked_array(cake, mask=cakemask <= 0)
     chiprofile = np.ma.average(maskedcake, axis=1)
 
-    np.save('/Users/guillaumefreychet/Desktop/cake.npy', cake)
 
     kernel = np.zeros_like(chiprofile)
     kernel[0] = 1
     kernel[len(kernel) / 2] = 1
 
     tiltprofile = filters.convolve1d(kernel, chiprofile, mode='wrap')
-    np.save('/Users/guillaumefreychet/Desktop/tilt.npy', tiltprofile)
 
     if beamline == '1102':
         tilt = tiltprofile[0:200].argmax() / float(config.settings['Integration Bins (χ)']) * 360.
@@ -135,12 +156,10 @@ def reduceto1dprofile(data, phi, beamline):
     cake, q, chi = AI.integrate2d(data[int(centerY - 20) : int(centerY + 20),  int(max(0, centerX)):], config.settings['Integration Bins (q)'], 100)
     cakemask, q, chi = AI.integrate2d(np.ones_like(data[int(centerY - 20) : int(centerY + 20), int(max(0, centerX)):]), config.settings['Integration Bins (q)'], 100)
 
-    np.save('/Users/guillaumefreychet/Desktop/cake1.npy', cake)
 
     slc = np.vstack(cake[45:55,:]) # for other side, index around 500
     profile1=np.sum(slc,axis=0)
 
-    np.save('/Users/guillaumefreychet/Desktop/profile.npy', profile1)
     q_n = np.array([q[val] for val in np.where(profile1 > 0)[0]])
     q_x = np.array(q_n * np.cos(phi + 2 * np.arcsin(q_n * wavelength / (4. * np.pi))))
     q_z = np.array(q_n * np.sin(phi + 2 * np.arcsin(q_n * wavelength / (4. * np.pi))))

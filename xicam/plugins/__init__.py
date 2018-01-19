@@ -36,7 +36,7 @@ def initplugins(placeholders):
 
     for module in modules:
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
-        for objname,obj in module.__dict__.iteritems():
+        for objname,obj in module.__dict__.items():
             if inspect.isclass(obj):
                 if issubclass(obj, base.plugin) and not obj is base.plugin and not obj is base.EZplugin:
                     link = pluginlink(module, obj, placeholders)

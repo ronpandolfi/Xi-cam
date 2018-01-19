@@ -37,6 +37,8 @@ class plugin(base.plugin):
             {'name': 'User_input', 'type': 'group', 'children': [
                 {'name': '1st_pic', 'type': 'float'},
                 {'name': 'Pitch', 'type': 'float'},
+                {'name': 'ths', 'type': 'float'},
+                {'name': 'th0', 'type': 'float'},
                 {'name': 'Num_trap', 'type': 'float'},
                 {'name': 'H', 'type': 'float'},
                 {'name': 'w0', 'type': 'float'},
@@ -82,8 +84,8 @@ class plugin(base.plugin):
         self.centerwidget.addTab(widget, os.path.basename(files[0]))
         self.centerwidget.setCurrentWidget(widget)
 
-        fst_pic, Pitch = self.param['User_input', '1st_pic'], self.param['User_input', 'Pitch']
-        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(fst_pic, Pitch))
+        fst_pic, Pitch, th_sc, th_0 = self.param['User_input', '1st_pic'], self.param['User_input', 'Pitch'], self.param['User_input', 'ths'], self.param['User_input', 'th0']
+        fitrunnable = threads.RunnableMethod(self.getCurrentTab().loadRAW, method_args=(fst_pic, Pitch, th_sc, th_0))
         threads.add_to_queue(fitrunnable)
 
     def currentChanged(self, index):
@@ -122,7 +124,7 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         self.src = src
 
-    def loadRAW(self, fst_pic = 50, Pitch = 100):
+    def loadRAW(self, fst_pic = 50, Pitch = 100, th_sc = 1, th_0 = 0):
         """ This function is launched when the user select the data. 4 parameters have to be entered manually by the user (Phi, ..., pitch) => to change when angles are contained in the header
         Here this fucntion will process all the data treatment in order to dislay the experimental raw data, the qx,qz cartography and the peak intensity profile
 
@@ -152,12 +154,11 @@ class CDSAXSWidget(QtGui.QTabWidget):
 
         # Parallelization
         pool = multiprocessing.Pool()
-        func = partial(cdrsoxs.test, substratethickness, substrateattenuation, Pitch, q_pitch, fst_pic)
+        func = partial(cdrsoxs.test, substratethickness, substrateattenuation, Pitch, q_pitch, fst_pic, th_sc, th_0)
         a = file
         #b = [list(elem) for elem in a]
         #I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*pool.map(func, b))
         I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*map(func, a))
-        np.save('/Users/guillaumefreychet/Desktop/i_ini.npy', I_peaks)
 
 
         print(np.shape(I_peaks))
@@ -191,10 +192,6 @@ class CDSAXSWidget(QtGui.QTabWidget):
             self.qx.append(np.array([item for item in zip(*sorted(zip(self.Qx[i], self.Qz[i], self.In[i]), key = lambda x: x[1]))[0]]))
             self.qz.append(np.array([item for item in zip(*sorted(zip(self.Qx[i], self.Qz[i], self.In[i]), key = lambda x: x[1]))[1]]))
             self.I.append(np.array([item for item in zip(*sorted(zip(self.Qx[i], self.Qz[i], self.In[i]), key = lambda x: x[1]))[2]]))
-
-        np.save('/Users/guillaumefreychet/Desktop/qx.npy', self.qx)
-        np.save('/Users/guillaumefreychet/Desktop/qz.npy', self.qz)
-        np.save('/Users/guillaumefreychet/Desktop/i.npy', self.I)
 
         sampling_size = (400, 400)
         qx_carto = np.array([item for sublist in q_x for item in sublist])

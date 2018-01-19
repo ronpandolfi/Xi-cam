@@ -238,7 +238,6 @@ class SliceWidget(pg.HistogramLUTWidget):
         bounds = (bounds[0]*self.item.region.getRegion()[1],bounds[1]*self.item.region.getRegion()[1])
         return slice(*bounds)
 
-
 scene.visuals.Volume = VolumeVisual
 
 class VolumeRenderWidget(scene.SceneCanvas):

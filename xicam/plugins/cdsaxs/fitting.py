@@ -228,10 +228,10 @@ def cmaes(data, qx, qz, initial_guess, sigma, ngen, popsize, mu, N, restarts, ve
     # make population dataframe, order of rows is first generation for all children, then second generation for all children...
     population_array = np.array([list(individual) for generation in population_list for individual in generation])
     # logMessage(('poparr1', np.shape(population_array)))
-    np.save('/Users/guillaumefreychet/Desktop/poparr1.npy', population_array)
+    #np.save('/Users/guillaumefreychet/Desktop/poparr1.npy', population_array)
     population_array = fittingp_to_simp1(population_array, initial_guess)
     # logMessage('poparr2', np.shape(population_array))
-    np.save('/Users/guillaumefreychet/Desktop/poparr2.npy', population_array)
+    #np.save('/Users/guillaumefreychet/Desktop/poparr2.npy', population_array)
     fitness_array = np.array([individual.fitness.values[0] for generation in population_list for individual in generation])
     # logMessage('popfit', np.shape(fitness_array))
     population_frame = pd.DataFrame(np.column_stack((population_array, fitness_array)))

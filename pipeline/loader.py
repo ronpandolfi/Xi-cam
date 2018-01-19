@@ -1428,7 +1428,9 @@ class multifilediffimage2(diffimage2):
             return None  # Prevent wrap-around with first variation
 
         try:
-            return self.xvals('')[i], variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            var=variation.variationoperators.operations.values()[operationindex](self, i, roi)
+            t=self.xvals('')[i]
+            return t, var
         except IndexError as ex:
             msg.logMessage(('Skipping index:', i),msg.WARNING)
         return None
