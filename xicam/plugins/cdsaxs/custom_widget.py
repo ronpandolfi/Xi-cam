@@ -22,6 +22,7 @@ class CDModelWidget(pg.PlotWidget):
 class CDProfileWidget(pg.ImageView):
     pass
 
+
 class CDLineProfileWidget(pg.PlotWidget):
     def __init__(self):
         super(CDLineProfileWidget, self).__init__()

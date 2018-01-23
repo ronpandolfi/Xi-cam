@@ -127,7 +127,7 @@ class plugin(base.plugin):
         self.H, self.w0, self.Beta1, self.Num_trap = self.datatreatmentparam['Initial line Profile', 'Heigth'], self.datatreatmentparam['Initial line Profile', 'Linewidth'], self.datatreatmentparam['Initial line Profile', 'Sidewall angle'], \
                                  self.datatreatmentparam['Initial line Profile', 'Number trapezoid']
 
-        self.best_param = [self.DW, self.I0, self.Bkg + self.H, self.w0] + [int(self.Beta1) for i in range(0, self.Num_trap, 1)]
+        self.best_param = [self.DW, self.I0, self.Bkg, self.H, self.w0] + [int(self.Beta1) for i in range(0, self.Num_trap, 1)]
         self.Ifit = data_treatment.SL_model1(self.qx, self.qz, self.best_param)
         self.diplay_fitteddata(self.Ifit, self.best_param)
 
@@ -142,10 +142,11 @@ class plugin(base.plugin):
             self.fval= 0
         else:
             self.Ifit = Ifit
-            self.best_param = [best_param[0], best_param[1], best_param[2], best_param[3], best_param[4]] + [best_param[5:]]
+            self.best_param = [best_param[0], best_param[1], best_param[2], best_param[3], best_param[4]] + [best_param[i] for i in range(5, len(best_param), 1)]
             self.fval = fval
 
         self.update_right_widget()
+        self.bottomwidget.plotLineProfile(self.best_param[3], self.best_param[4], np.array(self.best_param[5:]))
         self.getCurrentTab().update_profile(self.qz, self.I, self.Ifit)
 
     def currentChanged(self, index):

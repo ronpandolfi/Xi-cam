@@ -80,7 +80,7 @@ def loadRAW(files, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100, substrateth
 def fitting_cmaes(qx, qz, I, H=10, LL=20, Beta=70, Num_trap=5, DW=0.11, I0=3, Bkg=1):
     initiale_value = [DW, I0, Bkg, int(H), int(LL)] + [int(Beta) for i in range(0, Num_trap,1)]
 
-    best_corr, best_fitness = fitting.cmaes(data=I, qx=qx, qz=qz, initial_guess=np.asarray(initiale_value), sigma=200, ngen=100, popsize=100, mu=10, N=len(initiale_value), restarts=0, verbose=False, tolhistfun=5e-5, ftarget=None)
+    best_corr, best_fitness = fitting.cmaes(data=I, qx=qx, qz=qz, initial_guess=np.asarray(initiale_value), sigma=200, ngen=1, popsize=100, mu=10, N=len(initiale_value), restarts=0, verbose=False, tolhistfun=5e-5, ftarget=None)
     I_fit = SL_model1(qx, qz, best_corr)
 
     #update_right_widget(Num_trap, best_corr[3], best_corr[4], best_corr[5], best_fitness)
