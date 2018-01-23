@@ -30,8 +30,9 @@ def loadRAW(files, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100, substrateth
     if fabio.open(files[0]).header:
         phi = fabio.open(files[0]).header('angle')
     else:
-        phi = [np.deg2rad(Phi_max - i * Phi_step) for i in range(0, 1 + int((Phi_max - Phi_min)/Phi_step), 1)]
+        phi = [np.deg2rad(Phi_min + i * Phi_step) for i in range(0, 1 + int((Phi_max - Phi_min)/Phi_step), 1)]
 
+    print(np.rad2deg(phi))
     header_dic = OrderedDict(sorted(zip(phi, files), key=lambda t: t[0]))
 
     #open the closest file with the angle closer to 0 and check it orientation
@@ -45,12 +46,12 @@ def loadRAW(files, Phi_min=-45, Phi_max=45, Phi_step=1, Pitch = 100, substrateth
     #1st peak ....
     '''
 
-    pool = multiprocessing.Pool()
+    #pool = multiprocessing.Pool()
     func = partial(cdsaxs.test, substratethickness, substrateattenuation, Pitch, q_pitch, or_hor)
 
     I_cor, img1, q_x, q_z, Qxexp, Q__Z, I_peaks = zip(*map(func, header_dic.items()))
 
-    pool.close()
+    #pool.close()
 
     data = np.stack(img1)
     data = np.log(data - data.min() + 1.)
@@ -85,7 +86,7 @@ def fitting_cmaes(qx, qz, I, H=10, LL=20, Beta=70, Num_trap=5, DW=0.11, I0=3, Bk
     #update_right_widget(Num_trap, best_corr[3], best_corr[4], best_corr[5], best_fitness)
     #update_right_widget(best_corr[3], best_corr[4], best_corr[5:], best_fitness)
     #update_model()
-    return I_fit, best_corr[3], best_corr[4], best_corr[5], best_fitness
+    return I_fit, best_corr, best_fitness
 
 def fitting_mcmc(self, qx, qz, I, H=10, LL=20, Beta=70, Num_trap=5, DW=0.11, I0=3, Bkg=1):
     initiale_value = [DW, I0, Bkg, int(H), int(LL)] + [int(Beta) for i in range(0, Num_trap, 1)]

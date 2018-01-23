@@ -38,29 +38,29 @@ class plugin(base.plugin):
 
         self.datatreatmentparam = pg.parametertree.Parameter.create(name='params', type='group', children=[
             {'name': 'Experimental input', 'type': 'group', 'children': [
-                {'name': 'Start_angle', 'type': 'float', 'value': 0},
-                {'name': 'End_angle', 'type': 'float', 'value': 0},
-                {'name': 'Angle_step', 'type': 'float', 'value': 0},
-                {'name': 'Line_pitch', 'type': 'float', 'value': 86},
+                {'name': 'Start angle', 'type': 'float', 'value': 0},
+                {'name': 'End angle', 'type': 'float', 'value': 0},
+                {'name': 'Angle step', 'type': 'float', 'value': 0},
+                {'name': 'Line pitch', 'type': 'float', 'value': 86},
                 {'name': 'Data treatment', 'type': 'action'}]},
             {'name': 'Initial line Profile', 'type': 'group', 'children': [
                 {'name': 'Number trapezoid', 'type': 'float', 'value': 5},
                 {'name': 'Heigth', 'type': 'float', 'value': 20},
                 {'name': 'Linewidth', 'type': 'float', 'value': 50},
-                {'name': 'Sidewall_angle', 'type': 'float', 'value': 90},
+                {'name': 'Sidewall angle', 'type': 'float', 'value': 90},
                 {'name': 'Simulation', 'type': 'action'}]},
-            {'name': 'Fit_output', 'type': 'group', 'children': [
-                {'name': 'num_trap_fit', 'type': 'float', 'readonly': True},
-                {'name': 'H_fit', 'type': 'float', 'readonly': True},
-                {'name': 'w0_fit', 'type': 'float', 'readonly': True},
-                {'name': 'Beta_fit', 'type': 'float', 'readonly': True},
+            {'name': 'Fit output', 'type': 'group', 'children': [
+                {'name': 'num trap fit', 'type': 'float', 'readonly': True},
+                {'name': 'H fit', 'type': 'float', 'readonly': True},
+                {'name': 'w0 fit', 'type': 'float', 'readonly': True},
+                {'name': 'Beta fit', 'type': 'float', 'readonly': True},
                 {'name': 'f_val', 'type': 'float', 'readonly': True}]}])
         self.datatreatmenttree.setParameters(self.datatreatmentparam, showTop=False)
 
         self.materialparam = pg.parametertree.Parameter.create(name='params', type='group', children=[
             {'name': 'Material', 'type': 'group', 'children': [
-                {'name': 'Substrate_thickness', 'type': 'float', 'value': 27 * 10 ** -6},
-                {'name': 'Substrate_attenuation', 'type': 'float', 'value': 200 * 10 ** -6}]}])
+                {'name': 'Substrate thickness', 'type': 'float', 'value': 27 * 10 ** -6},
+                {'name': 'Substrate attenuation', 'type': 'float', 'value': 200 * 10 ** -6}]}])
         self.materialstree.setParameters(self.materialparam, showTop=False)
 
         from .trapezoidparameter import TrapezoidAnglesWidgetParameter
@@ -76,11 +76,11 @@ class plugin(base.plugin):
         guiinvoker.invoke_in_main_thread(self.bottomwidget.plotLineProfile, *widget.modelParameters)
 
     def update_right_widget(self):
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit_output', 'num_trap_fit').setValue, self.Num_trap)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit_output', 'H_fit').setValue, self.H)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit_output', 'w0_fit').setValue, self.w0)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit_output', 'Beta_fit').setValue, self.Beta1)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit_output', 'f_val').setValue, self.fval)
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit output', 'num trap fit').setValue, self.Num_trap)
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit output', 'H fit').setValue, self.H)
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit output', 'w0 fit').setValue, self.w0)
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit output', 'Beta fit').setValue, self.Beta1)
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Fit output', 'f_val').setValue, self.fval)
 
     def openfiles(self, files, operation=None, operationname=None):
         self.activate()
@@ -97,18 +97,18 @@ class plugin(base.plugin):
         threads.add_to_queue(fitrunnable)
 
     def update_experimental_input(self, files, angle_start, angle_end, angle_step):
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'Start_angle').setValue,
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'Start angle').setValue,
                                          angle_start)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'End_angle').setValue,
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'End angle').setValue,
                                          angle_end)
-        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'Angle_step').setValue,
+        guiinvoker.invoke_in_main_thread(self.datatreatmentparam.param('Experimental input', 'Angle step').setValue,
                                          angle_step)
         self.files = files
 
     def datatreatment(self):
-        Phi_min, Phi_max, Phi_step, Pitch = self.datatreatmentparam['Experimental input', 'Start_angle'], self.datatreatmentparam['Experimental input', 'End_angle'], self.datatreatmentparam[
-            'Experimental input', 'Angle_step'], self.datatreatmentparam['Experimental input', 'Line_pitch']
-        substratethickness, substrateattenuation = self.materialparam['Material', 'Substrate_thickness'], self.materialparam['Material', 'Substrate_attenuation']
+        Phi_min, Phi_max, Phi_step, Pitch = self.datatreatmentparam['Experimental input', 'Start angle'], self.datatreatmentparam['Experimental input', 'End angle'], self.datatreatmentparam[
+            'Experimental input', 'Angle step'], self.datatreatmentparam['Experimental input', 'Line pitch']
+        substratethickness, substrateattenuation = self.materialparam['Material', 'Substrate thickness'], self.materialparam['Material', 'Substrate attenuation']
         fitrunnable = threads.RunnableMethod(data_treatment.loadRAW, method_args=(self.files, Phi_min, Phi_max, Phi_step, Pitch, substratethickness, substrateattenuation), callback_slot=self.diplay_experimentaldata)
         threads.add_to_queue(fitrunnable)
 
@@ -123,23 +123,29 @@ class plugin(base.plugin):
     def fit(self):
         activeSet = self.getCurrentTab()
         activeSet.setCurrentWidget(activeSet.CDModelWidget)
-        self.H, self.w0, self.Beta1, self.Num_trap = self.datatreatmentparam['Initial line Profile', 'Heigth'], self.datatreatmentparam['Initial line Profile', 'Linewidth'], self.datatreatmentparam['Initial line Profile', 'Sidewall_angle'], \
+        self.DW, self.I0, self.Bkg = 0.11, 3.0, 1 # default
+        self.H, self.w0, self.Beta1, self.Num_trap = self.datatreatmentparam['Initial line Profile', 'Heigth'], self.datatreatmentparam['Initial line Profile', 'Linewidth'], self.datatreatmentparam['Initial line Profile', 'Sidewall angle'], \
                                  self.datatreatmentparam['Initial line Profile', 'Number trapezoid']
 
-        self.fval = 0
-        self.update_right_widget()
-        fitrunnable = threads.RunnableMethod(data_treatment.SL_model1, method_args=(self.qx, self.qz, self.H, self.w0, self.Beta1, self.Num_trap), callback_slot=self.diplay_fitteddata)
+        self.best_param = [self.DW, self.I0, self.Bkg + self.H, self.w0] + [int(self.Beta1) for i in range(0, self.Num_trap, 1)]
+        self.Ifit = data_treatment.SL_model1(self.qx, self.qz, self.best_param)
+        self.diplay_fitteddata(self.Ifit, self.best_param)
+
         fitrunnable1 = threads.RunnableMethod(data_treatment.fitting_cmaes, method_args=(self.qx, self.qz, self.I, self.H, self.w0, self.Beta1, self.Num_trap), callback_slot=self.diplay_fitteddata)
-        fitrunnable2 = threads.RunnableMethod(data_treatment.fitting_mcmc, method_args=(self.qx, self.qz, self.I, self.H, self.w0, self.Beta1, self.Num_trap))
-        threads.add_to_queue(fitrunnable)
+        #fitrunnable2 = threads.RunnableMethod(data_treatment.fitting_mcmc, method_args=(self.qx, self.qz, self.I, self.H, self.w0, self.Beta1, self.Num_trap))
         threads.add_to_queue(fitrunnable1)
         self.update_right_widget()
         #threads.add_to_queue(fitrunnable2)
 
+    def diplay_fitteddata(self, Ifit, best_param, fval = None):
+        if fval is None:
+            self.fval= 0
+        else:
+            self.Ifit = Ifit
+            self.best_param = [best_param[0], best_param[1], best_param[2], best_param[3], best_param[4]] + [best_param[5:]]
+            self.fval = fval
 
-    def diplay_fitteddata(self, Ifit, H, w0, beta, fval):
-        self.Ifit = Ifit
-        self.H, self.w0, self.Beta1, self.fval = H, w0, beta, fval
+        self.update_right_widget()
         self.getCurrentTab().update_profile(self.qz, self.I, self.Ifit)
 
     def currentChanged(self, index):
