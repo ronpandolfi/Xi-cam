@@ -25,7 +25,7 @@ class ProjectionStack(StackImage):
         Dark field data
     """
 
-    def __init__(self, filepath=None, data=None):
+    def     __init__(self, filepath=None, data=None):
         super(ProjectionStack, self).__init__(filepath=filepath, data=data)
         try:
             self.flats = self.fabimage.flats
