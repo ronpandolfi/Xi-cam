@@ -299,7 +299,8 @@ class TomoViewer(QtGui.QWidget):
             Array of flat field data
 
         """
-        flats = np.array(self.data.flats.values())
+        flats = self.data.flats
+        if hasattr(flats,'values'): flats = np.array(flats.values())
         if slc is None:
             return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
         else:
@@ -320,7 +321,8 @@ class TomoViewer(QtGui.QWidget):
             Array of dark field data
 
         """
-        darks = np.array(self.data.darks.values())
+        darks = self.data.darks
+        if hasattr(darks, 'values'): darks = np.array(darks.values())
         if slc is None:
             return np.ascontiguousarray(darks[:, self.sinogramViewer.currentIndex, :])
         else:

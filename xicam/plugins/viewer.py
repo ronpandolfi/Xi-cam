@@ -239,6 +239,7 @@ class ViewerPlugin(base.plugin):
             tab.unload()
         self.centerwidget.currentWidget().load()
         self.propertytable.setData(self.currentImage().dimg.headers)
+        self.replotcurrent()
 
 
     def openfiles(self, paths=None, operation=None, operationname=None):

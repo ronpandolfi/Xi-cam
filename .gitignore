@@ -13,6 +13,7 @@ lib64
 *.pyc
 *.csv
 *.tif
+*.swp
 build/
 dist/
 *.swp
