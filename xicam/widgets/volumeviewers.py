@@ -261,7 +261,7 @@ class VolumeRenderWidget(scene.SceneCanvas):
         # Prepare canvas
         self.measure_fps()
 
-        self.unfreeze()
+        # self.unfreeze()
 
         # Set up a viewbox to display the image with interactive pan/zoom
         self.view = self.central_widget.add_view()
