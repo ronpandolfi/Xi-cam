@@ -13,8 +13,8 @@ def import_module(modname,packagename=None):
         missingpackage = ex.message.replace('No module named ', '')
 
         import config
-        if config.settings['ignoredmodules']:
-            if missingpackage in config.settings['ignoredmodules']:
+        if config.settings['Ignored Modules']:
+            if missingpackage in config.settings['Ignored Modules']:
                 return None
 
         msgBox = QtGui.QMessageBox()
@@ -63,10 +63,10 @@ def import_module(modname,packagename=None):
                         exit(1)
         elif response == QtGui.QMessageBox.Ignore and modname.strip('.') != 'MOTD':
             import config
-            if config.settings['ignoredmodules']:
-                config.settings['ignoredmodules'].append(missingpackage)
+            if config.settings['Ignored Modules']:
+                config.settings['Ignored Modules']+=[missingpackage]
             else:
-                config.settings['ignoredmodules']=[missingpackage]
+                config.settings['Ignored Modules']=[missingpackage]
             msgBox = QtGui.QMessageBox()
             msgBox.setText('Xi-cam will no longer prompt you to install this package, however some plugins may be disabled.')
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
