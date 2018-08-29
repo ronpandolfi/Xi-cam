@@ -82,7 +82,7 @@ shortcut_table = [
 msi_data = {'Shortcut': shortcut_table}
 
 def include_OpenGL():
-    path_base = "C:\\Python27-64\\Lib\\site-packages\\OpenGL"
+    path_base = "C:\\Python27\\Lib\\site-packages\\OpenGL"
     skip_count = len(path_base)
     zip_includes = [(path_base, "OpenGL")]
     for root, sub_folders, files in os.walk(path_base):
@@ -99,17 +99,17 @@ getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name
 
 buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL',
                              'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
-                             'pyqtgraph','distutils','IPython','numpy'],
+                             'pyqtgraph','distutils','IPython','numpy','idna','ctypes'],
                 'includes': ['PIL', 'PySide.QtXml','PySide.QtNetwork','PySide.QtWebKit','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
                              'pygments.lexers.python','ipykernel.datapub','distributed',
-                             'cryptography.hazmat.backends.openssl','cryptography.hazmat.backends.commoncrypto',
+                             'cryptography.hazmat.backends.openssl',#'cryptography.hazmat.backends.commoncrypto',
                              'numpy.core._methods','numpy.lib.format'
                              ],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 0,
-                'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py'),'tiff.dll','hipgisaxs.exe',
-                                  ('xicam/gui/','xicam/gui/'), 'yaml/', 'icon.ico',
-                                  ('C:\\Python27-64\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
+                'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py'),#'hipgisaxs.exe',#,'tiff.dll'
+                                  ('xicam/gui/','xicam/gui/'), 'xicam/yaml/', 'icon.ico',
+                                  ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
                                   zmq.libzmq.__file__,pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),
                 'include_msvcr': True
