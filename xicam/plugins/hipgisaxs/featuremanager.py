@@ -11,11 +11,14 @@ import hig
 
 features = []
 functionTree = None
-
+layout = None
 
 def clearFeatures():
     global features
-    features = []
+    while features:
+        feature = features[-1]
+        features.remove(feature)
+        feature.deleteLater()
 
 
 def addSubstrate():
@@ -56,12 +59,13 @@ def update():
     assert isinstance(layout, QtGui.QVBoxLayout)
 
     for i in range(layout.count()):
-        layout.itemAt(i).parent = None
+        if layout.itemAt(i) not in features:
+            layout.itemAt(i).parent = None
 
     # layout.addItem(QtGui.QSpacerItem(0,0,vData=QtGui.QSizePolicy.Expanding))
 
-    for item in features[::-1]:
-        layout.addWidget(item)
+    for i, item in enumerate(features[::-1]):
+        layout.insertWidget(i, item)
 
     if display.viewWidget:
         display.redraw()
@@ -80,6 +84,5 @@ def load():
     global features, functionTree
     layout.setAlignment(QtCore.Qt.AlignBottom)
     addSubstrate()
-    addLayer()
     addParticle()
 
