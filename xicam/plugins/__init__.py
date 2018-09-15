@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest','HipGISAXS']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest', '3D Viewer', 'HipRMC', ]
 
 
 def initplugins(placeholders):
