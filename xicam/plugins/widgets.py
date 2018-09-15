@@ -102,7 +102,10 @@ class dimgViewer(QtGui.QWidget):
         if dimg is not None:
             self.dimg = dimg
         else:
-            self.dimg = loader.loaddiffimage(src)
+            try:
+                self.dimg = loader.loaddiffimage(src)
+            except RuntimeError: # unknown max recursion error
+                self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
         self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
