@@ -13,6 +13,9 @@ def import_module(modname,packagename=None):
         missingpackage = ex.message.replace('No module named ', '')
 
         import config
+        if missingpackage in ['qt.qtapi','pandas','tomopy','matplotlib.pyplot']:
+            return None
+
         if config.settings['Ignored Modules']:
             if missingpackage in config.settings['Ignored Modules']:
                 return None
