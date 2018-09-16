@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['Library', 'HipGISAXS']
+disabledatstart = ['Library']
 
 
 def initplugins(placeholders):

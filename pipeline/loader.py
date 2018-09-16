@@ -4,7 +4,6 @@ import os
 
 import fabio
 import numpy as np
-import pyfits
 
 # from nexpy.api import nexus as nx
 from pyFAI import detectors
@@ -64,7 +63,7 @@ def readenergy(path):
     try:
         if os.path.splitext(path)[1] in acceptableexts:
             if os.path.splitext(path)[1] == '.fits':
-                head = pyfits.open(path)
+                head = fabio.open(path)
                 # print head[0].header.keys()
                 paras = scanparaslines(str(head[0].header).split('\r'))
                 # print paras
@@ -116,7 +115,7 @@ def loadparas(path):
     try:
         extension = os.path.splitext(path)[1]
         if extension == '.fits':
-            head = pyfits.open(path)
+            head = fabio.open(path)
             # print head[0].header
             return head[0].header
 
