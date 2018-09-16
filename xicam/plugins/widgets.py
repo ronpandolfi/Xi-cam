@@ -102,7 +102,10 @@ class dimgViewer(QtGui.QWidget):
         if dimg is not None:
             self.dimg = dimg
         else:
-            self.dimg = loader.loaddiffimage(src)
+            try:
+                self.dimg = loader.loaddiffimage(src)
+            except RuntimeError: # unknown max recursion error
+                self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
         self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
@@ -1087,7 +1090,7 @@ class timelineViewer(dimgViewer):
         bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
                                         finished_slot=self.processingfinished,
                                         parent=self)(variation.variationiterator)
-        bg_variation(self.simg, self.operationindex)
+
         # xglobals.pool.apply_async(variation.scanvariation,args=(self.simg.filepaths),callback=self.testreceive)
 
         # variation = self.simg.scan(self.operationindex)
@@ -1103,11 +1106,15 @@ class timelineViewer(dimgViewer):
                     # Run on thread queue
                     # TODO: pull color from ROI, give ROIs deterministic colors with pyqtgraph.intColor
                     bg_variation(self.simg, self.operationindex, roi=roi)
+                    break
                 else:
                     self.viewbox.removeItem(roi)
                     # except Exception as ex:
                     # print 'Warning: error displaying ROI variation.'
                     #    print ex.message
+
+        else:
+            bg_variation(self.simg, self.operationindex)
 
 
     def processingfinished(self, *args, **kwargs):

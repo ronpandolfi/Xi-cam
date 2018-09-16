@@ -24,7 +24,7 @@ class settingstracker(ptypes.GroupParameter):
             with open(self.settingspath,'r') as stream:
                 self.restoreState(yaml.load(stream))
             for param in self.template()['children']:
-                if param['value'] not in self:
+                if param['name'] not in self:
                     raise yaml.YAMLError
         except (yaml.YAMLError,IOError) as exc:
             msg.logMessage(exc, msg.WARNING)
@@ -83,7 +83,8 @@ class settingstracker(ptypes.GroupParameter):
             {'name':'Integration Bins (q)','value':1000,'type':'int','min':1},
             {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int','min':1},
             {'name':'Image Load Rotations','value':0,'type':'int'},
-            {'name':'Image Load Transpose','value':False,'type':'bool'}]}
+            {'name':'Image Load Transpose','value':False,'type':'bool'},
+            {'name':'Ignored Modules','value':[],'type':'list'}]}
 
 
 settings=settingstracker()

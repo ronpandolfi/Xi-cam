@@ -17,6 +17,9 @@ disabledatstart = ['Library', 'HipGISAXS']
 
 
 def initplugins(placeholders):
+
+
+def initplugins(placeholders):
     import base
     global plugins, modules
 
