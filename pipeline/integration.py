@@ -367,20 +367,19 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
         AI = pyFAI.AzimuthalIntegrator()
         AI.setPyFAI(**AIdict)
 
-
     if mask is not None:
         mask = mask.copy()
 
-    msg.logMessage(('image:', data.shape),msg.DEBUG)
-    msg.logMessage(('mask:', mask.shape),msg.DEBUG)
+    msg.logMessage(('image:', data.shape), msg.DEBUG)
+    msg.logMessage(('mask:', mask.shape), msg.DEBUG)
 
     if not mask.shape == data.shape:
-        msg.logMessage("No mask match. Mask will be ignored.",msg.WARNING)
+        msg.logMessage("No mask match. Mask will be ignored.", msg.WARNING)
         mask = np.ones_like(data)
-        msg.logMessage(('emptymask:', mask.shape),msg.DEBUG)
+        msg.logMessage(('emptymask:', mask.shape), msg.DEBUG)
 
     if cut is not None and type(cut) is np.ndarray:
-        msg.logMessage(('cut:', cut.shape),msg.DEBUG)
+        msg.logMessage(('cut:', cut.shape), msg.DEBUG)
         mask = mask.astype(bool) & cut.astype(bool)
 
 
@@ -399,9 +398,10 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
     AIdict=AI.getPyFAI()
     msg.logMessage('remesh corrected calibration: '+str(AIdict))
 
-    AI._cached_array["q_center"]=np.sqrt(qsquared).T/10   # This is cheating! pyFAI may give unexpected results here
+    AI._cached_array["q_center"] = np.sqrt(qsquared).T / 10  # This is cheating! pyFAI may give unexpected results here
 
-    (q, radialprofile) = AI.integrate1d(data.T, config.settings['Integration Bins (q)'], mask=1 - mask.T, method=pyFAI_method)  #pyfai uses 0-valid mask
+    (q, radialprofile) = AI.integrate1d(data.T, config.settings['Integration Bins (q)'], mask=1 - mask.T,
+                                        method=pyFAI_method)  # pyfai uses 0-valid mask
 
     return q, radialprofile, color, requestkey
 

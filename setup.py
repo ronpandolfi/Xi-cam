@@ -92,9 +92,9 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
-                      'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
-                      'pypaws>=0.8.4','matplotlib'],
+                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole', 'tifffile', 'pysftp',
+                      'requests', 'dask', 'distributed', 'appdirs', 'futures', 'scikit-image', 'imageio', 'vispy',
+                      'pypaws>=0.8.4', 'matplotlib'],
 
     setup_requires=['numpy', 'cython'],
 
@@ -111,7 +111,7 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-         'xicam': ['gui/*', 'yaml/*','gui/logos/*'],
+        'xicam': ['gui/*', 'yaml/*', 'gui/logos/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may

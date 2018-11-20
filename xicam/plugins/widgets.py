@@ -104,7 +104,7 @@ class dimgViewer(QtGui.QWidget):
         else:
             try:
                 self.dimg = loader.loaddiffimage(src)
-            except RuntimeError: # unknown max recursion error
+            except RuntimeError:  # unknown max recursion error
                 self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image

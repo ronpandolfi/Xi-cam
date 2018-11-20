@@ -153,9 +153,12 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
     positionX1 = 0
     positionX2 = 0
 
-    if config.activeExperiment.mapHeader('Detector Vertical') in paras1 and config.activeExperiment.mapHeader('Detector Vertical') in paras2 and \
-                    config.activeExperiment.mapHeader('Detector Horizontal') in paras1 and config.activeExperiment.mapHeader('Detector Horizontal') in paras2:
-        if float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])!=0 and float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])!=0:
+    if config.activeExperiment.mapHeader('Detector Vertical') in paras1 and config.activeExperiment.mapHeader(
+            'Detector Vertical') in paras2 and \
+            config.activeExperiment.mapHeader('Detector Horizontal') in paras1 and config.activeExperiment.mapHeader(
+        'Detector Horizontal') in paras2:
+        if float(paras1[config.activeExperiment.mapHeader('Detector Vertical')]) != 0 and float(
+                paras2[config.activeExperiment.mapHeader('Detector Vertical')]) != 0:
             positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
             positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
             positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
@@ -286,7 +289,7 @@ def loadpath(path):
     if not isinstance(img, tuple):
         mask = finddetectorbyfilename(path).calc_mask()
         if mask is None: mask = np.zeros_like(img)
-        img = (img, 1-mask)
+        img = (img, 1 - mask)
     return img
 
 
@@ -1321,7 +1324,9 @@ class singlefilediffimage2(diffimage2):
         if self._rawdata is None:
             rawdata, mask = loadpath(self.filepath)
             self._rawdata = np.rot90(rawdata, 3)
-            if mask is not None and (self.experiment.mask is None or self.experiment.mask.shape!=mask.shape): self.experiment.mask = np.rot90(mask, 3)
+            if mask is not None and (
+                    self.experiment.mask is None or self.experiment.mask.shape != mask.shape): self.experiment.mask = np.rot90(
+                mask, 3)
         return self._rawdata
 
     def implements(self, t):

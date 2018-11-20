@@ -1,5 +1,3 @@
-
-
 __author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
@@ -267,6 +265,7 @@ def remove_outlier1d(arr, dif, size=3, axis=0, ncore=None, out=None):
 
     return out
 
+
 def beam_hardening(arr, a0=0, a1=1.0, a2=0, a3=0, a4=0, a5=0.1):
     """
     beam hardening correction, based on "Correction for beam hardening in computed tomography",
@@ -284,6 +283,7 @@ def beam_hardening(arr, a0=0, a1=1.0, a2=0, a3=0, a4=0, a5=0.1):
     loc_dict['a5'] = np.float32(a5)
 
     return ne.evaluate('a0 + a1*tomo + a2*tomo**2 + a3*tomo**3 + a4*tomo**4 + a5*tomo**5', local_dict=loc_dict)
+
 
 def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0=0):
     """
@@ -308,11 +308,11 @@ def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0
     """
 
     if not tiltcenter_slice:
-        tiltcenter_slice = arr.shape[1]/2
+        tiltcenter_slice = arr.shape[1] / 2
     if not tiltcenter_det:
-        tiltcenter_det = arr.shape[2]/2
+        tiltcenter_det = arr.shape[2] / 2
 
-    new_center = tiltcenter_slice - 0.5 -sino_0
+    new_center = tiltcenter_slice - 0.5 - sino_0
     center_det = tiltcenter_det - 0.5
     cntr = (center_det, new_center)
     for b in range(arr.shape[0]):
@@ -320,15 +320,16 @@ def correct_tilt(arr, tilt=0, tiltcenter_slice=None, tiltcenter_det=None, sino_0
 
     return arr
 
+
 def sino_360_to_180(data, overlap=0, rotation='left'):
     """
     Wrapper for 360_to_180 function (see below) to handle even/odd shaped data
     """
 
-    if data.shape[0]%2>0:
-        return do360_to_180(data[0:-1,:,:], overlap=overlap, rotation=rotation)
+    if data.shape[0] % 2 > 0:
+        return do360_to_180(data[0:-1, :, :], overlap=overlap, rotation=rotation)
     else:
-        return do360_to_180(data[:,:,:], overlap=overlap, rotation=rotation)
+        return do360_to_180(data[:, :, :], overlap=overlap, rotation=rotation)
 
 
 def do360_to_180(data, overlap=0, rotation='left'):
@@ -356,7 +357,7 @@ def do360_to_180(data, overlap=0, rotation='left'):
     lo = overlap // 2
     ro = overlap - lo
     n = dx // 2
-    out = np.zeros((n, dy, 2*dz - overlap), dtype=data.dtype)
+    out = np.zeros((n, dy, 2 * dz - overlap), dtype=data.dtype)
     if rotation == 'left':
         weights = (np.arange(overlap) + 0.5) / overlap
         out[:, :, -dz + overlap:] = data[:n, :, overlap:]
@@ -370,6 +371,7 @@ def do360_to_180(data, overlap=0, rotation='left'):
         out[:, :, dz - overlap:dz] = weights * data[:n, :, -overlap:] + (weights * data[n:2 * n, :, -overlap:])[:, :,
                                                                         ::-1]
     return out
+
 
 def normalize(tomo, flats, dark, cutoff=None, ncore=None):
     """

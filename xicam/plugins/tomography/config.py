@@ -1,4 +1,3 @@
-
 __author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
@@ -21,11 +20,15 @@ from modpkgs import yamlmod
 PARAM_TYPES = {'int': int, 'float': float}
 
 # Load yaml with names of all available functions in pipeline
-with open('xicam/yaml/tomography/functions.yml','r') as stream:
+with open('xicam/yaml/tomography/functions.yml', 'r') as stream:
     funcs=yaml.load(stream)
 
 # load various function dictionaries from function_info.yml file
-parameters = {}; als832defaults = {}; aps_defaults = {}; names = {}; function_defaults = {}
+parameters = {};
+als832defaults = {};
+aps_defaults = {};
+names = {};
+function_defaults = {}
 with open('xicam/yaml/tomography/functions_info.yml', 'r') as stream:
     info = yaml.load(stream)
     for key in info.keys():

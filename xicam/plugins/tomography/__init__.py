@@ -112,8 +112,8 @@ class TomographyPlugin(base.plugin):
 
         # Connect toolbar signals and ui button signals
         self.toolbar.connectTriggers(self.slicePreviewAction, self.multiSlicePreviewAction, self.preview3DAction,
-                                            self.loadFullReconstruction, self.manualCenter,  self.roiSelection,
-                                            self.mbir, self.openFlats, self.openDarks)
+                                     self.loadFullReconstruction, self.manualCenter, self.roiSelection,
+                                     self.mbir, self.openFlats, self.openDarks)
 
         self.ui.connectTriggers(self.loadPipeline, self.savePipeline, self.resetPipeline,
                         lambda: self.manager.swapFeatures(self.manager.selectedFeature, self.manager.previousFeature),
@@ -171,20 +171,19 @@ class TomographyPlugin(base.plugin):
         # connect signals
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.projectionViewer.sigROIWidgetChanged.connect(lambda x:
-                                x.sigRegionChanged.connect(self.manager.adjustReaderParams))
+                                                            x.sigRegionChanged.connect(self.manager.adjustReaderParams))
 
         # complicated way of connecting the ROI params to the functionwidget
         # is there a better way to do this?
         self.manager.sigNormFuncAdded.connect(lambda x:
-                                x.sigROIAdded.connect(widget.projectionViewer.stackViewer.view.addItem))
+                                              x.sigROIAdded.connect(widget.projectionViewer.stackViewer.view.addItem))
         self.manager.sigNormFuncAdded.connect(lambda x: x.sigROIAdded.connect(
-                                lambda y: y.sigRegionChanged.connect(lambda z: x.adjustParams(self.manager))
+            lambda y: y.sigRegionChanged.connect(lambda z: x.adjustParams(self.manager))
         ))
 
         self.wireCORWidgets(widget)
         self.centerwidget.addTab(widget, os.path.basename(paths))
         self.centerwidget.setCurrentWidget(widget)
-
 
     def wireCORWidgets(self, widget):
         """
@@ -233,7 +232,7 @@ class TomographyPlugin(base.plugin):
 
             widget = TomoViewer(paths=files)
         except Exception as e:
-            msg.showMessage('Unable to load directory. Check log for details.', timeout= 10)
+            msg.showMessage('Unable to load directory. Check log for details.', timeout=10)
             raise e
         widget.sigSetDefaults.connect(self.manager.setPipelineFromDict)
         widget.wireupCenterSelection(self.manager.recon_function)
@@ -346,7 +345,7 @@ class TomographyPlugin(base.plugin):
         Sets up the metadata table and default values in configuration parameters and functions based on the selected
         dataset
         """
-        widget =  self.centerwidget.widget(self.currentIndex())
+        widget = self.centerwidget.widget(self.currentIndex())
         if widget is not None:
             self.ui.property_table.setData(widget.data.header.items())
             # self.ui.setMBIR(widget.data.header.items())
@@ -505,8 +504,8 @@ class TomographyPlugin(base.plugin):
         """
 
         slice_no = self.centerwidget.widget(self.currentIndex()).sinogramViewer.currentIndex
-        maximum = self.centerwidget.widget(self.currentIndex()).sinogramViewer.data.shape[0]-1
-        dialog = sliceDialog(parent=self.centerwidget, val1=slice_no, val2=slice_no+20,maximum=maximum)
+        maximum = self.centerwidget.widget(self.currentIndex()).sinogramViewer.data.shape[0] - 1
+        dialog = sliceDialog(parent=self.centerwidget, val1=slice_no, val2=slice_no + 20, maximum=maximum)
         try:
             value = dialog.value
 
@@ -518,7 +517,7 @@ class TomographyPlugin(base.plugin):
                 if self.checkPipeline():
                     msg.showMessage(message, timeout=0)
                     if value[0] == value[1]:
-                        dims = self.get_reader_dims(sino = (value[1], value[1] + 1, 1))
+                        dims = self.get_reader_dims(sino=(value[1], value[1] + 1, 1))
                         dims += (0,)
                         self.preview_slices = value[1]
                         self.centerwidget.widget(self.currentIndex()).sinogramViewer.setIndex(self.preview_slices)
@@ -551,10 +550,9 @@ class TomographyPlugin(base.plugin):
 
             if window.result():
                 msg.showMessage('Computing 3D preview...', timeout=0)
-                dims = self.get_reader_dims(sino = (None, None, val), width=(None, None, val))
+                dims = self.get_reader_dims(sino=(None, None, val), width=(None, None, val))
                 dims += (0,)
                 self.processFunctionStack(callback=lambda *x: self.run3DPreview(*x), dims=dims)
-
 
     def runSlicePreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
@@ -586,9 +584,8 @@ class TomographyPlugin(base.plugin):
 
         except_slot = lambda: msg.showMessage(err_message)
         bg_fold = threads.iterator(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
-                                 except_slot=except_slot)
+                                   except_slot=except_slot)
         bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, 'Slice')
-
 
     def run3DPreview(self, datawidget, func_dict, theta, center, stack_dict, prange=None, dims=None):
         """
@@ -619,7 +616,6 @@ class TomographyPlugin(base.plugin):
         bg_fold = threads.iterator(callback_slot=callback, finished_slot=msg.clearMessage, lock=threads.mutex,
                                    except_slot=except_slot)
         bg_fold(self.manager.reconGenerator)(datawidget, func_dict, theta, center, None, None, dims, None, '3D')
-
 
     def processFunctionStack(self, callback, finished=None, dims=None, fixed_func=None, prange=None):
         """
@@ -680,8 +676,8 @@ class TomographyPlugin(base.plugin):
 
         func_dict, theta, center, pipeline_dict, run_dict = self.manager.saveState(currentWidget)
         recon_iter = threads.iterator(callback_slot=self.bottom.log2local, except_slot=self.reconstructionFinished,
-                            interrupt_signal=self.bottom.local_cancelButton.clicked,
-                            finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
+                                      interrupt_signal=self.bottom.local_cancelButton.clicked,
+                                      finished_slot=self.reconstructionFinished)(self.manager.reconGenerator)
 
         # set up information for reconstruction
         proj, sino, width, proj_chunk, sino_chunk = self.get_reader_dims()
@@ -703,7 +699,7 @@ class TomographyPlugin(base.plugin):
         Takes reconstruction job from self.queue_widget.recon_queue and runs it on background thread. Saves function
         pipeline as python runnable after reconstruction is finished.
         """
-        if (not len(self.queue_widget.recon_queue)==0) and (not self.recon_running):
+        if (not len(self.queue_widget.recon_queue) == 0) and (not self.recon_running):
             self.recon_running = True
             self.queue_widget.manager.features[0].closeButton.hide()
             recon_job = self.queue_widget.recon_queue.popleft()
@@ -728,7 +724,6 @@ class TomographyPlugin(base.plugin):
             self.bottom.log2local('------- Beginning next reconstruction -------')
         self.recon_running = False
         self.runReconstruction()
-
 
     def get_reader_dims(self, proj=None, sino=None, width=None):
         """
@@ -765,19 +760,14 @@ class TomographyPlugin(base.plugin):
             else:
                 if not dim[0]: dim = (0 if not reader else reader[i][0], dim[1], dim[2])
                 if not dim[1]: dim = (dim[0], self.centerwidget.currentWidget().data.shape[i] if not reader
-                                      else reader[i][1], dim[2])
+                else reader[i][1], dim[2])
                 if not dim[2]: dim = (dim[0], dim[1], 1 if not reader else reader[i][2])
             dims[i] = dim
         proj, width, sino = dims
 
         if not sino_chunk:
-            sino_chunk = cpu_count()*5
+            sino_chunk = cpu_count() * 5
         if not proj_chunk:
-            proj_chunk = cpu_count()*5
+            proj_chunk = cpu_count() * 5
 
         return proj, sino, width, proj_chunk, sino_chunk
-
-
-
-
-

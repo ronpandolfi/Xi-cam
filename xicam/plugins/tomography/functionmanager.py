@@ -11,7 +11,6 @@ __maintainer__ = "Ronald J Pandolfi"
 __email__ = "ronpandolfi@lbl.gov"
 __status__ = "Beta"
 
-
 import inspect
 import time
 import os
@@ -97,7 +96,8 @@ class FunctionManager(fw.FeatureManager):
         'Phase Retrieval': 'proj',
         'Gridrec': 'sino', 'FBP': 'sino', 'ART': 'sino', 'BART': 'sino', 'MLEM': 'sino', 'OSEm': 'sino',
         'OSPML Hybrid': 'sino', 'OSPML Quad': 'sino', 'PML Hybrid': 'sino', 'PML Quad': 'sino', 'SIRT': 'sino',
-        'BP': 'sino', 'FBP_astra': 'sino', 'SIRT_astra': 'sino', 'SART': 'sino', 'ART_astra': 'sino', 'CGLS': 'sino', 'BP_CUDA': 'sino',
+        'BP': 'sino', 'FBP_astra': 'sino', 'SIRT_astra': 'sino', 'SART': 'sino', 'ART_astra': 'sino', 'CGLS': 'sino',
+        'BP_CUDA': 'sino',
         'FBP_CUDA': 'sino', 'SIRT_CUDA': 'sino', 'SART_CUDA': 'sino', 'CGLS_CUDA': 'sino', 'Gridrec Tomocam': 'sino',
         'SIRT TomoCam': 'sino', 'MBIR TomoCam': 'sino',
         'Polar Mean Filter': 'sino',
@@ -114,16 +114,13 @@ class FunctionManager(fw.FeatureManager):
         'Add': 'both', 'Subtract': 'both', 'Multiply': 'both', 'Divide': 'both', 'Maximum': 'both'
     }
 
-
     def __init__(self, list_layout, form_layout, function_widgets=None, blank_form=None):
         super(FunctionManager, self).__init__(list_layout, form_layout, feature_widgets=function_widgets,
                                               blank_form=blank_form)
-        #TODO: add attribute to keep track of function's order in pipeline
+        # TODO: add attribute to keep track of function's order in pipeline
         self.cor_offset = lambda x: x  # dummy
         self.cor_scale = lambda x: x  # dummy
         self.recon_function = None
-
-
 
     # TODO fix this astra check raise error if package not available
     def addFunction(self, function, subfunction, package):
@@ -163,12 +160,11 @@ class FunctionManager(fw.FeatureManager):
         func_widget.sigTestRange.connect(self.testParameterRange)
         self.addFeature(func_widget)
 
-        if function == 'Padding' or function  == 'Crop':
+        if function == 'Padding' or function == 'Crop':
             self.connectCropPad()
 
         self.sigFuncAdded.emit()
         return func_widget
-
 
     def setFunctionValues(self, funcwidget, params, setDefault=False):
         """
@@ -182,7 +178,6 @@ class FunctionManager(fw.FeatureManager):
             if setDefault:
                 funcwidget.params.child(param).setDefault(value)
 
-
     def connectCropPad(self):
         """
         Connects 'Crop' and 'Pad' functions in pipeline, if they are both present, so that # of pixels added by
@@ -191,15 +186,18 @@ class FunctionManager(fw.FeatureManager):
         names = [func.name for func in self.features]
         if 'Padding' in names and 'Crop' in names:
             for feature in self.features:
-                if feature.func_name == 'Padding': pad = feature
-                elif feature. func_name == 'Crop': crop = feature
+                if feature.func_name == 'Padding':
+                    pad = feature
+                elif feature.func_name == 'Crop':
+                    crop = feature
 
             pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p11').setValue(x.value()))
             pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p12').setValue(x.value()))
             pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p21').setValue(x.value()))
             pad.params.child('npad').sigValueChanged.connect(lambda x: crop.params.child('p22').setValue(x.value()))
 
-            children = [crop.params.child('p11'), crop.params.child('p21'), crop.params.child('p12'), crop.params.child('p22')]
+            children = [crop.params.child('p11'), crop.params.child('p21'), crop.params.child('p12'),
+                        crop.params.child('p22')]
             for p in children:
                 for p_other in [param for param in children if param != p]:
                     p.sigValueChanged.connect(lambda x=p: p_other.setValue(x.value()))
@@ -270,7 +268,6 @@ class FunctionManager(fw.FeatureManager):
                 for child in self.cor_func.params.children():
                     child.sigValueChanged.connect(self.updateCORWidget)
 
-
     def updateCORPipeline(self, param):
         """
         Slot for connecting COR widget and pipeline COR functions - emitted when parameter in COR widget is changed,
@@ -294,7 +291,6 @@ class FunctionManager(fw.FeatureManager):
         child = self.cor_widget.params.child(param.name())
         child.setValue(param.value())
 
-
     def CORChoiceUpdated(self):
         """
         Slot to receive signal when COR detection method is changed (auto/manual). Emits signal to reflect this
@@ -304,7 +300,6 @@ class FunctionManager(fw.FeatureManager):
         for feature in self.features:
             if 'center' in feature.input_functions:
                 self.sigCORDetectChanged.emit(feature.input_functions['center'].enabled)
-
 
     def updateParameters(self):
         """
@@ -326,18 +321,18 @@ class FunctionManager(fw.FeatureManager):
             if 'Reader' in feature.name:
                 pos = roi_widget.pos()
                 size = roi_widget.size()
-                x1 = int(pos[0]) if pos[0]>0 else 0
-                x2 = int(pos[0]+size[0]) if pos[0]+size[0]<feature.params.child('end_width').defaultValue() else \
-                        feature.params.child('end_width').defaultValue()
-                y1 = int(pos[1]) if pos[1]>0 else 0
-                y2 = int(pos[1]+size[1]) if pos[1]+size[1]<feature.params.child('end_sinogram').defaultValue() else \
-                        feature.params.child('end_sinogram').defaultValue()
+                x1 = int(pos[0]) if pos[0] > 0 else 0
+                x2 = int(pos[0] + size[0]) if pos[0] + size[0] < feature.params.child('end_width').defaultValue() else \
+                    feature.params.child('end_width').defaultValue()
+                y1 = int(pos[1]) if pos[1] > 0 else 0
+                y2 = int(pos[1] + size[1]) if pos[1] + size[1] < feature.params.child(
+                    'end_sinogram').defaultValue() else \
+                    feature.params.child('end_sinogram').defaultValue()
 
                 feature.params.child('start_width').setValue(x1)
                 feature.params.child('end_width').setValue(x2)
                 feature.params.child('start_sinogram').setValue(y1)
                 feature.params.child('end_sinogram').setValue(y2)
-
 
     def lockParams(self, boolean):
         """
@@ -406,7 +401,8 @@ class FunctionManager(fw.FeatureManager):
         self.lockParams(True)
 
         # extract function pipeline
-        d = OrderedDict(); theta = []
+        d = OrderedDict();
+        theta = []
         for function in self.features:
             if not function.enabled or 'Reader' in function.name:
                 continue
@@ -431,8 +427,8 @@ class FunctionManager(fw.FeatureManager):
 
             d[function.name] = fpartial
 
-            if 'Reconstruction' in function.name: # could be bad, depending on if other operations need theta/center
-                for param,ipf in function.input_functions.iteritems():
+            if 'Reconstruction' in function.name:  # could be bad, depending on if other operations need theta/center
+                for param, ipf in function.input_functions.iteritems():
                     if not ipf.enabled:
                         if 'center' in param:
                             center = function.partial.keywords['center']
@@ -443,7 +439,7 @@ class FunctionManager(fw.FeatureManager):
                         args = []
                         if ipf.subfunc_name in FunctionManager.center_func_slc:
                             map(args.append, map(datawidget.data.fabimage.__getitem__,
-                                                         FunctionManager.center_func_slc[ipf.subfunc_name]))
+                                                 FunctionManager.center_func_slc[ipf.subfunc_name]))
                         else:
                             args.append(datawidget.getsino())
                         if ipf.subfunc_name == 'Nelder-Mead':
@@ -459,7 +455,7 @@ class FunctionManager(fw.FeatureManager):
         return [d, theta, center, config.extract_pipeline_dict(self.features),
                 config.extract_runnable_dict(self.features)]
 
-    def loadDataDictionary(self, datawidget, theta, center, slc = None):
+    def loadDataDictionary(self, datawidget, theta, center, slc=None):
         """
         Method to load dictionary of data relevant to a reconstruction
 
@@ -495,7 +491,6 @@ class FunctionManager(fw.FeatureManager):
             if len(data_dict[key].shape) < 3:
                 data_dict[key] = data_dict[key][:, np.newaxis, :]
 
-
         try:
             if slc is not None and slc[0].start is not None:
                 slc_ = (slice(slc[0].start, datawidget.data.shape[0] - 1, slc[0].step) if slc[0].stop is None
@@ -504,15 +499,15 @@ class FunctionManager(fw.FeatureManager):
             else:
                 flat_loc = datawidget.data.fabimage.flatindices()
             data_dict['flat_loc'] = flat_loc
-        except TypeError: pass
-        except AttributeError: pass
+        except TypeError:
+            pass
+        except AttributeError:
+            pass
 
         data_dict['theta'] = theta
         data_dict['center'] = center
 
         return data_dict
-
-
 
     def updatePartial(self, function, name, data_dict, param_dict, slc=None):
         """
@@ -557,12 +552,12 @@ class FunctionManager(fw.FeatureManager):
             # since this parameter needs the COR (which can change), loading must be done here
             # instead of done earlier
             tomo = data_dict['tomo']
-            if tomo.shape[0]%2>0:
-                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'] -0.5))*2)
+            if tomo.shape[0] % 2 > 0:
+                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'] - 0.5)) * 2)
             else:
-                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center']))*2)
+                function.keywords['overlap'] = int(np.round((tomo.shape[2] - data_dict['center'])) * 2)
         elif name == 'Write (Tiff Stack)':
-            function.keywords['start'] = data_dict['y']*data_dict['num_sino_per_chunk'] + data_dict['sino'][0]
+            function.keywords['start'] = data_dict['y'] * data_dict['num_sino_per_chunk'] + data_dict['sino'][0]
         return function, write
 
     def updateDataDict(self, data_dict, function, name):
@@ -591,15 +586,17 @@ class FunctionManager(fw.FeatureManager):
             data_dict['keepvalues'] = [data_dict['proj'], data_dict['num_proj_per_chunk'], data_dict['numprojchunks'],
                                        data_dict['numprojused'], data_dict['width']]
             proj = data_dict['proj']
-            numangles = int(proj[1]-proj[0]) / 2
+            numangles = int(proj[1] - proj[0]) / 2
             data_dict['proj'] = (0, numangles - 1, proj[2])
             data_dict['num_proj_per_chunk'] = np.minimum(data_dict['num_proj_per_chunk'],
                                                          data_dict['proj'][1] - data_dict['proj'][0])
-            data_dict['numprojchunks'] = (data_dict['proj'][1]-data_dict['proj'][0]-1) // data_dict['num_proj_per_chunk'] + 1
+            data_dict['numprojchunks'] = (data_dict['proj'][1] - data_dict['proj'][0] - 1) // data_dict[
+                'num_proj_per_chunk'] + 1
             data_dict['numprojused'] = (data_dict['proj'][1] - data_dict['proj'][0]) // data_dict['proj'][2]
             data_dict['width'] = (data_dict['width'][0], data_dict['width'][1] + data_dict['tomo'].shape[2],
                                   data_dict['width'][2])
-            min_angle = data_dict['theta'][-1]; max_angle = data_dict['theta'][0]
+            min_angle = data_dict['theta'][-1];
+            max_angle = data_dict['theta'][0]
             data_dict['theta'] = tomopy.angles(numangles, np.rad2deg(max_angle), np.rad2deg(min_angle))
 
     def loadPreviewData(self, datawidget, dims=None, ncore=None, skip_names=['Write', 'Reader'],
@@ -647,7 +644,7 @@ class FunctionManager(fw.FeatureManager):
         # load data dictionary
         proj, sino, width, proj_p_chunk, sino_p_chunk, cpu_count = dims
         slc = (slice(*proj), slice(*sino), slice(*width))
-        data_dict = self.loadDataDictionary(datawidget, theta, center, slc = slc)
+        data_dict = self.loadDataDictionary(datawidget, theta, center, slc=slc)
 
         count = 1
         for func in self.features:
@@ -683,10 +680,8 @@ class FunctionManager(fw.FeatureManager):
         self.lockParams(False)
         return datawidget, func_dict, theta, center, stack_dict, prange, dims
 
-
-
     def reconGenerator(self, datawidget, func_dict, theta, center, yaml_pipe,
-                       run_dict, dims, ncore = 1, reconType='Full'):
+                       run_dict, dims, ncore=1, reconType='Full'):
 
         """
         Generator for running full reconstruction. Yields messages representing the status of reconstruction or the
@@ -735,17 +730,16 @@ class FunctionManager(fw.FeatureManager):
         preview_slices = []
 
         num_proj_per_chunk = np.minimum(proj_p_chunk, proj[1] - proj[0])
-        numprojchunks = (proj[1] - proj[0] - 1)//num_proj_per_chunk+1
+        numprojchunks = (proj[1] - proj[0] - 1) // num_proj_per_chunk + 1
         num_sino_per_chunk = np.minimum(sino_p_chunk, sino[1] - sino[0])
-        numsinochunks = (sino[1]-sino[0]-1)//num_sino_per_chunk+1
-        numprojused = (proj[1] - proj[0])//proj[2]
-        numsinoused = (sino[1] - sino[0])//sino[2]
+        numsinochunks = (sino[1] - sino[0] - 1) // num_sino_per_chunk + 1
+        numprojused = (proj[1] - proj[0]) // proj[2]
+        numsinoused = (sino[1] - sino[0]) // sino[2]
 
         # set up dictionary of function keywords
         params_dict = OrderedDict()
         for name, fpartial in list(func_dict.items()):
             params_dict['{}'.format(name)] = dict(fpartial.keywords)
-
 
         if reconType == 'Full':
             # get save names for pipeline yaml/runnable files
@@ -774,12 +768,11 @@ class FunctionManager(fw.FeatureManager):
             #     yield "Error: pipeline python script not written - path could not be found"
 
             # save yaml in reconstruction folder
-            for key in yaml_pipe.iterkeys(): # special case for 'center' param
+            for key in yaml_pipe.iterkeys():  # special case for 'center' param
                 if 'Recon' in key:
                     for subfunc in yaml_pipe[key].iterkeys():
                         if 'Parameters' in yaml_pipe[key][subfunc].iterkeys():
                             yaml_pipe[key][subfunc]['Parameters']['center'] = float(center)
-
 
             try:
                 with open(yml_file, 'w') as yml:
@@ -800,12 +793,12 @@ class FunctionManager(fw.FeatureManager):
                          os.path.join(os.path.dirname(path), 'tmp1.h5')]
 
         d = {'num_proj_per_chunk': num_proj_per_chunk, 'num_sino_per_chunk':
-                    num_sino_per_chunk, 'numprojchunks': numprojchunks, 'numsinochunks': numsinochunks,
-                    'numprojused': numprojused, 'numsinoused': numsinoused,
-                    'proj': proj, 'sino': sino, 'width': width, 'keepvalues': None}
+            num_sino_per_chunk, 'numprojchunks': numprojchunks, 'numsinochunks': numsinochunks,
+             'numprojused': numprojused, 'numsinoused': numsinoused,
+             'proj': proj, 'sino': sino, 'width': width, 'keepvalues': None}
 
         while True:
-            if axis=='proj':
+            if axis == 'proj':
                 niter = d['numprojchunks']
             else:
                 niter = d['numsinochunks']
@@ -814,28 +807,34 @@ class FunctionManager(fw.FeatureManager):
                 if axis != 'proj' and reconType == '3D':
                     self.cor_scale = lambda x: x // width[2]
                 d['y'] = y
-                yield "{} chunk {} of {}".format(axis, y+1, niter)
-                if curfunc==0:
-                    if axis=='proj':
-                        slc = (slice(y*num_proj_per_chunk+proj[0], np.minimum((y+1)*num_proj_per_chunk+proj[0], proj[1]),
+                yield "{} chunk {} of {}".format(axis, y + 1, niter)
+                if curfunc == 0:
+                    if axis == 'proj':
+                        slc = (slice(y * num_proj_per_chunk + proj[0],
+                                     np.minimum((y + 1) * num_proj_per_chunk + proj[0], proj[1]),
                                      proj[2]), slice(*sino), slice(*width))
                     else:
-                        slc = (slice(*proj), slice(y*num_sino_per_chunk+sino[0], np.minimum((y+1)*num_sino_per_chunk
-                                + sino[0], sino[1]), sino[2]), slice(*width))
-                    tmp_d = self.loadDataDictionary(datawidget, theta, center,  slc=slc)
+                        slc = (
+                            slice(*proj),
+                            slice(y * num_sino_per_chunk + sino[0], np.minimum((y + 1) * num_sino_per_chunk
+                                                                               + sino[0], sino[1]), sino[2]),
+                            slice(*width))
+                    tmp_d = self.loadDataDictionary(datawidget, theta, center, slc=slc)
                     d.update(tmp_d)
 
                 else:
-                    if axis=='proj':
-                        start, end = y * d['num_proj_per_chunk'], np.minimum((y + 1)*d['num_proj_per_chunk'], d['numprojused'])
+                    if axis == 'proj':
+                        start, end = y * d['num_proj_per_chunk'], np.minimum((y + 1) * d['num_proj_per_chunk'],
+                                                                             d['numprojused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((start, end, 1), (0, d['numsinoused'], 1),
-                                     (0, (d['width'][1]-d['width'][0])//d['width'][2], 1)))
+                                                         slc=((start, end, 1), (0, d['numsinoused'], 1),
+                                                              (0, (d['width'][1] - d['width'][0]) // d['width'][2], 1)))
                     else:
-                        start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1)*d['num_sino_per_chunk'], d['numsinoused'])
+                        start, end = y * d['num_sino_per_chunk'], np.minimum((y + 1) * d['num_sino_per_chunk'],
+                                                                             d['numsinoused'])
                         tomo = dxchange.reader.read_hdf5(tempfilenames[curtemp], '/tmp/tmp',
-                                slc=((0, d['numprojused'], 1), (start, end, 1),
-                                     (0, (d['width'][1]-d['width'][0])//d['width'][2], 1)))
+                                                         slc=((0, d['numprojused'], 1), (start, end, 1),
+                                                              (0, (d['width'][1] - d['width'][0]) // d['width'][2], 1)))
                     d['tomo'] = tomo
                 dofunc = curfunc
                 d['start'] = write_start
@@ -846,13 +845,13 @@ class FunctionManager(fw.FeatureManager):
                     newaxis = self.slice_dir[subfunc]
                     if newaxis != 'both' and newaxis != axis:
                         # we have to switch the axis, so flush to disk
-                        if y ==0:
+                        if y == 0:
                             try:
-                                os.remove(tempfilenames[1-curtemp])
+                                os.remove(tempfilenames[1 - curtemp])
                             except OSError:
                                 pass
-                        appendaxis = 1 if axis=='sino' else 0
-                        dxchange.write_hdf5(d['tomo'], fname=tempfilenames[1-curtemp], gname='tmp', dname='tmp',
+                        appendaxis = 1 if axis == 'sino' else 0
+                        dxchange.write_hdf5(d['tomo'], fname=tempfilenames[1 - curtemp], gname='tmp', dname='tmp',
                                             overwrite=False, appendaxis=appendaxis)
                         break
                     yield "{}: ".format(func_name)
@@ -862,13 +861,14 @@ class FunctionManager(fw.FeatureManager):
                     d[write] = function()
                     self.updateDataDict(d, func_dict[func_name], func_name)
 
-                    yield 'Finished in {:2f} seconds\n'.format(time.time()-curtime)
+                    yield 'Finished in {:2f} seconds\n'.format(time.time() - curtime)
                     dofunc += 1
                     if dofunc == len(func_dict):
-                        preview_slices.append(d['tomo']) # append to list for previews
+                        preview_slices.append(d['tomo'])  # append to list for previews
                         break
                 if y < niter - 1 and d['keepvalues']:
-                    d['proj'], d['num_proj_per_chunk'], d['numprojchunks'], d['numprojused'], d['width'] = d['keepvalues']
+                    d['proj'], d['num_proj_per_chunk'], d['numprojchunks'], d['numprojused'], d['width'] = d[
+                        'keepvalues']
                 if axis == 'sino':
                     write_start += num_sino_per_chunk
             curtemp = 1 - curtemp
@@ -890,7 +890,6 @@ class FunctionManager(fw.FeatureManager):
 
         yield "End Time: " + time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
         yield "It took {:3f} s to process {}".format(time.time() - start_time, path)
-
 
     def testParameterRange(self, function, parameter, prange):
         """
@@ -923,7 +922,6 @@ class FunctionManager(fw.FeatureManager):
                                                 '_function': function._function})
             self.sigTestRange.emit('Computing preview for {} parameter {}={}...'.format(function.name, parameter, i),
                                    fixed_func, {'function': function.func_name, parameter: prange})
-
 
     def setPipelineFromYAML(self, pipeline, setdefaults=False, config_dict=config.names):
         """
@@ -997,7 +995,8 @@ class FunctionManager(fw.FeatureManager):
                         for param, ipfs in value.iteritems():
                             for ipf, sipf in ipfs.iteritems():
                                 ifwidget = self.addInputFunction(funcWidget, param, ipf, sipf.keys()[0],
-                                                    package=reconpkg.packages[config_dict[sipf.keys()[0]][1]])
+                                                                 package=reconpkg.packages[
+                                                                     config_dict[sipf.keys()[0]][1]])
                                 for p, v in sipf[sipf.keys()[0]].items():
                                     ifwidget.params.child(p).setValue(v)
                                 ifwidget.updateParamsDict()
@@ -1013,7 +1012,6 @@ class FunctionManager(fw.FeatureManager):
 
         # TODO: make new backend pipeline compatible with python script
         """
-
 
         signature = "import time \nimport tomopy \nimport dxchange\nimport h5py\n" \
                     "import numpy as np\nimport numexpr as ne\n\n"
@@ -1032,10 +1030,11 @@ class FunctionManager(fw.FeatureManager):
         signature += "\ttomo=data[0]; flats=data[1]; dark=data[2]\n"
         signature += "\tmdata = read_als_832h5_metadata('{}')\n\n".format(path)
         signature += "\t# choose which projections and sinograms go into the reconstruction:\n"
-        signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0],proj[1],proj[2])
-        signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0],sino[1],sino[2])
+        signature += "\tproj_start = {}; proj_end = {}; proj_step = {}\n".format(proj[0], proj[1], proj[2])
+        signature += "\tsino_start = {}; sino_end = {}; sino_step = {}\n".format(sino[0], sino[1], sino[2])
         signature += "\twidth_start = {}; width_end = {}; width_step = 1\n".format(width[0], width[1])
-        signature += "\tsino_p_chunk = {2} # chunk size of data during reconstruction\n\n".format(proj, sino, sino_p_chunk)
+        signature += "\tsino_p_chunk = {2} # chunk size of data during reconstruction\n\n".format(proj, sino,
+                                                                                                  sino_p_chunk)
         signature += "\tproj = (proj_start, proj_end, proj_step)\n"
         signature += "\tsino = (sino_start, sino_end, sino_step)\n"
         signature += "\twidth = (width_start, width_end, width_step)\n\n"
@@ -1071,7 +1070,8 @@ class FunctionManager(fw.FeatureManager):
             signature += "\t\tprint 'Running {0} on slices {1} to {2} from a total of {3} slices'.format("
             signature += "'{}', start, end, total_sino)\n ".format('{}'.format(func))
             signature += "\t\tparams = {}\n".format(param_dict)
-            signature += "\t\tkwargs, write, cor_offset, cor_scale = updateKeywords('{}', params, data_dict,".format(func)
+            signature += "\t\tkwargs, write, cor_offset, cor_scale = updateKeywords('{}', params, data_dict,".format(
+                func)
             signature += " cor_offset, cor_scale, width)\n"
             signature += "\t\tdata_dict[write] = {}(**kwargs)\n".format(func)
             signature += "\t\tprint 'Finished in {:.3f} s'.format(time.time()-ts)\n"
@@ -1121,7 +1121,6 @@ class FunctionManager(fw.FeatureManager):
         signature += "def correctCenter(center, cor_offset, cor_scale, width):\n"
         signature += "\tif cor_scale<0:\n\t\treturn float(int(center * 2 ** cor_scale)) + cor_offset - width[0]\n"
         signature += "\telse:\n\t\treturn (center * 2 ** cor_scale) + cor_offset - width[0]\n\n"
-
 
         signature += "def map_loc(slc,loc):\n\tstep = slc.step if slc.step is not None else 1\n"
         signature += "\tind = range(slc.start, slc.stop, step)\n\tloc = np.array(loc)\n\tlow, upp = ind[0], ind[-1]\n"
@@ -1236,7 +1235,6 @@ def array_operation_max(arr, value=0):
         return signature
 
 
-
 def map_loc(slc, loc):
     """
     Does a linear mapping of the indices in loc from a range given by slc start and stop with step of one to a new
@@ -1269,6 +1267,7 @@ def map_loc(slc, loc):
         loc[0] = 0
 
     return np.ndarray.tolist(loc)
+
 
 class TestRangeDialog(QtGui.QDialog):
     """
@@ -1321,6 +1320,7 @@ class TestRangeDialog(QtGui.QDialog):
         # return the end as selected end + step so that the range includes the end
         return np.arange(self.spinBox.value(), self.spinBox_2.value(), self.spinBox_3.value())
 
+
 class TestListRangeDialog(QtGui.QDialog):
     """
     Simple QDialog subclass with comboBox and lineEdit to choose from a list of available function parameter keywords
@@ -1362,22 +1362,3 @@ class TestListRangeDialog(QtGui.QDialog):
 
     def selectedRange(self):
         return str(self.lineEdit.text()).split(' ')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

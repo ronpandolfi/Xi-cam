@@ -16,8 +16,9 @@ from nexusformat import nexus as nx
 from collections import OrderedDict
 import re
 
-if fabio._version.MAJOR==0 and fabio._version.MINOR<5:
+if fabio._version.MAJOR == 0 and fabio._version.MINOR < 5:
     from PySide import QtGui
+
     msgBox = QtGui.QMessageBox()
     msgBox.setText("The FabIO package is an older version and must be updated. Xi-cam can try to install this for you.")
     msgBox.setInformativeText("Would you like to install FabIO?")
@@ -27,13 +28,17 @@ if fabio._version.MAJOR==0 and fabio._version.MINOR<5:
     response = msgBox.exec_()
     if response == QtGui.QMessageBox.Yes:
         import pip
-        failure = pip.main(['install','--upgrade','fabio'])
+
+        failure = pip.main(['install', '--upgrade', 'fabio'])
 
         from xicam.dialogs import infodialog
+
         if failure:
-            infodialog("The FabIO package could not be updated. Please update FabIO manually (i.e. 'pip install --upgrade fabio').",'Update Failed')
+            infodialog(
+                "The FabIO package could not be updated. Please update FabIO manually (i.e. 'pip install --upgrade fabio').",
+                'Update Failed')
         else:
-            infodialog("The FabIO package was updated. Please restart Xi-cam.",'Update Success!')
+            infodialog("The FabIO package was updated. Please restart Xi-cam.", 'Update Success!')
             exit(0)
 
 from fabio import fabioutils, edfimage, tifimage, fabioformats
@@ -42,6 +47,7 @@ fabioformats.__dict__['_extension_cache'] = None
 
 h5classes = list()
 tiffclasses = list()
+
 
 def register_tiffclass(cls):
     global tiffclasses
@@ -59,13 +65,13 @@ class xicamtiffimage(fabioimage):
 
     def read(self, filename, frame=None):
         for tiff in tiffclasses:
-            if hasattr(tiff,'validate'): # check which class preferably based on the validate staticmethod
+            if hasattr(tiff, 'validate'):  # check which class preferably based on the validate staticmethod
                 try:
                     tiff.validate(filename, frame)
                 except Exception as ex:
                     continue
-            try: # if there isn't one, try to read with this class
-                return xicamtiffimage._instantiate_read(tiff,filename,frame)
+            try:  # if there isn't one, try to read with this class
+                return xicamtiffimage._instantiate_read(tiff, filename, frame)
             except Exception as ex:
                 continue
 
@@ -73,16 +79,17 @@ class xicamtiffimage(fabioimage):
         return xicamtiffimage._instantiate_read(fabio.tifimage.tifimage, filename, frame)
 
     @staticmethod
-    def _instantiate_read(cls,filename,frame):
+    def _instantiate_read(cls, filename, frame):
         fabh5 = cls()
         fabh5.filename = filename
         return fabh5.read(filename, frame)
 
-fabio.openimage.MAGIC_NUMBERS.insert(0,(b"\x49\x49", 'xicamtiff'))
+
+fabio.openimage.MAGIC_NUMBERS.insert(0, (b"\x49\x49", 'xicamtiff'))
 
 
 class hdf5image(fabioimage):
-    DEFAULT_EXTENSIONS = ['.hdf','.h5','.hdf5']
+    DEFAULT_EXTENSIONS = ['.hdf', '.h5', '.hdf5']
 
     # A proxy class which defers to specific hdf5 schema classes
     def read(self, filename, frame=None):
@@ -267,7 +274,6 @@ class ALS832H5image(fabioimage):
         self.data = self._dgroup[self.frames[frame]][0]
         return self.data
 
-
     def next(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
@@ -436,7 +442,6 @@ class nexusimage(fabioimage):
 
 @register_tiffclass
 class tomotifimage(fabioimage):
-
     """
     Fabio class for tiff images (specifically for tomography)
     """
@@ -702,6 +707,7 @@ class ALS733H5image(fabioimage):
                 return u'high' in ddet.keys() and u'low' in ddet.keys()
         except AttributeError:
             return False
+
 
 # @register_h5class
 # class GeneralAPSH5image(fabioimage):
@@ -1072,10 +1078,8 @@ class H5ReadError(IOError):
 #     imshow(arr, cmap='gray')
 #     show()
 def tests():
-
     # print(fabio.open('/home/rp/Downloads/Bar5_sample2_th0.098_10.00s_3451.tif').data)
     print(fabio.open('/home/rp/Downloads/MFLP3_50Al_OK_5TH_Sp2_40549-00001(1).fits').data)
 
 if __name__ == '__main__':
-
     tests()

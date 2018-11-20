@@ -92,7 +92,7 @@ class VolumeViewer(QtGui.QWidget):
         else:
             sliceobj = 3*(slice(0, None),)
 
-        if vol is not None: vol=np.nan_to_num(vol)
+        if vol is not None: vol = np.nan_to_num(vol)
 
         self.volumeRenderWidget.setVolume(vol, path, sliceobj)
         self.volumeRenderWidget.update()
@@ -298,7 +298,8 @@ class VolumeRenderWidget(scene.SceneCanvas):
         if slice is not None:
             def intify(a):
                 if a is not None: return int(a)
-            sliceobj = [slice(intify(s.start),intify(s.stop),intify(s.step)) for s in sliceobj]
+
+            sliceobj = [slice(intify(s.start), intify(s.stop), intify(s.step)) for s in sliceobj]
             slicevol = self.vol[sliceobj]
         else:
             slicevol = self.vol

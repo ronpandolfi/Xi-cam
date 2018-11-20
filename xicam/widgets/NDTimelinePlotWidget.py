@@ -33,7 +33,7 @@ class timelineStackPlot(QtGui.QWidget):
         self.slider.setGeometry(500, 500, 30, 10)
         # slider.setFocusPolicy(QtCore.Qt.NoFocus)
 
-        self.plotWidget = pg.PlotWidget(labels={'bottom':(xaxes['label'])})
+        self.plotWidget = pg.PlotWidget(labels={'bottom': (xaxes['label'])})
 
         layout = QtGui.QHBoxLayout()
         self.setLayout(layout)
@@ -73,7 +73,7 @@ class timelineStackPlot(QtGui.QWidget):
 
 
 class timelineWaterfallPlot(pg.ImageView):
-    def __init__(self,frameaxes,xaxes):
+    def __init__(self, frameaxes, xaxes):
         self.axesItem = pg.PlotItem()
         self.axesItem.setLabel('top', frameaxes['label'], units=frameaxes['units'] if 'units' in frameaxes else None)
         self.axesItem.setLabel('left', xaxes['label'], units=xaxes['units'] if 'units' in xaxes else None)
@@ -81,7 +81,7 @@ class timelineWaterfallPlot(pg.ImageView):
         self.axesItem.axes['top']['item'].setZValue(10)
         self.axesItem.showAxis('bottom', False)
 
-        kwargs= {'view':self.axesItem}
+        kwargs = {'view': self.axesItem}
         super(timelineWaterfallPlot, self).__init__(**kwargs)
         self.view.setAspectLocked(False)
 
@@ -94,12 +94,12 @@ class timelineWaterfallPlot(pg.ImageView):
 
 
 class TimelinePlot(QtGui.QTabWidget):
-    def __init__(self,frameaxes={'label':'Time','units':'s'},
-                      xaxes={'label':u'q (Å⁻¹)'}):
+    def __init__(self, frameaxes={'label': 'Time', 'units': 's'},
+                 xaxes={'label': u'q (Å⁻¹)'}):
         super(TimelinePlot, self).__init__()
-        self.waterfall = timelineWaterfallPlot(frameaxes,xaxes)
-        self.lineplot = timelineLinePlot(frameaxes,xaxes)
-        self.stackplot = timelineStackPlot(frameaxes,xaxes)
+        self.waterfall = timelineWaterfallPlot(frameaxes, xaxes)
+        self.lineplot = timelineLinePlot(frameaxes, xaxes)
+        self.stackplot = timelineStackPlot(frameaxes, xaxes)
         self.addTab(self.lineplot, 'Line plot')
         self.addTab(self.waterfall, 'Waterfall')
         self.addTab(self.stackplot, 'Stack plot')
@@ -239,7 +239,8 @@ if __name__ == '__main__':
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
 
+
 class XASTimelineWidget(TimelinePlot):
     def __init__(self):
-        super(XASTimelineWidget, self).__init__(frameaxes={'label':'Scan'},
-                                                xaxes={'label':'Energy','units':'eV'})
+        super(XASTimelineWidget, self).__init__(frameaxes={'label': 'Scan'},
+                                                xaxes={'label': 'Energy', 'units': 'eV'})

@@ -1,5 +1,3 @@
-
-
 __author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque",
@@ -114,7 +112,7 @@ class UIform(object):
         icon_properties = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_61.png")) #metadata icon
         icon_queue = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_63.png"))
         icon_log = QtGui.QIcon(QtGui.QPixmap("xicam/gui/icons_64.png"))
-        self.leftmodes = [(leftwidget, icon_functions),(self.queue, icon_queue), (logwidget, icon_log),
+        self.leftmodes = [(leftwidget, icon_functions), (self.queue, icon_queue), (logwidget, icon_log),
                           (self.property_table, icon_properties)]
 
 
@@ -307,7 +305,6 @@ class Toolbar(QtGui.QToolBar):
         self.actionROI.setIcon(icon)
         self.actionROI.setToolTip('Select region of interest')
 
-
         self.openButton = QtGui.QToolButton(self)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("xicam/gui/icons_55.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
@@ -337,7 +334,6 @@ class Toolbar(QtGui.QToolBar):
 
         # self.addAction(toolbuttonMaskingAction)
 
-
     def connectTriggers(self, slicepreview, multislicepreview, preview3D, fullrecon, center, roiselection, mbir,
                         openflats, opendarks):
 
@@ -366,6 +362,7 @@ class Toolbar(QtGui.QToolBar):
         self.openFlats.triggered.connect(openflats)
         self.openDarks.triggered.connect(opendarks)
 
+
 class ReconManager(QtGui.QSplitter):
     """
     Widget to show reconstruction queue on leftwidget tab. Also has actual queue used to hold recon jobs
@@ -381,7 +378,6 @@ class ReconManager(QtGui.QSplitter):
 
     """
 
-
     def __init__(self, *args, **kwargs):
 
         super(ReconManager, self).__init__(*args, **kwargs)
@@ -390,7 +386,8 @@ class ReconManager(QtGui.QSplitter):
         queue_ui.functionsList.setAlignment(QtCore.Qt.AlignBottom)
         queue_ui.moveDownButton.setToolTip('Move selected job down in queue')
         queue_ui.moveUpButton.setToolTip('Move selected job up in queue')
-        self.manager = fw.FeatureManager(queue_ui.functionsList, self.queue_form, blank_form='Click items below to see reconstruction jobs on queue.')
+        self.manager = fw.FeatureManager(queue_ui.functionsList, self.queue_form,
+                                         blank_form='Click items below to see reconstruction jobs on queue.')
         queue_ui.moveDownButton.clicked.connect(self.moveDown)
         queue_ui.moveUpButton.clicked.connect(self.moveUp)
 
@@ -419,7 +416,7 @@ class ReconManager(QtGui.QSplitter):
         tmp = self.recon_queue[idx1]
         self.recon_queue[idx1] = self.recon_queue[idx2]
         self.recon_queue[idx2] = tmp
-        del(tmp)
+        del (tmp)
 
     def delQueueJob(self, idx):
         """
@@ -435,7 +432,6 @@ class ReconManager(QtGui.QSplitter):
 
         job = self.recon_queue[idx]
         self.recon_queue.remove(job)
-
 
     def addRecon(self, args):
         """
@@ -471,7 +467,6 @@ class ReconManager(QtGui.QSplitter):
 
         self.queue_form.addWidget(form)
         self.manager.addFeature(widget)
-
 
     def removeRecon(self, idx):
         """

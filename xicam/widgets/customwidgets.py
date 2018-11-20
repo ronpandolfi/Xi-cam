@@ -119,6 +119,7 @@ class ImageView(pg.ImageView):
         except AttributeError:
             pass
 
+
 class histDialogButton(QtGui.QPushButton):
     """
     Button to connect to a pyqtgraph.HistogramLUTWidget. Sets the maximum and minimum hist value based on
@@ -131,7 +132,6 @@ class histDialogButton(QtGui.QPushButton):
         self.value = None
 
     def showDialog(self, min_default, max_default):
-
         self.dialog = QtGui.QDialog(parent=self.window())
         layout = QtGui.QVBoxLayout()
         text = QtGui.QLabel("Set maximum and minimum values for histogram.")
@@ -176,18 +176,15 @@ class histDialogButton(QtGui.QPushButton):
         self.value = [self.field2.value(), self.field1.value()]
         self.dialog.accept()
 
-
     def cancel(self):
         self.value = None
         self.dialog.reject()
 
     def connectToHistWidget(self, hist):
-
         self.hist = hist
         self.clicked.connect(self.setHistValues)
 
     def setHistValues(self):
-
         defaults = self.hist.getLevels()
         self.showDialog(defaults[0], defaults[1])
 

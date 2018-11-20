@@ -8,14 +8,13 @@ logger = logging.getLogger("pyFAI.azimuthalIntegrator")
 
 from pyFAI import version_info
 
-if version_info.minor>=16 and version_info.major==0:
+if version_info.minor >= 16 and version_info.major == 0:
     class AzimuthalIntegrator(azimuthalIntegrator.AzimuthalIntegrator):
         USE_LEGACY_MASK_NORMALIZATION = False
 else:
 
     # monkey patch to correct auto-inversion of masks
     class AzimuthalIntegrator(azimuthalIntegrator.AzimuthalIntegrator):
-
 
         def create_mask(self, data, mask=None,
                         dummy=None, delta_dummy=None, mode="normal"):
@@ -86,4 +85,4 @@ else:
                 mask = numpy.where(numpy.logical_not(mask))
             return mask
 
-azimuthalIntegrator.__dict__['AzimuthalIntegrator']=AzimuthalIntegrator
+azimuthalIntegrator.__dict__['AzimuthalIntegrator'] = AzimuthalIntegrator

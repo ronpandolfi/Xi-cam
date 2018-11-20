@@ -252,7 +252,8 @@ def center_approx(img, mask, log=False):
         with np.errstate(divide='ignore', invalid='ignore'):
             img = np.log(img * (img > 0) + 1)
 
-    con = signal.fftconvolve(img.astype(int)*mask*(img>0), img.astype(int)*mask*(img>0)) / np.sqrt(signal.fftconvolve(np.ones_like(img), np.ones_like(img)))
+    con = signal.fftconvolve(img.astype(int) * mask * (img > 0), img.astype(int) * mask * (img > 0)) / np.sqrt(
+        signal.fftconvolve(np.ones_like(img), np.ones_like(img)))
 
     cen = np.array(np.unravel_index(con.argmax(), con.shape)) / 2.
     return cen

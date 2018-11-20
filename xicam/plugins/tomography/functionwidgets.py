@@ -341,8 +341,8 @@ class FunctionWidget(fw.FeatureWidget):
         if test.exec_():
             self.sigTestRange.emit(self, param.name(), test.selectedRange())
 
-class AnglesFunctionWidget(FunctionWidget):
 
+class AnglesFunctionWidget(FunctionWidget):
     """
     Custom functionwidget to handle the calculation of projection angles from custom parameters (ang1 and range vs
     ang1 and ang2
@@ -350,7 +350,6 @@ class AnglesFunctionWidget(FunctionWidget):
 
     @property
     def updated_param_dict(self):
-
         param_dict = {}
         param_dict['ang1'] = float(self.param_dict['ang1'] + self.param_dict['range'])
         param_dict['ang2'] = float(self.param_dict['ang1'])
@@ -358,8 +357,8 @@ class AnglesFunctionWidget(FunctionWidget):
 
         return param_dict
 
-class NormalizeFunctionWidget(FunctionWidget):
 
+class NormalizeFunctionWidget(FunctionWidget):
     """
     Custom functionwidget class for normalization functions, particularly for the special case 'tomopy.normalize_roi'
 
@@ -381,8 +380,9 @@ class NormalizeFunctionWidget(FunctionWidget):
 
     def __init__(self, name, subname, package, input_functions=None, checkable=True, closeable=True, parent=None):
         super(NormalizeFunctionWidget, self).__init__(name=name, subname=subname, package=package,
-                                        input_functions=input_functions, checkable=checkable, closeable=closeable,
-                                        parent=parent)
+                                                      input_functions=input_functions, checkable=checkable,
+                                                      closeable=closeable,
+                                                      parent=parent)
 
         if subname == 'ROI':
             self.selection_roi = pg.ROI([0, 0], [200, 200])
@@ -398,7 +398,7 @@ class NormalizeFunctionWidget(FunctionWidget):
         param_dict = FunctionWidget.updated_param_dict.fget(self)
         if self.subfunc_name == 'ROI':
             param_dict.update({'roi': [self.params.child('p11').value(), self.params.child('p12').value(),
-                                  self.params.child('p21').value(), self.params.child('p22').value()]})
+                                       self.params.child('p21').value(), self.params.child('p22').value()]})
             for param in ['p11', 'p12', 'p21', 'p22', 'Select roi']:
                 try:
                     param_dict.pop(param)
@@ -417,14 +417,13 @@ class NormalizeFunctionWidget(FunctionWidget):
     #     if hasattr(self, 'selection_roi'):
     #         self.selection_roi.hide()
 
-
     def setRoi(self):
         """
         Adds pyqtgraph.ROI to projection images so user can select ROI from which to normalize
         """
 
         if self.selection_roi:
-            del(self.selection_roi)
+            del (self.selection_roi)
 
         self.selection_roi = pg.ROI([0, 0], [200, 200], pen=QtGui.QPen('y'), removable=True)
         self.selection_roi.addScaleHandle([1, 1], [0, 0])
@@ -506,7 +505,7 @@ class TomoPyReconFunctionWidget(FunctionWidget):
 
         self.packagename = package.__name__
         self.input_functions = {'theta': AnglesFunctionWidget('Projection Angles', 'Projection Angles', closeable=False,
-                                                  package=reconpkg.packages['tomopy'], checkable=False),
+                                                              package=reconpkg.packages['tomopy'], checkable=False),
                                 'center': FunctionWidget('Center Detection', 'Phase Correlation', closeable=True,
                                                   package=reconpkg.packages['tomopy'])}
         super(TomoPyReconFunctionWidget, self).__init__(name, subname, package, input_functions=self.input_functions,
@@ -685,6 +684,7 @@ class AstraReconFuncWidget(TomoPyReconFunctionWidget):
             param_dict['options']['method'] = param_dict['options']['method'].split('_astra')[0]
 
         return param_dict
+
 
 class MaskFunctionWidget(FunctionWidget):
     """

@@ -99,18 +99,18 @@ getglobalpkg = lambda name: (os.path.join(os.path.dirname(opcode.__file__), name
 
 buildOptions = {'packages': ['xicam', 'xicamlauncher', 'scipy', 'pipeline', 'daemon','zmq.backend.cython','OpenGL',
                              'OpenGL.platform','zmq.utils','pygments.styles','pkg_resources._vendor.packaging','email',
-                             'pyqtgraph','distutils','IPython','numpy','idna','ctypes','pygments'],
+                             'pyqtgraph', 'distutils', 'IPython', 'numpy', 'idna', 'ctypes', 'pygments'],
                 'includes': ['PIL', 'PySide.QtXml','PySide.QtNetwork','PySide.QtWebKit','scipy','h5py','cython','zmq.backend','zmq.backend.cython',
-                             'ipykernel.datapub','distributed',
-                             'cryptography.hazmat.backends.openssl',#'cryptography.hazmat.backends.commoncrypto',
+                             'ipykernel.datapub', 'distributed',
+                             'cryptography.hazmat.backends.openssl',  # 'cryptography.hazmat.backends.commoncrypto',
                              'numpy.core._methods','numpy.lib.format'
                              ],  # ,'scipy.sparse.csgraph._validation'
                 'excludes': ['site','PyQt', 'PyQt5', 'pyqt', 'collections.sys', 'collections._weakref', 'PyQt4', 'cairo', 'tk',
                              'matplotlib', 'pyopencl', 'tcl', 'TKinter', 'tkk'], 'optimize': 0,
-                'include_files': [getglobalpkg('distutils'),getglobalpkg('site.py'),'hipgisaxs.exe','tiff.dll',
-                                  ('xicam/gui/','xicam/gui/'), 'xicam/yaml/', 'icon.ico',
-                                  ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd','_ufuncs.pyd'),
-                                  zmq.libzmq.__file__,pyFAI.__path__[0]],
+                'include_files': [getglobalpkg('distutils'), getglobalpkg('site.py'), 'hipgisaxs.exe', 'tiff.dll',
+                                  ('xicam/gui/', 'xicam/gui/'), 'xicam/yaml/', 'icon.ico',
+                                  ('C:\\Python27\\Lib\\site-packages\\scipy\\special\\_ufuncs.pyd', '_ufuncs.pyd'),
+                                  zmq.libzmq.__file__, pyFAI.__path__[0]],
                 'zip_includes': include_OpenGL(),
                 'include_msvcr': True
                 }

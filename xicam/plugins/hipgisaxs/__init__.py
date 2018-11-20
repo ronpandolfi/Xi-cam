@@ -76,44 +76,45 @@ class HipGISAXSPlugin(base.plugin):
 
         super(HipGISAXSPlugin, self).__init__(*args, **kwargs)
 
-
     def save(self):
         filename, ok = QtGui.QFileDialog.getSaveFileName(self.centerwidget, 'Save Model', os.curdir, '*.model')
 
         if filename and ok:
             import yaml
             data = {'computation': self.detectorForm.parameter.saveState(),
-                    'items':[{'type':feature.__class__.__name__,
-                              'parameter':feature.parameter.saveState(),
-                              'structure':feature.structure.parameter.saveState() if hasattr(feature,'structure') else None,
-                              'ensemble':feature.ensemble.parameter.saveState() if hasattr(feature,'ensemble') else None,
-                              } for feature in featuremanager.features],
+                    'items': [{'type': feature.__class__.__name__,
+                               'parameter': feature.parameter.saveState(),
+                               'structure': feature.structure.parameter.saveState() if hasattr(feature,
+                                                                                               'structure') else None,
+                               'ensemble': feature.ensemble.parameter.saveState() if hasattr(feature,
+                                                                                             'ensemble') else None,
+                               } for feature in featuremanager.features],
                     }
-            with open(filename,'w') as f:
+            with open(filename, 'w') as f:
                 yaml.dump(data, f)
 
     def load(self):
         filename, ok = QtGui.QFileDialog.getOpenFileName(self.centerwidget, 'Load Model', os.curdir,
                                                          '*.model')
         if filename and ok:
-            with open(filename,'r') as f:
+            with open(filename, 'r') as f:
                 data = yaml.load(f)
 
             self.detectorForm.parameter.restoreState(data['computation'])
             ui.showForm(ui.blankForm)
             featuremanager.clearFeatures()
             for item in data['items']:
-                if item['type']=='particle':
+                if item['type'] == 'particle':
                     feature = customwidgets.particle()
                     feature.parameter.restoreState(item['parameter'])
                     feature.structure.parameter.restoreState(item['structure'])
                     feature.ensemble.parameter.restoreState(item['ensemble'])
                     featuremanager.features.append(feature)
-                elif item['type']=='layer':
+                elif item['type'] == 'layer':
                     feature = customwidgets.layer()
                     feature.parameter.restoreState(item['parameter'])
                     featuremanager.features.append(feature)
-                elif item['type']=='substrate':
+                elif item['type'] == 'substrate':
                     feature = customwidgets.substrate()
                     feature.parameter.restoreState(item['parameter'])
                     featuremanager.features.append(feature)
@@ -192,9 +193,11 @@ class HipGISAXSPlugin(base.plugin):
         import subprocess
         import sys
         if sys.platform == 'win32':
-            p = subprocess.Popen(["hipgisaxs.exe", os.path.join(os.path.expanduser('~'), 'test.yml')], stdout=subprocess.PIPE)
+            p = subprocess.Popen(["hipgisaxs.exe", os.path.join(os.path.expanduser('~'), 'test.yml')],
+                                 stdout=subprocess.PIPE)
         else:
-            p = subprocess.Popen(["./hipgisaxs", os.path.join(os.path.expanduser('~'),'test.yml')], stdout=subprocess.PIPE)
+            p = subprocess.Popen(["./hipgisaxs", os.path.join(os.path.expanduser('~'), 'test.yml')],
+                                 stdout=subprocess.PIPE)
         stdout,stderr=p.communicate()
         stdout=stdout.replace('\r\r','\r')        # Hack to fix double carriage returns
         out = np.array([np.fromstring(line, sep=' ') for line in stdout.splitlines()])
@@ -287,11 +290,11 @@ class HipGISAXSPlugin(base.plugin):
         self.loginwidget.loginResult(True)
         sftp = client.open_sftp()
         timestamp =time.strftime("%Y.%m.%d.%H.%M.%S")
-        sftp.put(os.path.join(os.path.expanduser('~'),'test.yml'),timestamp+'.yml')
+        sftp.put(os.path.join(os.path.expanduser('~'), 'test.yml'), timestamp + '.yml')
         sftp.close()
-        stdin,stdout,stderr = client.exec_command('hipgisaxs '+timestamp+'.yml')
+        stdin, stdout, stderr = client.exec_command('hipgisaxs ' + timestamp + '.yml')
         buffer = stdout.read()
-        out = np.array([np.fromstring(line,sep=' ') for line in buffer.splitlines()])
+        out = np.array([np.fromstring(line, sep=' ') for line in buffer.splitlines()])
         msg.logMessage(stderr.read())
         plugins.plugins['Viewer'].instance.opendata(out)
 

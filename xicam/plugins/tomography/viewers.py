@@ -13,7 +13,6 @@ from xicam.widgets.roiwidgets import ROImageOverlay
 from xicam.widgets.imageviewers import StackViewer, ArrayViewer
 from xicam.widgets.volumeviewers import VolumeViewer
 
-
 __author__ = "Luis Barroso-Luque, Holden Parks"
 __copyright__ = "Copyright 2016, CAMERA, LBL, ALS"
 __credits__ = ["Ronald J Pandolfi", "Dinesh Kumar", "Singanallur Venkatakrishnan", "Luis Luque", "Alexander Hexemer"]
@@ -123,7 +122,7 @@ class TomoViewer(QtGui.QWidget):
         self.sinogramViewer.setIndex(self.sinogramViewer.data.shape[0] // 2)
         self.viewstack.addWidget(self.sinogramViewer)
 
-        self.flatViewer = ArrayViewer(self.data.flats,flipAxes=True,  parent=self)
+        self.flatViewer = ArrayViewer(self.data.flats, flipAxes=True, parent=self)
         self.darkViewer = ArrayViewer(self.data.darks, flipAxes=True, parent=self)
         self.viewstack.addWidget(self.flatViewer)
         self.viewstack.addWidget(self.darkViewer)
@@ -164,7 +163,7 @@ class TomoViewer(QtGui.QWidget):
             # Uncomment this if you want convenience of having the center parameter in pipeline connected to the
             # manual center widget, but this limits the center options to a resolution of 0.5
             self.projectionViewer.sigCenterChanged.connect(
-                lambda x: center_param.setValue(x)) #, blockSignal=center_param.sigValueChanged))
+                lambda x: center_param.setValue(x))  # , blockSignal=center_param.sigValueChanged))
             self.projectionViewer.centerBox.valueChanged.connect(lambda x: center_param.setValue(x))
             self.projectionViewer.setCenterButton.clicked.connect(
                 lambda: center_param.setValue(self.projectionViewer.centerBox.value()))
@@ -300,7 +299,7 @@ class TomoViewer(QtGui.QWidget):
 
         """
         flats = self.data.flats
-        if hasattr(flats,'values'): flats = np.array(flats.values())
+        if hasattr(flats, 'values'): flats = np.array(flats.values())
         if slc is None:
             return np.ascontiguousarray(flats[:, self.sinogramViewer.currentIndex, :])
         else:
@@ -802,7 +801,7 @@ class ProjectionViewer(QtGui.QWidget):
         self.imageItem.sigImageChanged.connect(self.imgoverlay_roi.updateImage)
         self.stackViewer.view.addItem(self.imgoverlay_roi)
         self.roi_histogram = pg.HistogramLUTWidget(image=self.imgoverlay_roi.imageItem, parent=self.stackViewer)
-        self.roi_histogram.vb.enableAutoRange(self.roi_histogram.vb.YAxis, False) #disable autoscaling for histogram
+        self.roi_histogram.vb.enableAutoRange(self.roi_histogram.vb.YAxis, False)  # disable autoscaling for histogram
         self.mbir_viewer = MBIRViewer(self.data, path = self.parentWidget().path, parent=self)
 
 
@@ -871,11 +870,11 @@ class ProjectionViewer(QtGui.QWidget):
         plabel = QtGui.QLabel('Overlay Projection No:')
         plabel.setAlignment(QtCore.Qt.AlignRight)
         spinBox = QtGui.QSpinBox(parent=self.cor_widget)
-        spinBox.setRange(0, data.shape[0]-1)
+        spinBox.setRange(0, data.shape[0] - 1)
         slider = QtGui.QSlider(orientation=QtCore.Qt.Horizontal, parent=self.cor_widget)
-        slider.setRange(0, data.shape[0]-1)
-        spinBox.setValue(data.shape[0]-1)
-        slider.setValue(data.shape[0]-1)
+        slider.setRange(0, data.shape[0] - 1)
+        spinBox.setValue(data.shape[0] - 1)
+        slider.setValue(data.shape[0] - 1)
         flipCheckBox = QtGui.QCheckBox('Flip Overlay', parent=self.cor_widget)
         flipCheckBox.setChecked(True)
         constrainYCheckBox = QtGui.QCheckBox('Constrain Y', parent=self.cor_widget)
@@ -1128,7 +1127,7 @@ class ProjectionViewer(QtGui.QWidget):
             self.stackViewer.setImage(proj, autoRange=False, autoLevels=True)
             self.stackViewer.updateImage()
             self.normalized = True
-            self.roi_histogram.setLevels(-1, 1) # lazy solution, could be improved with some sampling methods
+            self.roi_histogram.setLevels(-1, 1)  # lazy solution, could be improved with some sampling methods
             self.roi_histogram.vb.setRange(yRange=(-1.5, 1.5))
             self.normCheckBox.setChecked(True)
         elif not val and self.normalized:
@@ -1223,7 +1222,7 @@ class PreviewViewer(QtGui.QSplitter):
         h.addWidget(self.deleteButton)
         ly.addLayout(h)
         panel = QtGui.QWidget(self)
-        panel.resize(375,480)
+        panel.resize(375, 480)
         panel.setLayout(ly)
         self.setPipelineButton.hide()
         self.deleteButton.hide()

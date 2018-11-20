@@ -94,6 +94,7 @@ class PhotonicScience(pyFAI.detectors.Detector):
         return "Detector %s\t PixelSize= %.3e, %.3e m" % \
             (self.name, self._pixel1, self._pixel2)
 
+
 class Xpad_BM02(pyFAI.detectors.Xpad_flat):
     MAX_SHAPE = (958, 576)
 
@@ -112,7 +113,7 @@ class Xpad_BM02(pyFAI.detectors.Xpad_flat):
         # workinng in dim0 = Y
         for i in range(0, self.max_shape[0], self.module_size[0]):
             try:
-                mask[i + self.module_size[0]-2, :] = 1
+                mask[i + self.module_size[0] - 2, :] = 1
                 mask[i + self.module_size[0] - 1, :] = 1
             except IndexError:
                 pass
@@ -124,6 +125,7 @@ class Xpad_BM02(pyFAI.detectors.Xpad_flat):
             except IndexError:
                 pass
         return mask
+
 
 class Maxipix_BM05(pyFAI.detectors.Maxipix5x1):
     aliases = ['Maxipix (ESRF BM05)']
