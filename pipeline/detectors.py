@@ -125,5 +125,25 @@ class Xpad_BM02(pyFAI.detectors.Xpad_flat):
                 pass
         return mask
 
+class Maxipix_BM05(pyFAI.detectors.Maxipix5x1):
+    aliases = ['Maxipix (ESRF BM05)']
+
+    def calc_mask(self):
+        """
+        Returns a generic mask for Mexipix detectors...
+        """
+        if self.max_shape is None:
+            raise NotImplementedError("Generic Pilatus detector does not know "
+                                      "its max size ...")
+        mask = np.zeros(self.max_shape, dtype=np.int8)
+        # workinng in dim0 = Y
+        for i in range(self.module_size[0], self.max_shape[0], self.module_size[0] + self.MODULE_GAP[0]):
+            mask[i: i + self.MODULE_GAP[0], :] = 1
+        # workinng in dim1 = X
+        for i in range(self.module_size[1], self.max_shape[1], self.module_size[1] + self.MODULE_GAP[1]):
+            mask[:, i - 1: 1 + i + self.MODULE_GAP[1]] = 1
+        return mask
+
+
 
 ALL_DETECTORS = OrderedDict((cls().name,cls) for cls in sorted(pyFAI.detectors.ALL_DETECTORS.values(),key=lambda cls:cls().name))
