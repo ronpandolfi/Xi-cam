@@ -292,7 +292,7 @@ created in the directory xicam/plugins to be detected as a plugin:
     class plugin(base.plugin):
         name = "ViewerRMC"
 
-        def __init__(self, *args, ''kwargs):
+        def __init__(self, *args, **kwargs):
 
             super(plugin, self).__init__(*args, **kwargs)
             self.centerwidget = None
@@ -317,7 +317,7 @@ images and set it to the plugin's `centerwidget`.
     class plugin(base.plugin):
         name = "ViewerRMC"
 
-        def __init__(self, *args, ''kwargs):
+        def __init__(self, *args, **kwargs):
 
             self.centerwidget = QtGui.QTabWidget()
             self.centerwidget.setDocumentMode(True)
@@ -338,7 +338,7 @@ functionality manually with a method that takes and deletes tabs.
     class plugin(base.plugin):
         name = "ViewerRMC"
 
-        def __init__(self, *args, ''kwargs):
+        def __init__(self, *args, **kwargs):
 
             self.centerwidget = QtGui.QTabWidget()
             self.centerwidget.setDocumentMode(True)
@@ -372,7 +372,7 @@ empty ``openfiles`` method that will be overriden by your plugin's own ``openfil
 
     ...
 
-        def openfiles(self,path):
+        def openfiles(self, paths):
             self.activate()
             if type(paths) == list:
                 self.path = paths[0]
@@ -381,10 +381,10 @@ empty ``openfiles`` method that will be overriden by your plugin's own ``openfil
 
             self.orig_image = np.transpose(loader.loadimage(self.path))
 
-            self.orig_view = pg.ImageView(self)
+            self.orig_view = pg.ImageView()
             self.orig_view.setContentsMargins(0,0,0,0)
             self.orig_view.setImage(self.orig_image)
-            self.centerwidget.addTab(self.orig_view)
+            self.centerwidget.addTab(self.orig_view, 'image')
 
 Displaying an image requires ``pyqtgraph`` and the ``loader`` function from ``pipeline``, a Xi-Cam module. First we
 activate the plugin using the ``activate`` method inherited from the base class. The image is loaded using the
@@ -514,7 +514,7 @@ uses code written above, but much of it is rearranged.
     class plugin(base.plugin):
         name = "ViewerRMC"
 
-        def __init__(self, *args, ''kwargs):
+        def __init__(self, *args, **kwargs):
 
             self.centerwidget = QtGui.QTabWidget()
             self.centerwidget.setDocumentMode(True)
@@ -529,7 +529,7 @@ uses code written above, but much of it is rearranged.
             view_widget = inOutViewer(paths = paths)
             self.centerwidget.addTab(view_widget, os.path.basename(paths[0]))
             self.centerwidget.setCurrentWidget(view_widget)
-            view_widget.drawCameraLocation(view_widget.view_stack,view_widget.cameraLocation)
+            view_widget.drawCameraLocation(view_widget.orig_view,view_widget.cameraLocation)
 
         def tabCloseRequested(self,index):
             self.centerwidget.widget(index).deleteLater()
@@ -585,7 +585,7 @@ the HipRMC output, in different tabs.
             sideWidgetFormat.setContentsMargins(0, 0, 0, 0)
 
              try:
-                start_size = max(self.stack_image.shape)
+                start_size = max(self.orig_image.shape)
              except ValueError:
                 print "Image must be 2-D"
 

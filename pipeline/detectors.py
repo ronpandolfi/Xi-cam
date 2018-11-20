@@ -2,6 +2,7 @@ import pyFAI.detectors
 import fabio
 import logging
 from collections import OrderedDict
+import numpy as np
 
 class PrincetonMTE(pyFAI.detectors.Detector):
     """
@@ -92,5 +93,57 @@ class PhotonicScience(pyFAI.detectors.Detector):
     def __repr__(self):
         return "Detector %s\t PixelSize= %.3e, %.3e m" % \
             (self.name, self._pixel1, self._pixel2)
+
+class Xpad_BM02(pyFAI.detectors.Xpad_flat):
+    MAX_SHAPE = (958, 576)
+
+    aliases = ['Xpad (ESRF BM02)']
+
+    def calc_mask(self):
+        """
+        Returns a generic mask for Xpad detectors...
+        discards the first line and raw form all modules:
+        those are 2.5x bigger and often mis - behaving
+        """
+        if self.max_shape is None:
+            raise NotImplementedError("Generic Xpad detector does not"
+                                      " know the max size ...")
+        mask = np.zeros(self.max_shape, dtype=np.int8)
+        # workinng in dim0 = Y
+        for i in range(0, self.max_shape[0], self.module_size[0]):
+            try:
+                mask[i + self.module_size[0]-2, :] = 1
+                mask[i + self.module_size[0] - 1, :] = 1
+            except IndexError:
+                pass
+        # workinng in dim1 = X
+        for i in range(0, self.max_shape[1], self.module_size[1]):
+            try:
+                mask[:, i] = 1
+                mask[:, i + self.module_size[1] - 1] = 1
+            except IndexError:
+                pass
+        return mask
+
+class Maxipix_BM05(pyFAI.detectors.Maxipix5x1):
+    aliases = ['Maxipix (ESRF BM05)']
+
+    def calc_mask(self):
+        """
+        Returns a generic mask for Mexipix detectors...
+        """
+        if self.max_shape is None:
+            raise NotImplementedError("Generic Pilatus detector does not know "
+                                      "its max size ...")
+        mask = np.zeros(self.max_shape, dtype=np.int8)
+        # workinng in dim0 = Y
+        for i in range(self.module_size[0], self.max_shape[0], self.module_size[0] + self.MODULE_GAP[0]):
+            mask[i: i + self.MODULE_GAP[0], :] = 1
+        # workinng in dim1 = X
+        for i in range(self.module_size[1], self.max_shape[1], self.module_size[1] + self.MODULE_GAP[1]):
+            mask[:, i - 1: 1 + i + self.MODULE_GAP[1]] = 1
+        return mask
+
+
 
 ALL_DETECTORS = OrderedDict((cls().name,cls) for cls in sorted(pyFAI.detectors.ALL_DETECTORS.values(),key=lambda cls:cls().name))

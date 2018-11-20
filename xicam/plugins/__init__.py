@@ -13,7 +13,7 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest']
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest', '3D Viewer', 'HipRMC', ]
 
 
 def initplugins(placeholders):
@@ -36,7 +36,7 @@ def initplugins(placeholders):
 
     for module in modules:
         msg.logMessage(('Imported, enabling:',module.__name__),msg.DEBUG)
-        for objname,obj in module.__dict__.items():
+        for objname,obj in module.__dict__.copy().iteritems():
             if inspect.isclass(obj):
                 if issubclass(obj, base.plugin) and not obj is base.plugin and not obj is base.EZplugin:
                     link = pluginlink(module, obj, placeholders)

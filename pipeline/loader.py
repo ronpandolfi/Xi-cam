@@ -153,12 +153,13 @@ def loadstitched(filepath2, filepath1, data1=None, data2=None, paras1=None, para
     positionX1 = 0
     positionX2 = 0
 
-    if 'Detector Vertical' in paras1 and 'Detector Vertical' in paras2 and \
-                    'Detector Horizontal' in paras1 and 'Detector Horizontal' in paras2:
-        positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
-        positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
-        positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
-        positionX2 = float(paras2[config.activeExperiment.mapHeader('Detector Horizontal')])
+    if config.activeExperiment.mapHeader('Detector Vertical') in paras1 and config.activeExperiment.mapHeader('Detector Vertical') in paras2 and \
+                    config.activeExperiment.mapHeader('Detector Horizontal') in paras1 and config.activeExperiment.mapHeader('Detector Horizontal') in paras2:
+        if float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])!=0 and float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])!=0:
+            positionY1 = float(paras1[config.activeExperiment.mapHeader('Detector Vertical')])
+            positionY2 = float(paras2[config.activeExperiment.mapHeader('Detector Vertical')])
+            positionX1 = float(paras1[config.activeExperiment.mapHeader('Detector Horizontal')])
+            positionX2 = float(paras2[config.activeExperiment.mapHeader('Detector Horizontal')])
 
     I1 = 1
     I2 = 1
@@ -283,11 +284,9 @@ def loadpath(path):
         img=np.rot90(img,config.settings['Image Load Rotations'])
 
     if not isinstance(img, tuple):
-        detectormask = finddetectorbyfilename(path).calc_mask()
-        if detectormask is None:
-            img = (img,np.zeros_like(img))
-        else:
-            img = (img, 1-finddetectorbyfilename(path).calc_mask())
+        mask = finddetectorbyfilename(path).calc_mask()
+        if mask is None: mask = np.zeros_like(img)
+        img = (img, 1-mask)
     return img
 
 
@@ -809,10 +808,6 @@ class StackImage(object):
         if filepath is not None:
             if (isinstance(filepath, list) and len(filepath) == 1):
                 filepath = filepath[0]
-            if isinstance(filepath, list) or os.path.isdir(filepath):
-                self.fabimage = TiffStack(filepath)
-            elif filepath.endswith('.tif') or filepath.endswith('.tiff'):
-                self.fabimage = CondensedTiffStack(filepath)
             else:
                 self.fabimage = fabio.open(filepath)
         elif data is not None:
@@ -820,6 +815,10 @@ class StackImage(object):
         else:
             if filepath is None and data is None:
                 raise ValueError('Either data or path to file must be provided')
+        # throw error if loading with fabio fails
+        if not self.fabimage:
+            raise IOError("Unable to detect file format for this dataset.")
+
         self.header = self.fabimage.header
 
         self._framecache = dict()
@@ -840,12 +839,14 @@ class StackImage(object):
             self._rawdata = self._getframe()
         return self._rawdata
 
-    def transpose(self, ax): # transposing is handled internally
+    def transpose(self, ax):
+        # TODO: find a good way to do this
+        # TODO: annoying because of the way hdfs are stored
         return self
 
     def asVolume(self, level=1):
         for i, j in enumerate(range(0, self.shape[0], level)):
-            img = self._getimage(j)[::level, ::level].transpose()
+            img = self._getimage(j)[::level, ::level]
             if i == 0:  # allocate array:
                 shape = (np.ceil(float(self.shape[0]) / level), img.shape[0], img.shape[1])
                 vol = np.empty(shape, dtype=self.rawdata.dtype)
@@ -865,7 +866,7 @@ class StackImage(object):
         return self._framecache[frame]
 
     def _getimage(self, frame):
-        return self.fabimage.getframe(frame).transpose()
+        return self.fabimage.getframe(frame)
 
     def invalidatecache(self):
         self.cache = dict()
@@ -1320,7 +1321,7 @@ class singlefilediffimage2(diffimage2):
         if self._rawdata is None:
             rawdata, mask = loadpath(self.filepath)
             self._rawdata = np.rot90(rawdata, 3)
-            if mask is not None: self.experiment.mask = np.rot90(mask, 3)
+            if mask is not None and (self.experiment.mask is None or self.experiment.mask.shape!=mask.shape): self.experiment.mask = np.rot90(mask, 3)
         return self._rawdata
 
     def implements(self, t):
