@@ -30,6 +30,8 @@ def import_module(modname,packagename=None):
 
         if response == QtGui.QMessageBox.Yes:
             import pip
+            if not hasattr(pip, 'main'):
+                import pip._internal as pip
 
             failure=pip.main(['install', '--user', missingpackage])
             if failure:
