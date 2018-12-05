@@ -247,6 +247,27 @@ def loadthumbnail(path):
 #     raise ValueError('Detector could not be identified!')
 #     return None, None, None
 
+def finddetectorbyshape(shape):
+    for name, detector in sorted(pyFAI.detectors.ALL_DETECTORS.iteritems()):
+        # print detector
+        # print 'det:',name, detector
+        if hasattr(detector, 'MAX_SHAPE'):
+            # print name, detector.MAX_SHAPE, imgdata.shape[::-1]
+            if detector.MAX_SHAPE == shape[::-1]:  #
+                detector = detector()
+                msg.logMessage('Detector found: ' + name)
+                return detector
+        if hasattr(detector, 'BINNED_PIXEL_SIZE'):
+            # print detector.BINNED_PIXEL_SIZE.keys()
+            for binning in detector.BINNED_PIXEL_SIZE.keys():
+                if shape[::-1] == tuple(np.array(detector.MAX_SHAPE) / binning):
+                    detector = detector()
+                    msg.logMessage('Detector found with binning: ' + name)
+                    detector.set_binning(binning)
+                    return detector
+    return pyFAI.detectors.Detector(1, 1, max_shape=shape[::-1])
+    raise ValueError('Detector could not be identified!')
+
 def finddetectorbyfilename(path, data=None):
     if data is None:
         data = loadimage(path)
@@ -284,7 +305,7 @@ def loadpath(path):
         img=np.rot90(img,config.settings['Image Load Rotations'])
 
     if not isinstance(img, tuple):
-        mask = finddetectorbyfilename(path).calc_mask()
+        mask = finddetectorbyshape(img.shape).calc_mask()
         if mask is None: mask = np.zeros_like(img)
         img = (img, 1-mask)
     return img
