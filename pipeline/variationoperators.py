@@ -30,6 +30,35 @@ def imgmax(data, t, roi):
     return (roi * current).max()
 
 
+def qmax(data, t, roi):
+    current = data[t]
+    q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
+    return q[np.argmax(I)]
+
+
+def fit_mean(data, t, roi):
+    current = data[t]
+    q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
+    from astropy.modeling import models, fitting
+    qmin = q[(np.array(I) != 0).argmax()]
+    qmax = q[len(I) - (np.array(I) != 0)[::-1].argmax()]
+    g_init = models.Gaussian1D(amplitude=np.array(I).max(), mean=(qmax + qmin) / 2, stddev=(qmax - qmin) / 4)
+    fit_g = fitting.LevMarLSQFitter()
+    g = fit_g(g_init, q, I)
+    return g.mean.value
+
+
+def fit_stddev(data, t, roi):
+    current = data[t]
+    q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
+    from astropy.modeling import models, fitting
+    qmin = q[(np.array(I) != 0).argmax()]
+    qmax = q[len(I) - (np.array(I) != 0)[::-1].argmax()]
+    g_init = models.Gaussian1D(amplitude=np.array(I).max(), mean=(qmax + qmin) / 2, stddev=(qmax - qmin) / 4)
+    fit_g = fitting.LevMarLSQFitter()
+    g = fit_g(g_init, q, I)
+    return g.stddev.value
+
 def absdiff(data, t, roi):
     current = data[t].astype(float)
     previous = data[t - 1].astype(float)
@@ -90,8 +119,11 @@ operations = collections.OrderedDict([('Chi Squared', chisquared),
                                       ('Norm. Abs. Derivative', normabsdiffderiv),
                                       ('Chi Squared w/First Frame', chisquaredwithfirst),
                                       ('Angular autocorrelation w/First Frame', angularcorrelationwithfirst),
-                                      ('Radial Integration', radialintegration)
-])
+                                      ('Radial Integration', radialintegration),
+                                      ('Q at peak max', qmax),
+                                      ('Q at peak fit max', fit_mean),
+                                      ('Peak Fit Std. Dev.', fit_stddev)
+                                      ])
 
 
 experiment = None
