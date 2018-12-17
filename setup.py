@@ -91,7 +91,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
+    install_requires=['scipy', 'Cython', 'pyFAI', 'fabio==0.5.0', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
                       'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
                       'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
                       'pypaws>=0.8.4','matplotlib'],
