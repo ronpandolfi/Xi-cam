@@ -166,7 +166,7 @@ class TimelinePlugin(base.plugin):  ##### Inherit viewer instead!!!
 
 
         self.getCurrentTab().sigAddTimelineData.connect(self.unpack)
-        self.getCurrentTab().sigClearTimeline.connect(self.bottomwidget.clearData)
+        self.getCurrentTab().sigClearTimeline.connect(self.bottomwidget.clear)
 
 
 def convertto8bit(image):

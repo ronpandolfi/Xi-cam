@@ -41,7 +41,7 @@ def fit_mean(data, t, roi):
     q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
     from astropy.modeling import models, fitting
     qmin = q[(np.array(I) != 0).argmax()]
-    qmax = q[len(I) - (np.array(I) != 0)[::-1].argmax()]
+    qmax = q[len(I) - 1 - (np.array(I) != 0)[::-1].argmax()]
     g_init = models.Gaussian1D(amplitude=np.array(I).max(), mean=(qmax + qmin) / 2, stddev=(qmax - qmin) / 4)
     fit_g = fitting.LevMarLSQFitter()
     g = fit_g(g_init, q, I)
@@ -53,11 +53,25 @@ def fit_stddev(data, t, roi):
     q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
     from astropy.modeling import models, fitting
     qmin = q[(np.array(I) != 0).argmax()]
-    qmax = q[len(I) - (np.array(I) != 0)[::-1].argmax()]
+    qmax = q[len(I) - 1 - (np.array(I) != 0)[::-1].argmax()]
     g_init = models.Gaussian1D(amplitude=np.array(I).max(), mean=(qmax + qmin) / 2, stddev=(qmax - qmin) / 4)
     fit_g = fitting.LevMarLSQFitter()
     g = fit_g(g_init, q, I)
     return g.stddev.value
+
+
+def gaussian_fit(data, t, roi):
+    current = data[t]
+    q, I = integration.radialintegratepyFAI(current, cut=roi)[:2]
+    from astropy.modeling import models, fitting
+    qmin = q[(np.array(I) != 0).argmax()]
+    qmax = q[len(I) - 1 - (np.array(I) != 0)[::-1].argmax()]
+    g_init = models.Gaussian1D(amplitude=np.array(I).max(), mean=(qmax + qmin) / 2, stddev=(qmax - qmin) / 4)
+    fit_g = fitting.LevMarLSQFitter()
+    g = fit_g(g_init, q, I)
+    return collections.OrderedDict(
+        [('stddev', g.stddev.value), ('mean', g.mean.value), ('Amplitude', g.amplitude.value),
+         ('chi^2', np.average((g(q) - I) ** 2))])
 
 def absdiff(data, t, roi):
     current = data[t].astype(float)
@@ -122,7 +136,8 @@ operations = collections.OrderedDict([('Chi Squared', chisquared),
                                       ('Radial Integration', radialintegration),
                                       ('Q at peak max', qmax),
                                       ('Q at peak fit max', fit_mean),
-                                      ('Peak Fit Std. Dev.', fit_stddev)
+                                      ('Peak Fit Std. Dev.', fit_stddev),
+                                      ('Gaussian Q Fit', gaussian_fit)
                                       ])
 
 

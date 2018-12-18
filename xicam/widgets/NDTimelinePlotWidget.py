@@ -16,13 +16,20 @@ class timelineLinePlot(pg.PlotWidget):
                 self.addLegend()
 
             if not key in self.variationcurve:
-                self.variationcurve[key] = self.plot(name=key)
+                self.variationcurve[key] = self.plot(name=key, pen=pg.mkPen(
+                    color=pg.intColor(kwargs.keys().index(key), len(kwargs.keys()))))
+                # self.variationcurve[key].setPen()
 
             y = kwargs[key]
             l=min(len(t),len(y))
             self.variationcurve[key].setData(x=t[:l], y=y[:l])
-            self.variationcurve[key].setPen(pg.mkPen(color=pg.intColor(self.variationcurve.keys().index(key),len(self.variationcurve))))
 
+    def clear_hack(self):
+        self.variationcurve = OrderedDict()
+        if self.plotItem.legend:
+            self.plotItem.legend.scene().removeItem(self.plotItem.legend)
+            self.plotItem.legend = None
+        super(timelineLinePlot, self).clear()
 
 
 class timelineStackPlot(QtGui.QWidget):
@@ -107,13 +114,10 @@ class TimelinePlot(QtGui.QTabWidget):
         self.setTabPosition(self.West)
         self.currentChanged.connect(self.widgetChanged)
 
-    @QtCore.Slot(object, list)
+    @QtCore.Slot(object, list, OrderedDict)
     @nonesigmod.pyside_none_deco
-    def addData(self, t, *args):
-        kwargs=OrderedDict()
-        if isinstance(args[0],OrderedDict):
-            kwargs=args[0]
-        elif len(args)==1:
+    def addData(self, t, *args, **kwargs):
+        if len(args) == 1:
             kwargs['y']=args[0]
         elif len(args)==2:
             kwargs['x']=args[0]
@@ -192,6 +196,7 @@ class TimelinePlot(QtGui.QTabWidget):
     def clear(self):
         self.clearData()
         self.currentPlot().clear()
+        if hasattr(self.currentPlot(), 'clear_hack'): self.currentPlot().clear_hack()
 
     def widgetChanged(self, *args, **kwargs):
         self.currentPlot().clear()
