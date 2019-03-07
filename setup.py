@@ -120,7 +120,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'gui_scripts': [
-            'xicam=run_xicam',
+            'xicam=xicamlauncher.main:main',
         ],
     },
 
