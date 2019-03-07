@@ -1,10 +1,14 @@
 import pandas as pd
 from modpkgs.memoize import memoized_property
 import numpy as np
-from larch import Interpreter
-from larch_plugins.math.mathutils import index_of
-from larch_plugins.xafs import pre_edge
-mylarch = Interpreter()
+try:
+    from larch import Interpreter
+    from larch_plugins.math.mathutils import index_of
+    from larch_plugins.xafs import pre_edge
+    mylarch = Interpreter()
+except ImportError:
+    print('Larch is not installed; XAS plugin will be disabled.')
+
 from os import path
 
 
