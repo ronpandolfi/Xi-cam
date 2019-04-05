@@ -10,10 +10,11 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy ==1.10.4
-    - cython
+
 
   run:
+    - numpy
+    - cython
     - pyfits
     - python
     - scipy
@@ -29,7 +30,6 @@ requirements:
     - six
     - pyfai
     - qtconsole
-    - nexusformat
     - qdarkstyle
     - pyqtgraph
     - matplotlib

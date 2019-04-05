@@ -12,7 +12,7 @@ from pyFAI import detectors
 import logging
 from . import msg
 import pyfits
-from nexusformat import nexus as nx
+# from nexusformat import nexus as nx
 from collections import OrderedDict
 import re
 

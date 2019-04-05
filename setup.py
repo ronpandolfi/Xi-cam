@@ -9,17 +9,11 @@ Usage: python setup.py install
 #     print 'You should run his with pip instead!\n Try this:\n\tpip install .\n...or...\n\tpip install xicam'
 #     exit(0)
 
-try:
-    import numpy as np
-except ImportError:
-    print 'Error: Numpy is not installed. Install numpy first!'
-    exit(1)
-
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
 import glob
-from numpy.distutils.core import Extension
+# from numpy.distutils.core import Extension
 
 
 here = path.abspath(path.dirname(__file__))
@@ -27,19 +21,19 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:  # rst?
     long_description = f.read()
 
-EXT = Extension(name='pipeline.cWarpImage',
-                sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
-                extra_compile_args=['-O3', '-ffast-math'],  # '-fopenmp',, '-I/opt/local/include'
-                # extra_link_args=['-fopenmp'],
-                include_dirs=[np.get_include()],
-                )
+# EXT = Extension(name='pipeline.cWarpImage',
+#                 sources=['cext/cWarpImage.cc', 'cext/remesh.cc'],
+#                 extra_compile_args=['-O3', '-ffast-math'],  # '-fopenmp',, '-I/opt/local/include'
+#                 # extra_link_args=['-fopenmp'],
+#                 include_dirs=[np.get_include()],
+#                 )
 setup(
     name='xicam',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.2.21',
+    version='1.2.25',
 
     description='A synchrotron data analysis interface',
     long_description=long_description,
@@ -91,12 +85,12 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['scipy', 'Cython', 'pyFAI==0.16.0', 'fabio==0.5.0', 'h5py', 'PySide', 'pyqtgraph', 'QDarkStyle',
-                      'nexusformat', 'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
+    install_requires=['scipy', 'Cython', 'pyFAI==0.16.0', 'h5py', 'PySide==1.2.2', 'pyqtgraph', 'QDarkStyle',
+                      'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
                       'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
-                      'pypaws>=0.8.4','matplotlib'],
+                      'pypaws>=0.8.4','matplotlib', 'astropy'],
 
-    setup_requires=['numpy', 'cython'],
+    # setup_requires=['numpy', 'cython'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -130,6 +124,6 @@ setup(
         ],
     },
 
-    ext_modules=[EXT],
+    # ext_modules=[EXT],
     include_package_data=True
 )
