@@ -123,6 +123,13 @@ def angularcorrelationwithfirst(data, t, roi):
     return signal.convolve(currentchi, firstchi)
 
 
+def zintegration(data, t, roi):
+    current = data[t]
+    d = np.ma.masked_array(current, mask=np.logical_not(roi))
+    profile = np.ma.average(d, axis=0)
+    return list(np.arange(len(profile))), list(profile.data)
+
+
 
 
 operations = collections.OrderedDict([('Chi Squared', chisquared),
@@ -134,10 +141,11 @@ operations = collections.OrderedDict([('Chi Squared', chisquared),
                                       ('Chi Squared w/First Frame', chisquaredwithfirst),
                                       ('Angular autocorrelation w/First Frame', angularcorrelationwithfirst),
                                       ('Radial Integration', radialintegration),
+                                      ('Z Integration', zintegration),
                                       ('Q at peak max', qmax),
                                       ('Q at peak fit max', fit_mean),
                                       ('Peak Fit Std. Dev.', fit_stddev),
-                                      ('Gaussian Q Fit', gaussian_fit)
+                                      ('Gaussian Q Fit', gaussian_fit),
                                       ])
 
 
