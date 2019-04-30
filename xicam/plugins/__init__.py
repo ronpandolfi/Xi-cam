@@ -13,18 +13,17 @@ import inspect
 modules = []
 plugins = OrderedDict()
 
-disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS','EZTest', '3D Viewer', 'HipRMC', ]
+disabledatstart = ['FXS', 'SPOTH5', 'Library', 'XAS', 'EZTest', '3D Viewer', 'HipRMC', 'Tomography']
 
 
 def initplugins(placeholders):
-    import base
+    from . import base
     global plugins, modules
 
     packages = pkgutil.iter_modules(__path__)
     msg.logMessage(('packages:',packages),msg.DEBUG)
 
     for importer, modname, ispkg in packages:
-
         msg.logMessage("Found plugin %s (is a package: %s)" % (modname, ispkg),msg.DEBUG)
         mod=safeimporter.import_module('.' + modname, 'xicam.plugins')
         if mod:
@@ -52,7 +51,7 @@ def initplugins(placeholders):
 
 def buildactivatemenu(modewidget):
     menu = QtGui.QMenu('Plugins')
-    for pluginlink in plugins.values():
+    for pluginlink in list(plugins.values()):
         if pluginlink.plugin.hidden:
             continue
         action = QtGui.QAction(pluginlink.name, menu)
@@ -64,7 +63,7 @@ def buildactivatemenu(modewidget):
     return menu
 
 
-class pluginlink():
+class pluginlink(object):
     def __init__(self, module, plugin, placeholders):
         self.plugin = plugin
         self.modulename = module.__name__

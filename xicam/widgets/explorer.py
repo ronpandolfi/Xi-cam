@@ -17,9 +17,95 @@ from PySide import QtGui, QtCore
 from collections import OrderedDict
 from xicam import threads
 from xicam import clientmanager as cmanager
-from pipeline import pathtools, msg
+from pipeline import path, msg
 from xicam import config
 from modpkgs import guiinvoker
+from pipeline import daemon
+
+
+class LiveFolderView(QtGui.QListWidget):
+    """
+    Local file explorer tree view
+    """
+
+    pathChanged = QtCore.Signal(str)
+    sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
+    sigDelete = QtCore.Signal(list)
+    sigUpload = QtCore.Signal(list)
+    sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
+
+    def __init__(self, path, parent=None):
+        self.path = path
+        super(LiveFolderView, self).__init__(parent)
+
+        # self.path = config.settings['Default Local Path']
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Open', self)]
+        standardActions[0].triggered.connect(self.handleOpenAction)
+        # standardActions[1].triggered.connect(self.handleOpenFolderAction)
+        # standardActions[2].triggered.connect(self.handleDeleteAction)
+        self.menu.addActions(standardActions)
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+        self.doubleClicked.connect(self.onDoubleClick)
+
+        self.filter = '*.*'
+        self.startwatcher()
+
+    def startwatcher(self):
+        self.watcher = daemon.Watcher(self.path, self.filter, newcallback=lambda ev: self.autoOpen(ev.src_path),
+                                      procold=False)
+
+    def autoOpen(self, path):
+        self.addItem(QtGui.QListWidgetItem(path))
+        self.sigOpen.emit(path)
+
+    def refresh(self, path=None):
+        """
+        Refresh the file tree, or switch directories and refresh
+        """
+        self.watcher.stop()
+        if not os.path.isdir(path):
+            self.path = os.path.dirname(path)
+            self.filter = os.path.basename(path)
+        self.startwatcher()
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def onDoubleClick(self, index):
+        self.sigOpen.emit(self.itemFromIndex(index).text())
+
+    def currentChanged(self, current, previous):
+        path = self.currentItem().text()
+        if os.path.isfile(path):
+            self.sigItemPreview.emit(path)
+
+    def getSelectedFilePaths(self):
+        items = self.selectedIndexes()
+        paths = [item.text() for item in items]
+        self.sigOpen.emit(paths)
+
+    def getSelectedFile(self):
+        pass
+
+    def handleOpenAction(self):
+        paths = self.getSelectedFilePaths()
+        if os.path.isdir(paths[0]) and len(paths) == 1:
+            self.refresh(path=paths[0])
+        else:
+            self.sigOpen.emit(paths)
+
+
+class StreamFolderView(LiveFolderView):
+
+    def autoOpen(self, path):
+        self.addItem(QtGui.QListWidgetItem(path))
+        self.sigAppend.emit(path)
 
 class LocalFileView(QtGui.QTreeView):
     """
@@ -32,6 +118,7 @@ class LocalFileView(QtGui.QTreeView):
     sigDelete = QtCore.Signal(list)
     sigUpload = QtCore.Signal(list)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(LocalFileView, self).__init__(parent)
@@ -88,7 +175,6 @@ class LocalFileView(QtGui.QTreeView):
         self.file_model.setRootPath(root.absolutePath())
         self.file_model.setNameFilters([filter])
         self.setRootIndex(self.file_model.index(root.absolutePath()))
-        self.pathChanged.emit(path)
         config.settings['Default Local Path'] = path
 
     def menuRequested(self, position):
@@ -97,7 +183,8 @@ class LocalFileView(QtGui.QTreeView):
     def onDoubleClick(self, index):
         path = self.file_model.filePath(index)
         if os.path.isdir(path):
-            self.refresh(path=path)
+            self.pathChanged.emit(path)
+            # self.refresh(path=path)
         else:
             self.sigOpen.emit([path])
 
@@ -154,6 +241,7 @@ class RemoteFileView(QtGui.QListWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, remote_client, parent=None):
         super(RemoteFileView, self).__init__(parent)
@@ -225,64 +313,123 @@ class RemoteFileView(QtGui.QListWidget):
         pass
 
 
-# This has been replaced with SFTP based client see SFTPFileView
-# class NERSCFileView(RemoteFileView):
-# """
-#     File explorer for NERSC systems, must be passed a client and a worker to make REST calls
-#     """
-#
-#     def __init__(self, nersc_client, system, parent=None):
-#         self.system = system
-#         super(NERSCFileView, self).__init__(nersc_client, parent=parent)
-#         self.client.set_scratch_dir(system)
-#         self.path = self.client.scratch_dir
-#         self.getDirContents(self.path, self.system)
-#
-#     def refresh(self, path=None):
-#         if path is None:
-#             path = self.path
-#
-#         super(NERSCFileView, self).getDirContents(path, self.system)
-#         super(NERSCFileView, self).refresh(path=path)
-#
-#    def onDoubleClick(self, item):
-#        file_name = item.text()
-#        if '.' in file_name:
-#            save_path = os.path.join(tempfile.gettempdir(), file_name)
-#            self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
-#        super(NERSCFileView, self).onDoubleClick(item)
-#
-#     def handleOpenAction(self):
-#         paths = self.getSelectedFilePaths()
-#         files = [os.path.split(path)[-1] for path in paths]
-#         for file_name in files:
-#             save_path = os.path.join(tempfile.gettempdir(), file_name)
-#             self.handleDownloadAction(save_path=save_path, fslot=(lambda: self.sigOpen.emit([save_path])))
-#
-#     def handleDownloadAction(self, save_path=None, fslot=None):
-#         fpath = super(NERSCFileView, self).handleDownloadAction()
-#         size = self.client.get_file_size(fpath, self.system)
-#         desc = 'File {0} from {1}'.format(fpath, self.system)
-#         if size < 100*2**20:
-#             method = self.client.download_file_generator
-#             args = [fpath, self.system]
-#             kwargs = {}
-#             if save_path is not None:
-#                 kwargs['save_path'] = save_path
-#         else:
-#             # USE GLOBUS API CALL HERE, Think of how to get access to client
-#             pass
-#
-#         self.sigDownload.emit(desc, method, args, kwargs, fslot)
-#
-#     def handleTransferAction(self):
-#         return None
-#
-#     def handleDeleteAction(self):
-#         runnable = threads.RunnableMethod(self.client.delete_file,
-#                                           method_args=(self.getSelectedFilePath(), self.system),
-#                                           finished_slot=self.refresh)
-#         threads.add_to_queue(runnable)
+class DataBrokerView(QtGui.QListWidget):
+    """
+    Explorer interface for DataBroker connection
+    """
+
+    pathChanged = QtCore.Signal(str)
+    sigDelete = QtCore.Signal(list)
+    sigOpen = QtCore.Signal(list)
+    sigOpenFolder = QtCore.Signal(list)
+    sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
+    sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
+
+    def __init__(self, db, parent=None):
+        self.path = '-100:'
+        self.db = db
+        self._headers = {}
+        super(DataBrokerView, self).__init__()
+        self.setSelectionMode(self.ExtendedSelection)
+        self.query(self.path)
+        self.doubleClicked.connect(self.onDoubleClick)
+
+        self.menu = QtGui.QMenu()
+        standardActions = [QtGui.QAction('Open', self)]
+        standardActions[0].triggered.connect(self.openSelected)
+        self.menu.addActions(standardActions)
+
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+
+    def clear(self):
+        super(DataBrokerView, self).clear()
+        self._headers.clear()
+
+    def openSelected(self):
+        items = self.selectedIndexes()
+        headers = [self._headers[item.data()] for item in items]
+        paths = ['DB:{}/{}'.format(self.db.host, header.start['uid'])
+                 for header in headers]
+        self.sigOpen.emit(paths)
+
+    def onDoubleClick(self, item):
+        header = self._headers[item.data()]
+        self.sigOpen.emit(['DB:{}/{}'.format(self.db.host,
+                                             header.start['uid'])])
+
+    def currentChanged(self, current, previous):
+        uid = 'DB:{}/{}'.format(self.db.host,
+                                self._headers[current.data()].start['uid'])
+        self.sigItemPreview.emit(uid)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def query(self, querystring):
+        results = []
+
+        # if querystring is null, limit to last 100
+        if not querystring:
+            querystring = '-100:'
+
+        # if querystring is int-like
+        if not results:
+            try:
+                query = int(querystring)
+            except ValueError:
+                pass
+            else:
+                results = [self.db[query]]
+
+        # if querystring is slice-like, slice db
+        if not results:
+            try:
+                query = slice(*map(lambda x: int(x.strip()) if x.strip() else None, querystring.split(':')))
+            except ValueError:
+                pass
+            else:
+                results = self.db[query]
+
+        # if querystring is dict-like
+        if not results:
+            try:
+                query = eval("dict({})".format(querystring))
+            except Exception:
+                pass
+            else:
+                results = self.db(**query)
+
+        self.path = querystring
+        self.fillList(results)
+
+    def fillList(self, results):
+        self.clear()
+        for h in results:
+            start = h.start
+            for n in [start.get('sample_name'), start.get('object'), '??']:
+                if type(n) == str:
+                    name = n
+                    break
+
+            key = '{} [{}] sample: {}'.format(start.get('plan_name', '??'),
+                                              start.get('scan_id', ''), name)
+
+            item = QtGui.QListWidgetItem(key)
+
+            if not h.get('stop') or h.get('stop', {'exit_status': 'fail'})['exit_status'] in ['abort', 'fail']:
+                item.setBackground(QtGui.QBrush(QtCore.Qt.red))
+            self.addItem(item)
+            self._headers[key] = h
+
+    def refresh(self, path=None):
+        if path is None:
+            path = self.path
+        else:
+            self.path = path
+        self.query(path)
 
 
 class GlobusFileView(RemoteFileView):
@@ -340,6 +487,7 @@ class SFTPFileView(QtGui.QTreeWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(str)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, sftp_client, parent=None):
         super(SFTPFileView, self).__init__(parent=parent)
@@ -478,6 +626,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     sigDownload = QtCore.Signal(str, str, object, tuple, dict, object)
     sigTransfer = QtCore.Signal(str, str, object, tuple, dict, object)
     sigItemPreview = QtCore.Signal(object)
+    sigAppend = QtCore.Signal(str)
 
 
     def __init__(self, spot_client, parent=None):
@@ -524,7 +673,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         for index in range(len(data)):
             derived_data = {data[index]['fs']['stage']:
                             data[index]['name']}
-            if 'derivatives' in data[index]['fs'].keys():
+            if 'derivatives' in list(data[index]['fs'].keys()):
                 derivatives = data[index]['fs']['derivatives']
                 for d_index in range(len(derivatives)):
                     stage = derivatives[d_index]['dstage']
@@ -543,7 +692,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
     def addTreeItems(self, item, value):
         item.setExpanded(False)
         if type(value) is dict:
-            for key, val in sorted(value.iteritems()):
+            for key, val in sorted(value.items()):
                 icon = QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Folder)
                 child = QtGui.QTreeWidgetItem([key], parent=self)
                 child.setIcon(0, icon)
@@ -578,7 +727,7 @@ class SpotDatasetView(QtGui.QTreeWidget):
         return datasets
 
     def handleOpenAction(self):
-        save_paths = map(lambda dset: os.path.join(tempfile.gettempdir(), dset), self.getSelectedDatasets())
+        save_paths = [os.path.join(tempfile.gettempdir(), dset) for dset in self.getSelectedDatasets()]
         for path in save_paths:
             self.handleDownloadAction(save_paths=[path], fslot=(lambda: self.sigOpen.emit([path])))
 
@@ -664,6 +813,7 @@ class FileExplorer(QtGui.QWidget):
         path = self.file_view.path
         path = os.path.dirname(str(path))
         self.file_view.refresh(path=path)
+        self.file_view.pathChanged.emit(path)
 
     def onRefreshClicked(self):
         self.file_view.refresh()
@@ -743,13 +893,14 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     """
 
     sigLoginSuccess = QtCore.Signal(bool)
-    sigLoginRequest = QtCore.Signal(QtCore.Signal, bool)
+    sigLoginRequest = QtCore.Signal(QtCore.Signal, bool, bool)
     sigProgJob = QtCore.Signal(str, object, list, dict, object)
     sigPulsJob = QtCore.Signal(str, object, list, dict, object)
     sigSFTPJob = QtCore.Signal(str, object, list, dict, object)
     sigOpen = QtCore.Signal(list)
     sigFolderOpen = QtCore.Signal(list)
     sigPreview = QtCore.Signal(object)
+    sigAppend = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super(MultipleFileExplorer, self).__init__(parent)
@@ -775,16 +926,23 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         self.tabCloseRequested.connect(self.removeTab)
 
         self.newtabmenu = QtGui.QMenu(None)
+        addlivefolder = QtGui.QAction('Live Folder', self.newtabmenu)
+        addstreamfolder = QtGui.QAction('Stream Folder', self.newtabmenu)
+        adddatabroker = QtGui.QAction('Data Broker', self.newtabmenu)
         addspot = QtGui.QAction('SPOT', self.newtabmenu)
         addcori = QtGui.QAction('Cori', self.newtabmenu)
         addedison = QtGui.QAction('Edison', self.newtabmenu)
         addbragg = QtGui.QAction('Bragg', self.newtabmenu)
         addsftp = QtGui.QAction('SFTP Connection', self.newtabmenu)
         showjobtab = QtGui.QAction('Jobs', self.newtabmenu)
-        self.standard_actions = OrderedDict({'SPOT': addspot, 'Cori': addcori, 'Edison': addedison,
-                                             'Bragg': addbragg, 'SFTP': addsftp})
-        self.newtabmenu.addActions(self.standard_actions.values())
+        self.standard_actions = OrderedDict({'DataBroker': adddatabroker, 'SPOT': addspot, 'Cori': addcori,
+                                             'Edison': addedison, 'Bragg': addbragg, 'SFTP': addsftp,
+                                             'Live': addlivefolder, 'Stream': addstreamfolder})
+        self.newtabmenu.addActions(list(self.standard_actions.values()))
         self.newtabmenu.addAction(showjobtab)
+        addlivefolder.triggered.connect(self.addLiveFolderTab)
+        addstreamfolder.triggered.connect(self.addStreamFolderTab)
+        adddatabroker.triggered.connect(self.addDataBrokerTab)
         addspot.triggered.connect(self.addSPOTTab)
         addedison.triggered.connect(lambda: self.addHPCTab('Edison'))
         addcori.triggered.connect(lambda: self.addHPCTab('Cori'))
@@ -793,15 +951,15 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         showjobtab.triggered.connect(lambda: self.addTab(self.jobtab, 'Jobs'))
 
     def enableActions(self):
-        for name, action in self.standard_actions.iteritems():
-            if name in self.explorers.keys():
+        for name, action in self.standard_actions.items():
+            if name in list(self.explorers.keys()):
                 action.setEnabled(False)
             else:
                 action.setEnabled(True)
 
     def removeTab(self, p_int):
         if self.tabText(p_int) != 'Jobs':
-            name = self.explorers.keys()[p_int]
+            name = list(self.explorers.keys())[p_int]
             explorer = self.explorers.pop(name)
             cmanager.logout(explorer.file_view.client)
             self.widget(p_int).deleteLater()
@@ -809,11 +967,37 @@ class MultipleFileExplorer(QtGui.QTabWidget):
         super(MultipleFileExplorer, self).removeTab(p_int)
 
     def removeTabs(self):
-        for i in xrange(1, self.count()):
+        for i in range(1, self.count()):
             self.removeTab(1)
 
     def onPlusClicked(self):
         self.newtabmenu.popup(QtGui.QCursor.pos())
+
+    def addDataBrokerTab(self):
+        add_DB_tab = lambda client: self.addFileExplorer('DataBroker',
+                                                         FileExplorer(DataBrokerView(client, self)))
+        add_DB_callback = lambda client: self.loginSuccess(client,
+                                                           add_explorer=add_DB_tab)
+        login_callback = lambda client: cmanager.add_DB_client(client.host,
+                                                               client,
+                                                               add_DB_callback)
+        DB_client = cmanager.DB_client
+        self.sigLoginRequest.emit(partial(cmanager.login, login_callback, DB_client),
+                                  True, False)
+
+    def addLiveFolderTab(self):
+        dialog = QtGui.QFileDialog(self, 'Choose a live folder to watch', os.curdir,
+                                   options=QtGui.QFileDialog.ShowDirsOnly)
+        d = dialog.getExistingDirectory()
+        if d:
+            self.addFileExplorer('Live Folder', FileExplorer(LiveFolderView(d)))
+
+    def addStreamFolderTab(self):
+        dialog = QtGui.QFileDialog(self, 'Choose a stream folder to watch', os.curdir,
+                                   options=QtGui.QFileDialog.ShowDirsOnly)
+        d = dialog.getExistingDirectory()
+        if d:
+            self.addFileExplorer('Stream Folder', FileExplorer(StreamFolderView(d)))
 
     def addFileExplorer(self, name, file_explorer, closable=True):
         self.explorers[name] = file_explorer
@@ -833,6 +1017,7 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def wireExplorerSignals(self, explorer):
         explorer.file_view.sigOpen.connect(self.handleOpenActions)
         explorer.file_view.sigOpenFolder.connect(self.handleOpenFolderActions)
+        explorer.file_view.sigAppend.connect(self.handleAppendActions)
         try:
             explorer.file_view.sigDownload.connect(self.handleDownloadActions)
         except AttributeError:
@@ -921,6 +1106,10 @@ class MultipleFileExplorer(QtGui.QTabWidget):
     def handleOpenActions(self, paths):
         if len(paths) > 0:
             self.sigOpen.emit(paths)
+
+    def handleAppendActions(self, paths):
+        if len(paths) > 0:
+            self.sigAppend.emit(paths)
 
     def handleOpenFolderActions(self, paths):
         if len(paths) > 0:

@@ -177,7 +177,7 @@ class GlobusClient(User):
             os.utime(test, None)
 
         for endpoint in user_endpoints:
-                params = {'path': unicode(test)}
+            params = {'path': str(test)}
                 r = self.get(self.TRANSFER_URL + '/endpoint/' + quote(endpoint) + '/ls',
                              headers=self.authentication, params=params)
                 try:
@@ -256,11 +256,11 @@ class GlobusClient(User):
             transfer_submission = json.load(json_file)
 
         transfer_submission["submission_id"] = submission_id["value"]
-        transfer_submission["source_endpoint"] = unicode(src_endpoint)
-        transfer_submission["destination_endpoint"] = unicode(dst_enpoint)
-        transfer_submission["DATA"][0]["source_path"] = unicode(src_path)
-        transfer_submission["DATA"][0]["destination_path"] = unicode(dst_path)
-        transfer_submission["label"] = unicode('transfered from SPEW client')
+        transfer_submission["source_endpoint"] = str(src_endpoint)
+        transfer_submission["destination_endpoint"] = str(dst_enpoint)
+        transfer_submission["DATA"][0]["source_path"] = str(src_path)
+        transfer_submission["DATA"][0]["destination_path"] = str(dst_path)
+        transfer_submission["label"] = str('transfered from SPEW client')
 
         r = self.post(self.TRANSFER_URL + '/transfer', json=transfer_submission, headers=self.authentication)
         transfer_result = self.check_response(r)
@@ -296,9 +296,9 @@ class GlobusClient(User):
             delete_submission = json.load(json_file)
 
         delete_submission["submission_id"] = submission_id["value"]
-        delete_submission["endpoint"] = unicode(endpoint)
-        delete_submission["DATA"][0]["path"] = unicode(fpath)
-        delete_submission["label"] = unicode('deleted from SPEW client')
+        delete_submission["endpoint"] = str(endpoint)
+        delete_submission["DATA"][0]["path"] = str(fpath)
+        delete_submission["label"] = str('deleted from SPEW client')
 
         r = self.post(self.TRANSFER_URL + '/delete', json=delete_submission,
                       headers=self.authentication)
@@ -386,7 +386,7 @@ class GlobusClient(User):
         while status['status'] == 'ACTIVE':
             time.sleep(3)
             status = self.get_task_status(r['task_id'])
-            yield float(status['bytes_transferred'])/float(size)
+            yield old_div(float(status['bytes_transferred']), float(size))
 
 
 class GLOBUSError(Exception):

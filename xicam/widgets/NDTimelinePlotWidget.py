@@ -145,7 +145,12 @@ class TimelinePlot(QtGui.QTabWidget):
     plot = addData
 
     def setData(self):
-        self.currentPlot().setData(**self._data)
+        if 'x' not in self._data:
+            for colorhash in self._data['colors']:
+                color = list(map(int, colorhash.split(',')))
+                self.currentPlot().setData(self._data['t'], self._data[colorhash], color)
+        else:
+            self.currentPlot().setData(self._data['t'], self._data['x'], self._data['y'])
 
     def setDMode(self,is1D):
         index = None

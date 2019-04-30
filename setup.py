@@ -33,7 +33,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.2.25',
+    version='1.2.26',
 
     description='A synchrotron data analysis interface',
     long_description=long_description,
@@ -88,7 +88,7 @@ setup(
     install_requires=['scipy', 'Cython', 'pyFAI==0.16.0', 'h5py', 'PySide==1.2.2', 'pyqtgraph', 'QDarkStyle',
                       'Pillow', 'pyfits', 'PyOpenGL', 'PyYAML', 'qtconsole','tifffile','pysftp',
                       'requests','dask','distributed','appdirs','futures','scikit-image','imageio','vispy',
-                      'pypaws>=0.8.4','matplotlib', 'astropy'],
+                      'pypaws>=0.8.4', 'matplotlib', 'astropy', 'watchdog'],
 
     # setup_requires=['numpy', 'cython'],
 

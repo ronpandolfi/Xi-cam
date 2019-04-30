@@ -10,11 +10,12 @@ if op_sys == 'Darwin':
     except ImportError:
         msg.logMessage('NSURL not found. Drag and drop may not work correctly',msg.WARNING)
 
-import base
+from . import base
 from PySide import QtGui, QtCore
 import os
 from pyqtgraph.parametertree import ParameterTree
-import widgets
+from . import widgets
+from xicam.widgets import metadatawidget
 import numpy as np
 from pipeline.spacegroups import spacegroupwidget
 from pipeline import loader
@@ -73,7 +74,7 @@ class ViewerPlugin(base.plugin):
         sgicon.addPixmap(QtGui.QPixmap("xicam/gui/icons_35.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.rightmodes.append((self.spacegroupwidget,sgicon))
 
-        self.propertytable = widgets.frameproptable()
+        self.propertytable = metadatawidget.MetaDataWidget()
         self.rightmodes.append((self.propertytable,QtGui.QFileIconProvider().icon(QtGui.QFileIconProvider.Desktop)))
 
         self.calibrationPanel = calibrationpanel()
@@ -246,12 +247,19 @@ class ViewerPlugin(base.plugin):
         self.activate()
         if type(paths) is not list:
             paths = [paths]
-
         widget = widgets.OOMTabItem(itemclass=widgets.dimgViewer, src=paths, operation=operation,
                                     operationname=operationname, plotwidget=self.bottomwidget,
                                     toolbar=self.toolbar)
         self.centerwidget.addTab(widget, os.path.basename(paths[0]))
         self.centerwidget.setCurrentWidget(widget)
+
+    def appendfiles(self, paths=None):
+        if not self.centerwidget.count():
+            return self.openfiles(paths)
+        self.activate()
+        if type(paths) is not list:
+            paths = [paths]
+        self.centerwidget.currentWidget().widget.appendpaths(paths)
 
     def opendata(self, data=None, operation=None, operationname=None):
         self.activate()
@@ -280,9 +288,9 @@ class ViewerPlugin(base.plugin):
     def exportimage(self):
         fabimg = edfimage.edfimage(np.rot90(self.getCurrentTab().imageitem.image))
         dialog = QtGui.QFileDialog(parent=None, caption=u"Export image as EDF",
-                                   directory=unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)),
+                                   directory=str(os.path.dirname(self.getCurrentTab().dimg.filepath)),
                                    filter=u"EDF (*.edf)")
-        dialog.selectFile(unicode(os.path.dirname(self.getCurrentTab().dimg.filepath)))
+        dialog.selectFile(str(os.path.dirname(self.getCurrentTab().dimg.filepath)))
         filename, ok = dialog.getSaveFileName()
         msg.logMessage(filename,msg.DEBUG)
         if ok and filename:

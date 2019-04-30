@@ -1,4 +1,4 @@
-import distributed 
+import distributed
 from tornado.ioloop import IOLoop
 from threading import Thread
 from distributed import Scheduler, Worker, Executor
@@ -9,7 +9,8 @@ distributed.core.logging.propagate = False
 
 __ioloop__ = IOLoop()
 
-class DaskLoop():
+
+class DaskLoop(object):
   def __init__(self):
     self.loop = __ioloop__
     self.t = Thread(target=self.loop.start)

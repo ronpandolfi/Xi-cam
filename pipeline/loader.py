@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import os
 
@@ -34,9 +34,36 @@ imagecache = dict()
 def loadsingle(path):
     return loadimage(path), loadparas(path)
 
-
 def loadimage(path):
     data = None
+    if path.startswith('DB:'):
+        from xicam import clientmanager
+        dc = clientmanager.databroker_clients
+        host, _, uid = path[3:].partition('/')
+        db = dc[host]
+        h = db[uid]
+
+        img_names = [k for d in h.descriptors if d['name'] == 'primary'
+                     for k, v in d['data_keys'].items() if v['dtype'] == 'array']
+
+        # For tiled data
+        if h.start.get('mode') == 'tiled':
+            ev1, ev2 = [doc['data'] for name, doc in h.stream('primary', fill=True) if name == 'event']
+            data, mask = loadstitched('', '', data1=ev1['image'], data2=ev2['image'], paras1=ev1, paras2=ev2)
+            return data, mask
+        else:
+            data = db.db.get_images(h, img_names[0])[0]
+
+            # converting to np.array takes too long - is it necessary to do this?
+            # if so, comment out line above and uncomment line below
+            # data = np.array(db.db.get_images(h, img_names[0]).squeeze()
+            if data.ndim > 2:
+                data = np.transpose(data, [1, 2, 0])
+            return data
+
+
+
+
     try:
         ext = os.path.splitext(path)[1]
         if ext in acceptableexts:
@@ -134,6 +161,14 @@ def loadparas(path):
         elif extension in ['.tif', '.img', '.tiff']:
             fimg = fabio.open(path)
             return fimg.header
+
+        elif path.startswith('DB:'):
+            from xicam import clientmanager
+            dc = clientmanager.databroker_clients
+            host, _, uid = path[3:].partition('/')
+            db = dc[host]
+            h = db[uid]
+            return h
 
 
     except IOError:
@@ -300,9 +335,9 @@ def loadpath(path):
 
     # Do extra rotations/transposition
     if config.settings['Image Load Transpose']:
-        img=img.transpose()
+        img = img.transpose()
     if config.settings['Image Load Rotations']:
-        img=np.rot90(img,config.settings['Image Load Rotations'])
+        img = np.rot90(img, config.settings['Image Load Rotations'])
 
     if not isinstance(img, tuple):
         mask = finddetectorbyshape(img.shape).calc_mask()
@@ -814,9 +849,120 @@ class jpegimageset():
             return np.array([self.jpegs[i] for i in item])
 
 
+class PStack(object):
+    ndim = 3
+
+    def __init__(self, projections, dark, flat, sino, hdr, descriptors):
+        self.primary = projections
+        self.projections = projections
+        self.sino = sino
+        self.darks = dark
+        self.flats = flat
+        self.dtype = projections.pixel_type
+        self.header = hdr
+        self.descriptors = descriptors
+        self.frames = [str(j) for j in range(len(self.projections))]
+
+        for pim in (self.sino, self.darks, self.flats, self.primary):
+            pim.frames = [str(j) for j in range(len(pim))]
+
+    def __len__(self):
+        return len(self.primary)
+
+    # these are required because this object gets passed
+    # into pyqtgraph which tries to down sample / scale
+    @property
+    def max(self):
+        return self[0].max()
+
+    @property
+    def min(self):
+        return self[0].min()
+
+    @property
+    def shape(self):
+        return (len(self.primary),) + self.primary.frame_shape
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
+
+    def transpose(self, ax):
+        return self
+
+    def __getitem__(self, item):
+
+        s = []
+        if not isinstance(item, tuple) and not isinstance(item, list):
+            item = (item,)
+        for n in range(3):
+            if n == 0:
+                stop = len(self)
+            elif n == 1:
+                stop = self.data.shape[0]
+            elif n == 2:
+                stop = self.data.shape[1]
+            if n < len(item) and isinstance(item[n], slice):
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
+            else:
+                start, step = 0, 1
+
+            s.append((start, stop, step))
+
+        for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
+            _arr = self.primary[i][slice(*s[1]), slice(*s[2])]
+            if n == 0:  # allocate array
+                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+            arr[n] = _arr
+        if arr.shape[0] == 1:
+            arr = arr[0]
+        return np.squeeze(arr)
+
+    def flatindices(self):
+
+        # looks through databroker descriptor
+        # TODO: find a better way to search through the doc
+        i0 = 0
+        for descriptor in self.descriptors:
+            try:
+                key = list(descriptor['configuration'].keys())[0]
+                if 'i0cycle' in descriptor['configuration'][key]['data']:
+                    i0 = int(descriptor['configuration'][key]['data']['i0cycle'])
+            except KeyError:
+                pass
+
+        nproj = len(self)
+        if i0 > 0:
+            indices = list(range(0, nproj, i0))
+            if indices[-1] != nproj - 1:
+                indices.append(nproj - 1)
+        elif i0 == 0:
+            indices = [0, nproj - 1]
+        return indices
+
+    @property
+    def rawdata(self):
+        return self[0]
+
+    def getframe(self, frame=0):
+        self.data = self.primary[frame]
+        return self.data
+
+    def close(self):
+        pass
+
+
 class StackImage(object):
-    """
-    Class for displaying a Image Stack in a pyqtgraph ImageView and be able to scroll through the various Images
+    """Class for displaying a Image Stack in a pyqtgraph ImageView and be
+    able to scroll through the various Images
+
     """
 
     ndim = 3
@@ -875,14 +1021,16 @@ class StackImage(object):
         return vol
 
     def _getframe(self, frame=None):  # keeps 3 frames in cache at most
-        if frame is None: frame = self.currentframe
+        if frame is None:
+            frame = self.currentframe
         if type(frame) is list and type(frame[0]) is slice:
             frame = 0  # frame[1].step
         self.currentframe = frame
         # print self._framecache
         if frame not in self._framecache:
             # del the first cached item
-            if len(self._framecache) > self._cachesize: del self._framecache[self._framecache.keys()[0]]
+            if len(self._framecache) > self._cachesize:
+                del self._framecache[list(self._framecache.keys())[0]]
             self._framecache[frame] = self._getimage(frame)
         return self._framecache[frame]
 
@@ -1353,7 +1501,8 @@ class multifilediffimage2(diffimage2):
     ndim = 3
 
     def __init__(self, filepaths, detector=None, experiment=None):
-        self.filepaths = sorted(list(filepaths))
+        self.filepaths = filepaths
+        if not filepaths[0].startswith('DB:'): self.filepaths = sorted(list(self.filepaths))
         self._currentframe = 0
         super(multifilediffimage2, self).__init__(detector=detector, experiment=experiment)
         self._framecache = dict()
@@ -1390,7 +1539,10 @@ class multifilediffimage2(diffimage2):
         if self._xvals is None:
             timekey = config.activeExperiment.headermap['Timeline Axis']
             if timekey:
-                self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                try:
+                    self._xvals = np.array([float(self.iHeaders(i)[timekey]) for i in range(len(self.filepaths))])
+                except KeyError:  # TODO: allow DB headers to be keyed without .start
+                    self._xvals = np.array([float(self.iHeaders(i).start[timekey]) for i in range(len(self.filepaths))])
             else:
                 self._xvals = np.arange(len(self.filepaths))
         return self._xvals
@@ -1464,11 +1616,11 @@ class multifilediffimage2(diffimage2):
 class datadiffimage2(singlefilediffimage2):
     ndim = 2
 
-    def __init__(self, data, detector=None, experiment=None):
+    def __init__(self, data, detector=None, experiment=None, rot90=3):
         super(datadiffimage2, self).__init__(filepath=None, detector=detector, experiment=experiment)
-        self._rawdata = np.rot90(data, 3)
+        self._rawdata = np.rot90(data, rot90)
 
-        # False scale rawdata to avoid log issues
+        # False scale rawdata when given floats less than 1 to avoid log issues
         if self._rawdata.max() <= 1:
             self._rawdata *= 2 ** 32
 

@@ -19,7 +19,12 @@ import sys
 import types
 import traceback
 import functools
-import Queue
+
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
 import multiprocessing as mp
 from PySide import QtCore
 from pipeline import msg
@@ -131,8 +136,8 @@ class RunnableMethod(QtCore.QRunnable):
                 if self._callback_slot: self.emit(self._callback_slot, value)
             except RuntimeError:
                 etype, ex, tb = sys.exc_info()
-                print 'exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method
-                print 'this did not run'
+                print('exception1:', etype, ex, traceback.format_exc(), self._callback_slot, self._method)
+                print('this did not run')
                 msg.logMessage(('Runnable method tried to return value, but signal was already disconnected.'),
                                msg.WARNING)
                 if self.lock is not None: self.lock.unlock()
@@ -140,7 +145,7 @@ class RunnableMethod(QtCore.QRunnable):
 
         except Exception:
             etype, ex, tb = sys.exc_info()
-            print 'exception:',etype,ex,traceback.format_exc(),self._callback_slot,self._method
+            print('exception:', etype, ex, traceback.format_exc(), self._callback_slot, self._method)
             self.emitter.sigExcept.emit(etype, ex, tb)
         else:
             self.emitter.sigFinished.emit()
@@ -153,7 +158,7 @@ class RunnableMethod(QtCore.QRunnable):
         if type(value) is not tuple: value = (value,)
         if str(type(slot)) == "<type 'PySide.QtCore.SignalInstance'>": # allows slotting into signals; this type is not in QtCore, so must compare by name str
             if slot is None: return
-            value = map(nonesigmod.pyside_none_wrap, value)
+            value = list(map(nonesigmod.pyside_none_wrap, value))
             tempemitter = EmitterFactory(*[object] * len(value))()
             tempemitter.sigTemp.connect(slot, QtCore.Qt.QueuedConnection)
             tempemitter.sigTemp.emit(*value)
@@ -350,7 +355,7 @@ class Worker(QtCore.QThread):
         super(Worker, self).__init__(parent)
         self.queue = queue
         self.pool = QtCore.QThreadPool.globalInstance()
-        print 'maxthreads:',self.pool.maxThreadCount()
+        print('maxthreads:', self.pool.maxThreadCount())
 
 
     # def __del__(self):
@@ -363,7 +368,7 @@ class Worker(QtCore.QThread):
 
         self.queue.put(None)
         self.quit()
-        print 'threads:',self.pool.activeThreadCount()
+        print('threads:', self.pool.activeThreadCount())
 
     def run(self):
         """
@@ -421,7 +426,7 @@ def add_to_queue(runnable):
 
 
 # Application globals
-queue = Queue.Queue()
+queue = queue.Queue()
 worker = Worker(queue)
 mutex = QtCore.QMutex()
 worker.start()

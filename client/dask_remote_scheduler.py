@@ -141,7 +141,7 @@ class DaskWorker(object):
 # client.load_system_host_keys()
 # client.connect('edison.nersc.gov', username="hkrishna")
 
-class RemoteScheduler():
+class RemoteScheduler(object):
     """
        Create a remote executor
     """

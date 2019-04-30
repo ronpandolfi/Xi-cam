@@ -79,9 +79,9 @@ class PhotonicScience(pyFAI.detectors.Detector):
     aliases = ["Photonic Science"]
     force_pixel = True
     MAX_SHAPE = (1042, 1042)
-    DEFAULT_PIXEL1 = DEFAULT_PIXEL2 = 200e-6
+    DEFAULT_PIXEL1 = DEFAULT_PIXEL2 = 104e-6
 
-    def __init__(self, pixel1=200e-6, pixel2=200e-6):
+    def __init__(self, pixel1=104e-6, pixel2=104e-6):
         super(PhotonicScience, self).__init__(pixel1=pixel1, pixel2=pixel2)
         if (pixel1 != self.DEFAULT_PIXEL1) or (pixel2 != self.DEFAULT_PIXEL2):
             self._binning = (int(2 * pixel1 / self.DEFAULT_PIXEL1), int(2 * pixel2 / self.DEFAULT_PIXEL2))

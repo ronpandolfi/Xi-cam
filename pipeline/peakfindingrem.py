@@ -55,7 +55,7 @@ def peakdet(x, v, delta):
 
 ###############
 
-class peaktooltip:
+class peaktooltip(object):
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = peakdet(x, y, 10)
         self.scatterPoints = pg.ScatterPlotItem(self.q, self.I, size=10, pen=pg.mkPen(None),

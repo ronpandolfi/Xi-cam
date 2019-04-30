@@ -42,7 +42,7 @@ def variation(operationindex, imga, imgb=None, imgc=None, roi=None):
                 else:
                     roi = 1
             with np.errstate(divide='ignore'):
-                return variationoperators.operations.values()[operationindex](p, c, n, roi, None, None)
+                return list(variationoperators.operations.values())[operationindex](p, c, n, roi, None, None)
         except TypeError:
             msg.logMessage('Variation could not be determined for a frame.',msg.ERROR)
     else:

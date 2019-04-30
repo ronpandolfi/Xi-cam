@@ -1,4 +1,6 @@
-import base
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from . import base
 from PySide import QtGui, QtCore
 from xicam import xglobals
 from pipeline import msg

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import range
 from PySide import QtGui, QtCore  # (the example applies equally well to PySide)
 import pyqtgraph as pg
 import numpy as np
@@ -19,10 +22,10 @@ for i in range(1, TID.shape[1]):
     curves.append(plot.plot(TID[:,i], pen=(i,TID.shape[1]*1.3)))
 
 def getValue(value):
-    print value
+    print(value)
     for i in range(1, TID.shape[1]):
         curves[i].setData(TID[:,i]+(i*value))
-        print i
+        print(i)
 
 w.connect(slider, QtCore.SIGNAL('valueChanged(int)'), getValue)
 

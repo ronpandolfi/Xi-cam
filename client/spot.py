@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from time import sleep
-from StringIO import StringIO
+from io import StringIO
 from PIL import Image
 import numpy as np
 from client.newt import NewtClient
@@ -73,10 +73,10 @@ class SpotClient(NewtClient):
                           'end_station': ['bl832', 'bl733']}
         generic_kwargs = ['limitnum', 'skipnum']
         for key in kwargs:
-            if key not in allowed_kwargs.keys() and key not in generic_kwargs:
+            if key not in list(allowed_kwargs.keys()) and key not in generic_kwargs:
                 raise ValueError('%s keyword not in allowed keywords %s' %
-                                 (key, list(allowed_kwargs.keys() +
-                                  generic_kwargs)))
+                                 (key, list(list(allowed_kwargs.keys()) +
+                                            generic_kwargs)))
             elif key in allowed_kwargs:
                 if kwargs[key] not in allowed_kwargs[key]:
                     raise ValueError('%s keyword value must be on of %s' %
@@ -461,7 +461,7 @@ class SpotClient(NewtClient):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
                     f.flush()
-                    downloaded += len(chunk)/file_size
+                    downloaded += old_div(len(chunk), file_size)
                     yield downloaded
         r.close()
 
@@ -495,7 +495,7 @@ class SPOTError(Exception):
 
 if __name__ == '__main__':
     import time
-    from StringIO import StringIO
+    from io import StringIO
     from PIL import Image
     from matplotlib.pyplot import imshow, show, figure
     s = SpotClient()
@@ -505,11 +505,11 @@ if __name__ == '__main__':
     # print 'Time: ', time.time() - t
     t = time.time()
     arr = s.get_image_as('20160630_054009_prefire_3_0amp_scan7', 'raw', ext='tif', index=0)
-    print arr.shape
+    print(arr.shape)
     imshow(arr)
     show()
     # for i in range(3):
     #     figure(i)
     #     imshow(arr[:, :, i])
     # show()
-    print 'Time: ', time.time() - t
+    print('Time: ', time.time() - t)

@@ -84,7 +84,7 @@ def findpeaks(x, y):
 
 
 # TODO: Refactor this class into xicam module so I can get rid of pyside dependency
-class peaktooltip:
+class peaktooltip(object):
     def __init__(self, x, y, widget):
         self.q, self.I, self.width, self.index = findpeaks(x, y)
         self.scatterPoints = pg.PlotDataItem(self.q, self.I, size=10, pen=pg.mkPen(None),

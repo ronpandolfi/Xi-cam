@@ -84,7 +84,9 @@ class settingstracker(ptypes.GroupParameter):
             {'name': 'Integration Bins (χ)', 'value': 1000, 'type': 'int','min':1},
             {'name':'Image Load Rotations','value':0,'type':'int'},
             {'name':'Image Load Transpose','value':False,'type':'bool'},
-            {'name':'Ignored Modules','value':[],'type':'list'}]}
+            {'name': 'Ignored Modules', 'value': [], 'type': 'list'},
+            {'name': 'Databroker FileStore Name', 'value': 'filestore-production-v1', 'type': 'str'},
+            {'name': 'Databroker MetaDataStore Name', 'value': 'metadatastore-production-v1', 'type': 'str'}, ]}
 
 
 settings=settingstracker()
