@@ -67,7 +67,7 @@ def _error_function(parameter, arguments):
     geometry, d_spacings, maxima, selected_parameter = arguments
     mask = [sel in selected_parameter for sel in FIT_PARAMETER]
     param = numpy.array(get_fit2d(geometry))
-    print 'update:',param
+    print('update:', param)
     param[numpy.array(mask)] = parameter[numpy.array(mask)]
     set_fit2d(geometry,*param)
     return peak_distance(geometry, d_spacings, maxima)

@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # REF: http://stackoverflow.com/questions/23728401/pyside-crashing-python-when-emitting-none-between-threads
 
 _PYSIDE_NONE_SENTINEL = object()
@@ -25,7 +26,7 @@ def pyside_none_deco(func):
 
     def inner(*args, **kwargs):
         newargs = map(sentinel_guard, args)
-        newkwargs = {k: sentinel_guard(v) for k, v in kwargs.iteritems()}
+        newkwargs = {k: sentinel_guard(v) for k, v in kwargs.items()}
         return func(*newargs, **newkwargs)
 
     return inner

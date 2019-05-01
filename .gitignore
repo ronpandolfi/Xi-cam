@@ -9,3 +9,4 @@
 build/
 dist/
 xicam.egg_info/
+xicam.egg-info/

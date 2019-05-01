@@ -5,7 +5,8 @@ from PySide import QtCore
 import multiprocessing
 import time
 import pyFAI
-import msg
+from . import remesh
+from . import msg
 
 pyFAI_method = 'cython'
 from modpkgs import pyFAImod
@@ -322,7 +323,7 @@ def cakexintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
     if cut is not None:
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
-        mask &= cut.astype(bool)
+        mask = (mask & cut.astype(bool))
 
     chi = np.arange(-180,180,360/config.settings['Integration Bins (χ)'])
 
@@ -342,7 +343,7 @@ def cakezintegrate(data, mask, AIdict, cut=None, color=[255,255,255], requestkey
 
     if cut is not None:
         msg.logMessage(('cut:', cut.shape),msg.DEBUG)
-        mask &= cut.astype(bool)
+        mask = mask & cut.astype(bool)
 
     q = np.arange(config.settings['Integration Bins (q)'])*np.max(qpar)/ 10./config.settings['Integration Bins (q)']
 
@@ -390,7 +391,7 @@ def remeshqintegrate(data, mask, AIdict, cut=None, color=[255, 255, 255], reques
 
     remeshcenter=np.unravel_index(qsquared.argmin(),qsquared.shape)
 
-    print 'center?:',remeshcenter
+    print('center?:', remeshcenter)
 
     f2d=AI.getFit2D()
     f2d['centerX']=remeshcenter[0]

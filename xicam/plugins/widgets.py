@@ -4,7 +4,7 @@ from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 import numpy as np
 import pyqtgraph as pg
-from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, pathtools, writer
+from pipeline import loader, cosmics, integration, peakfinding, center_approx, variationoperators, path, writer
 from xicam import config, ROI, debugtools, toolbar
 from fabio import edfimage
 import os
@@ -108,7 +108,7 @@ class dimgViewer(QtGui.QWidget):
                 self.dimg = loader.loaddiffimage(src)
 
         # Make an imageview for the image
-        self.imgview = ImageView(self,actionLog_Intensity=self.toolbar.actionLog_Intensity)
+        self.imgview = ImageView(self)
         self.imageitem = self.imgview.getImageItem()
         self.graphicslayoutwidget = self.imgview
         self.imgview.ui.roiBtn.setParent(None)
@@ -228,6 +228,14 @@ class dimgViewer(QtGui.QWidget):
         self.imgview.getHistogramWidget().item.sigLevelChangeFinished.connect(self.cacheLUT)
         self.imgview.getHistogramWidget().item.gradient.sigGradientChangeFinished.connect(self.cacheLUT)
 
+    def appendpaths(self, paths):
+        newimages = np.stack([loader.loadimage(path) for path in paths])
+        oldimages = self.dimg._rawdata
+        if len(oldimages.shape) == 2:
+            oldimages = np.stack([oldimages])
+
+        self.dimg = loader.datadiffimage2(np.vstack([oldimages, np.rot90(newimages, 3, axes=[1, 2])]), rot90=0)
+        self.redrawimage()
 
     def mousePressEvent(self,ev):
         super(dimgViewer, self).mousePressEvent(ev)
@@ -443,7 +451,7 @@ class dimgViewer(QtGui.QWidget):
             remeshqz = self.dimg.remeshqx
             q = remeshqpar ** 2 + remeshqz ** 2
             center = np.where(q == q.min())
-            return zip(*center)[0]
+            return list(zip(*center))[0]
         else:
             return config.activeExperiment.center
 
@@ -858,7 +866,7 @@ class dimgViewer(QtGui.QWidget):
 
     def thresholdmask(self):
         threshold, ok = QtGui.QInputDialog.getInt(self, 'Threshold value','Input intensity threshold:',3,0,10000000)
-        print 'threshold:',threshold
+        print('threshold:', threshold)
 
         if ok and threshold:
             kernelsize, ok = QtGui.QInputDialog.getInt(self, 'Neighborhood size', 'Neighborhood size (binary closing kernel size):', 2, 0,
@@ -1032,7 +1040,7 @@ class timelineViewer(dimgViewer):
         menu = self.timeline.getViewBox().menu
         operationcombo = QtGui.QComboBox()
         operationcombo.setObjectName('operationcombo')
-        operationcombo.addItems(variationoperators.operations.keys())
+        operationcombo.addItems(list(variationoperators.operations.keys()))
         operationcombo.currentIndexChanged.connect(self.setvariationmode)
         opwidgetaction = QtGui.QWidgetAction(menu)
         opwidgetaction.setDefaultWidget(operationcombo)
@@ -1071,6 +1079,8 @@ class timelineViewer(dimgViewer):
         paths = [os.path.join(d, path) for path in paths]
         self.simg.appendimages(paths)
 
+    def addTimelineData(self, *args, **kwargs):
+        self.sigAddTimelineData.emit(*args, **kwargs)
 
 
     def rescan(self):
@@ -1087,7 +1097,7 @@ class timelineViewer(dimgViewer):
         # self.plotvariation(d)
 
         # Run on thread queue
-        bg_variation = threads.iterator(callback_slot=self.sigAddTimelineData,
+        bg_variation = threads.iterator(callback_slot=self.addTimelineData,
                                         finished_slot=self.processingfinished,
                                         parent=self)(variation.variationiterator)
 
@@ -1314,6 +1324,8 @@ class integrationsubwidget(pg.PlotWidget):
     def plotresult(self, x, y, color, requestkey): #x, y, color, requestkey
         # print 'RESULT:',x, y, color, requestkey #x, y, color, requestkey, QtCore.QThread.currentThread()
 
+        x, y = map(np.array, (x, y))
+
         if requestkey == self.requestkey:
             if not self.iscleared:
                 self.plotItem.clear()
@@ -1321,6 +1333,7 @@ class integrationsubwidget(pg.PlotWidget):
                 self.iscleared = True
             if color is None:
                 color = [255, 255, 255]
+            y = y.astype(np.float)
             y[y<=0]=1.E-9
             curve = self.plotItem.plot(np.array(x), np.nan_to_num(np.array(y).astype(float)), pen=pg.mkPen(color=color))
             curve.setZValue(3 * 255 - sum(color))
@@ -1492,10 +1505,6 @@ pg.ImageItem.getHistogram = getHistogram
 
 class ImageView(pg.ImageView):
     sigKeyRelease = QtCore.Signal()
-    def __init__(self,*args,**kwargs):
-        self.actionLog_Intensity=kwargs['actionLog_Intensity']
-        del kwargs['actionLog_Intensity']
-        super(ImageView, self).__init__(*args,**kwargs)
 
     def buildMenu(self):
         super(ImageView, self).buildMenu()
@@ -1519,34 +1528,6 @@ class ImageView(pg.ImageView):
                 return (0, t)
             ind = inds[-1, 0]
         return ind, t
-
-    def setImage(self,*args,**kwargs):
-        super(ImageView, self).setImage(*args,**kwargs)
-        # if self.actionLog_Intensity.isChecked():
-        #     levelmin = np.log(self.levelMin)
-        #     levelmax = np.log(self.levelMax)
-        #     if np.isnan(levelmin): levelmin = 0
-        #     if np.isnan(levelmax): levelmax = 1
-        #     if np.isinf(levelmin): levelmin = 0
-        #     msg.logMessage(('min:',levelmin),msg.DEBUG)
-        #     msg.logMessage(('max:',levelmax),msg.DEBUG)
-        #
-        #     self.ui.histogram.setLevels(levelmin, levelmax)
-
-    # def updateImage(self, autoHistogramRange=True): # inject logarithm action
-    #     ## Redraw image on screen
-    #     if self.image is None:
-    #         return
-    #
-    #     image = self.getProcessedImage()
-    #
-    #     if autoHistogramRange:
-    #         self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
-    #     if self.axes['t'] is None:
-    #         self.imageItem.updateImage(np.log(image * (image> 0) + (image < 1)) if self.actionLog_Intensity.isChecked() else image)
-    #     else:
-    #         self.ui.roiPlot.show()
-    #         self.imageItem.updateImage(np.log(image[self.currentIndex] * (image[self.currentIndex]> 0) + (image[self.currentIndex] < 1)) if self.actionLog_Intensity.isChecked() else image[self.currentIndex])
 
 
 from scipy.signal import fftconvolve
@@ -1599,7 +1580,7 @@ class pluginModeWidget(QtGui.QWidget):
             del w
             w = self.layout().takeAt(0)
 
-        for key, plugin in self.plugins.items():
+        for key, plugin in list(self.plugins.items()):
             if plugin.enabled:
                 if plugin.instance.hidden:
                     continue
@@ -1612,7 +1593,7 @@ class pluginModeWidget(QtGui.QWidget):
                 button.setCheckable(True)
                 button.setAutoExclusive(True)
                 button.clicked.connect(plugin.activate)
-                if plugin is self.plugins.values()[0]:
+                if plugin is list(self.plugins.values())[0]:
                     button.setChecked(True)
                 self.layout().addWidget(button)
                 label = QtGui.QLabel('|')
@@ -1651,8 +1632,8 @@ class previewwidget(pg.GraphicsLayoutWidget):
         # self.textitem.dataBounds = textItemBounds
 
     def loaditem(self, item):
-        if isinstance(item, str) or isinstance(item, unicode):
-            if os.path.isfile(item) or os.path.isdir(item):
+        if isinstance(item, str):
+            if os.path.isfile(item) or os.path.isdir(item) or item[:3] == 'DB:':
                 item = loader.loadimage(item)
             else:
                 self.setText(item)
@@ -1684,7 +1665,7 @@ class fileTreeWidget(QtGui.QTreeView):
         super(fileTreeWidget, self).__init__()
         self.filetreemodel = QtGui.QFileSystemModel()
         self.setModel(self.filetreemodel)
-        self.filetreepath = pathtools.getRoot()
+        self.filetreepath = path.getRoot()
         self.treerefresh(self.filetreepath)
         header = self.header()
         self.setHeaderHidden(True)

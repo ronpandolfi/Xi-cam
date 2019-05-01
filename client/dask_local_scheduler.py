@@ -2,7 +2,7 @@ from distributed import Scheduler, Worker, Executor
 from pipeline import msg
 
 
-class LocalScheduler():
+class LocalScheduler(object):
     def __init__(self, dloop):
         """
           Create a local scheduler and worker to run commands

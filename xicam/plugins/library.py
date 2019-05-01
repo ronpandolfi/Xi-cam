@@ -1,7 +1,7 @@
 from PySide import QtGui
 import sys
-import base
-import viewer
+from . import base
+from . import viewer
 
 
 class LibraryPlugin(base.plugin):
@@ -25,7 +25,7 @@ class LibraryPlugin(base.plugin):
 
         self.toolbar = None
 
-        super(plugin, self).__init__(*args, **kwargs)
+        super(LibraryPlugin, self).__init__(*args, **kwargs)
 
         # self.centerwidget.sigOpenFile.connect(viewer.plugininstance.openfiles)
 
@@ -205,7 +205,7 @@ class thumbwidgetitem(QtGui.QFrame):
         self.fileicon = QtGui.QImage()
         self.fileicon.load('xicam/gui/post-360412-0-09676400-1365986245.png')
 
-        print 'Library widget generated for ' + path
+        print('Library widget generated for ' + path)
         super(thumbwidgetitem, self).__init__()
         self.parentwindow = parentwindow
         self.setObjectName('thumb')
@@ -239,7 +239,7 @@ class thumbwidgetitem(QtGui.QFrame):
                                           self.thumb.shape[1],
                                           QtGui.QImage.Format_Indexed8)
             except Exception as ex:
-                print ex.message
+                print(ex.message)
 
                 self.image = self.fileicon
 

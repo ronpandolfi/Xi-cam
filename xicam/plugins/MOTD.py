@@ -1,9 +1,11 @@
-import base
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from . import base
 from PySide import QtGui
 import os
 from xicam import xglobals
 
-import widgets
+from . import widgets
 
 
 class MOTDPlugin(base.plugin):
@@ -33,6 +35,10 @@ class MOTDPlugin(base.plugin):
     def openfiles(self, *args, **kwargs):
         xglobals.plugins['Viewer'].instance.activate()
         xglobals.plugins['Viewer'].instance.openfiles(*args, **kwargs)
+
+    def appendfiles(self, files):
+        xglobals.plugins['Viewer'].instance.activate()
+        xglobals.plugins['Viewer'].instance.openfiles(files)
 
     def calibrate(self):
         xglobals.plugins['Viewer'].instance.activate()

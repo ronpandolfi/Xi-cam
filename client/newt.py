@@ -206,7 +206,7 @@ class NewtClient(User):
         try:
             contents = self.get_dir_contents(path, system)
             for item in contents:
-                if 'user' in item.keys():
+                if 'user' in list(item.keys()):
                     if item['user'] == self.username:
                         return True
         except HTTPError:
@@ -234,7 +234,7 @@ class NewtClient(User):
                          self.username)
             contents = self.get_dir_contents(root_home, system)
             for item in contents:
-                    if 'user' in item.keys():
+                if 'user' in list(item.keys()):
                         if item['user'] == self.username:
                             home_dir = root_home
                             break
@@ -437,7 +437,7 @@ class NewtClient(User):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
                     f.flush()
-                    downloaded += len(chunk)/file_size
+                    downloaded += old_div(len(chunk), file_size)
                     yield downloaded
         r.close()
 

@@ -28,9 +28,9 @@ With fly camera:
 * FC - move up-down
 * IJKL or mouse - look around
 """
+from __future__ import unicode_literals
 
 from PySide import QtGui
-from vispy import scene
 
 from pipeline import loader, msg
 # TODO refactor general widgets to be part of plugins.widgets to be shared in a more organized fashion

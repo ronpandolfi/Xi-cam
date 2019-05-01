@@ -139,8 +139,8 @@ class ArrayViewer(StackViewer):
     def setData(self, data, flipAxes=False):
 
         if type(data) is dict or type(data).__bases__[0] is dict:
-            self.keys = data.keys()
-            data = np.array(data.values())
+            self.keys = list(data.keys())
+            data = np.array(list(data.values()))
         else:
             self.keys = None
 

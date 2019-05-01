@@ -43,7 +43,7 @@ def mergenexus(**kwargs):
         nxroot.data.thumbnail = kwargs['thumb']
     # TODO: merge variation
     if not hasattr(nxroot.data, 'variation'):
-        nxroot.data.variation = kwargs['variation'].items()
+        nxroot.data.variation = list(kwargs['variation'].items())
 
     if newfile:
         writenexus(nxroot, kwargs['path'])
@@ -83,7 +83,7 @@ def jpeg(img):
 
 def blockshaped(arr, factor):
     firstslice = np.array_split(arr, arr.shape[0] // factor)
-    secondslice = map(lambda x: np.array_split(x, arr.shape[1] // factor, axis=1), firstslice)
+    secondslice = [np.array_split(x, arr.shape[1] // factor, axis=1) for x in firstslice]
     return np.array(secondslice)
 
 

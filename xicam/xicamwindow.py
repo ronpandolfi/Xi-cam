@@ -5,19 +5,21 @@
 ## TODO: Add mask clear
 
 
-
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
 import os
 
 from PySide.QtUiTools import QUiLoader
 from PySide import QtGui
 from PySide import QtCore
 
-from xicam import config
-import watcher
+from . import config
+from . import watcher
 #import daemon
 import pipeline
 import qdarkstyle
-import plugins
+from . import plugins
 from xicam import xglobals
 import numpy as np
 
@@ -25,7 +27,7 @@ import numpy as np
 # import client.dask_local_scheduler
 # import client.dask_remote_scheduler
 # import client.dask_active_executor
-import threads
+from . import threads
 from pipeline import msg
 
 class ComboBoxAction(QtGui.QWidgetAction):
@@ -75,10 +77,10 @@ class Login(QtGui.QDialog):
 class MyMainWindow(QtCore.QObject):
     def __init__(self, app):
         QtCore.QObject.__init__(self, app)
-        print 'Gui:\t\t\t', QtGui.QApplication.instance().thread()
+        print('Gui:\t\t\t', QtGui.QApplication.instance().thread())
         QtGui.QFontDatabase.addApplicationFont("xicam/gui/zerothre.ttf")
 
-        import plugins
+        from . import plugins
 
         config.activate()
 
@@ -133,6 +135,7 @@ class MyMainWindow(QtCore.QObject):
 
         plugins.base.fileexplorer.sigOpen.connect(self.openfiles)
         plugins.base.fileexplorer.sigFolderOpen.connect(self.openfolder)
+        plugins.base.fileexplorer.sigAppend.connect(self.appendfiles)
         plugins.base.booltoolbar.actionTimeline.triggered.connect(plugins.base.filetree.handleOpenAction)
 
         pluginmode = plugins.widgets.pluginModeWidget(plugins.plugins)
@@ -318,6 +321,32 @@ class MyMainWindow(QtCore.QObject):
                 elif response == QtGui.QMessageBox.Cancel:
                     return None
 
+    def appendfiles(self, filenames):
+        """
+        when a file is opened, check if there is calibration and offer to use the image as calibrant
+        """
+        if filenames is not u'':
+            if config.activeExperiment.iscalibrated() or len(filenames) > 1:
+                self.appendimages(filenames)
+            else:
+                msgBox = QtGui.QMessageBox()
+                msgBox.setText("The current experiment has not yet been calibrated. ")
+                msgBox.setInformativeText("Use this image as a calibrant (AgBe)?")
+                msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel)
+                msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
+
+                response = msgBox.exec_()
+
+                if response == QtGui.QMessageBox.Yes:
+                    self.appendimages(filenames)
+
+                    self.calibrate()
+                elif response == QtGui.QMessageBox.No:
+                    self.appendimages(filenames)
+                elif response == QtGui.QMessageBox.Cancel:
+                    return None
+
+
     def openfolder(self, filenames):
         """
         build a new tab from the folder path, add it to the tab view, and display it
@@ -325,7 +354,7 @@ class MyMainWindow(QtCore.QObject):
 
         if filenames is not u'':
             if config.activeExperiment.iscalibrated or len(filenames) > 1:
-                import plugins
+                from . import plugins
 
                 self.ui.statusbar.showMessage('Loading images from folder...')
                 self.app.processEvents()
@@ -349,7 +378,7 @@ class MyMainWindow(QtCore.QObject):
         build a new tab, add it to the tab view, and display it
         """
 
-        import plugins
+        from . import plugins
 
         self.ui.statusbar.showMessage('Loading image...')
         self.app.processEvents()
@@ -358,6 +387,20 @@ class MyMainWindow(QtCore.QObject):
         #tabwidget = self.ui.findChild(QtGui.QTabWidget, 'tabWidget')
         #tabwidget.setCurrentIndex(tabwidget.addTab(newimagetab, path.split('/')[-1]))
         plugins.base.activeplugin.openfiles(paths)
+
+        self.ui.statusbar.showMessage('Ready...')
+
+    def appendimages(self, paths):
+        """
+        build a new tab, add it to the tab view, and display it
+        """
+
+        from . import plugins
+
+        self.ui.statusbar.showMessage('Loading image...')
+        self.app.processEvents()
+
+        plugins.base.activeplugin.appendfiles(paths)
 
         self.ui.statusbar.showMessage('Ready...')
 

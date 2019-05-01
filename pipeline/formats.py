@@ -26,8 +26,12 @@ if fabio._version.MAJOR==0 and fabio._version.MINOR<5:
 
     response = msgBox.exec_()
     if response == QtGui.QMessageBox.Yes:
-        import pip
-        failure = pip.main(['install','--upgrade','fabio'])
+        try:
+            from pip import main
+        except ImportError:
+            from pip._internal import main
+
+        failure = main(['install', '--upgrade', 'fabio'])
 
         from xicam.dialogs import infodialog
         if failure:
@@ -239,7 +243,7 @@ class ALS832H5image(fabioimage):
                 start = item[n].start if item[n].start is not None else 0
                 step = item[n].step if item[n].step is not None else 1
                 stop = item[n].stop if item[n].stop is not None else stop
-            elif n < len(item) and isinstance(item[n], int):
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
                 if item[n] < 0:
                     start, stop, step = stop + item[n], stop + item[n] + 1, 1
                 else:
@@ -309,8 +313,6 @@ class nexusimage(fabioimage):
         dfrm = self._dgroup[self.frames[frame]]
         self.currentframe = frame
         self.data = dfrm
-
-
 
         return self
 
@@ -385,14 +387,14 @@ class nexusimage(fabioimage):
             elif n == 2:
                 stop = self.data.shape[1]
             if n < len(item) and isinstance(item[n], slice):
-                    start = item[n].start if item[n].start is not None else 0
-                    step = item[n].step if item[n].step is not None else 1
-                    stop = item[n].stop if item[n].stop is not None else stop
-            elif n < len(item) and isinstance(item[n], int):
-                    if item[n] < 0:
-                        start, stop, step = stop + item[n], stop + item[n] + 1, 1
-                    else:
-                        start, stop, step = item[n], item[n] + 1, 1
+                start = item[n].start if item[n].start is not None else 0
+                step = item[n].step if item[n].step is not None else 1
+                stop = item[n].stop if item[n].stop is not None else stop
+            elif n < len(item) and (isinstance(item[n], int) or 'int' in str(type(item[n]))):
+                if item[n] < 0:
+                    start, stop, step = stop + item[n], stop + item[n] + 1, 1
+                else:
+                    start, stop, step = item[n], item[n] + 1, 1
             else:
                 start, step = 0, 1
 
@@ -401,7 +403,7 @@ class nexusimage(fabioimage):
         for n, i in enumerate(range(s[0][0], s[0][1], s[0][2])):
             _arr = self._dgroup[self.frames[i]][slice(*s[1]), slice(*s[2])]
             if n == 0:  # allocate array
-                arr = np.empty((len(range(s[0][0], s[0][1], s[0][2])), _arr.shape[0], _arr.shape[1]))
+                arr = np.empty((len(list(range(s[0][0], s[0][1], s[0][2]))), _arr.shape[0], _arr.shape[1]))
             arr[n] = _arr
         if arr.shape[0] == 1:
             arr = arr[0]
@@ -414,7 +416,7 @@ class nexusimage(fabioimage):
         self.data = self._dgroup[self.frames[frame]]
         return self.data
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -646,10 +648,10 @@ class ALS733H5image(fabioimage):
     @property
     def nframes(self):
         with h5py.File(self.filename, 'r') as h:
-            dset = h[h.keys()[0]]
-            ddet = dset[dset.keys()[0]]
+            dset = h[list(h.keys())[0]]
+            ddet = dset[list(dset.keys())[0]]
             if self.isburst:
-                frames = sum(map(lambda key: '.edf' in key, ddet.keys()))
+                frames = sum(['.edf' in key for key in list(ddet.keys())])
             else:
                 frames = 1
         return frames
@@ -666,15 +668,15 @@ class ALS733H5image(fabioimage):
             frame = 0
         f = self.filename
         with h5py.File(f, 'r') as h:
-            dset = h[h.keys()[0]]
-            ddet = dset[dset.keys()[0]]
+            dset = h[list(h.keys())[0]]
+            ddet = dset[list(dset.keys())[0]]
             if self.isburst:
-                frames = [key for key in ddet.keys() if '.edf' in key]
+                frames = [key for key in list(ddet.keys()) if '.edf' in key]
                 dfrm = ddet[frames[frame]]
             elif self.istiled:
                 high = ddet[u'high']
                 low = ddet[u'low']
-                frames = [high[high.keys()[0]], low[low.keys()[0]]]
+                frames = [high[list(high.keys())[0]], low[list(low.keys())[0]]]
                 dfrm = frames[frame]
             else:
                 dfrm = ddet
@@ -685,9 +687,9 @@ class ALS733H5image(fabioimage):
     def isburst(self):
         try:
             with h5py.File(self.filename, 'r') as h:
-                dset = h[h.keys()[0]]
-                ddet = dset[dset.keys()[0]]
-                return not (u'high' in ddet.keys() and u'low' in ddet.keys())
+                dset = h[list(h.keys())[0]]
+                ddet = dset[list(dset.keys())[0]]
+                return not (u'high' in list(ddet.keys()) and u'low' in list(ddet.keys()))
         except AttributeError:
             return False
 
@@ -695,9 +697,9 @@ class ALS733H5image(fabioimage):
     def istiled(self):
         try:
             with h5py.File(self.filename, 'r') as h:
-                dset = h[h.keys()[0]]
-                ddet = dset[dset.keys()[0]]
-                return u'high' in ddet.keys() and u'low' in ddet.keys()
+                dset = h[list(h.keys())[0]]
+                ddet = dset[list(dset.keys())[0]]
+                return u'high' in list(ddet.keys()) and u'low' in list(ddet.keys())
         except AttributeError:
             return False
 
@@ -886,7 +888,7 @@ class DXchangeH5image(fabioimage):
         return self
 
     def _finddatagroup(self, h5object):
-        exchange_groups = [key for key in h5object.keys() if 'exchange' in key]
+        exchange_groups = [key for key in list(h5object.keys()) if 'exchange' in key]
         if len(exchange_groups) > 1:
             raise RuntimeWarning('More than one exchange group found. Will use \'exchange\'\n'
                                  'Need to use logging for this...')
@@ -916,7 +918,7 @@ class DXchangeH5image(fabioimage):
         self.data = self._dgroup['data'][frame]
         return self.data
 
-    def next(self):
+    def __next__(self):
         if self.currentframe < self.__len__() - 1:
             self.currentframe += 1
         else:
@@ -981,7 +983,7 @@ class CondensedTiffStack(object):
         super(CondensedTiffStack, self).__init__()
 
         self.rawdata = tifffile.imread(path, memmap=True)
-        self.frames = range(self.rawdata.shape[0])
+        self.frames = list(range(self.rawdata.shape[0]))
         self.header = header
         self._readheader()
 
@@ -1034,7 +1036,7 @@ class EdfImage(edfimage.EdfImage):
 
         keylesslines = 0
         for line in lines:
-            cells = filter(None, re.split('[=:]+', line))
+            cells = [_f for _f in re.split('[=:]+', line) if _f]
 
             key = cells[0].strip()
 
