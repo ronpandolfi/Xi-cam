@@ -178,15 +178,15 @@ class GlobusClient(User):
 
         for endpoint in user_endpoints:
             params = {'path': str(test)}
-                r = self.get(self.TRANSFER_URL + '/endpoint/' + quote(endpoint) + '/ls',
-                             headers=self.authentication, params=params)
-                try:
-                    file_response = r.json()
-                    if 'is a file' in file_response['message']:
-                        os.remove(test)
-                        return endpoint
-                except KeyError:
-                    pass
+            r = self.get(self.TRANSFER_URL + '/endpoint/' + quote(endpoint) + '/ls',
+                         headers=self.authentication, params=params)
+            try:
+                file_response = r.json()
+                if 'is a file' in file_response['message']:
+                    os.remove(test)
+                    return endpoint
+            except KeyError:
+                pass
 
         os.remove(test)
         return None
